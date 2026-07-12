@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>html2canvas</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13.5px;
+    margin-right: 6px;
+    margin-bottom: 10px;
+  }
+  button:hover { background: #3d67e0; }
+  button.secondary {
+    background: #fff;
+    color: #4f7dff;
+    border: 1px solid #4f7dff;
+  }
+
+  /* 캡처 대상 카드 */
+  .receipt-card {
+    width: 320px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-size: 13px;
+  }
+  .receipt-card h3 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+  .receipt-card .date {
+    color: #888;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .receipt-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .receipt-card th, .receipt-card td {
+    text-align: right;
+    padding: 4px 2px;
+    border-bottom: 1px solid #eee;
+  }
+  .receipt-card th:first-child, .receipt-card td:first-child {
+    text-align: left;
+  }
+  .receipt-card tfoot td {
+    font-weight: bold;
+    border-bottom: none;
+    border-top: 2px solid #333;
+  }
+  .receipt-card .note {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #c0392b;
+    background: #ffecec;
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  .memo-badge {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #fff;
+    background: #888;
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+
+  .row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .capture-result {
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 12.5px;
+  }
+  .capture-result img { max-width: 100%; display: block; }
+  .hint { font-size: 12px; color: #888; margin-top: 6px; }
+
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>html2canvas 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>html2canvas</strong>는 화면에 그려진 HTML 요소를 그대로 이미지(canvas)로 캡처해주는 라이브러리입니다.
+    서버에서 이미지를 만들지 않고, 브라우저에서 바로 "스크린샷"처럼 저장할 수 있습니다.
+    <ul>
+      <li>특정 DOM 요소를 지정하면 그 모양 그대로 canvas에 그려줌</li>
+      <li>결과 canvas를 PNG 등 이미지 파일로 바로 다운로드 가능</li>
+      <li><code>scale</code> 옵션으로 캡처 해상도를 높이거나 낮출 수 있음</li>
+      <li><code>ignoreElements</code> 옵션으로 특정 요소만 캡처에서 제외 가능(예: 화면에는 보이지만 이미지에는 빼고 싶은 메모/버튼)</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 "위판 정산서"는 html2canvas 학습용으로 만든 <strong>가상의 샘플</strong>이며,
+      실제 수협중앙회의 정산 서식/수치가 아닙니다. 이 페이지는 html2canvas(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 캡처 · PNG 다운로드</h2>
+    <div class="desc">아래 "위판 정산서" 카드를 캡처해서 이미지를 만들고, PNG로 다운로드합니다.</div>
+    <div class="row">
+      <div id="card1" class="receipt-card">
+        <h3>위판 정산서 (예시)</h3>
+        <div class="date">2026-07-13 · 부산공동어시장</div>
+        <table>
+          <thead><tr><th>어종</th><th>수량(kg)</th><th>단가</th><th>금액</th></tr></thead>
+          <tbody>
+            <tr><td>고등어</td><td>320</td><td>4,500</td><td>1,440,000</td></tr>
+            <tr><td>갈치</td><td>180</td><td>8,200</td><td>1,476,000</td></tr>
+            <tr><td>오징어</td><td>95</td><td>12,000</td><td>1,140,000</td></tr>
+          </tbody>
+          <tfoot><tr><td>합계</td><td></td><td></td><td>4,056,000</td></tr></tfoot>
+        </table>
+        <div class="note">※ 가상 예시 데이터입니다</div>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <button id="captureBtn1">이미지로 캡처</button>
+        <button id="downloadBtn1" class="secondary" disabled>PNG 다운로드</button>
+        <div class="capture-result" id="result1">캡처 결과가 여기 표시됩니다</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const canvas = await html2canvas(document.getElementById('card1'));
+resultBox.appendChild(canvas);
+
+// PNG 다운로드
+const link = document.createElement('a');
+link.download = 'wipan-settlement.png'; // 일부 브라우저는 data URL 다운로드에서 한글 파일명을 깨뜨려서 영문으로 지정
+link.href = canvas.toDataURL('image/png');
+link.click();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 해상도 배율(scale) 조절</h2>
+    <div class="desc">같은 카드를 1배/2배/3배로 캡처해서 실제 픽셀 크기가 어떻게 달라지는지 비교합니다.</div>
+    <div class="row">
+      <div id="card2" class="receipt-card">
+        <h3>위판 정산서 (예시)</h3>
+        <div class="date">2026-07-13 · 목포수산시장</div>
+        <table>
+          <thead><tr><th>어종</th><th>수량(kg)</th><th>단가</th><th>금액</th></tr></thead>
+          <tbody>
+            <tr><td>새우</td><td>60</td><td>18,000</td><td>1,080,000</td></tr>
+            <tr><td>꽃게</td><td>110</td><td>15,500</td><td>1,705,000</td></tr>
+          </tbody>
+          <tfoot><tr><td>합계</td><td></td><td></td><td>2,785,000</td></tr></tfoot>
+        </table>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <button data-scale="1">1x 캡처</button>
+        <button data-scale="2">2x 캡처</button>
+        <button data-scale="3">3x 캡처</button>
+        <div class="capture-result" id="result2">배율을 선택해보세요</div>
+        <div class="hint" id="sizeInfo2"></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const canvas = await html2canvas(card, { scale: 2 });
+console.log(canvas.width, canvas.height); // 원본의 2배 픽셀</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 특정 요소 캡처 제외 (ignoreElements)</h2>
+    <div class="desc">
+      카드 안의 <strong>"내부 검토용" 메모</strong>는 화면에는 보이지만, 캡처 이미지에는 빠지도록 처리합니다.
+    </div>
+    <div class="row">
+      <div id="card3" class="receipt-card">
+        <h3>위판 정산서 (예시)</h3>
+        <div class="date">2026-07-13 · 통영수산시장</div>
+        <table>
+          <thead><tr><th>어종</th><th>수량(kg)</th><th>단가</th><th>금액</th></tr></thead>
+          <tbody>
+            <tr><td>전복</td><td>25</td><td>42,000</td><td>1,050,000</td></tr>
+          </tbody>
+          <tfoot><tr><td>합계</td><td></td><td></td><td>1,050,000</td></tr></tfoot>
+        </table>
+        <div class="memo-badge no-capture">내부 검토용 메모 (캡처 제외 대상)</div>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <button id="captureBtn3">이미지로 캡처</button>
+        <div class="capture-result" id="result3">캡처 결과가 여기 표시됩니다</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const canvas = await html2canvas(card, {
+  ignoreElements: (el) => el.classList.contains('no-capture'),
+});</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 1. 기본 캡처 · 다운로드 ----------
+    const card1 = document.getElementById('card1');
+    const result1 = document.getElementById('result1');
+    const captureBtn1 = document.getElementById('captureBtn1');
+    const downloadBtn1 = document.getElementById('downloadBtn1');
+    let lastCanvas1 = null;
+
+    captureBtn1.addEventListener('click', async () => {
+      result1.textContent = '캡처 중...';
+      const canvas = await html2canvas(card1);
+      lastCanvas1 = canvas;
+      result1.innerHTML = '';
+      result1.appendChild(canvas);
+      downloadBtn1.disabled = false;
+    });
+
+    downloadBtn1.addEventListener('click', () => {
+      if (!lastCanvas1) return;
+      const link = document.createElement('a');
+      link.download = 'wipan-settlement.png'; // 일부 브라우저는 data URL 다운로드에서 한글 파일명을 깨뜨려서 영문으로 지정
+      link.href = lastCanvas1.toDataURL('image/png');
+      link.click();
+    });
+
+    // ---------- 2. 배율 조절 ----------
+    const card2 = document.getElementById('card2');
+    const result2 = document.getElementById('result2');
+    const sizeInfo2 = document.getElementById('sizeInfo2');
+
+    document.querySelectorAll('[data-scale]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const scale = Number(btn.dataset.scale);
+        result2.textContent = '캡처 중...';
+        const canvas = await html2canvas(card2, { scale });
+        result2.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.style.width = '200px';
+        result2.appendChild(img);
+        sizeInfo2.textContent = `실제 캡처 픽셀 크기: ${canvas.width} x ${canvas.height} (화면엔 200px 폭으로 축소 표시)`;
+      });
+    });
+
+    // ---------- 3. 요소 제외 ----------
+    const card3 = document.getElementById('card3');
+    const result3 = document.getElementById('result3');
+    const captureBtn3 = document.getElementById('captureBtn3');
+
+    captureBtn3.addEventListener('click', async () => {
+      result3.textContent = '캡처 중...';
+      const canvas = await html2canvas(card3, {
+        ignoreElements: (el) => el.classList.contains('no-capture'),
+      });
+      result3.innerHTML = '';
+      result3.appendChild(canvas);
+    });
+  </script>
+</body>
+</html>
