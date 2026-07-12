@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>CodeMirror</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .editor-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+  .editor-wrap .cm-editor { height: 180px; }
+  .editor-wrap .cm-scroller { overflow: auto; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.active { background: #1baf7a; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>CodeMirror 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>CodeMirror</strong>(6버전)는 웹페이지 안에 문법 강조·자동 들여쓰기·괄호 매칭 같은 기능을 갖춘
+    코드 에디터를 넣을 수 있게 해주는 라이브러리입니다. VSCode의 웹 버전 등에서도 비슷한 기술이 쓰입니다.
+    <ul>
+      <li><code>new EditorView({ doc, extensions, parent })</code>로 에디터 생성</li>
+      <li><code>javascript()</code>, <code>html()</code>, <code>sql()</code> 같은 언어별 확장을 넣으면 그 언어에 맞는 문법 강조</li>
+      <li><code>Compartment</code>로 언어·테마 같은 설정을 나중에 동적으로 교체 가능</li>
+      <li><code>EditorView.updateListener</code>로 에디터 내용이 바뀔 때마다 실시간으로 감지</li>
+    </ul>
+    <div class="disclaimer">
+      ※ CodeMirror 6는 npm 패키지 자체에 브라우저용 번들이 없습니다(ESM 전용, <code>codemirror</code> +
+      <code>@codemirror/lang-*</code> + <code>@codemirror/theme-one-dark</code> 등 여러 패키지로 나뉘어 있음).
+      CDN의 ESM 변환 주소(<code>/+esm</code>)로 이 패키지들을 <strong>각각 따로</strong> 불러와보면
+      "multiple instances of @codemirror/state are loaded" 에러로 실제로 깨지는 것을 확인했습니다
+      (여러 패키지가 내부적으로 공유해야 하는 <code>@codemirror/state</code>를 패키지별로 따로 번들링해서
+      벌어지는 문제입니다). 그래서 이 페이지는 필요한 패키지들을 한 번에 올바르게 묶어 만든 번들 파일
+      (<code>codemirror-bundle.esm.js</code>, 같은 CDN 배포 버전으로 직접 빌드)을 함께 담아 사용합니다.
+      다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 에디터 + 상태 읽기</h2>
+    <div class="desc">줄 번호, 괄호 자동 매칭, 실행 취소(Ctrl/Cmd+Z) 같은 기본 기능이 포함된 <code>basicSetup</code>으로 만든 에디터입니다. 코드를 수정한 뒤 버튼을 눌러 현재 내용을 읽어와 보세요.</div>
+    <div class="editor-wrap" id="editor1"></div>
+    <div class="controls"><button id="readBtn1">현재 코드 가져오기</button></div>
+    <pre class="output" id="output1">아직 읽지 않음</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">import { EditorView, basicSetup } from 'codemirror';
+import { javascript } from '@codemirror/lang-javascript';
+
+const view = new EditorView({
+  doc: "const total = records.reduce((sum, r) => sum + r.weight, 0);",
+  extensions: [basicSetup, javascript()],
+  parent: document.getElementById('editor1'),
+});
+
+readBtn.addEventListener('click', () => {
+  output.textContent = view.state.doc.toString();
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 언어 모드 전환</h2>
+    <div class="desc">버튼을 누르면 에디터의 언어 모드와 예시 코드가 함께 바뀝니다. <code>Compartment</code>를 이용해 이미 만들어진 에디터의 설정을 나중에 바꾸는 방식입니다.</div>
+    <div class="controls">
+      <button class="lang-btn active" data-lang="js">JavaScript</button>
+      <button class="lang-btn" data-lang="html">HTML</button>
+      <button class="lang-btn" data-lang="sql">SQL</button>
+      <button class="lang-btn" data-lang="md">Markdown</button>
+    </div>
+    <div class="editor-wrap" id="editor2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const langCompartment = new Compartment();
+const view = new EditorView({
+  extensions: [basicSetup, langCompartment.of(javascript())],
+  parent: el,
+});
+
+langBtn.addEventListener('click', () => {
+  view.dispatch({ effects: langCompartment.reconfigure(html()) });
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 다크 테마</h2>
+    <div class="desc">버튼으로 <code>@codemirror/theme-one-dark</code> 테마를 켜고 끕니다.</div>
+    <div class="controls"><button class="ghost" id="themeBtn3">다크 테마 켜기</button></div>
+    <div class="editor-wrap" id="editor3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">import { oneDark } from '@codemirror/theme-one-dark';
+
+const themeCompartment = new Compartment();
+// 처음엔 빈 확장([])으로 시작
+extensions: [basicSetup, themeCompartment.of([])]
+
+themeBtn.addEventListener('click', () => {
+  darkOn = !darkOn;
+  view.dispatch({ effects: themeCompartment.reconfigure(darkOn ? oneDark : []) });
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 실시간 글자수 감시 + 읽기 전용 토글</h2>
+    <div class="desc">타이핑할 때마다 글자수·줄 수가 실시간으로 갱신됩니다. "읽기 전용" 버튼을 누르면 더 이상 편집할 수 없습니다.</div>
+    <div class="editor-wrap" id="editor4"></div>
+    <div class="controls">
+      <span class="result-box" id="stats4" style="margin-top:0;">글자수: 0 · 줄 수: 1</span>
+      <button class="ghost" id="readOnlyBtn4">읽기 전용 켜기</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const view = new EditorView({
+  extensions: [
+    basicSetup,
+    javascript(),
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        const doc = update.state.doc;
+        stats.textContent = `글자수: ${doc.length} · 줄 수: ${doc.lines}`;
+      }
+    }),
+    readOnlyCompartment.of(EditorView.editable.of(true)),
+  ],
+});
+
+readOnlyBtn.addEventListener('click', () => {
+  isReadOnly = !isReadOnly;
+  view.dispatch({ effects: readOnlyCompartment.reconfigure(EditorView.editable.of(!isReadOnly)) });
+});</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    import {
+      EditorView, basicSetup, EditorState, Compartment,
+      javascript, html, sql, markdown, oneDark,
+    } from './codemirror-bundle.esm.js';
+
+    // ---------- 1. 기본 에디터 + 상태 읽기 ----------
+    const view1 = new EditorView({
+      doc: "// 위판 기록(가상)의 총 중량 합계\nconst total = records.reduce((sum, r) => sum + r.weight, 0);\nconsole.log(total);",
+      extensions: [basicSetup, javascript()],
+      parent: document.getElementById('editor1'),
+    });
+    document.getElementById('readBtn1').addEventListener('click', () => {
+      document.getElementById('output1').textContent = view1.state.doc.toString();
+    });
+
+    // ---------- 2. 언어 모드 전환 ----------
+    const SAMPLES = {
+      js: "// 위판 기록(가상)\nconst records = [\n  { species: '고등어', weight: 320 },\n  { species: '갈치', weight: 180 },\n];",
+      html: "<!-- 위판장 안내 카드(가상) -->\n<div class=\"market-card\">\n  <h2>부산공동어시장</h2>\n  <p>오늘 위판량: 480kg</p>\n</div>",
+      sql: "-- 위판장별 합계(가상)\nSELECT market, SUM(weight) AS total\nFROM records\nGROUP BY market\nORDER BY total DESC;",
+      md: "# 위판 안내(가상)\n\n- 개장 시각: 05:00\n- 위판장: 부산공동어시장\n\n> 실제 공지가 아닌 학습용 예시입니다.",
+    };
+    const LANG_EXT = { js: javascript(), html: html(), sql: sql(), md: markdown() };
+    const langCompartment2 = new Compartment();
+    const view2 = new EditorView({
+      doc: SAMPLES.js,
+      extensions: [basicSetup, langCompartment2.of(LANG_EXT.js)],
+      parent: document.getElementById('editor2'),
+    });
+    document.querySelectorAll('.lang-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.lang-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const lang = btn.dataset.lang;
+        view2.dispatch({
+          changes: { from: 0, to: view2.state.doc.length, insert: SAMPLES[lang] },
+          effects: langCompartment2.reconfigure(LANG_EXT[lang]),
+        });
+      });
+    });
+
+    // ---------- 3. 다크 테마 ----------
+    const themeCompartment3 = new Compartment();
+    const view3 = new EditorView({
+      doc: "// 테마를 켜고 꺼보세요\nfunction greet(name) {\n  return `안녕하세요, ${name}님`;\n}",
+      extensions: [basicSetup, javascript(), themeCompartment3.of([])],
+      parent: document.getElementById('editor3'),
+    });
+    let darkOn3 = false;
+    document.getElementById('themeBtn3').addEventListener('click', (e) => {
+      darkOn3 = !darkOn3;
+      view3.dispatch({ effects: themeCompartment3.reconfigure(darkOn3 ? oneDark : []) });
+      e.target.textContent = darkOn3 ? '다크 테마 끄기' : '다크 테마 켜기';
+    });
+
+    // ---------- 4. 실시간 글자수 + 읽기 전용 ----------
+    const readOnlyCompartment4 = new Compartment();
+    const stats4 = document.getElementById('stats4');
+    const view4 = new EditorView({
+      doc: "여기에 입력해보세요.",
+      extensions: [
+        basicSetup,
+        javascript(),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            const doc = update.state.doc;
+            stats4.textContent = `글자수: ${doc.length} · 줄 수: ${doc.lines}`;
+          }
+        }),
+        readOnlyCompartment4.of(EditorView.editable.of(true)),
+      ],
+      parent: document.getElementById('editor4'),
+    });
+    let isReadOnly4 = false;
+    document.getElementById('readOnlyBtn4').addEventListener('click', (e) => {
+      isReadOnly4 = !isReadOnly4;
+      view4.dispatch({ effects: readOnlyCompartment4.reconfigure(EditorView.editable.of(!isReadOnly4)) });
+      e.target.textContent = isReadOnly4 ? '읽기 전용 끄기' : '읽기 전용 켜기';
+    });
+  </script>
+</body>
+</html>
