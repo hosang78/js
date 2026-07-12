@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Cropper.js</title>
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@2.1.1/dist/cropper.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .crop-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  cropper-canvas {
+    width: 100%;
+    max-width: 460px;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .result-col {
+    flex: 1;
+    min-width: 180px;
+  }
+  .result-col h3 { margin: 0 0 8px; font-size: 12.5px; color: #888; }
+  .result-frame {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fafbfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    overflow: hidden;
+  }
+  .result-frame img, .result-frame canvas { max-width: 100%; display: block; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  select, button {
+    padding: 7px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #fff;
+    cursor: pointer;
+  }
+  button {
+    background: #4f7dff;
+    color: #fff;
+    border: none;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost {
+    background: #fff;
+    color: #333;
+    border: 1px solid #ccc;
+  }
+  button.ghost:hover { background: #f2f2f2; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Cropper.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Cropper.js</strong>는 이미지 위에 크롭(잘라내기) 영역을 올려두고, 마우스로 옮기거나 크기를
+    조절해서 원하는 부분만 잘라낼 수 있게 해주는 라이브러리입니다. v2부터는
+    <code>&lt;cropper-canvas&gt;</code>, <code>&lt;cropper-image&gt;</code>, <code>&lt;cropper-selection&gt;</code> 같은
+    커스텀 엘리먼트(태그) 조합으로 동작합니다.
+    <ul>
+      <li>크롭 영역을 마우스로 드래그해서 옮기거나, 모서리를 끌어 크기 조절</li>
+      <li><code>aspect-ratio</code> 속성으로 정사각형·4:3 같은 비율을 고정</li>
+      <li>이미지 자체를 회전·확대축소·좌우반전 (크롭 영역과는 별개로 동작)</li>
+      <li><code>selection.$toCanvas()</code>로 크롭된 부분만 새 캔버스로 뽑아내기</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 크롭 대상 이미지는 실제 사진이 아니라 이 페이지에서 직접 그린 <strong>가상의 위판장 일러스트(SVG)</strong>입니다.
+      이 페이지는 Cropper.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 자유 영역 크롭 + 결과 내보내기</h2>
+    <div class="desc">파란 영역을 드래그해서 옮기거나 모서리를 끌어 크기를 바꾼 뒤, "잘라내기" 버튼을 눌러보세요.</div>
+    <div class="crop-row">
+      <cropper-canvas id="canvas1" background>
+        <cropper-image src="sample-market.svg" alt="위판장 일러스트" rotatable scalable translatable></cropper-image>
+        <cropper-shade hidden></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection id="sel1" initial-coverage="0.5" movable resizable>
+          <cropper-grid role="grid" covered></cropper-grid>
+          <cropper-handle action="move" theme-color="rgba(255,255,255,0.35)"></cropper-handle>
+          <cropper-handle action="n-resize"></cropper-handle>
+          <cropper-handle action="e-resize"></cropper-handle>
+          <cropper-handle action="s-resize"></cropper-handle>
+          <cropper-handle action="w-resize"></cropper-handle>
+          <cropper-handle action="ne-resize"></cropper-handle>
+          <cropper-handle action="nw-resize"></cropper-handle>
+          <cropper-handle action="se-resize"></cropper-handle>
+          <cropper-handle action="sw-resize"></cropper-handle>
+        </cropper-selection>
+      </cropper-canvas>
+      <div class="result-col">
+        <h3>잘라낸 결과</h3>
+        <div class="result-frame" id="result1">아직 없음</div>
+        <div class="controls"><button id="cropBtn1">잘라내기</button></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// HTML: cropper-canvas 안에 cropper-image + cropper-selection을 배치
+
+const selection = document.getElementById('sel1');
+document.getElementById('cropBtn1').addEventListener('click', async () => {
+  const canvas = await selection.$toCanvas(); // 선택 영역만 새 캔버스로 추출
+  resultEl.innerHTML = '';
+  resultEl.appendChild(canvas);
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 비율 고정 크롭</h2>
+    <div class="desc">비율을 고르면 크롭 영역이 그 비율로 고정된 채로만 크기가 바뀝니다.</div>
+    <div class="crop-row">
+      <cropper-canvas id="canvas2" background>
+        <cropper-image src="sample-market.svg" alt="위판장 일러스트" rotatable scalable translatable></cropper-image>
+        <cropper-shade hidden></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection id="sel2" initial-coverage="0.5" movable resizable aspect-ratio="1">
+          <cropper-grid role="grid" covered></cropper-grid>
+          <cropper-handle action="move" theme-color="rgba(255,255,255,0.35)"></cropper-handle>
+          <cropper-handle action="se-resize"></cropper-handle>
+        </cropper-selection>
+      </cropper-canvas>
+      <div class="result-col">
+        <h3>비율</h3>
+        <select id="ratioSelect">
+          <option value="1">정사각형 (1:1)</option>
+          <option value="1.3333">4:3</option>
+          <option value="1.7778">16:9</option>
+          <option value="NaN">자유 비율</option>
+        </select>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>document.getElementById('ratioSelect').addEventListener('change', (e) => {
+  selection.setAttribute('aspect-ratio', e.target.value); // 'NaN'이면 자유 비율
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 회전 · 확대축소 · 좌우반전</h2>
+    <div class="desc">이미지 자체를 돌리거나 뒤집어봅니다. 크롭 영역의 위치는 그대로 두고 이미지만 움직입니다.</div>
+    <div class="crop-row">
+      <cropper-canvas id="canvas3" background>
+        <cropper-image id="img3" src="sample-market.svg" alt="위판장 일러스트" rotatable scalable translatable></cropper-image>
+        <cropper-shade hidden></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection id="sel3" initial-coverage="0.5" movable resizable>
+          <cropper-handle action="move" theme-color="rgba(255,255,255,0.35)"></cropper-handle>
+          <cropper-handle action="se-resize"></cropper-handle>
+        </cropper-selection>
+      </cropper-canvas>
+      <div class="result-col">
+        <h3>이미지 조작</h3>
+        <div class="controls" style="margin-top:0;">
+          <button class="ghost" id="rotateBtn">↻ 90도 회전</button>
+          <button class="ghost" id="flipBtn">↔ 좌우반전</button>
+          <button class="ghost" id="zoomInBtn">＋ 확대</button>
+          <button class="ghost" id="zoomOutBtn">－ 축소</button>
+          <button class="ghost" id="resetBtn3">초기화</button>
+        </div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const image = document.getElementById('img3');
+rotateBtn.addEventListener('click', () => image.$rotate('90deg'));
+flipBtn.addEventListener('click', () => { flipped = !flipped; image.$scale(flipped ? -1 : 1, 1); });
+zoomInBtn.addEventListener('click', () => image.$zoom(0.1));
+zoomOutBtn.addEventListener('click', () => image.$zoom(-0.1));
+resetBtn.addEventListener('click', () => image.$resetTransform());</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 실시간 미리보기 + 다운로드</h2>
+    <div class="desc">크롭 영역을 움직이는 즉시 오른쪽 미리보기가 갱신됩니다. "다운로드"를 누르면 잘라낸 이미지를 PNG 파일로 저장합니다.</div>
+    <div class="crop-row">
+      <cropper-canvas id="canvas4" background>
+        <cropper-image src="sample-market.svg" alt="위판장 일러스트" rotatable scalable translatable></cropper-image>
+        <cropper-shade hidden></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection id="sel4" initial-coverage="0.5" movable resizable>
+          <cropper-grid role="grid" covered></cropper-grid>
+          <cropper-handle action="move" theme-color="rgba(255,255,255,0.35)"></cropper-handle>
+          <cropper-handle action="se-resize"></cropper-handle>
+        </cropper-selection>
+      </cropper-canvas>
+      <div class="result-col">
+        <h3>실시간 미리보기</h3>
+        <div class="result-frame" id="preview4">준비 중...</div>
+        <div class="controls"><button id="downloadBtn4">다운로드</button></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let pending = false;
+selection.addEventListener('change', () => {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(async () => {
+    const canvas = await selection.$toCanvas({ width: 160 });
+    preview.innerHTML = '';
+    preview.appendChild(canvas);
+    pending = false;
+  });
+});
+
+downloadBtn.addEventListener('click', async () => {
+  const canvas = await selection.$toCanvas();
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'wipan-crop.png'; // 한글 파일명은 브라우저에서 깨질 수 있어 영문으로 지정
+  a.click();
+});</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 1. 자유 영역 크롭 ----------
+    (async () => {
+      await customElements.whenDefined('cropper-selection');
+      const sel1 = document.getElementById('sel1');
+      const result1 = document.getElementById('result1');
+      document.getElementById('cropBtn1').addEventListener('click', async () => {
+        const canvas = await sel1.$toCanvas();
+        result1.innerHTML = '';
+        result1.appendChild(canvas);
+      });
+
+      // ---------- 2. 비율 고정 크롭 ----------
+      const sel2 = document.getElementById('sel2');
+      document.getElementById('ratioSelect').addEventListener('change', (e) => {
+        sel2.setAttribute('aspect-ratio', e.target.value);
+      });
+
+      // ---------- 3. 회전 · 확대축소 · 좌우반전 ----------
+      const img3 = document.getElementById('img3');
+      let flipped3 = false;
+      document.getElementById('rotateBtn').addEventListener('click', () => img3.$rotate('90deg'));
+      document.getElementById('flipBtn').addEventListener('click', () => {
+        flipped3 = !flipped3;
+        img3.$scale(flipped3 ? -1 : 1, 1);
+      });
+      document.getElementById('zoomInBtn').addEventListener('click', () => img3.$zoom(0.1));
+      document.getElementById('zoomOutBtn').addEventListener('click', () => img3.$zoom(-0.1));
+      document.getElementById('resetBtn3').addEventListener('click', () => {
+        img3.$resetTransform();
+        flipped3 = false;
+      });
+
+      // ---------- 4. 실시간 미리보기 + 다운로드 ----------
+      const sel4 = document.getElementById('sel4');
+      const preview4 = document.getElementById('preview4');
+      let pending4 = false;
+      async function updatePreview() {
+        if (pending4) return;
+        pending4 = true;
+        requestAnimationFrame(async () => {
+          const canvas = await sel4.$toCanvas({ width: 160 });
+          preview4.innerHTML = '';
+          preview4.appendChild(canvas);
+          pending4 = false;
+        });
+      }
+      sel4.addEventListener('change', updatePreview);
+      updatePreview();
+
+      document.getElementById('downloadBtn4').addEventListener('click', async () => {
+        const canvas = await sel4.$toCanvas();
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'wipan-crop.png';
+        a.click();
+      });
+    })();
+  </script>
+</body>
+</html>
