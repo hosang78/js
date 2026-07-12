@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Turf.js</title>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.3.5/turf.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .layout-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .map-wrap {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #eaf3fa;
+    flex-shrink: 0;
+  }
+  .map-wrap svg { display: block; }
+  .side-col {
+    flex: 1;
+    min-width: 200px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.active { background: #205fb0; }
+  input[type="range"] { width: 100%; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    color: #2c3e91;
+    font-weight: 600;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Turf.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Turf.js</strong>는 위경도 좌표(GeoJSON)를 가지고 거리·면적·포함 여부 같은 지리 공간 계산을 해주는
+    라이브러리입니다. 지도를 그려주진 않고, 순수하게 좌표 계산만 담당합니다.
+    <ul>
+      <li><code>turf.distance(a, b)</code>로 두 지점 사이의 실제 거리(km) 계산</li>
+      <li><code>turf.area(polygon)</code>로 다각형의 실제 면적(㎡) 계산</li>
+      <li><code>turf.buffer(point, radius)</code>로 지점 주변 반경만큼의 원형 다각형 생성</li>
+      <li><code>turf.booleanPointInPolygon(point, polygon)</code>로 점이 다각형 안에 있는지 판별</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지는 실제 지도 타일(API 키가 필요) 없이, 위경도 좌표를 단순한 SVG 좌표로 직접 투영해서
+      보여줍니다. 아래 위판장 좌표와 부지 모양은 Turf.js 학습용으로 만든 <strong>가상의 좌표</strong>이며
+      실제 수협중앙회의 위치·부지가 아닙니다. Turf.js(CDN) 하나만 사용하고 다른 외부 라이브러리나
+      지도 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 두 지점 사이 거리 (turf.distance)</h2>
+    <div class="desc">본소에서 각 위판장까지의 실제 거리를 계산합니다. 위판장을 선택해보세요.</div>
+    <div class="layout-row">
+      <div class="map-wrap"><svg id="map1" width="380" height="380" viewBox="0 0 460 460"></svg></div>
+      <div class="side-col">
+        <div class="controls">
+          <button class="dest-btn active" data-dest="A">위판장 A</button>
+          <button class="dest-btn" data-dest="B">위판장 B</button>
+          <button class="dest-btn" data-dest="C">위판장 C</button>
+        </div>
+        <div class="result-box" id="distResult"></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const hq = turf.point([129.02, 35.00]);
+const target = turf.point([129.08, 35.05]);
+
+const km = turf.distance(hq, target, { units: 'kilometers' });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 다각형 면적 (turf.area)</h2>
+    <div class="desc">위판장 A 부지(다각형)의 실제 면적을 계산합니다.</div>
+    <div class="layout-row">
+      <div class="map-wrap"><svg id="map2" width="380" height="380" viewBox="0 0 460 460"></svg></div>
+      <div class="side-col">
+        <div class="result-box" id="areaResult"></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const site = turf.polygon([[
+  [129.070, 35.045], [129.092, 35.045],
+  [129.092, 35.058], [129.070, 35.058],
+  [129.070, 35.045],
+]]);
+
+const squareMeters = turf.area(site); // ㎡ 단위로 반환</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 반경 버퍼 생성 (turf.buffer)</h2>
+    <div class="desc">위판장 B를 중심으로 반경을 조절하면서 버퍼(원형 다각형)를 만들어봅니다.</div>
+    <div class="layout-row">
+      <div class="map-wrap"><svg id="map3" width="380" height="380" viewBox="0 0 460 460"></svg></div>
+      <div class="side-col">
+        <div class="controls" style="flex-direction:column; align-items:stretch;">
+          <span>반경: <strong id="radiusLabel">300</strong>m</span>
+          <input type="range" id="radiusSlider" min="100" max="1500" step="50" value="300" />
+        </div>
+        <div class="result-box" id="bufferResult"></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const center = turf.point([129.110, 34.990]);
+const buffered = turf.buffer(center, 0.3, { units: 'kilometers' }); // 반경 300m
+
+// buffered.geometry.coordinates[0] 가 원을 근사하는 다각형 좌표 배열</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 점이 다각형 안에 있는지 판별 (turf.booleanPointInPolygon)</h2>
+    <div class="desc">지도를 클릭해보세요. 클릭한 지점이 위판장 A 부지(파란 다각형) 안에 있는지 바로 판별합니다.</div>
+    <div class="layout-row">
+      <div class="map-wrap"><svg id="map4" width="380" height="380" viewBox="0 0 460 460"></svg></div>
+      <div class="side-col">
+        <div class="result-box" id="inPolyResult">지도를 클릭해보세요.</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>map.addEventListener('click', (e) => {
+  const [lng, lat] = unproject(e.offsetX, e.offsetY); // 클릭 좌표 -> 위경도 역변환
+  const clicked = turf.point([lng, lat]);
+  const isInside = turf.booleanPointInPolygon(clicked, site);
+});</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 좌표 <-> SVG 투영 ----------
+    const BOUNDS = { lngMin: 129.00, lngMax: 129.14, latMin: 34.97, latMax: 35.12 };
+    const W = 460, H = 460;
+    function project([lng, lat]) {
+      return [
+        ((lng - BOUNDS.lngMin) / (BOUNDS.lngMax - BOUNDS.lngMin)) * W,
+        ((BOUNDS.latMax - lat) / (BOUNDS.latMax - BOUNDS.latMin)) * H,
+      ];
+    }
+    function unproject(x, y) {
+      return [
+        BOUNDS.lngMin + (x / W) * (BOUNDS.lngMax - BOUNDS.lngMin),
+        BOUNDS.latMax - (y / H) * (BOUNDS.latMax - BOUNDS.latMin),
+      ];
+    }
+    function polygonToPath(coords) {
+      return coords
+        .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`)
+        .join(' ') + ' Z';
+    }
+    function svgEl(tag, attrs) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      return el;
+    }
+    function drawBaseMap(svg) {
+      svg.appendChild(svgEl('rect', { x: 0, y: 0, width: W, height: H, fill: '#eaf3fa' }));
+      // 대략적인 해안선 느낌의 배경 도형(가상)
+      svg.appendChild(svgEl('path', {
+        d: `M0,${H} L0,${H * 0.62} L${W * 0.35},${H * 0.5} L${W * 0.65},${H * 0.58} L${W},${H * 0.4} L${W},${H} Z`,
+        fill: '#d9e8d0',
+      }));
+    }
+
+    const LOCATIONS = {
+      HQ: [129.02, 35.00],
+      A: [129.081, 35.0515],
+      B: [129.110, 34.990],
+      C: [129.045, 35.088],
+    };
+    const SITE_A = turf.polygon([[
+      [129.070, 35.045], [129.092, 35.045],
+      [129.092, 35.058], [129.070, 35.058],
+      [129.070, 35.045],
+    ]]);
+
+    // ---------- 1. 거리 계산 ----------
+    (function () {
+      const svg = document.getElementById('map1');
+      drawBaseMap(svg);
+      const hqXY = project(LOCATIONS.HQ);
+      svg.appendChild(svgEl('circle', { cx: hqXY[0], cy: hqXY[1], r: 7, fill: '#0b0b0b' }));
+      svg.appendChild(svgEl('text', { x: hqXY[0] + 10, y: hqXY[1] + 4, 'font-size': 12, fill: '#0b0b0b' })).textContent = '본소';
+
+      const line = svgEl('line', { stroke: '#2a78d6', 'stroke-width': 2, 'stroke-dasharray': '6,4' });
+      svg.appendChild(line);
+      const destDot = svgEl('circle', { r: 7, fill: '#2a78d6' });
+      svg.appendChild(destDot);
+      const destLabel = svgEl('text', { 'font-size': 12, fill: '#2a78d6' });
+      svg.appendChild(destLabel);
+
+      const distResult = document.getElementById('distResult');
+      function updateDistance(destKey) {
+        const destXY = project(LOCATIONS[destKey]);
+        line.setAttribute('x1', hqXY[0]); line.setAttribute('y1', hqXY[1]);
+        line.setAttribute('x2', destXY[0]); line.setAttribute('y2', destXY[1]);
+        destDot.setAttribute('cx', destXY[0]); destDot.setAttribute('cy', destXY[1]);
+        destLabel.setAttribute('x', destXY[0] + 10); destLabel.setAttribute('y', destXY[1] + 4);
+        destLabel.textContent = `위판장 ${destKey}`;
+
+        const km = turf.distance(turf.point(LOCATIONS.HQ), turf.point(LOCATIONS[destKey]), { units: 'kilometers' });
+        distResult.textContent = `본소 → 위판장 ${destKey}: 약 ${km.toFixed(2)}km`;
+      }
+      document.querySelectorAll('.dest-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.dest-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          updateDistance(btn.dataset.dest);
+        });
+      });
+      updateDistance('A');
+    })();
+
+    // ---------- 2. 면적 계산 ----------
+    (function () {
+      const svg = document.getElementById('map2');
+      drawBaseMap(svg);
+      const coords = SITE_A.geometry.coordinates[0].map(project);
+      svg.appendChild(svgEl('path', { d: polygonToPath(coords), fill: 'rgba(42,120,214,0.35)', stroke: '#2a78d6', 'stroke-width': 2 }));
+      const labelXY = project([129.081, 35.0515]);
+      svg.appendChild(svgEl('text', { x: labelXY[0] - 24, y: labelXY[1], 'font-size': 12, fill: '#184f95' })).textContent = '위판장 A 부지';
+
+      const area = turf.area(SITE_A);
+      document.getElementById('areaResult').textContent =
+        `면적: 약 ${Math.round(area).toLocaleString()}㎡ (${(area / 10000).toFixed(2)}ha)`;
+    })();
+
+    // ---------- 3. 반경 버퍼 ----------
+    (function () {
+      const svg = document.getElementById('map3');
+      drawBaseMap(svg);
+      const centerXY = project(LOCATIONS.B);
+      const bufferPath = svgEl('path', { fill: 'rgba(27,175,122,0.3)', stroke: '#1baf7a', 'stroke-width': 2 });
+      svg.appendChild(bufferPath);
+      svg.appendChild(svgEl('circle', { cx: centerXY[0], cy: centerXY[1], r: 5, fill: '#0b0b0b' }));
+      svg.appendChild(svgEl('text', { x: centerXY[0] + 10, y: centerXY[1] + 4, 'font-size': 12, fill: '#0b0b0b' })).textContent = '위판장 B';
+
+      const radiusLabel = document.getElementById('radiusLabel');
+      const bufferResult = document.getElementById('bufferResult');
+      function updateBuffer(radiusM) {
+        const buffered = turf.buffer(turf.point(LOCATIONS.B), radiusM / 1000, { units: 'kilometers' });
+        const coords = buffered.geometry.coordinates[0].map(project);
+        bufferPath.setAttribute('d', polygonToPath(coords));
+        bufferResult.textContent = `반경 ${radiusM}m 버퍼 면적: 약 ${Math.round(turf.area(buffered)).toLocaleString()}㎡`;
+      }
+      document.getElementById('radiusSlider').addEventListener('input', (e) => {
+        const radiusM = Number(e.target.value);
+        radiusLabel.textContent = radiusM;
+        updateBuffer(radiusM);
+      });
+      updateBuffer(300);
+    })();
+
+    // ---------- 4. 점이 다각형 안에 있는지 ----------
+    (function () {
+      const svg = document.getElementById('map4');
+      drawBaseMap(svg);
+      const coords = SITE_A.geometry.coordinates[0].map(project);
+      svg.appendChild(svgEl('path', { d: polygonToPath(coords), fill: 'rgba(42,120,214,0.25)', stroke: '#2a78d6', 'stroke-width': 2 }));
+
+      const marker = svgEl('circle', { r: 6, fill: '#898781', style: 'display:none' });
+      svg.appendChild(marker);
+      const inPolyResult = document.getElementById('inPolyResult');
+
+      svg.addEventListener('click', (e) => {
+        const rect = svg.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const scaleY = H / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        const [lng, lat] = unproject(x, y);
+        const isInside = turf.booleanPointInPolygon(turf.point([lng, lat]), SITE_A);
+
+        marker.setAttribute('cx', x);
+        marker.setAttribute('cy', y);
+        marker.setAttribute('fill', isInside ? '#1baf7a' : '#e34948');
+        marker.style.display = 'block';
+        inPolyResult.textContent = isInside ? '✔ 위판장 A 부지 안에 있습니다.' : '✘ 위판장 A 부지 밖에 있습니다.';
+      });
+    })();
+  </script>
+</body>
+</html>
