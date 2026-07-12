@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Fuse.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .result-item {
+    padding: 8px 12px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fafbfc;
+    font-size: 13.5px;
+  }
+  .result-item .score {
+    color: #999;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  .no-result {
+    color: #999;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .slider-row input[type="range"] { flex: 1; }
+  mark {
+    background: #fff2a8;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Fuse.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Fuse.js</strong>는 오타나 일부 글자가 달라도 원하는 항목을 찾아주는
+    <strong>퍼지 검색(fuzzy search)</strong> 라이브러리입니다. 서버나 DB 없이 브라우저에서 목록을 바로 검색할 때 씁니다.
+    <ul>
+      <li>정확히 일치하지 않아도(오타·일부 글자 누락) 비슷한 항목을 점수(score)와 함께 찾아줌</li>
+      <li>검색 대상 필드를 여러 개 지정하고, 필드별 중요도(가중치)를 다르게 줄 수 있음</li>
+      <li><code>threshold</code> 값으로 얼마나 느슨하게/엄격하게 매칭할지 조절 가능</li>
+      <li>어느 글자가 매칭됐는지 위치 정보(<code>includeMatches</code>)를 받아 하이라이트 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 예시의 위판장/어종 목록은 Fuse.js 학습용으로 만든 <strong>샘플 데이터</strong>이며,
+      수협중앙회의 실제 위판장 현황과는 무관합니다. 이 페이지는 Fuse.js(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 퍼지 검색 (오타 허용)</h2>
+    <div class="desc">
+      어종 이름 목록에서 검색합니다. 예를 들어 <code>고등오</code>처럼 한 글자를 틀리게 입력해도
+      <code>고등어</code>가 결과에 나옵니다.
+    </div>
+    <input type="text" id="search1" placeholder="어종 이름을 입력하세요 (예: 고등오, 갈치, 오징엉)" />
+    <div class="result-list" id="results1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const fish = ['고등어', '갈치', '오징어', '멸치', '참치', '광어', '우럭', '전어', '삼치', '도미'];
+const fuse = new Fuse(fish, { threshold: 0.4 });
+
+fuse.search('고등오');
+// -> [{ item: '고등어', refIndex: 0, score: 0.1x }]</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 다중 필드 + 가중치 검색</h2>
+    <div class="desc">
+      위판장 이름과 지역, 두 필드를 동시에 검색하되 이름에 더 높은 가중치를 줍니다.
+      지역명(예: <code>부산</code>)으로 검색해도 결과가 나옵니다.
+    </div>
+    <input type="text" id="search2" placeholder="위판장 이름 또는 지역으로 검색 (예: 노량진, 경남)" />
+    <div class="result-list" id="results2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const markets = [
+  { name: '부산공동어시장', region: '부산' },
+  { name: '노량진수산시장', region: '서울' },
+  { name: '목포수산시장', region: '전남' },
+  { name: '포항죽도시장', region: '경북' },
+];
+
+const fuse = new Fuse(markets, {
+  keys: [
+    { name: 'name', weight: 0.7 },
+    { name: 'region', weight: 0.3 },
+  ],
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. threshold 조절 (매칭 엄격도)</h2>
+    <div class="desc">
+      <code>threshold</code>가 0에 가까울수록 엄격(정확히 일치), 1에 가까울수록 느슨(대충 비슷해도 매칭)합니다.
+      고정된 검색어 <code>고등얼</code>로 threshold를 바꿔가며 결과 개수 변화를 확인해보세요.
+    </div>
+    <div class="slider-row">
+      <span>엄격</span>
+      <input type="range" id="thresholdSlider" min="0" max="10" value="4" />
+      <span>느슨</span>
+      <span id="thresholdValue">0.4</span>
+    </div>
+    <div class="result-list" id="results3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const fuse = new Fuse(fish, { threshold: 0.4 }); // 0(엄격) ~ 1(느슨)
+fuse.search('고등얼');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 매치 하이라이트</h2>
+    <div class="desc">
+      <code>includeMatches: true</code> 옵션을 주면 어느 글자가 매칭됐는지 위치 정보를 받아
+      <mark>이렇게</mark> 강조 표시할 수 있습니다.
+    </div>
+    <input type="text" id="search4" placeholder="어종 이름을 입력하세요 (예: 삼치, 도밋)" />
+    <div class="result-list" id="results4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const fuse = new Fuse(fish, { includeMatches: true, threshold: 0.4 });
+const [result] = fuse.search('삼치');
+// result.matches[0].indices -> [[0, 1]] 같은 매칭 구간 배열</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@7.4.2/dist/fuse.min.mjs';
+
+    const fish = ['고등어', '갈치', '오징어', '멸치', '참치', '광어', '우럭', '전어', '삼치', '도미', '병어', '조기', '홍어', '문어', '낙지', '새우', '꽃게', '대게', '굴', '전복'];
+
+    const markets = [
+      { name: '부산공동어시장', region: '부산' },
+      { name: '노량진수산시장', region: '서울' },
+      { name: '목포수산시장', region: '전남' },
+      { name: '포항죽도시장', region: '경북' },
+      { name: '통영수산시장', region: '경남' },
+      { name: '여수수산시장', region: '전남' },
+    ];
+
+    // ---------- 1. 기본 퍼지 검색 ----------
+    const fuse1 = new Fuse(fish, { threshold: 0.4, includeScore: true });
+    const input1 = document.getElementById('search1');
+    const results1 = document.getElementById('results1');
+
+    function renderSimpleResults(container, list) {
+      container.innerHTML = '';
+      if (list.length === 0) {
+        container.innerHTML = '<div class="no-result">검색어를 입력해보세요.</div>';
+        return;
+      }
+      list.forEach((r) => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.textContent = r.item;
+        if (r.score !== undefined) {
+          const score = document.createElement('span');
+          score.className = 'score';
+          score.textContent = `score ${r.score.toFixed(3)}`;
+          div.appendChild(score);
+        }
+        container.appendChild(div);
+      });
+    }
+
+    input1.addEventListener('input', () => {
+      const q = input1.value.trim();
+      renderSimpleResults(results1, q ? fuse1.search(q) : []);
+    });
+    renderSimpleResults(results1, []);
+
+    // ---------- 2. 다중 필드 + 가중치 ----------
+    const fuse2 = new Fuse(markets, {
+      keys: [
+        { name: 'name', weight: 0.7 },
+        { name: 'region', weight: 0.3 },
+      ],
+      threshold: 0.4,
+    });
+    const input2 = document.getElementById('search2');
+    const results2 = document.getElementById('results2');
+
+    function renderMarketResults(list) {
+      results2.innerHTML = '';
+      if (list.length === 0) {
+        results2.innerHTML = '<div class="no-result">검색어를 입력해보세요.</div>';
+        return;
+      }
+      list.forEach((r) => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.textContent = `${r.item.name} (${r.item.region})`;
+        results2.appendChild(div);
+      });
+    }
+    input2.addEventListener('input', () => {
+      const q = input2.value.trim();
+      renderMarketResults(q ? fuse2.search(q) : []);
+    });
+    renderMarketResults([]);
+
+    // ---------- 3. threshold 조절 ----------
+    const slider = document.getElementById('thresholdSlider');
+    const thresholdValueEl = document.getElementById('thresholdValue');
+    const results3 = document.getElementById('results3');
+    const fixedQuery = '고등얼';
+
+    function runThresholdSearch() {
+      const threshold = Number(slider.value) / 10;
+      thresholdValueEl.textContent = threshold.toFixed(1);
+      const fuse = new Fuse(fish, { threshold, includeScore: true });
+      renderSimpleResults(results3, fuse.search(fixedQuery));
+    }
+    slider.addEventListener('input', runThresholdSearch);
+    runThresholdSearch();
+
+    // ---------- 4. 매치 하이라이트 ----------
+    const fuse4 = new Fuse(fish, { includeMatches: true, threshold: 0.4 });
+    const input4 = document.getElementById('search4');
+    const results4 = document.getElementById('results4');
+
+    function highlight(text, indices) {
+      if (!indices || indices.length === 0) return text;
+      let out = '';
+      let cursor = 0;
+      indices.forEach(([start, end]) => {
+        out += escapeHtml(text.slice(cursor, start));
+        out += '<mark>' + escapeHtml(text.slice(start, end + 1)) + '</mark>';
+        cursor = end + 1;
+      });
+      out += escapeHtml(text.slice(cursor));
+      return out;
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    }
+
+    function renderHighlightResults(list) {
+      results4.innerHTML = '';
+      if (list.length === 0) {
+        results4.innerHTML = '<div class="no-result">검색어를 입력해보세요.</div>';
+        return;
+      }
+      list.forEach((r) => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        const indices = r.matches && r.matches[0] ? r.matches[0].indices : [];
+        div.innerHTML = highlight(r.item, indices);
+        results4.appendChild(div);
+      });
+    }
+    input4.addEventListener('input', () => {
+      const q = input4.value.trim();
+      renderHighlightResults(q ? fuse4.search(q) : []);
+    });
+    renderHighlightResults([]);
+  </script>
+</body>
+</html>
