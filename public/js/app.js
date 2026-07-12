@@ -23,21 +23,29 @@ async function loadPages() {
     window.location.href = '/login';
     return;
   }
-  const pages = await res.json();
+  const groups = await res.json();
 
   menuList.innerHTML = '';
 
-  if (pages.length === 0) {
+  const totalPages = groups.reduce((sum, g) => sum + g.pages.length, 0);
+  if (totalPages === 0) {
     menuList.innerHTML = '<div class="menu-empty">등록된 페이지가 없습니다</div>';
     return;
   }
 
-  pages.forEach((page) => {
-    const item = document.createElement('div');
-    item.className = 'menu-item';
-    item.textContent = page.name;
-    item.addEventListener('click', () => selectPage(page, item));
-    menuList.appendChild(item);
+  groups.forEach((group) => {
+    const groupLabel = document.createElement('div');
+    groupLabel.className = 'menu-group-label';
+    groupLabel.textContent = group.label;
+    menuList.appendChild(groupLabel);
+
+    group.pages.forEach((page) => {
+      const item = document.createElement('div');
+      item.className = 'menu-item';
+      item.textContent = page.name;
+      item.addEventListener('click', () => selectPage(page, item));
+      menuList.appendChild(item);
+    });
   });
 }
 

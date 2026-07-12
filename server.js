@@ -21,6 +21,20 @@ if (!ADMIN_PASSWORD_HASH || !SESSION_SECRET) {
 
 const PAGES_DIR = path.join(__dirname, 'pages');
 
+// 좌측 메뉴 그룹 순서와 표시 이름 (meta.json의 category 값과 매칭)
+const CATEGORY_ORDER = [
+  { key: 'chart', label: '차트 · 시각화' },
+  { key: 'diagram', label: '다이어그램 · 그래프 구조' },
+  { key: 'map', label: '지도 · 위치 데이터' },
+  { key: 'datetime', label: '날짜 · 시간' },
+  { key: 'data', label: '데이터 처리 · 유틸리티' },
+  { key: 'form', label: '폼 · 입력 컨트롤' },
+  { key: 'ui', label: 'UI 인터랙션 · 알림' },
+  { key: 'canvas', label: '캔버스 · 이미지 · 애니메이션' },
+  { key: 'document', label: '문서 · 텍스트 처리' },
+  { key: 'etc', label: '기타' },
+];
+
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -95,6 +109,7 @@ app.get('/api/pages', requireAuthApi, (req, res) => {
           slug: entry.name,
           name: meta.name || entry.name,
           entry: meta.entry || 'index.html',
+          category: meta.category || 'etc',
         };
       } catch (err) {
         console.error(`meta.json 파싱 실패: ${entry.name}`, err.message);
@@ -104,7 +119,14 @@ app.get('/api/pages', requireAuthApi, (req, res) => {
     .filter(Boolean)
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
-  res.json(list);
+  // 카테고리별로 묶어서, 정해진 그룹 순서대로 반환 (그룹 안에서는 이름순)
+  const groups = CATEGORY_ORDER.map(({ key, label }) => ({
+    category: key,
+    label,
+    pages: list.filter((page) => page.category === key),
+  })).filter((group) => group.pages.length > 0);
+
+  res.json(groups);
 });
 
 // 개별 페이지 정적 파일 (iframe 로 로드됨) - 인증 필요

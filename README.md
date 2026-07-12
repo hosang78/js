@@ -55,11 +55,15 @@ pages/
 ```json
 {
   "name": "메뉴에 표시될 이름",
-  "entry": "index.html"
+  "description": "페이지 설명(선택)",
+  "entry": "index.html",
+  "category": "chart"
 }
 ```
 
-서버 재시작 없이, 새로고침만 하면 메뉴에 바로 나타납니다. 예시로 `pages/weather`(Open-Meteo 날씨 조회), `pages/currency`(frankfurter.app 환율 변환)가 포함되어 있으니 참고해서 만들면 됩니다.
+`category`는 좌측 메뉴에서 페이지를 묶는 그룹입니다. 사용 가능한 값과 그룹 순서는 `server.js`의 `CATEGORY_ORDER`에 정의되어 있습니다 (chart/diagram/map/datetime/data/form/ui/canvas/document). 없는 값을 쓰면 "기타" 그룹으로 표시됩니다.
+
+서버 재시작 없이, 새로고침만 하면 메뉴에 바로 나타납니다. `pages/` 아래 폴더들을 참고해서 만들면 됩니다.
 
 ### API 키가 필요한 외부 API를 쓰고 싶다면
 
