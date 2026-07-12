@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>날씨 조회</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+  }
+  h2 { margin-top: 0; }
+  .search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  button:hover { background: #3d67e0; }
+  .results { margin-bottom: 20px; }
+  .result-item {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    background: #fff;
+  }
+  .result-item:hover { background: #eef2ff; }
+  .weather-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 320px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .temp { font-size: 40px; font-weight: 700; }
+  .status { color: #666; margin-top: 4px; }
+  .error { color: #d33; }
+</style>
+</head>
+<body>
+  <h2>날씨 조회</h2>
+  <div class="search-row">
+    <input id="cityInput" placeholder="도시 이름 입력 (예: Seoul)" />
+    <button id="searchBtn">검색</button>
+  </div>
+  <div class="results" id="results"></div>
+  <div id="weatherArea"></div>
+
+  <script>
+    const cityInput = document.getElementById('cityInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultsEl = document.getElementById('results');
+    const weatherArea = document.getElementById('weatherArea');
+
+    const WEATHER_CODE_MAP = {
+      0: '맑음', 1: '대체로 맑음', 2: '부분 흐림', 3: '흐림',
+      45: '안개', 48: '서리 안개',
+      51: '이슬비 약함', 53: '이슬비', 55: '이슬비 강함',
+      61: '비 약함', 63: '비', 65: '비 강함',
+      71: '눈 약함', 73: '눈', 75: '눈 강함',
+      80: '소나기 약함', 81: '소나기', 82: '소나기 강함',
+      95: '뇌우', 96: '뇌우(우박)', 99: '강한 뇌우(우박)',
+    };
+
+    async function searchCity() {
+      const name = cityInput.value.trim();
+      if (!name) return;
+      resultsEl.innerHTML = '검색 중...';
+      weatherArea.innerHTML = '';
+
+      try {
+        const res = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=5&language=ko&format=json`
+        );
+        const data = await res.json();
+
+        if (!data.results || data.results.length === 0) {
+          resultsEl.innerHTML = '<div class="error">검색 결과가 없습니다.</div>';
+          return;
+        }
+
+        resultsEl.innerHTML = '';
+        data.results.forEach((place) => {
+          const div = document.createElement('div');
+          div.className = 'result-item';
+          div.textContent = `${place.name}${place.admin1 ? ', ' + place.admin1 : ''}, ${place.country}`;
+          div.addEventListener('click', () => loadWeather(place));
+          resultsEl.appendChild(div);
+        });
+      } catch (err) {
+        resultsEl.innerHTML = '<div class="error">검색 중 오류가 발생했습니다.</div>';
+      }
+    }
+
+    async function loadWeather(place) {
+      weatherArea.innerHTML = '불러오는 중...';
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current_weather=true`
+        );
+        const data = await res.json();
+        const cw = data.current_weather;
+        const desc = WEATHER_CODE_MAP[cw.weathercode] || '알 수 없음';
+
+        weatherArea.innerHTML = `
+          <div class="weather-card">
+            <div>${place.name}${place.admin1 ? ', ' + place.admin1 : ''}</div>
+            <div class="temp">${cw.temperature}°C</div>
+            <div class="status">${desc} · 풍속 ${cw.windspeed}km/h</div>
+          </div>
+        `;
+      } catch (err) {
+        weatherArea.innerHTML = '<div class="error">날씨 정보를 불러오지 못했습니다.</div>';
+      }
+    }
+
+    searchBtn.addEventListener('click', searchCity);
+    cityInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') searchCity();
+    });
+  </script>
+</body>
+</html>
