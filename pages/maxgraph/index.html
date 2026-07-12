@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>maxGraph</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@maxgraph/core@0.24.0/css/common.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  .deprecated-note {
+    font-size: 12.5px;
+    color: #7a1f1f;
+    background: #ffecec;
+    border: 1px solid #ffc9c9;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .graph-wrap {
+    width: 100%;
+    height: 320px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    overflow: auto;
+  }
+  .hint {
+    font-size: 12px;
+    color: #888;
+    margin-top: 6px;
+  }
+  .task-info {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>maxGraph 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>maxGraph</strong>는 노드(Vertex)와 연결선(Edge)으로 이루어진 다이어그램을
+    브라우저에서 직접 그리고 마우스로 편집할 수 있게 해주는 라이브러리입니다. (draw.io/diagrams.net을 만든 팀 개발)
+    <ul>
+      <li>노드 생성, 드래그 이동, 클릭 선택, 마우스로 새 연결선 그리기 등을 기본 제공</li>
+      <li>노드/선마다 색상·모양·둥근 정도 등 스타일을 개별 지정 가능</li>
+      <li>클릭/이동 등 사용자 조작에 이벤트 콜백을 연결할 수 있음</li>
+    </ul>
+    <div class="deprecated-note">
+      ※ 원래 요청하신 <strong>mxGraph</strong>는 2020년 지원 종료(deprecated)되어, 같은 팀이 만든 후속 라이브러리인
+      <strong>maxGraph</strong>(<code>@maxgraph/core</code>)로 대신 만들었습니다. mxGraph의 API 개념을 그대로 이어받아
+      핵심 기능은 동일하게 파악할 수 있습니다.
+    </div>
+    <div class="disclaimer">
+      ※ 아래 예시들은 maxGraph 문법 학습용으로 만든 <strong>가상의 샘플 관계도</strong>이며,
+      수협중앙회의 실제 조직/유통 구조와는 무관합니다. 이 페이지는 maxGraph(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 그래프 · 드래그 · 선택</h2>
+    <div class="desc">
+      노드를 만들고 화살표로 연결한 기본 다이어그램입니다. 노드를 <strong>드래그하면 위치가 바뀌고</strong>,
+      클릭하면 선택되며, 빈 캔버스를 드래그하면 여러 개를 한번에 선택(러버밴드)할 수 있습니다.
+      예시: 수산물 유통 흐름
+    </div>
+    <div class="graph-wrap" id="graph1"></div>
+    <div class="hint">노드를 마우스로 끌어서 옮겨보세요. 화면이 좁으면 이 영역을 좌우로 스크롤할 수 있습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const graph = new Graph(document.getElementById('graph1'));
+const parent = graph.getDefaultParent();
+
+graph.batchUpdate(() => {
+  const v1 = graph.insertVertex({ parent, value: '어선 조업', position: [20, 20], size: [100, 40],
+    style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+  const v2 = graph.insertVertex({ parent, value: '위판장 입고', position: [180, 20], size: [100, 40],
+    style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+  // ...
+  graph.insertEdge({ parent, source: v1, target: v2 });
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 커스텀 스타일 (색상 · 모양)</h2>
+    <div class="desc">
+      노드마다 <code>style</code> 객체로 채우기색/테두리색/글자색/모양(사각형·타원 등)을 다르게 지정할 수 있습니다.
+      예시: 수협중앙회-지역조합-조합원 관계도
+    </div>
+    <div class="graph-wrap" id="graph2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>graph.insertVertex({ parent, value: '수협중앙회 (예시)', position: [180, 20], size: [140, 40],
+  style: { fillColor: '#2c3e91', fontColor: '#ffffff', strokeColor: '#1c2666' } });
+
+graph.insertVertex({ parent, value: '지역조합 A', position: [40, 140], size: [120, 40],
+  style: { fillColor: '#2ecc71', fontColor: '#ffffff', strokeColor: '#1e8449', rounded: true } });
+
+graph.insertVertex({ parent, value: '조합원', position: [40, 240], size: [120, 40],
+  style: { fillColor: '#f5d76e', strokeColor: '#b8912f', shape: 'ellipse' } });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 클릭 이벤트 처리</h2>
+    <div class="desc">
+      노드를 클릭하면 <code>InternalEvent.CLICK</code> 콜백이 호출되어 상세 정보를 아래에 표시합니다.
+      예시: 위판장 간 연계 정보
+    </div>
+    <div class="graph-wrap" id="graph3"></div>
+    <div class="task-info" id="info3">노드를 클릭해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>graph.addListener(InternalEvent.CLICK, (sender, evt) => {
+  const cell = evt.getProperty('cell');
+  if (cell && cell.isVertex()) {
+    info.textContent = '클릭한 노드: ' + cell.value;
+  }
+});</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    import { Graph, InternalEvent } from 'https://cdn.jsdelivr.net/npm/@maxgraph/core@0.24.0/+esm';
+
+    // ---------- 1. 기본 그래프 ----------
+    const graph1 = new Graph(document.getElementById('graph1'));
+    const parent1 = graph1.getDefaultParent();
+    graph1.batchUpdate(() => {
+      const v1 = graph1.insertVertex({ parent: parent1, value: '어선 조업', position: [20, 20], size: [100, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      const v2 = graph1.insertVertex({ parent: parent1, value: '위판장 입고', position: [180, 20], size: [100, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      const v3 = graph1.insertVertex({ parent: parent1, value: '경매', position: [340, 20], size: [100, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      const v4 = graph1.insertVertex({ parent: parent1, value: '도매상', position: [340, 140], size: [100, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      const v5 = graph1.insertVertex({ parent: parent1, value: '소비자', position: [180, 140], size: [100, 40], style: { fillColor: '#ffe9c7', strokeColor: '#c98a1f', rounded: true } });
+      graph1.insertEdge({ parent: parent1, source: v1, target: v2 });
+      graph1.insertEdge({ parent: parent1, source: v2, target: v3 });
+      graph1.insertEdge({ parent: parent1, source: v3, target: v4 });
+      graph1.insertEdge({ parent: parent1, source: v4, target: v5 });
+    });
+
+    // ---------- 2. 커스텀 스타일 ----------
+    const graph2 = new Graph(document.getElementById('graph2'));
+    const parent2 = graph2.getDefaultParent();
+    graph2.batchUpdate(() => {
+      const hq = graph2.insertVertex({ parent: parent2, value: '수협중앙회 (예시)', position: [180, 20], size: [140, 40], style: { fillColor: '#2c3e91', fontColor: '#ffffff', strokeColor: '#1c2666' } });
+      const c1 = graph2.insertVertex({ parent: parent2, value: '지역조합 A', position: [40, 140], size: [120, 40], style: { fillColor: '#2ecc71', fontColor: '#ffffff', strokeColor: '#1e8449', rounded: true } });
+      const c2 = graph2.insertVertex({ parent: parent2, value: '지역조합 B', position: [340, 140], size: [120, 40], style: { fillColor: '#2ecc71', fontColor: '#ffffff', strokeColor: '#1e8449', rounded: true } });
+      const m1 = graph2.insertVertex({ parent: parent2, value: '조합원', position: [40, 240], size: [120, 40], style: { fillColor: '#f5d76e', strokeColor: '#b8912f', shape: 'ellipse' } });
+      graph2.insertEdge({ parent: parent2, source: hq, target: c1 });
+      graph2.insertEdge({ parent: parent2, source: hq, target: c2 });
+      graph2.insertEdge({ parent: parent2, source: c1, target: m1 });
+    });
+
+    // ---------- 3. 클릭 이벤트 ----------
+    const graph3 = new Graph(document.getElementById('graph3'));
+    const parent3 = graph3.getDefaultParent();
+    graph3.batchUpdate(() => {
+      const n1 = graph3.insertVertex({ parent: parent3, value: '부산공동어시장', position: [40, 60], size: [130, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      const n2 = graph3.insertVertex({ parent: parent3, value: '목포위판장', position: [260, 60], size: [130, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      const n3 = graph3.insertVertex({ parent: parent3, value: '포항위판장', position: [150, 160], size: [130, 40], style: { fillColor: '#dbe8ff', strokeColor: '#4f7dff', rounded: true } });
+      graph3.insertEdge({ parent: parent3, source: n1, target: n2 });
+      graph3.insertEdge({ parent: parent3, source: n1, target: n3 });
+    });
+
+    const info3 = document.getElementById('info3');
+    graph3.addListener(InternalEvent.CLICK, (sender, evt) => {
+      const cell = evt.getProperty('cell');
+      if (cell && cell.isVertex()) {
+        info3.textContent = '클릭한 노드: ' + cell.value;
+      }
+    });
+  </script>
+</body>
+</html>
