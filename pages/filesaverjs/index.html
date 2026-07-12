@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>FileSaver.js</title>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 90px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13.5px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button.secondary {
+    background: #fff;
+    color: #4f7dff;
+    border: 1px solid #4f7dff;
+  }
+  canvas.draw-canvas {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    touch-action: none;
+    display: block;
+    margin-bottom: 10px;
+  }
+  .status-msg {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>FileSaver.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>FileSaver.js</strong>는 브라우저에서 만든 데이터(Blob)를 파일로 저장(다운로드)할 때
+    브라우저마다 다른 방식 차이를 신경 쓰지 않아도 되게 해주는 아주 작은 라이브러리입니다.
+    <ul>
+      <li><code>saveAs(blob, 파일명)</code> 한 줄로 어떤 데이터든 파일로 저장 가능</li>
+      <li>텍스트, JSON, 이미지(canvas) 등 Blob으로 만들 수 있는 건 뭐든 저장 가능</li>
+      <li>Blob의 MIME 타입에 따라 확장자만 바꿔주면 됨 (txt/json/csv/html 등)</li>
+      <li>직접 <code>&lt;a download&gt;</code> 태그를 만드는 것보다 브라우저 차이를 덜 신경 써도 됨</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 메모 예시는 FileSaver.js 학습용 샘플이며, 실제 수협중앙회의 자료가 아닙니다.
+      이 페이지는 FileSaver.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 텍스트 파일 저장</h2>
+    <div class="desc">아래 내용을 .txt 파일로 저장합니다.</div>
+    <textarea id="input1">오늘 위판 메모 (예시)
+- 고등어 320kg, 부산공동어시장
+- 갈치 180kg, 목포수산시장</textarea>
+    <button id="saveBtn1">텍스트 파일로 저장</button>
+    <div class="status-msg" id="status1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+saveAs(blob, '위판메모.txt');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. JSON 파일 저장</h2>
+    <div class="desc">아래 표를 JS 객체로 만들어 JSON 파일로 저장합니다.</div>
+    <button id="saveBtn2">JSON 파일로 저장</button>
+    <div class="status-msg" id="status2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const data = [
+  { 어종: '고등어', 수량: 320, 위판장: '부산공동어시장' },
+  { 어종: '갈치', 수량: 180, 위판장: '목포수산시장' },
+];
+const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+saveAs(blob, 'wipan-data.json');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 캔버스 이미지 저장</h2>
+    <div class="desc">아래 캔버스에 간단히 그려진 그림을 PNG 파일로 저장합니다.</div>
+    <canvas id="drawCanvas" class="draw-canvas" width="280" height="160"></canvas>
+    <button id="saveBtn3">PNG로 저장</button>
+    <div class="status-msg" id="status3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>canvas.toBlob((blob) => {
+  saveAs(blob, 'wipan-canvas.png');
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 여러 MIME 타입으로 저장</h2>
+    <div class="desc">같은 데이터를 형식만 바꿔서(txt/csv/json/html) 각각 저장해봅니다.</div>
+    <button id="saveTxtBtn" class="secondary">.txt로 저장</button>
+    <button id="saveCsvBtn" class="secondary">.csv로 저장</button>
+    <button id="saveJsonBtn" class="secondary">.json으로 저장</button>
+    <button id="saveHtmlBtn" class="secondary">.html로 저장</button>
+    <div class="status-msg" id="status4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>saveAs(new Blob([csvText], { type: 'text/csv;charset=utf-8' }), 'wipan.csv');
+saveAs(new Blob([htmlText], { type: 'text/html;charset=utf-8' }), 'wipan.html');
+// MIME 타입은 브라우저가 파일을 어떻게 다룰지 힌트를 줄 뿐, 실제 형식은 파일명 확장자로 결정됨</pre>
+    </details>
+  </section>
+
+  <script>
+    function setStatus(el, text) {
+      el.textContent = text;
+    }
+
+    // ---------- 1. 텍스트 파일 저장 ----------
+    document.getElementById('saveBtn1').addEventListener('click', () => {
+      const text = document.getElementById('input1').value;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      saveAs(blob, 'wipan-memo.txt'); // 일부 브라우저는 다운로드에서 한글 파일명을 깨뜨려서 영문으로 지정
+      setStatus(document.getElementById('status1'), '텍스트 파일이 저장되었습니다.');
+    });
+
+    // ---------- 2. JSON 파일 저장 ----------
+    document.getElementById('saveBtn2').addEventListener('click', () => {
+      const data = [
+        { 어종: '고등어', 수량: 320, 위판장: '부산공동어시장' },
+        { 어종: '갈치', 수량: 180, 위판장: '목포수산시장' },
+        { 어종: '오징어', 수량: 95, 위판장: '통영수산시장' },
+      ];
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      saveAs(blob, 'wipan-data.json');
+      setStatus(document.getElementById('status2'), 'JSON 파일이 저장되었습니다.');
+    });
+
+    // ---------- 3. 캔버스 이미지 저장 ----------
+    const canvas = document.getElementById('drawCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#eef2ff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#4f7dff';
+    ctx.beginPath();
+    ctx.ellipse(110, 80, 60, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(170, 80);
+    ctx.lineTo(200, 60);
+    ctx.lineTo(200, 100);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('위판 캔버스 예시', 60, 140);
+
+    document.getElementById('saveBtn3').addEventListener('click', () => {
+      canvas.toBlob((blob) => {
+        saveAs(blob, 'wipan-canvas.png');
+        setStatus(document.getElementById('status3'), 'PNG 이미지가 저장되었습니다.');
+      });
+    });
+
+    // ---------- 4. 여러 MIME 타입 ----------
+    const status4 = document.getElementById('status4');
+    const rows = [
+      { fish: '고등어', qty: 320, market: '부산공동어시장' },
+      { fish: '갈치', qty: 180, market: '목포수산시장' },
+    ];
+
+    document.getElementById('saveTxtBtn').addEventListener('click', () => {
+      const text = rows.map((r) => `${r.fish} ${r.qty}kg (${r.market})`).join('\n');
+      saveAs(new Blob([text], { type: 'text/plain;charset=utf-8' }), 'wipan.txt');
+      setStatus(status4, '.txt 파일로 저장되었습니다.');
+    });
+
+    document.getElementById('saveCsvBtn').addEventListener('click', () => {
+      const csv = '어종,수량,위판장\n' + rows.map((r) => `${r.fish},${r.qty},${r.market}`).join('\n');
+      saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'wipan.csv');
+      setStatus(status4, '.csv 파일로 저장되었습니다.');
+    });
+
+    document.getElementById('saveJsonBtn').addEventListener('click', () => {
+      saveAs(new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' }), 'wipan.json');
+      setStatus(status4, '.json 파일로 저장되었습니다.');
+    });
+
+    document.getElementById('saveHtmlBtn').addEventListener('click', () => {
+      const html = `<table border="1"><tr><th>어종</th><th>수량</th><th>위판장</th></tr>${rows
+        .map((r) => `<tr><td>${r.fish}</td><td>${r.qty}</td><td>${r.market}</td></tr>`)
+        .join('')}</table>`;
+      saveAs(new Blob([html], { type: 'text/html;charset=utf-8' }), 'wipan.html');
+      setStatus(status4, '.html 파일로 저장되었습니다.');
+    });
+  </script>
+</body>
+</html>
