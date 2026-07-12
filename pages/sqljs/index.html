@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>sql.js</title>
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.14.1/dist/sql-wasm.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.danger { background: #e34948; }
+  button.danger:hover { background: #c93b3a; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  input[type="text"] {
+    padding: 7px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 13px;
+    flex: 1;
+    min-width: 180px;
+  }
+  table.result {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  table.result th, table.result td {
+    border: 1px solid #eee;
+    padding: 6px 8px;
+    text-align: left;
+  }
+  table.result th { background: #f4f6fa; color: #555; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    color: #2c3e91;
+    font-weight: 600;
+  }
+  .result-box.danger { background: #fff0f0; border-color: #f3c9c9; color: #c23b3b; }
+  .result-box.safe { background: #eafaf0; border-color: #b8ebcf; color: #0a7a3d; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>sql.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>sql.js</strong>는 SQLite 데이터베이스 엔진을 WebAssembly로 컴파일해서, 서버 없이 브라우저
+    안에서 진짜 SQL 쿼리를 실행할 수 있게 해주는 라이브러리입니다.
+    <ul>
+      <li><code>new SQL.Database()</code>로 메모리 안에 SQLite 데이터베이스 생성</li>
+      <li><code>db.exec(sql)</code>로 SQL을 그대로 실행하고 결과를 컬럼/행 배열로 받음</li>
+      <li><code>db.prepare(sql)</code> + <code>bind()</code>로 값을 안전하게 끼워넣는 파라미터 바인딩 지원</li>
+      <li><code>db.export()</code>로 현재 데이터베이스를 진짜 <code>.sqlite</code> 파일(바이너리)로 추출 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 기록 데이터는 sql.js 학습용으로 만든 <strong>가상의 샘플</strong>이며,
+      실제 수협중앙회의 데이터베이스가 아닙니다. 이 페이지는 sql.js(CDN, WebAssembly) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다. 모든 데이터는 이 브라우저 탭 안에만 존재하며
+      새로고침하면 사라집니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 쿼리 실행</h2>
+    <div class="desc">위판 기록 테이블을 만들고 데이터를 넣은 뒤, <code>SELECT</code>로 조회한 결과를 표로 보여줍니다.</div>
+    <div class="controls"><button id="selectAllBtn1">전체 조회</button></div>
+    <div id="tableWrap1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>db.run(`
+  CREATE TABLE markets (id INTEGER PRIMARY KEY, name TEXT, region TEXT);
+  CREATE TABLE records (id INTEGER PRIMARY KEY, market_id INTEGER, species TEXT, weight REAL, price INTEGER);
+  INSERT INTO markets VALUES (1, '부산공동어시장', '경상권'), (2, '목포수산시장', '전라권');
+  INSERT INTO records (market_id, species, weight, price) VALUES
+    (1, '고등어', 320, 3200), (1, '갈치', 180, 8500), (2, '오징어', 95, 6100);
+`);
+
+const res = db.exec('SELECT * FROM records');
+res[0].columns; // ['id', 'market_id', 'species', 'weight', 'price']
+res[0].values;  // [[1, 1, '고등어', 320, 3200], ...]</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 파라미터 바인딩 — SQL 인젝션 방지</h2>
+    <div class="desc">
+      어종 이름으로 검색합니다. 검색어에 <code>x' OR '1'='1</code> 같은 값을 넣고 두 방식을 비교해보세요.
+      문자열을 그대로 이어붙이면 뚫리고, 파라미터 바인딩을 쓰면 안전합니다.
+    </div>
+    <div class="controls">
+      <input type="text" id="searchInput2" value="고등어" />
+      <button class="ghost" id="fillEvilBtn2">인젝션 값 채우기</button>
+    </div>
+    <div class="controls">
+      <button class="danger" id="unsafeBtn2">위험한 방식 (문자열 이어붙이기)</button>
+      <button id="safeBtn2">안전한 방식 (파라미터 바인딩)</button>
+    </div>
+    <div class="result-box" id="result2">검색어를 입력하고 버튼을 눌러보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// 위험: 사용자 입력을 SQL 문자열에 직접 끼워넣음
+db.exec(`SELECT * FROM records WHERE species = '${userInput}'`);
+// userInput이 "x' OR '1'='1" 이면 -> WHERE species = 'x' OR '1'='1' 가 되어 전체 행이 나옴
+
+// 안전: 값은 별도로 바인딩, SQL 구조와 절대 섞이지 않음
+const stmt = db.prepare('SELECT * FROM records WHERE species = :s');
+stmt.bind({ ':s': userInput });
+while (stmt.step()) rows.push(stmt.getAsObject());
+stmt.free();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. JOIN · GROUP BY 집계</h2>
+    <div class="desc">위판장(markets)과 위판 기록(records) 두 테이블을 <code>JOIN</code>하고, 위판장별 합계를 <code>GROUP BY</code>로 구합니다.</div>
+    <div class="controls"><button id="joinBtn3">위판장별 합계 보기</button></div>
+    <div id="tableWrap3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const res = db.exec(`
+  SELECT m.name AS market, SUM(r.weight) AS total_weight, COUNT(*) AS records
+  FROM records r
+  JOIN markets m ON r.market_id = m.id
+  GROUP BY m.name
+  ORDER BY total_weight DESC
+`);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 데이터베이스 내보내기 · 가져오기</h2>
+    <div class="desc">지금 이 브라우저 안 데이터베이스를 실제 <code>.sqlite</code> 파일로 다운로드하고, 그 파일을 다시 올려서 불러올 수 있습니다.</div>
+    <div class="controls">
+      <button id="exportBtn4">DB 파일 다운로드</button>
+      <span>불러오기:</span>
+      <input type="file" id="importInput4" accept=".sqlite,.db" />
+    </div>
+    <div class="result-box" id="result4">아직 내보내기/가져오기 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// 내보내기
+const bytes = db.export(); // Uint8Array (진짜 SQLite 파일 바이너리)
+const blob = new Blob([bytes], { type: 'application/x-sqlite3' });
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = 'wipan-records.sqlite'; // 한글 파일명은 브라우저에서 깨질 수 있어 영문으로 지정
+a.click();
+
+// 가져오기
+const buffer = await file.arrayBuffer();
+const loadedDb = new SQL.Database(new Uint8Array(buffer));
+loadedDb.exec('SELECT COUNT(*) FROM records');</pre>
+    </details>
+  </section>
+
+  <script>
+    function renderTable(container, columns, values) {
+      if (!values.length) {
+        container.innerHTML = '<div class="result-box">결과 없음</div>';
+        return;
+      }
+      const thead = `<tr>${columns.map((c) => `<th>${c}</th>`).join('')}</tr>`;
+      const rows = values.map((row) => `<tr>${row.map((v) => `<td>${v}</td>`).join('')}</tr>`).join('');
+      container.innerHTML = `<table class="result">${thead}${rows}</table>`;
+    }
+
+    async function init() {
+      const SQL = await initSqlJs({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/sql.js@1.14.1/dist/${file}`,
+      });
+
+      const db = new SQL.Database();
+      db.run(`
+        CREATE TABLE markets (id INTEGER PRIMARY KEY, name TEXT, region TEXT);
+        CREATE TABLE records (id INTEGER PRIMARY KEY, market_id INTEGER, species TEXT, weight REAL, price INTEGER);
+        INSERT INTO markets (id, name, region) VALUES
+          (1, '부산공동어시장', '경상권'),
+          (2, '목포수산시장', '전라권'),
+          (3, '통영수산시장', '경상권');
+        INSERT INTO records (market_id, species, weight, price) VALUES
+          (1, '고등어', 320, 3200),
+          (1, '갈치', 180, 8500),
+          (2, '오징어', 95, 6100),
+          (3, '새우', 60, 15000),
+          (1, '전복', 25, 42000),
+          (3, '꽃게', 140, 11300);
+      `);
+
+      // ---------- 1. 기본 쿼리 실행 ----------
+      const tableWrap1 = document.getElementById('tableWrap1');
+      document.getElementById('selectAllBtn1').addEventListener('click', () => {
+        const res = db.exec('SELECT id, species, weight, price FROM records ORDER BY id');
+        renderTable(tableWrap1, res[0].columns, res[0].values);
+      });
+      document.getElementById('selectAllBtn1').click();
+
+      // ---------- 2. 파라미터 바인딩 ----------
+      const searchInput2 = document.getElementById('searchInput2');
+      const result2 = document.getElementById('result2');
+      document.getElementById('fillEvilBtn2').addEventListener('click', () => {
+        searchInput2.value = "x' OR '1'='1";
+      });
+      document.getElementById('unsafeBtn2').addEventListener('click', () => {
+        const val = searchInput2.value;
+        try {
+          const res = db.exec(`SELECT * FROM records WHERE species = '${val}'`);
+          const count = res.length ? res[0].values.length : 0;
+          result2.className = count > 1 ? 'result-box danger' : 'result-box';
+          result2.textContent = `문자열 이어붙이기 결과: ${count}건${count > 1 ? ' — 검색어와 상관없이 전체 데이터가 노출됐습니다!' : ''}`;
+        } catch (e) {
+          result2.className = 'result-box danger';
+          result2.textContent = 'SQL 오류: ' + e.message;
+        }
+      });
+      document.getElementById('safeBtn2').addEventListener('click', () => {
+        const val = searchInput2.value;
+        const stmt = db.prepare('SELECT * FROM records WHERE species = :s');
+        stmt.bind({ ':s': val });
+        const rows = [];
+        while (stmt.step()) rows.push(stmt.getAsObject());
+        stmt.free();
+        result2.className = 'result-box safe';
+        result2.textContent = `파라미터 바인딩 결과: ${rows.length}건 (입력값은 그냥 문자열로만 취급됨)`;
+      });
+
+      // ---------- 3. JOIN · GROUP BY 집계 ----------
+      const tableWrap3 = document.getElementById('tableWrap3');
+      document.getElementById('joinBtn3').addEventListener('click', () => {
+        const res = db.exec(`
+          SELECT m.name AS 위판장, SUM(r.weight) AS 총중량, COUNT(*) AS 건수
+          FROM records r
+          JOIN markets m ON r.market_id = m.id
+          GROUP BY m.name
+          ORDER BY 총중량 DESC
+        `);
+        renderTable(tableWrap3, res[0].columns, res[0].values);
+      });
+
+      // ---------- 4. 내보내기 · 가져오기 ----------
+      const result4 = document.getElementById('result4');
+      document.getElementById('exportBtn4').addEventListener('click', () => {
+        const bytes = db.export();
+        const blob = new Blob([bytes], { type: 'application/x-sqlite3' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'wipan-records.sqlite';
+        a.click();
+        result4.className = 'result-box safe';
+        result4.textContent = `다운로드 완료 (${bytes.length.toLocaleString()} bytes)`;
+      });
+      document.getElementById('importInput4').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const buffer = await file.arrayBuffer();
+          const loadedDb = new SQL.Database(new Uint8Array(buffer));
+          const res = loadedDb.exec('SELECT COUNT(*) FROM records');
+          const count = res.length ? res[0].values[0][0] : 0;
+          result4.className = 'result-box safe';
+          result4.textContent = `불러오기 성공: records 테이블에 ${count}개 행이 있습니다.`;
+        } catch (err) {
+          result4.className = 'result-box danger';
+          result4.textContent = '불러오기 실패: 올바른 sql.js 데이터베이스 파일이 아닙니다.';
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
