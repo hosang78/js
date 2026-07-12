@@ -46,8 +46,8 @@ npm start
 ```
 pages/
   내페이지/
-    meta.json     ← 메뉴에 표시될 이름/설명
-    index.html    ← 실제 페이지 (자유롭게 HTML/CSS/JS 작성, 외부 API 호출 가능)
+    meta.json     ← 메뉴에 표시될 이름
+    index.html    ← 실제 페이지 (자유롭게 HTML/CSS/JS 작성, 외부 API 호출 가능, 상단에 간단한 설명 포함 권장)
 ```
 
 `meta.json` 형식:
@@ -55,7 +55,6 @@ pages/
 ```json
 {
   "name": "메뉴에 표시될 이름",
-  "description": "하단에 표시될 설명",
   "entry": "index.html"
 }
 ```

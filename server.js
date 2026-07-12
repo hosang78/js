@@ -94,7 +94,6 @@ app.get('/api/pages', requireAuthApi, (req, res) => {
         return {
           slug: entry.name,
           name: meta.name || entry.name,
-          description: meta.description || '',
           entry: meta.entry || 'index.html',
         };
       } catch (err) {

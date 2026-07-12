@@ -1,6 +1,5 @@
 const menuList = document.getElementById('menuList');
 const content = document.getElementById('content');
-const descText = document.getElementById('descText');
 const logoutBtn = document.getElementById('logoutBtn');
 const dashboard = document.querySelector('.dashboard');
 const hideSidebarBtn = document.getElementById('hideSidebarBtn');
@@ -50,8 +49,6 @@ function selectPage(page, itemEl) {
   const iframe = document.createElement('iframe');
   iframe.src = `/pages/${page.slug}/${page.entry}`;
   content.appendChild(iframe);
-
-  descText.textContent = page.description || '설명이 없습니다.';
 }
 
 logoutBtn.addEventListener('click', async () => {
