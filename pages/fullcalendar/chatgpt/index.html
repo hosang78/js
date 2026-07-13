@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="FullCalendar 7 무료 기능 종합 샘플" />
+  <title>FullCalendar 7 종합 기능 샘플</title>
+
+  <!-- FullCalendar 7 standard bundle + Korean locale + Monarch theme -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.0.0/all/global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.0.0/locales-all/global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@7.0.0/themes/monarch/global.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@7.0.0/skeleton.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@7.0.0/themes/monarch/theme.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@7.0.0/themes/monarch/palettes/purple.css" rel="stylesheet" />
+
+  <!-- Advanced recurring events -->
+  <script src="https://cdn.jsdelivr.net/npm/rrule@2.6.4/dist/es5/rrule.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/rrule@7.0.0/global.js"></script>
+
+  <style>
+    :root {
+      --page-bg: #f3f5f9;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --ink: #182230;
+      --muted: #667085;
+      --line: #e4e7ec;
+      --primary: #3157d5;
+      --primary-dark: #2442a5;
+      --primary-soft: #eef2ff;
+      --success: #087a55;
+      --warning: #b54708;
+      --danger: #b42318;
+      --shadow: 0 16px 42px rgba(16, 24, 40, 0.08);
+      --radius: 18px;
+      --sidebar-width: 310px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% -10%, rgba(49, 87, 213, 0.15), transparent 28rem),
+        radial-gradient(circle at 100% 0%, rgba(9, 117, 161, 0.11), transparent 26rem),
+        var(--page-bg);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: 0.48; }
+
+    .app-shell {
+      width: min(1840px, 100%);
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+      padding: 24px 28px;
+      color: white;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #1f3a8a 0%, #3157d5 52%, #087ea4 100%);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -100px;
+      width: 310px;
+      height: 310px;
+      border: 44px solid rgba(255,255,255,.10);
+      border-radius: 50%;
+    }
+
+    .hero-copy, .hero-actions { position: relative; z-index: 1; }
+    .eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 800; letter-spacing: .14em; opacity: .78; }
+    h1 { margin: 0; font-size: clamp(24px, 3.2vw, 38px); line-height: 1.18; letter-spacing: -.04em; }
+    .hero p { max-width: 880px; margin: 10px 0 0; line-height: 1.65; color: rgba(255,255,255,.84); }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 9px;
+      min-width: 280px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 40px;
+      padding: 9px 13px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-weight: 750;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn-primary { color: #fff; background: var(--primary); box-shadow: 0 8px 18px rgba(49,87,213,.22); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { color: #344054; background: #fff; border-color: #d0d5dd; }
+    .btn-secondary:hover { background: #f8fafc; }
+    .btn-ghost { color: #344054; background: transparent; border-color: #d0d5dd; }
+    .btn-danger { color: #fff; background: var(--danger); }
+    .hero .btn-secondary { border-color: rgba(255,255,255,.32); background: rgba(255,255,255,.14); color: white; backdrop-filter: blur(8px); }
+    .hero .btn-secondary:hover { background: rgba(255,255,255,.22); }
+
+    .feature-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 0 2px 14px;
+      scrollbar-width: thin;
+    }
+
+    .feature-chip {
+      flex: 0 0 auto;
+      padding: 7px 11px;
+      color: #344054;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(208,213,221,.8);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 86px;
+      padding: 16px;
+      background: rgba(255,255,255,.9);
+      border: 1px solid rgba(228,231,236,.9);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(16,24,40,.04);
+    }
+
+    .stat-icon {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      border-radius: 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 19px;
+    }
+
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .stat-value { margin-top: 3px; font-size: 25px; line-height: 1; font-weight: 850; letter-spacing: -.04em; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 12px;
+      position: sticky;
+      top: 12px;
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
+      padding-right: 3px;
+      scrollbar-width: thin;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.93);
+      border: 1px solid rgba(228,231,236,.92);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 30px rgba(16,24,40,.05);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 15px 16px 11px;
+    }
+
+    .panel-title { margin: 0; font-size: 14px; font-weight: 850; letter-spacing: -.02em; }
+    .panel-subtitle { margin: 3px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .panel-body { padding: 0 16px 16px; }
+
+    .search-box { position: relative; }
+    .search-box input { padding-left: 35px; }
+    .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #98a2b3; pointer-events: none; }
+
+    .field, .select-field, textarea {
+      width: 100%;
+      border: 1px solid #d0d5dd;
+      border-radius: 10px;
+      background: white;
+      color: var(--ink);
+      outline: none;
+      transition: border .15s, box-shadow .15s;
+    }
+
+    .field, .select-field { height: 40px; padding: 8px 10px; }
+    textarea { min-height: 84px; resize: vertical; padding: 10px; line-height: 1.5; }
+    .field:focus, .select-field:focus, textarea:focus { border-color: #8098e8; box-shadow: 0 0 0 3px rgba(49,87,213,.12); }
+
+    .view-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+    .view-btn {
+      min-height: 36px;
+      padding: 7px 8px;
+      border: 1px solid #d0d5dd;
+      border-radius: 9px;
+      background: white;
+      color: #475467;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .view-btn.active { color: white; background: var(--primary); border-color: var(--primary); }
+
+    .filter-list, .toggle-list { display: grid; gap: 9px; }
+    .check-row, .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 29px;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .check-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .category-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; }
+    .check-row input { accent-color: var(--primary); }
+
+    .switch { position: relative; width: 38px; height: 22px; flex: 0 0 38px; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .switch span { position: absolute; inset: 0; border-radius: 999px; background: #d0d5dd; transition: .18s; }
+    .switch span::after { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: white; box-shadow: 0 1px 4px rgba(0,0,0,.2); transition: .18s; }
+    .switch input:checked + span { background: var(--primary); }
+    .switch input:checked + span::after { transform: translateX(16px); }
+
+    .external-list { display: grid; gap: 8px; }
+    .external-event {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 39px;
+      padding: 9px 10px;
+      border: 1px solid #d0d5dd;
+      border-left: 4px solid var(--event-color);
+      border-radius: 10px;
+      background: white;
+      font-size: 12px;
+      font-weight: 750;
+      user-select: none;
+      cursor: grab;
+    }
+    .external-event:active { cursor: grabbing; }
+    .drag-handle { color: #98a2b3; letter-spacing: -2px; }
+
+    .upcoming-list { display: grid; gap: 8px; }
+    .upcoming-item {
+      display: grid;
+      grid-template-columns: 8px minmax(0,1fr);
+      gap: 9px;
+      padding: 9px 0;
+      border-bottom: 1px dashed #eaecf0;
+    }
+    .upcoming-item:last-child { border-bottom: 0; }
+    .upcoming-bar { border-radius: 999px; background: var(--event-color); }
+    .upcoming-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; }
+    .upcoming-meta { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+    .empty-note { padding: 12px 0; color: var(--muted); font-size: 12px; text-align: center; }
+
+    .calendar-panel { min-width: 0; overflow: hidden; }
+    .calendar-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.8);
+    }
+
+    .tools-left, .tools-right { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .compact-field { width: auto; min-width: 132px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #f2f4f7;
+      color: #475467;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .status-dot.loading { background: #f79009; animation: pulse 1s infinite alternate; }
+    @keyframes pulse { to { opacity: .35; } }
+
+    #calendar-wrap { padding: 16px; background: white; }
+    #calendar { min-height: 690px; }
+
+    .load-error {
+      display: none;
+      margin: 16px;
+      padding: 16px;
+      border: 1px solid #fecdca;
+      border-radius: 12px;
+      background: #fef3f2;
+      color: #912018;
+      line-height: 1.6;
+    }
+
+    .event-card-content { min-width: 0; overflow: hidden; }
+    .event-card-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+    .event-card-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78em; opacity: .86; }
+    .event-icon { margin-right: 3px; }
+
+    .fc { --fc-small-font-size: .78em; }
+    .fc .fc-toolbar { gap: 12px; margin-bottom: 1.1em; }
+    .fc .fc-toolbar-title { font-size: clamp(18px, 2vw, 25px); font-weight: 900; letter-spacing: -.04em; }
+    .fc .fc-button { min-height: 34px; font-weight: 750; border-radius: 9px !important; }
+    .fc .fc-button:focus { box-shadow: 0 0 0 3px rgba(49,87,213,.18) !important; }
+    .fc .fc-col-header-cell-cushion { padding: 10px 4px; font-weight: 800; }
+    .fc .fc-daygrid-day-number { padding: 8px; font-weight: 700; }
+    .fc .fc-day-today { background: rgba(49,87,213,.055) !important; }
+    .fc .fc-event { border-radius: 6px; }
+    .fc .fc-event-main { padding: 1px 3px; }
+    .fc .fc-daygrid-more-link { font-weight: 800; color: var(--primary); }
+    .fc .fc-list-event:hover td { background: var(--primary-soft); }
+    .fc .fc-timegrid-now-indicator-line { border-color: #ef4444; border-width: 2px 0 0; }
+    .fc .fc-timegrid-now-indicator-arrow { border-color: #ef4444; }
+    .fc-event.filtered-event { display: none !important; }
+    .fc-event.readonly-event { opacity: .84; }
+    .fc-event.completed-event { filter: saturate(.58); opacity: .78; }
+
+    .event-tooltip {
+      position: fixed;
+      z-index: 9999;
+      width: min(300px, calc(100vw - 24px));
+      pointer-events: none;
+      padding: 11px 12px;
+      color: white;
+      background: rgba(16,24,40,.96);
+      border-radius: 10px;
+      box-shadow: 0 12px 28px rgba(16,24,40,.24);
+      font-size: 11px;
+      line-height: 1.5;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: .12s;
+    }
+    .event-tooltip.show { opacity: 1; transform: translateY(0); }
+    .tooltip-title { font-size: 12px; font-weight: 850; margin-bottom: 4px; }
+    .tooltip-muted { color: #d0d5dd; }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(16,24,40,.56);
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: min(720px, 100%);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 30px 80px rgba(16,24,40,.28);
+    }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
+    .modal-title { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -.035em; }
+    .modal-desc { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid #d0d5dd; border-radius: 10px; background: white; color: #475467; font-size: 18px; }
+    .modal-body { padding: 18px 22px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+    .form-group { min-width: 0; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label { display: block; margin-bottom: 6px; color: #344054; font-size: 12px; font-weight: 800; }
+    .form-help { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .inline-check { display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 12px; font-weight: 700; }
+    .inline-check input { accent-color: var(--primary); }
+    .modal-banner { display: none; margin-bottom: 14px; padding: 10px 12px; border-radius: 10px; background: #fffaeb; color: #93370d; font-size: 11px; line-height: 1.5; }
+    .modal-banner.show { display: block; }
+    .modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 22px 20px; border-top: 1px solid var(--line); }
+    .footer-group { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 12000; display: grid; gap: 8px; width: min(360px, calc(100vw - 36px)); }
+    .toast { padding: 12px 14px; color: white; background: #1d2939; border-radius: 11px; box-shadow: 0 12px 30px rgba(16,24,40,.22); font-size: 12px; line-height: 1.5; animation: toast-in .2s ease; }
+    .toast.success { background: #067647; }
+    .toast.warning { background: #b54708; }
+    .toast.error { background: #b42318; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+    .log-drawer {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 9000;
+      width: min(460px, calc(100vw - 36px));
+      max-height: 50vh;
+      display: none;
+      overflow: hidden;
+      background: #101828;
+      color: #e4e7ec;
+      border: 1px solid #344054;
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(16,24,40,.32);
+    }
+    .log-drawer.open { display: block; }
+    .log-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #344054; }
+    .log-title { font-size: 12px; font-weight: 850; }
+    .log-body { max-height: 38vh; overflow-y: auto; padding: 10px 14px 14px; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .log-row { padding: 5px 0; border-bottom: 1px dashed #344054; }
+    .log-time { color: #98a2b3; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 1180px) {
+      :root { --sidebar-width: 280px; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .hero { flex-direction: column; }
+      .hero-actions { justify-content: flex-start; min-width: 0; }
+    }
+
+    @media (max-width: 900px) {
+      .app-shell { padding: 12px; }
+      .workspace { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; grid-template-columns: repeat(2, minmax(0,1fr)); overflow: visible; }
+      .sidebar .panel:last-child { grid-column: 1 / -1; }
+      #calendar-wrap { padding: 10px; overflow-x: auto; }
+      #calendar { min-width: 740px; }
+      .fc .fc-toolbar { align-items: flex-start; flex-direction: column; }
+      .fc .fc-toolbar-chunk { display: flex; flex-wrap: wrap; gap: 4px; }
+    }
+
+    @media (max-width: 620px) {
+      .hero { padding: 20px; }
+      .stats-grid, .sidebar, .form-grid { grid-template-columns: 1fr; }
+      .sidebar .panel:last-child { grid-column: auto; }
+      .calendar-tools { align-items: stretch; }
+      .tools-left, .tools-right { width: 100%; }
+      .compact-field { flex: 1; min-width: 120px; }
+      .modal-overlay { padding: 8px; }
+      .modal { max-height: calc(100vh - 16px); border-radius: 15px; }
+      .modal-header, .modal-body, .modal-footer { padding-left: 15px; padding-right: 15px; }
+      .modal-footer { align-items: stretch; flex-direction: column-reverse; }
+      .footer-group { width: 100%; }
+      .footer-group .btn { flex: 1; }
+    }
+
+    @media print {
+      body { background: white; }
+      .hero, .feature-strip, .stats-grid, .sidebar, .calendar-tools, .toast-stack, .log-drawer { display: none !important; }
+      .app-shell { width: 100%; padding: 0; }
+      .workspace { display: block; }
+      .panel { box-shadow: none; border: 0; }
+      #calendar-wrap { padding: 0; }
+      #calendar { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">FULLCALENDAR 7 · FREE FEATURE LAB</p>
+        <h1>FullCalendar 종합 기능 샘플</h1>
+        <p>월·주·일·목록·연간 보기, 일정 CRUD, 기간 선택, 드래그 이동·리사이즈, 외부 일정 드롭, 반복 일정, 이벤트 소스, 필터·검색, 업무시간 제약, 로컬 저장과 내보내기를 한 화면에서 시험한다.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn btn-secondary" id="heroAddBtn" type="button">＋ 일정 추가</button>
+        <button class="btn btn-secondary" id="todayBtn" type="button">오늘로 이동</button>
+        <button class="btn btn-secondary" id="printBtn" type="button">인쇄</button>
+      </div>
+    </header>
+
+    <div class="feature-strip" aria-label="구현 기능 목록">
+      <span class="feature-chip">DayGrid</span>
+      <span class="feature-chip">TimeGrid</span>
+      <span class="feature-chip">List</span>
+      <span class="feature-chip">MultiMonth</span>
+      <span class="feature-chip">Custom View</span>
+      <span class="feature-chip">Date Select</span>
+      <span class="feature-chip">Drag & Resize</span>
+      <span class="feature-chip">External Drop</span>
+      <span class="feature-chip">RRule</span>
+      <span class="feature-chip">Event Sources</span>
+      <span class="feature-chip">Background Event</span>
+      <span class="feature-chip">Business Hours</span>
+      <span class="feature-chip">Localization</span>
+      <span class="feature-chip">LocalStorage</span>
+      <span class="feature-chip">JSON · ICS Export</span>
+    </div>
+
+    <section class="stats-grid" aria-label="일정 통계">
+      <article class="stat-card"><div class="stat-icon">▦</div><div><div class="stat-label">현재 화면 일정</div><div class="stat-value" id="visibleCount">0</div></div></article>
+      <article class="stat-card"><div class="stat-icon">◷</div><div><div class="stat-label">7일 이내 일정</div><div class="stat-value" id="weekCount">0</div></div></article>
+      <article class="stat-card"><div class="stat-icon">◎</div><div><div class="stat-label">활성 카테고리</div><div class="stat-value" id="categoryCount">0</div></div></article>
+      <article class="stat-card"><div class="stat-icon">↻</div><div><div class="stat-label">반복 일정 시리즈</div><div class="stat-value" id="recurringCount">0</div></div></article>
+    </section>
+
+    <main class="workspace">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">검색·화면 전환</h2><p class="panel-subtitle">제목·장소·설명 통합 검색</p></div></div>
+          <div class="panel-body">
+            <div class="search-box">
+              <span class="search-icon">⌕</span>
+              <input class="field" id="eventSearch" type="search" placeholder="일정 검색  / 키" autocomplete="off" />
+            </div>
+            <div style="height:10px"></div>
+            <div class="view-grid" id="viewButtons">
+              <button class="view-btn active" data-view="dayGridMonth" type="button">월</button>
+              <button class="view-btn" data-view="timeGridWeek" type="button">주</button>
+              <button class="view-btn" data-view="timeGridDay" type="button">일</button>
+              <button class="view-btn" data-view="listWeek" type="button">목록</button>
+              <button class="view-btn" data-view="workWeek" type="button">근무주</button>
+              <button class="view-btn" data-view="quarterView" type="button">분기</button>
+              <button class="view-btn" data-view="multiMonthYear" type="button">연간</button>
+              <button class="view-btn" data-view="listYear" type="button">연간목록</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">카테고리 필터</h2><p class="panel-subtitle">일정 표시 여부를 즉시 변경</p></div><button class="btn btn-ghost" id="toggleAllCategories" type="button" style="min-height:31px;padding:5px 8px;font-size:10px">전체 해제</button></div>
+          <div class="panel-body"><div class="filter-list" id="categoryFilters"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">캘린더 옵션</h2><p class="panel-subtitle">setOption 동적 변경</p></div></div>
+          <div class="panel-body">
+            <div class="toggle-list">
+              <label class="toggle-row"><span>주말 표시</span><span class="switch"><input id="weekendsToggle" type="checkbox" checked /><span></span></span></label>
+              <label class="toggle-row"><span>주차 번호</span><span class="switch"><input id="weekNumbersToggle" type="checkbox" checked /><span></span></span></label>
+              <label class="toggle-row"><span>현재 시각선</span><span class="switch"><input id="nowIndicatorToggle" type="checkbox" checked /><span></span></span></label>
+              <label class="toggle-row"><span>업무시간 음영</span><span class="switch"><input id="businessHoursToggle" type="checkbox" checked /><span></span></span></label>
+              <label class="toggle-row"><span>일정 편집</span><span class="switch"><input id="editableToggle" type="checkbox" checked /><span></span></span></label>
+              <label class="toggle-row"><span>일정 겹침 허용</span><span class="switch"><input id="overlapToggle" type="checkbox" checked /><span></span></span></label>
+              <label class="toggle-row"><span>업무시간 내 이동 제한</span><span class="switch"><input id="constraintToggle" type="checkbox" /><span></span></span></label>
+              <label class="toggle-row"><span>API 모의 소스</span><span class="switch"><input id="apiSourceToggle" type="checkbox" checked /><span></span></span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">외부 일정 끌어놓기</h2><p class="panel-subtitle">항목을 캘린더 날짜·시간으로 드래그</p></div></div>
+          <div class="panel-body"><div class="external-list" id="externalEvents"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2 class="panel-title">다가오는 일정</h2><p class="panel-subtitle">현재부터 14일 이내 최대 7건</p></div></div>
+          <div class="panel-body"><div class="upcoming-list" id="upcomingList"></div></div>
+        </section>
+      </aside>
+
+      <section class="panel calendar-panel">
+        <div class="calendar-tools">
+          <div class="tools-left">
+            <input class="field compact-field" id="gotoDate" type="date" aria-label="이동할 날짜" />
+            <button class="btn btn-secondary" id="gotoDateBtn" type="button">날짜 이동</button>
+            <select class="select-field compact-field" id="localeSelect" aria-label="언어">
+              <option value="ko">한국어</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+              <option value="fr">Français</option>
+            </select>
+            <select class="select-field compact-field" id="slotDurationSelect" aria-label="시간 간격">
+              <option value="00:15:00">15분 간격</option>
+              <option value="00:30:00" selected>30분 간격</option>
+              <option value="01:00:00">60분 간격</option>
+            </select>
+          </div>
+          <div class="tools-right">
+            <span class="status-pill"><span class="status-dot" id="loadingDot"></span><span id="loadingText">준비됨</span></span>
+            <button class="btn btn-secondary" id="jsonExportBtn" type="button">JSON</button>
+            <button class="btn btn-secondary" id="icsExportBtn" type="button">ICS</button>
+            <button class="btn btn-secondary" id="jsonImportBtn" type="button">가져오기</button>
+            <button class="btn btn-secondary" id="logBtn" type="button">이벤트 로그</button>
+            <button class="btn btn-secondary" id="resetBtn" type="button">초기화</button>
+            <input id="jsonImportInput" type="file" accept="application/json,.json" hidden />
+          </div>
+        </div>
+        <div id="loadError" class="load-error">
+          <strong>FullCalendar 라이브러리를 불러오지 못했다.</strong><br />
+          이 샘플은 jsDelivr CDN을 사용하므로 인터넷 연결이 필요하다. 사내망·폐쇄망에서는 FullCalendar와 RRule 파일을 로컬 경로로 내려받아 script/link 경로를 교체해야 한다.
+        </div>
+        <div id="calendar-wrap"><div id="calendar"></div></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="event-tooltip" id="eventTooltip" role="tooltip"></div>
+
+  <div class="modal-overlay" id="eventModal" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-header">
+        <div><h2 class="modal-title" id="modalTitle">일정 추가</h2><p class="modal-desc" id="modalDescription">일정 정보를 입력한다.</p></div>
+        <button class="icon-btn" id="modalCloseBtn" type="button" aria-label="닫기">×</button>
+      </header>
+      <form id="eventForm">
+        <div class="modal-body">
+          <div class="modal-banner" id="modalBanner"></div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label" for="eventTitle">일정 제목 *</label>
+              <input class="field" id="eventTitle" maxlength="80" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eventCategory">카테고리</label>
+              <select class="select-field" id="eventCategory"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eventStatus">상태</label>
+              <select class="select-field" id="eventStatus">
+                <option value="planned">예정</option>
+                <option value="progress">진행</option>
+                <option value="completed">완료</option>
+                <option value="hold">보류</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eventStartDate">시작일 *</label>
+              <input class="field" id="eventStartDate" type="date" required />
+            </div>
+            <div class="form-group time-field">
+              <label class="form-label" for="eventStartTime">시작 시각</label>
+              <input class="field" id="eventStartTime" type="time" step="900" value="09:00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eventEndDate">종료일 *</label>
+              <input class="field" id="eventEndDate" type="date" required />
+            </div>
+            <div class="form-group time-field">
+              <label class="form-label" for="eventEndTime">종료 시각</label>
+              <input class="field" id="eventEndTime" type="time" step="900" value="10:00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">일정 형태</label>
+              <label class="inline-check"><input id="eventAllDay" type="checkbox" /> 종일 일정</label>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eventRecurrence">반복 규칙</label>
+              <select class="select-field" id="eventRecurrence">
+                <option value="none">반복 없음</option>
+                <option value="daily">매일</option>
+                <option value="weekdays">평일마다</option>
+                <option value="weekly">매주</option>
+                <option value="biweekly">격주</option>
+                <option value="monthly">매월</option>
+              </select>
+            </div>
+            <div class="form-group" id="repeatUntilGroup" hidden>
+              <label class="form-label" for="eventRepeatUntil">반복 종료일</label>
+              <input class="field" id="eventRepeatUntil" type="date" />
+              <div class="form-help">비워두면 시작일부터 1년간 생성</div>
+            </div>
+            <div class="form-group" id="repeatInfoGroup" hidden>
+              <label class="form-label">반복 일정 처리</label>
+              <div class="form-help" style="padding-top:8px">반복 일정은 개별 회차가 아닌 시리즈 전체를 수정·삭제한다.</div>
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="eventLocation">장소</label>
+              <input class="field" id="eventLocation" maxlength="100" placeholder="예: 10층 회의실 / 온라인" />
+            </div>
+            <div class="form-group full">
+              <label class="form-label" for="eventDescription">설명</label>
+              <textarea id="eventDescription" maxlength="500" placeholder="일정 목적, 준비사항, 담당자 등을 입력"></textarea>
+            </div>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <div class="footer-group"><button class="btn btn-danger" id="deleteEventBtn" type="button">삭제</button></div>
+          <div class="footer-group"><button class="btn btn-secondary" id="cancelEventBtn" type="button">취소</button><button class="btn btn-primary" id="saveEventBtn" type="submit">저장</button></div>
+        </footer>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <aside class="log-drawer" id="logDrawer" aria-label="FullCalendar 이벤트 로그">
+    <div class="log-head"><span class="log-title">FullCalendar Callback Log</span><button class="icon-btn" id="logCloseBtn" type="button" style="width:30px;height:30px;background:#1d2939;border-color:#475467;color:white">×</button></div>
+    <div class="log-body" id="logBody"></div>
+  </aside>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_EVENTS = 'fc7-demo-events-v2';
+      const STORAGE_RECURRING = 'fc7-demo-recurring-v2';
+      const STORAGE_OPTIONS = 'fc7-demo-options-v2';
+
+      const categories = {
+        '업무': { color: '#3157d5', contrast: '#ffffff', icon: '▣' },
+        '회의': { color: '#7a5af8', contrast: '#ffffff', icon: '◉' },
+        '현장': { color: '#087a55', contrast: '#ffffff', icon: '◆' },
+        '교육': { color: '#087ea4', contrast: '#ffffff', icon: '▤' },
+        '마감': { color: '#d92d20', contrast: '#ffffff', icon: '!' },
+        '개인': { color: '#c4320a', contrast: '#ffffff', icon: '●' },
+        '외부연계': { color: '#475467', contrast: '#ffffff', icon: '↗' }
+      };
+
+      const externalTemplates = [
+        { title: '현장점검', category: '현장', duration: '02:00', location: '회원조합 현장' },
+        { title: '실무협의', category: '회의', duration: '01:00', location: '회의실' },
+        { title: '교육 참석', category: '교육', duration: '03:00', location: '교육장' },
+        { title: '집중업무', category: '업무', duration: '01:30', location: '사무실' },
+        { title: '개인 일정', category: '개인', duration: '01:00', location: '' }
+      ];
+
+      let calendar;
+      let recurringSource = null;
+      let apiSource = null;
+      let recurringDefinitions = [];
+      let activeCategories = new Set(Object.keys(categories));
+      let searchQuery = '';
+      let modalState = { mode: 'create', eventId: null, seriesId: null, readOnly: false };
+      let callbackLogs = [];
+      let currentOptions = {
+        weekends: true,
+        weekNumbers: true,
+        nowIndicator: true,
+        businessHours: true,
+        editable: true,
+        overlap: true,
+        constraint: false,
+        apiSource: true,
+        locale: 'ko',
+        slotDuration: '00:30:00'
+      };
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+      function uid(prefix = 'ev') {
+        return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+
+      function localDateString(date) {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+
+      function localDateTimeString(date) {
+        const d = new Date(date);
+        return `${localDateString(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+      }
+
+      function addDays(date, amount) {
+        const d = new Date(date);
+        d.setDate(d.getDate() + amount);
+        return d;
+      }
+
+      function addMonths(date, amount) {
+        const d = new Date(date);
+        d.setMonth(d.getMonth() + amount);
+        return d;
+      }
+
+      function startOfDay(date) {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      }
+
+      function combineLocal(dateText, timeText = '00:00') {
+        const [y, m, d] = dateText.split('-').map(Number);
+        const [hh, mm] = (timeText || '00:00').split(':').map(Number);
+        return new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
+      }
+
+      function exclusiveAllDayEnd(inclusiveDateText) {
+        return localDateString(addDays(combineLocal(inclusiveDateText), 1));
+      }
+
+      function inclusiveAllDayEnd(eventEnd, fallbackStart) {
+        if (!eventEnd) return localDateString(fallbackStart);
+        return localDateString(addDays(eventEnd, -1));
+      }
+
+      function safeJsonParse(value, fallback) {
+        try { return value ? JSON.parse(value) : fallback; }
+        catch (error) { return fallback; }
+      }
+
+      function saveLocal(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); }
+        catch (error) { toast('브라우저 저장소에 저장하지 못했다.', 'error'); }
+      }
+
+      function categoryStyle(category) {
+        return categories[category] || categories['업무'];
+      }
+
+      function makeEvent(input) {
+        const style = categoryStyle(input.category);
+        return {
+          id: input.id || uid(),
+          title: input.title,
+          start: input.start,
+          end: input.end || undefined,
+          allDay: Boolean(input.allDay),
+          color: style.color,
+          contrastColor: style.contrast,
+          editable: input.editable !== false,
+          extendedProps: {
+            category: input.category || '업무',
+            status: input.status || 'planned',
+            location: input.location || '',
+            description: input.description || '',
+            persistable: input.persistable !== false,
+            readOnly: Boolean(input.readOnly),
+            sourceType: input.sourceType || 'local'
+          }
+        };
+      }
+
+      function createDefaultEvents() {
+        const today = startOfDay(new Date());
+        return [
+          makeEvent({ title: '주간 업무계획 점검', category: '업무', start: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0)), end: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0)), location: '업무지원 회의실', description: '금주 핵심 과제와 담당별 진행상황 점검' }),
+          makeEvent({ title: '회원조합 디지털 지원 협의', category: '회의', start: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 0)), end: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 15, 30)), location: '온라인 회의', description: '업무 자동화 수요와 시스템 개선 요청 검토' }),
+          makeEvent({ title: '양식장 스마트센서 현장점검', category: '현장', start: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 10, 0)), end: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 13, 0)), location: '시범 양식장', description: '수온·용존산소 센서 및 데이터 수집 상태 확인' }),
+          makeEvent({ title: 'AI 실무 활용 교육', category: '교육', start: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 13, 30)), end: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 4, 17, 0)), location: '전산교육장', description: '문서 작성·데이터 분석·업무 자동화 실습' }),
+          makeEvent({ title: '분기 실적자료 제출', category: '마감', start: localDateString(addDays(today, 6)), end: localDateString(addDays(today, 7)), allDay: true, location: '전자문서', description: '부서별 실적자료 최종 취합 및 제출' }),
+          makeEvent({ title: '연차휴가', category: '개인', start: localDateString(addDays(today, 8)), end: localDateString(addDays(today, 10)), allDay: true, status: 'planned', description: '개인 일정' }),
+          makeEvent({ title: '완료된 보고서 검토', category: '업무', start: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 15, 0)), end: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 16, 0)), status: 'completed', location: '사무실' }),
+          makeEvent({ title: '수산정책 동향 브리핑', category: '업무', start: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 9, 30)), end: localDateTimeString(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 11, 11, 0)), location: '대회의실' }),
+          makeEvent({ title: '프로젝트 집중기간', category: '업무', start: localDateString(addDays(today, 13)), end: localDateString(addDays(today, 17)), allDay: true, description: '여러 날에 걸친 종일 일정 예시' })
+        ];
+      }
+
+      function createDefaultRecurring() {
+        const today = startOfDay(new Date());
+        const monday = addDays(today, (8 - today.getDay()) % 7 || 7);
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0);
+        return [
+          buildRecurringDefinition({
+            id: uid('series'), title: '월요일 운영회의', category: '회의', status: 'planned',
+            startDate: localDateString(monday), startTime: '09:00', endDate: localDateString(monday), endTime: '10:00',
+            allDay: false, recurrence: 'weekly', repeatUntil: localDateString(addMonths(today, 10)),
+            location: '회의실 A', description: '매주 주요 현안과 일정 공유'
+          }),
+          buildRecurringDefinition({
+            id: uid('series'), title: '평일 시스템 모니터링', category: '업무', status: 'progress',
+            startDate: localDateString(today), startTime: '08:30', endDate: localDateString(today), endTime: '08:50',
+            allDay: false, recurrence: 'weekdays', repeatUntil: localDateString(addMonths(today, 4)),
+            location: '온라인', description: '평일 반복 일정과 RRule 예시'
+          }),
+          buildRecurringDefinition({
+            id: uid('series'), title: '월간 실적마감', category: '마감', status: 'planned',
+            startDate: localDateString(new Date(monthStart.getFullYear(), monthStart.getMonth(), 25)), startTime: '16:00',
+            endDate: localDateString(new Date(monthStart.getFullYear(), monthStart.getMonth(), 25)), endTime: '17:00',
+            allDay: false, recurrence: 'monthly', repeatUntil: localDateString(addMonths(today, 12)),
+            location: '전자결재', description: '매월 동일 일자 반복 일정'
+          })
+        ];
+      }
+
+      function buildRecurringDefinition(data) {
+        const startDate = data.startDate;
+        const startTime = data.startTime || '00:00';
+        const endDate = data.endDate || startDate;
+        const endTime = data.endTime || startTime;
+        const allDay = Boolean(data.allDay);
+        const recurrence = data.recurrence || 'weekly';
+        const until = data.repeatUntil || localDateString(addMonths(combineLocal(startDate), 12));
+        const start = allDay ? combineLocal(startDate) : combineLocal(startDate, startTime);
+        const end = allDay ? addDays(combineLocal(endDate), 1) : combineLocal(endDate, endTime);
+        const durationMs = Math.max(end - start, allDay ? 86400000 : 900000);
+        const duration = allDay ? { days: Math.max(1, Math.round(durationMs / 86400000)) } : { minutes: Math.max(15, Math.round(durationMs / 60000)) };
+        const rule = { dtstart: allDay ? startDate : `${startDate}T${startTime}:00`, until: `${until}T23:59:59` };
+
+        if (recurrence === 'daily') rule.freq = 'daily';
+        if (recurrence === 'weekdays') { rule.freq = 'weekly'; rule.byweekday = ['mo', 'tu', 'we', 'th', 'fr']; }
+        if (recurrence === 'weekly') rule.freq = 'weekly';
+        if (recurrence === 'biweekly') { rule.freq = 'weekly'; rule.interval = 2; }
+        if (recurrence === 'monthly') { rule.freq = 'monthly'; rule.bymonthday = combineLocal(startDate).getDate(); }
+
+        const style = categoryStyle(data.category);
+        return {
+          id: data.id || uid('series'),
+          title: data.title,
+          rrule: rule,
+          duration,
+          allDay,
+          color: style.color,
+          contrastColor: style.contrast,
+          editable: false,
+          extendedProps: {
+            category: data.category || '업무',
+            status: data.status || 'planned',
+            location: data.location || '',
+            description: data.description || '',
+            isRecurring: true,
+            recurrence,
+            repeatUntil: until,
+            seriesId: data.id,
+            startDate,
+            startTime,
+            endDate,
+            endTime,
+            persistable: false,
+            readOnly: false,
+            sourceType: 'rrule'
+          }
+        };
+      }
+
+      function loadData() {
+        const savedEvents = safeJsonParse(localStorage.getItem(STORAGE_EVENTS), null);
+        const savedRecurring = safeJsonParse(localStorage.getItem(STORAGE_RECURRING), null);
+        const savedOptions = safeJsonParse(localStorage.getItem(STORAGE_OPTIONS), null);
+        if (savedOptions && typeof savedOptions === 'object') currentOptions = { ...currentOptions, ...savedOptions };
+        recurringDefinitions = Array.isArray(savedRecurring) ? savedRecurring : createDefaultRecurring();
+        if (!Array.isArray(savedRecurring)) saveLocal(STORAGE_RECURRING, recurringDefinitions);
+        return Array.isArray(savedEvents) ? savedEvents : createDefaultEvents();
+      }
+
+      function persistRegularEvents() {
+        if (!calendar) return;
+        const events = calendar.getEvents()
+          .filter(ev => ev.extendedProps.persistable && !ev.extendedProps.isRecurring)
+          .map(ev => ({
+            id: ev.id,
+            title: ev.title,
+            start: ev.allDay ? localDateString(ev.start) : ev.start.toISOString(),
+            end: ev.end ? (ev.allDay ? localDateString(ev.end) : ev.end.toISOString()) : undefined,
+            allDay: ev.allDay,
+            color: ev.color,
+            contrastColor: ev.contrastColor,
+            editable: ev.extendedProps.readOnly ? false : true,
+            extendedProps: { ...ev.extendedProps, persistable: true }
+          }));
+        saveLocal(STORAGE_EVENTS, events);
+      }
+
+      function persistRecurring() {
+        saveLocal(STORAGE_RECURRING, recurringDefinitions);
+      }
+
+      function persistOptions() {
+        saveLocal(STORAGE_OPTIONS, currentOptions);
+      }
+
+      function refreshRecurringSource() {
+        if (!calendar) return;
+        if (recurringSource) recurringSource.remove();
+        recurringSource = calendar.addEventSource({ id: 'recurring-source', events: recurringDefinitions });
+        updateDashboardSoon();
+      }
+
+      function apiEventSource(fetchInfo, successCallback, failureCallback) {
+        const start = new Date(fetchInfo.start);
+        const end = new Date(fetchInfo.end);
+        const candidates = [
+          { offset: 3, hour: 11, title: '공공데이터 API 갱신', category: '외부연계', duration: 45 },
+          { offset: 10, hour: 15, title: '외부기관 연계 점검', category: '외부연계', duration: 90 },
+          { offset: 18, hour: 10, title: '통계 데이터 자동수집', category: '외부연계', duration: 60 }
+        ];
+        const events = candidates.map(item => {
+          const eventStart = new Date(start.getFullYear(), start.getMonth(), start.getDate() + item.offset, item.hour, 0);
+          const eventEnd = new Date(eventStart.getTime() + item.duration * 60000);
+          return makeEvent({
+            id: `api-${localDateString(eventStart)}-${item.offset}`,
+            title: item.title,
+            category: item.category,
+            start: eventStart,
+            end: eventEnd,
+            editable: false,
+            persistable: false,
+            readOnly: true,
+            sourceType: 'function-event-source',
+            location: '외부 API',
+            description: 'events 함수형 소스와 loading 콜백을 보여주는 모의 데이터'
+          });
+        }).filter(event => new Date(event.start) >= start && new Date(event.start) < end);
+
+        window.setTimeout(() => {
+          try { successCallback(events); }
+          catch (error) { failureCallback(error); }
+        }, 420);
+      }
+
+      function addApiSource() {
+        if (!calendar || apiSource) return;
+        apiSource = calendar.addEventSource({ id: 'api-source', events: apiEventSource });
+      }
+
+      function removeApiSource() {
+        if (apiSource) apiSource.remove();
+        apiSource = null;
+        updateDashboardSoon();
+      }
+
+      function backgroundEvents() {
+        const today = startOfDay(new Date());
+        return [
+          {
+            id: 'background-focus-time',
+            title: '집중업무 권장시간',
+            daysOfWeek: [1, 2, 3, 4, 5],
+            startTime: '09:00',
+            endTime: '11:00',
+            display: 'background',
+            color: 'rgba(49,87,213,.10)',
+            extendedProps: { category: '업무', sourceType: 'background' }
+          },
+          {
+            id: 'background-maintenance',
+            title: '시스템 점검기간',
+            start: localDateString(addDays(today, 20)),
+            end: localDateString(addDays(today, 23)),
+            display: 'background',
+            color: 'rgba(217,45,32,.10)',
+            extendedProps: { category: '마감', sourceType: 'background' }
+          }
+        ];
+      }
+
+      function eventMatches(event) {
+        const category = event.extendedProps.category || '업무';
+        if (!activeCategories.has(category)) return false;
+        if (!searchQuery) return true;
+        const haystack = [event.title, event.extendedProps.location, event.extendedProps.description, category]
+          .filter(Boolean).join(' ').toLocaleLowerCase();
+        return haystack.includes(searchQuery);
+      }
+
+      function applyEventVisibility(info) {
+        const event = info.event;
+        const hidden = !eventMatches(event);
+        info.el.classList.toggle('filtered-event', hidden);
+        info.el.classList.toggle('readonly-event', Boolean(event.extendedProps.readOnly));
+        info.el.classList.toggle('completed-event', event.extendedProps.status === 'completed');
+        info.el.setAttribute('data-category', event.extendedProps.category || '업무');
+      }
+
+      function renderEventContent(info) {
+        const category = info.event.extendedProps.category || '업무';
+        const location = info.event.extendedProps.location || '';
+        const style = categoryStyle(category);
+        const wrap = document.createElement('div');
+        wrap.className = 'event-card-content';
+
+        const title = document.createElement('div');
+        title.className = 'event-card-title';
+        const icon = document.createElement('span');
+        icon.className = 'event-icon';
+        icon.textContent = style.icon;
+        const text = document.createElement('span');
+        text.textContent = info.event.title;
+        title.append(icon, text);
+        wrap.append(title);
+
+        if (location && info.view.type.includes('timeGrid')) {
+          const meta = document.createElement('div');
+          meta.className = 'event-card-meta';
+          meta.textContent = location;
+          wrap.append(meta);
+        }
+        return { domNodes: [wrap] };
+      }
+
+      function attachTooltip(info) {
+        if (info.event.display === 'background') return;
+        const tooltip = $('#eventTooltip');
+        const show = (mouseEvent) => {
+          const event = info.event;
+          const range = formatEventRange(event);
+          tooltip.innerHTML = `
+            <div class="tooltip-title">${escapeHtml(event.title)}</div>
+            <div>${escapeHtml(range)}</div>
+            <div class="tooltip-muted">${escapeHtml(event.extendedProps.category || '업무')}${event.extendedProps.location ? ' · ' + escapeHtml(event.extendedProps.location) : ''}</div>
+            ${event.extendedProps.description ? `<div class="tooltip-muted" style="margin-top:4px">${escapeHtml(event.extendedProps.description)}</div>` : ''}
+          `;
+          tooltip.classList.add('show');
+          moveTooltip(mouseEvent);
+        };
+        const hide = () => tooltip.classList.remove('show');
+        const move = (mouseEvent) => moveTooltip(mouseEvent);
+        info.el.addEventListener('mouseenter', show);
+        info.el.addEventListener('mousemove', move);
+        info.el.addEventListener('mouseleave', hide);
+      }
+
+      function moveTooltip(event) {
+        const tooltip = $('#eventTooltip');
+        const margin = 14;
+        let left = event.clientX + margin;
+        let top = event.clientY + margin;
+        const rect = tooltip.getBoundingClientRect();
+        if (left + rect.width > window.innerWidth - 8) left = event.clientX - rect.width - margin;
+        if (top + rect.height > window.innerHeight - 8) top = event.clientY - rect.height - margin;
+        tooltip.style.left = `${Math.max(8, left)}px`;
+        tooltip.style.top = `${Math.max(8, top)}px`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+      }
+
+      function formatEventRange(event) {
+        if (!event.start) return '';
+        const locale = currentOptions.locale === 'ko' ? 'ko-KR' : currentOptions.locale;
+        const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        if (event.allDay) {
+          const startText = event.start.toLocaleDateString(locale, dateOptions);
+          const endInclusive = event.end ? addDays(event.end, -1) : event.start;
+          const endText = endInclusive.toLocaleDateString(locale, dateOptions);
+          return localDateString(event.start) === localDateString(endInclusive) ? startText : `${startText} ~ ${endText}`;
+        }
+        const dateTimeOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+        const startText = event.start.toLocaleString(locale, dateTimeOptions);
+        const endText = event.end ? event.end.toLocaleString(locale, dateTimeOptions) : '';
+        return endText ? `${startText} ~ ${endText}` : startText;
+      }
+
+      function logCallback(name, detail = '') {
+        const now = new Date();
+        const line = { time: now.toLocaleTimeString('ko-KR', { hour12: false }), name, detail };
+        callbackLogs.unshift(line);
+        callbackLogs = callbackLogs.slice(0, 100);
+        renderLogs();
+      }
+
+      function renderLogs() {
+        $('#logBody').innerHTML = callbackLogs.length
+          ? callbackLogs.map(row => `<div class="log-row"><span class="log-time">[${row.time}]</span> <strong>${escapeHtml(row.name)}</strong>${row.detail ? ` · ${escapeHtml(row.detail)}` : ''}</div>`).join('')
+          : '<div class="empty-note" style="color:#98a2b3">아직 기록된 콜백이 없다.</div>';
+      }
+
+      function toast(message, type = '') {
+        const el = document.createElement('div');
+        el.className = `toast ${type}`.trim();
+        el.textContent = message;
+        $('#toastStack').appendChild(el);
+        window.setTimeout(() => el.remove(), 3000);
+      }
+
+      function syncControlState() {
+        $('#weekendsToggle').checked = currentOptions.weekends;
+        $('#weekNumbersToggle').checked = currentOptions.weekNumbers;
+        $('#nowIndicatorToggle').checked = currentOptions.nowIndicator;
+        $('#businessHoursToggle').checked = currentOptions.businessHours;
+        $('#editableToggle').checked = currentOptions.editable;
+        $('#overlapToggle').checked = currentOptions.overlap;
+        $('#constraintToggle').checked = currentOptions.constraint;
+        $('#apiSourceToggle').checked = currentOptions.apiSource;
+        $('#localeSelect').value = currentOptions.locale;
+        $('#slotDurationSelect').value = currentOptions.slotDuration;
+      }
+
+      function buildFilters() {
+        const target = $('#categoryFilters');
+        target.innerHTML = Object.entries(categories).map(([name, style]) => `
+          <label class="check-row">
+            <span class="check-label"><span class="category-dot" style="background:${style.color}"></span><span>${name}</span></span>
+            <input type="checkbox" data-category="${name}" checked />
+          </label>
+        `).join('');
+
+        target.addEventListener('change', event => {
+          const input = event.target.closest('input[data-category]');
+          if (!input) return;
+          input.checked ? activeCategories.add(input.dataset.category) : activeCategories.delete(input.dataset.category);
+          calendar.rerenderEvents();
+          updateDashboardSoon();
+          updateCategoryToggleText();
+          logCallback('filterChange', `${input.dataset.category}: ${input.checked}`);
+        });
+      }
+
+      function updateCategoryToggleText() {
+        $('#toggleAllCategories').textContent = activeCategories.size ? '전체 해제' : '전체 선택';
+      }
+
+      function buildExternalEvents() {
+        $('#externalEvents').innerHTML = externalTemplates.map(item => `
+          <div class="external-event" style="--event-color:${categoryStyle(item.category).color}"
+               data-title="${escapeHtml(item.title)}" data-category="${item.category}" data-duration="${item.duration}" data-location="${escapeHtml(item.location)}">
+            <span class="drag-handle">⠿</span><span>${escapeHtml(item.title)}</span>
+          </div>
+        `).join('');
+
+        new FullCalendar.Draggable($('#externalEvents'), {
+          itemSelector: '.external-event',
+          eventData(eventEl) {
+            const category = eventEl.dataset.category;
+            const style = categoryStyle(category);
+            return {
+              id: uid(),
+              title: eventEl.dataset.title,
+              duration: eventEl.dataset.duration,
+              color: style.color,
+              contrastColor: style.contrast,
+              extendedProps: {
+                category,
+                status: 'planned',
+                location: eventEl.dataset.location || '',
+                description: '외부 팔레트에서 드래그하여 생성한 일정',
+                persistable: true,
+                readOnly: false,
+                sourceType: 'external-drop'
+              }
+            };
+          }
+        });
+      }
+
+      function initCalendar(initialEvents) {
+        const calendarEl = $('#calendar');
+        const businessHours = [
+          { daysOfWeek: [1, 2, 3, 4, 5], startTime: '09:00', endTime: '12:00' },
+          { daysOfWeek: [1, 2, 3, 4, 5], startTime: '13:00', endTime: '18:00' }
+        ];
+
+        calendar = new FullCalendar.Calendar(calendarEl, {
+          locale: currentOptions.locale,
+          timeZone: 'local',
+          initialView: 'dayGridMonth',
+          initialDate: new Date(),
+          headerToolbar: {
+            start: 'prevYear,prev,next,nextYear today addEvent',
+            center: 'title',
+            end: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek,multiMonthYear'
+          },
+          footerToolbar: {
+            start: 'title',
+            end: 'today prev,next'
+          },
+          buttons: {
+            prevYear: { text: '≪' },
+            nextYear: { text: '≫' },
+            prev: { text: '‹' },
+            next: { text: '›' },
+            today: { text: '오늘' },
+            addEvent: { text: '＋ 일정', click: () => openCreateModal(new Date(), null, false) },
+            dayGridMonth: { text: '월' },
+            timeGridWeek: { text: '주' },
+            timeGridDay: { text: '일' },
+            listWeek: { text: '목록' },
+            multiMonthYear: { text: '연간' },
+            workWeek: { text: '근무주' },
+            quarterView: { text: '분기' }
+          },
+          views: {
+            workWeek: {
+              type: 'timeGrid',
+              duration: { days: 5 },
+              dateAlignment: 'week',
+              hiddenDays: [0, 6]
+            },
+            quarterView: {
+              type: 'multiMonth',
+              duration: { months: 3 },
+              multiMonthMaxColumns: 3
+            },
+            dayGridMonth: { dayMaxEventRows: 4 },
+            timeGridWeek: { dayHeaderFormat: { month: 'numeric', day: 'numeric', weekday: 'short' } }
+          },
+          height: 'auto',
+          expandRows: true,
+          tableHeaderSticky: true,
+          navLinks: true,
+          weekNumbers: currentOptions.weekNumbers,
+          weekNumberCalculation: 'ISO',
+          weekends: currentOptions.weekends,
+          nowIndicator: currentOptions.nowIndicator,
+          businessHours: currentOptions.businessHours ? businessHours : false,
+          selectable: true,
+          selectMirror: true,
+          unselectAuto: true,
+          editable: currentOptions.editable,
+          eventStartEditable: currentOptions.editable,
+          eventDurationEditable: currentOptions.editable,
+          eventResizableFromStart: true,
+          droppable: true,
+          eventOverlap: currentOptions.overlap,
+          eventConstraint: currentOptions.constraint ? 'businessHours' : undefined,
+          selectConstraint: false,
+          allDayMaintainDuration: true,
+          dragScroll: true,
+          snapDuration: '00:15:00',
+          slotDuration: currentOptions.slotDuration,
+          slotMinTime: '06:00:00',
+          slotMaxTime: '23:00:00',
+          scrollTime: '08:00:00',
+          scrollTimeReset: false,
+          allDayText: '종일',
+          dayMaxEvents: true,
+          moreLinkClick: 'popover',
+          displayEventEnd: true,
+          eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+          eventOrder: 'start,-duration,title',
+          progressiveEventRendering: true,
+          eventInteractive: true,
+          longPressDelay: 550,
+          eventLongPressDelay: 550,
+          selectLongPressDelay: 550,
+          noEventsContent: '표시할 일정이 없다.',
+          events: initialEvents,
+          eventSources: [
+            { id: 'background-source', events: backgroundEvents() },
+            { id: 'recurring-source-initial', events: recurringDefinitions }
+          ],
+          eventContent: renderEventContent,
+          eventDidMount(info) {
+            applyEventVisibility(info);
+            attachTooltip(info);
+          },
+          dateClick(info) {
+            logCallback('dateClick', info.dateStr);
+            openCreateModal(info.date, null, info.allDay);
+          },
+          select(info) {
+            logCallback('select', `${info.startStr} → ${info.endStr}`);
+            openCreateModal(info.start, info.end, info.allDay);
+          },
+          eventClick(info) {
+            info.jsEvent.preventDefault();
+            logCallback('eventClick', info.event.title);
+            openEventModal(info.event);
+          },
+          eventMouseEnter(info) { logCallback('eventMouseEnter', info.event.title); },
+          eventDrop(info) {
+            persistRegularEvents();
+            updateDashboardSoon();
+            toast(`일정 이동: ${info.event.title}`, 'success');
+            logCallback('eventDrop', `${info.event.title} · ${formatEventRange(info.event)}`);
+          },
+          eventResize(info) {
+            persistRegularEvents();
+            updateDashboardSoon();
+            toast(`일정 시간 변경: ${info.event.title}`, 'success');
+            logCallback('eventResize', info.event.title);
+          },
+          drop(info) {
+            logCallback('drop', `${localDateString(info.date)} · ${info.draggedEl?.dataset.title || '외부 항목'}`);
+          },
+          eventReceive(info) {
+            persistRegularEvents();
+            updateDashboardSoon();
+            toast(`외부 일정 추가: ${info.event.title}`, 'success');
+            logCallback('eventReceive', info.event.title);
+          },
+          eventAdd(info) { logCallback('eventAdd', info.event.title); },
+          eventChange(info) { logCallback('eventChange', info.event.title); },
+          eventRemove(info) { logCallback('eventRemove', info.event.title); },
+          datesSet(info) {
+            $('#gotoDate').value = localDateString(info.view.currentStart);
+            setActiveView(info.view.type);
+            updateDashboardSoon();
+            logCallback('datesSet', `${info.view.type} · ${localDateString(info.start)}~${localDateString(addDays(info.end, -1))}`);
+          },
+          viewDidMount(info) { logCallback('viewDidMount', info.view.type); },
+          loading(isLoading) {
+            $('#loadingDot').classList.toggle('loading', isLoading);
+            $('#loadingText').textContent = isLoading ? '일정 불러오는 중' : '준비됨';
+            logCallback('loading', String(isLoading));
+          }
+        });
+
+        calendar.render();
+        recurringSource = calendar.getEventSourceById('recurring-source-initial');
+        if (currentOptions.apiSource) addApiSource();
+      }
+
+      function setActiveView(viewName) {
+        $$('.view-btn').forEach(button => button.classList.toggle('active', button.dataset.view === viewName));
+      }
+
+      function updateDashboardSoon() {
+        window.clearTimeout(updateDashboardSoon.timer);
+        updateDashboardSoon.timer = window.setTimeout(updateDashboard, 80);
+      }
+
+      function updateDashboard() {
+        if (!calendar) return;
+        const now = new Date();
+        const in7days = addDays(now, 7);
+        const in14days = addDays(now, 14);
+        const viewStart = calendar.view.activeStart;
+        const viewEnd = calendar.view.activeEnd;
+        const displayEvents = calendar.getEvents().filter(event => event.display !== 'background' && eventMatches(event));
+        const visible = displayEvents.filter(event => event.start && event.start < viewEnd && (event.end || event.start) >= viewStart);
+        const weekEvents = displayEvents.filter(event => event.start && event.start >= now && event.start < in7days);
+        const upcoming = displayEvents.filter(event => event.start && (event.end || event.start) >= now && event.start < in14days)
+          .sort((a, b) => a.start - b.start)
+          .slice(0, 7);
+
+        $('#visibleCount').textContent = visible.length;
+        $('#weekCount').textContent = weekEvents.length;
+        $('#categoryCount').textContent = activeCategories.size;
+        $('#recurringCount').textContent = recurringDefinitions.length;
+
+        $('#upcomingList').innerHTML = upcoming.length ? upcoming.map(event => {
+          const category = event.extendedProps.category || '업무';
+          return `<article class="upcoming-item" style="--event-color:${categoryStyle(category).color}">
+            <span class="upcoming-bar"></span>
+            <div><div class="upcoming-title">${escapeHtml(event.title)}</div><div class="upcoming-meta">${escapeHtml(formatEventRange(event))}<br>${escapeHtml(category)}${event.extendedProps.location ? ' · ' + escapeHtml(event.extendedProps.location) : ''}</div></div>
+          </article>`;
+        }).join('') : '<div class="empty-note">14일 이내 표시할 일정이 없다.</div>';
+      }
+
+      function openCreateModal(start, end = null, allDay = false) {
+        modalState = { mode: 'create', eventId: null, seriesId: null, readOnly: false };
+        $('#eventForm').reset();
+        $('#eventStatus').value = 'planned';
+        $('#eventCategory').value = '업무';
+        $('#eventRecurrence').value = 'none';
+        $('#eventRecurrence').querySelector('option[value="none"]').disabled = false;
+        $('#eventAllDay').checked = allDay;
+        $('#eventStartDate').value = localDateString(start);
+        $('#eventEndDate').value = allDay
+          ? localDateString(end ? addDays(end, -1) : start)
+          : localDateString(end || start);
+        $('#eventStartTime').value = allDay ? '09:00' : `${pad(start.getHours() || 9)}:${pad(start.getMinutes())}`;
+        const defaultEnd = end || new Date(start.getTime() + 60 * 60000);
+        $('#eventEndTime').value = allDay ? '10:00' : `${pad(defaultEnd.getHours())}:${pad(defaultEnd.getMinutes())}`;
+        $('#eventRepeatUntil').value = localDateString(addMonths(start, 12));
+        $('#modalTitle').textContent = '일정 추가';
+        $('#modalDescription').textContent = '날짜를 클릭하거나 기간을 선택해 새 일정을 만든다.';
+        $('#deleteEventBtn').hidden = true;
+        $('#modalBanner').classList.remove('show');
+        setFormReadOnly(false);
+        syncAllDayFields();
+        syncRecurrenceFields();
+        showModal();
+        window.setTimeout(() => $('#eventTitle').focus(), 60);
+      }
+
+      function openEventModal(event) {
+        if (event.extendedProps.isRecurring) {
+          const seriesId = event.extendedProps.seriesId || event.id;
+          const definition = recurringDefinitions.find(item => item.id === seriesId || item.extendedProps.seriesId === seriesId);
+          if (!definition) {
+            toast('반복 일정 원본을 찾지 못했다.', 'error');
+            return;
+          }
+          modalState = { mode: 'recurring', eventId: null, seriesId: definition.id, readOnly: false };
+          populateFromRecurring(definition);
+          $('#eventRecurrence').querySelector('option[value="none"]').disabled = true;
+          $('#modalTitle').textContent = '반복 일정 수정';
+          $('#modalDescription').textContent = '선택한 회차가 아니라 반복 시리즈 전체에 적용된다.';
+          $('#modalBanner').textContent = '이 일정은 RRule 반복 시리즈다. 저장·삭제 시 모든 반복 회차가 함께 변경된다.';
+          $('#modalBanner').classList.add('show');
+          $('#deleteEventBtn').hidden = false;
+          setFormReadOnly(false);
+          syncAllDayFields();
+          syncRecurrenceFields();
+          showModal();
+          return;
+        }
+
+        const readOnly = Boolean(event.extendedProps.readOnly);
+        modalState = { mode: 'edit', eventId: event.id, seriesId: null, readOnly };
+        $('#eventTitle').value = event.title;
+        $('#eventCategory').value = event.extendedProps.category || '업무';
+        $('#eventStatus').value = event.extendedProps.status || 'planned';
+        $('#eventAllDay').checked = event.allDay;
+        $('#eventStartDate').value = localDateString(event.start);
+        $('#eventEndDate').value = event.allDay ? inclusiveAllDayEnd(event.end, event.start) : localDateString(event.end || event.start);
+        $('#eventStartTime').value = `${pad(event.start.getHours())}:${pad(event.start.getMinutes())}`;
+        const eventEnd = event.end || new Date(event.start.getTime() + 60 * 60000);
+        $('#eventEndTime').value = `${pad(eventEnd.getHours())}:${pad(eventEnd.getMinutes())}`;
+        $('#eventRecurrence').value = 'none';
+        $('#eventRecurrence').querySelector('option[value="none"]').disabled = false;
+        $('#eventRepeatUntil').value = localDateString(addMonths(event.start, 12));
+        $('#eventLocation').value = event.extendedProps.location || '';
+        $('#eventDescription').value = event.extendedProps.description || '';
+        $('#modalTitle').textContent = readOnly ? '외부 일정 상세' : '일정 수정';
+        $('#modalDescription').textContent = readOnly ? '함수형 이벤트 소스에서 제공한 읽기 전용 일정이다.' : '일정 속성을 수정하거나 삭제한다.';
+        $('#modalBanner').textContent = readOnly ? '외부 이벤트 소스의 읽기 전용 데이터이므로 이 화면에서는 수정할 수 없다.' : '';
+        $('#modalBanner').classList.toggle('show', readOnly);
+        $('#deleteEventBtn').hidden = readOnly;
+        setFormReadOnly(readOnly);
+        syncAllDayFields();
+        syncRecurrenceFields();
+        showModal();
+      }
+
+      function populateFromRecurring(definition) {
+        const ext = definition.extendedProps;
+        $('#eventTitle').value = definition.title;
+        $('#eventCategory').value = ext.category || '업무';
+        $('#eventStatus').value = ext.status || 'planned';
+        $('#eventStartDate').value = ext.startDate;
+        $('#eventStartTime').value = ext.startTime || '09:00';
+        $('#eventEndDate').value = ext.endDate || ext.startDate;
+        $('#eventEndTime').value = ext.endTime || '10:00';
+        $('#eventAllDay').checked = Boolean(definition.allDay);
+        $('#eventRecurrence').value = ext.recurrence || 'weekly';
+        $('#eventRepeatUntil').value = ext.repeatUntil || '';
+        $('#eventLocation').value = ext.location || '';
+        $('#eventDescription').value = ext.description || '';
+      }
+
+      function setFormReadOnly(readOnly) {
+        $$('#eventForm input, #eventForm select, #eventForm textarea').forEach(element => {
+          element.disabled = readOnly;
+        });
+        $('#saveEventBtn').hidden = readOnly;
+      }
+
+      function showModal() {
+        $('#eventModal').classList.add('open');
+        $('#eventModal').setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeModal() {
+        $('#eventModal').classList.remove('open');
+        $('#eventModal').setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        if (calendar) calendar.unselect();
+      }
+
+      function syncAllDayFields() {
+        const allDay = $('#eventAllDay').checked;
+        $$('.time-field').forEach(group => group.style.opacity = allDay ? '.42' : '1');
+        $('#eventStartTime').disabled = allDay || modalState.readOnly;
+        $('#eventEndTime').disabled = allDay || modalState.readOnly;
+      }
+
+      function syncRecurrenceFields() {
+        const repeating = $('#eventRecurrence').value !== 'none';
+        $('#repeatUntilGroup').hidden = !repeating;
+        $('#repeatInfoGroup').hidden = !repeating;
+      }
+
+      function readFormData() {
+        const title = $('#eventTitle').value.trim();
+        const category = $('#eventCategory').value;
+        const status = $('#eventStatus').value;
+        const allDay = $('#eventAllDay').checked;
+        const startDate = $('#eventStartDate').value;
+        const endDate = $('#eventEndDate').value || startDate;
+        const startTime = $('#eventStartTime').value || '09:00';
+        const endTime = $('#eventEndTime').value || '10:00';
+        const recurrence = $('#eventRecurrence').value;
+        const repeatUntil = $('#eventRepeatUntil').value || localDateString(addMonths(combineLocal(startDate), 12));
+        const location = $('#eventLocation').value.trim();
+        const description = $('#eventDescription').value.trim();
+
+        if (!title || !startDate || !endDate) throw new Error('제목과 시작·종료일을 입력해야 한다.');
+        const start = allDay ? combineLocal(startDate) : combineLocal(startDate, startTime);
+        const end = allDay ? addDays(combineLocal(endDate), 1) : combineLocal(endDate, endTime);
+        if (end <= start) throw new Error('종료 시점은 시작 시점보다 뒤여야 한다.');
+        if (recurrence !== 'none' && combineLocal(repeatUntil) < combineLocal(startDate)) throw new Error('반복 종료일은 시작일 이후여야 한다.');
+        return { title, category, status, allDay, startDate, endDate, startTime, endTime, recurrence, repeatUntil, location, description, start, end };
+      }
+
+      function saveEventFromForm(event) {
+        event.preventDefault();
+        if (modalState.readOnly) return;
+        try {
+          const data = readFormData();
+          if (data.recurrence !== 'none' || modalState.mode === 'recurring') {
+            saveRecurringFromForm(data);
+          } else if (modalState.mode === 'edit') {
+            updateRegularEvent(data);
+          } else {
+            addRegularEvent(data);
+          }
+          closeModal();
+          updateDashboardSoon();
+        } catch (error) {
+          toast(error.message || '일정을 저장하지 못했다.', 'error');
+        }
+      }
+
+      function addRegularEvent(data) {
+        const style = categoryStyle(data.category);
+        calendar.addEvent({
+          id: uid(), title: data.title, start: data.start, end: data.end, allDay: data.allDay,
+          color: style.color, contrastColor: style.contrast,
+          extendedProps: { category: data.category, status: data.status, location: data.location, description: data.description, persistable: true, readOnly: false, sourceType: 'local' }
+        });
+        persistRegularEvents();
+        toast('새 일정을 추가했다.', 'success');
+      }
+
+      function updateRegularEvent(data) {
+        const event = calendar.getEventById(modalState.eventId);
+        if (!event) throw new Error('수정할 일정을 찾지 못했다.');
+        const style = categoryStyle(data.category);
+        event.setProp('title', data.title);
+        event.setProp('color', style.color);
+        event.setProp('contrastColor', style.contrast);
+        event.setAllDay(data.allDay);
+        event.setDates(data.start, data.end, { allDay: data.allDay });
+        event.setExtendedProp('category', data.category);
+        event.setExtendedProp('status', data.status);
+        event.setExtendedProp('location', data.location);
+        event.setExtendedProp('description', data.description);
+        persistRegularEvents();
+        calendar.rerenderEvents();
+        toast('일정을 수정했다.', 'success');
+      }
+
+      function saveRecurringFromForm(data) {
+        const seriesId = modalState.mode === 'recurring' ? modalState.seriesId : uid('series');
+        const definition = buildRecurringDefinition({
+          id: seriesId,
+          title: data.title,
+          category: data.category,
+          status: data.status,
+          startDate: data.startDate,
+          startTime: data.startTime,
+          endDate: data.endDate,
+          endTime: data.endTime,
+          allDay: data.allDay,
+          recurrence: data.recurrence === 'none' ? 'weekly' : data.recurrence,
+          repeatUntil: data.repeatUntil,
+          location: data.location,
+          description: data.description
+        });
+        const index = recurringDefinitions.findIndex(item => item.id === seriesId);
+        if (index >= 0) recurringDefinitions[index] = definition;
+        else recurringDefinitions.push(definition);
+        if (modalState.mode === 'edit' && modalState.eventId) {
+          const original = calendar.getEventById(modalState.eventId);
+          if (original) original.remove();
+          persistRegularEvents();
+        }
+        persistRecurring();
+        refreshRecurringSource();
+        toast(index >= 0 ? '반복 일정 시리즈를 수정했다.' : '반복 일정 시리즈를 추가했다.', 'success');
+      }
+
+      function deleteCurrentEvent() {
+        if (modalState.readOnly) return;
+        const confirmed = window.confirm('선택한 일정을 삭제할까?');
+        if (!confirmed) return;
+        if (modalState.mode === 'recurring') {
+          recurringDefinitions = recurringDefinitions.filter(item => item.id !== modalState.seriesId);
+          persistRecurring();
+          refreshRecurringSource();
+          toast('반복 일정 시리즈를 삭제했다.', 'success');
+        } else {
+          const event = calendar.getEventById(modalState.eventId);
+          if (event) event.remove();
+          persistRegularEvents();
+          toast('일정을 삭제했다.', 'success');
+        }
+        closeModal();
+        updateDashboardSoon();
+      }
+
+      function setCalendarOption(option, value) {
+        calendar.setOption(option, value);
+        logCallback('setOption', `${option}: ${String(value)}`);
+        updateDashboardSoon();
+      }
+
+      function exportJson() {
+        const data = {
+          format: 'fullcalendar-demo-v2',
+          exportedAt: new Date().toISOString(),
+          events: safeJsonParse(localStorage.getItem(STORAGE_EVENTS), []),
+          recurring: recurringDefinitions,
+          options: currentOptions
+        };
+        downloadFile(`fullcalendar-data-${localDateString(new Date())}.json`, JSON.stringify(data, null, 2), 'application/json');
+        toast('JSON 파일을 생성했다.', 'success');
+      }
+
+      function importJson(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (!Array.isArray(data.events) || !Array.isArray(data.recurring)) throw new Error('지원하는 형식이 아니다.');
+            saveLocal(STORAGE_EVENTS, data.events);
+            saveLocal(STORAGE_RECURRING, data.recurring);
+            if (data.options) saveLocal(STORAGE_OPTIONS, data.options);
+            toast('가져오기를 완료했다. 페이지를 새로 고친다.', 'success');
+            window.setTimeout(() => window.location.reload(), 500);
+          } catch (error) {
+            toast(`가져오기 실패: ${error.message}`, 'error');
+          }
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
+
+      function exportIcs() {
+        const regularEvents = calendar.getEvents().filter(event => event.extendedProps.persistable && !event.extendedProps.isRecurring);
+        const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FullCalendar Feature Lab//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+        regularEvents.forEach(event => {
+          lines.push('BEGIN:VEVENT');
+          lines.push(`UID:${icsEscape(event.id)}@fullcalendar-demo`);
+          lines.push(`DTSTAMP:${toIcsUtc(new Date())}`);
+          if (event.allDay) {
+            lines.push(`DTSTART;VALUE=DATE:${localDateString(event.start).replaceAll('-', '')}`);
+            const end = event.end || addDays(event.start, 1);
+            lines.push(`DTEND;VALUE=DATE:${localDateString(end).replaceAll('-', '')}`);
+          } else {
+            lines.push(`DTSTART:${toIcsUtc(event.start)}`);
+            if (event.end) lines.push(`DTEND:${toIcsUtc(event.end)}`);
+          }
+          lines.push(`SUMMARY:${icsEscape(event.title)}`);
+          if (event.extendedProps.location) lines.push(`LOCATION:${icsEscape(event.extendedProps.location)}`);
+          if (event.extendedProps.description) lines.push(`DESCRIPTION:${icsEscape(event.extendedProps.description)}`);
+          lines.push(`CATEGORIES:${icsEscape(event.extendedProps.category || '업무')}`);
+          lines.push('END:VEVENT');
+        });
+
+        recurringDefinitions.forEach(def => {
+          const ext = def.extendedProps;
+          lines.push('BEGIN:VEVENT');
+          lines.push(`UID:${icsEscape(def.id)}@fullcalendar-demo`);
+          lines.push(`DTSTAMP:${toIcsUtc(new Date())}`);
+          if (def.allDay) lines.push(`DTSTART;VALUE=DATE:${ext.startDate.replaceAll('-', '')}`);
+          else lines.push(`DTSTART:${ext.startDate.replaceAll('-', '')}T${ext.startTime.replace(':', '')}00`);
+          lines.push(`DURATION:${durationToIcs(def.duration)}`);
+          lines.push(`RRULE:${ruleToIcs(def.rrule)}`);
+          lines.push(`SUMMARY:${icsEscape(def.title)}`);
+          if (ext.location) lines.push(`LOCATION:${icsEscape(ext.location)}`);
+          if (ext.description) lines.push(`DESCRIPTION:${icsEscape(ext.description)}`);
+          lines.push(`CATEGORIES:${icsEscape(ext.category || '업무')}`);
+          lines.push('END:VEVENT');
+        });
+        lines.push('END:VCALENDAR');
+        downloadFile(`fullcalendar-${localDateString(new Date())}.ics`, lines.join('\r\n'), 'text/calendar;charset=utf-8');
+        toast('ICS 캘린더 파일을 생성했다.', 'success');
+      }
+
+      function toIcsUtc(date) { return new Date(date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+      function icsEscape(value) { return String(value ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
+      function durationToIcs(duration) {
+        if (duration.days) return `P${duration.days}D`;
+        const minutes = duration.minutes || 60;
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `PT${hours ? hours + 'H' : ''}${mins ? mins + 'M' : ''}`;
+      }
+      function ruleToIcs(rule) {
+        const parts = [`FREQ=${String(rule.freq).toUpperCase()}`];
+        if (rule.interval) parts.push(`INTERVAL=${rule.interval}`);
+        if (rule.byweekday) parts.push(`BYDAY=${rule.byweekday.map(v => String(v).toUpperCase()).join(',')}`);
+        if (rule.bymonthday) parts.push(`BYMONTHDAY=${rule.bymonthday}`);
+        if (rule.until) parts.push(`UNTIL=${String(rule.until).replace(/[-:]/g, '')}`);
+        return parts.join(';');
+      }
+
+      function downloadFile(filename, content, type) {
+        const blob = new Blob(['\uFEFF', content], { type });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function resetDemo() {
+        const confirmed = window.confirm('저장된 일정·반복 일정·옵션을 모두 초기 상태로 되돌릴까?');
+        if (!confirmed) return;
+        localStorage.removeItem(STORAGE_EVENTS);
+        localStorage.removeItem(STORAGE_RECURRING);
+        localStorage.removeItem(STORAGE_OPTIONS);
+        window.location.reload();
+      }
+
+      function bindControls() {
+        $('#heroAddBtn').addEventListener('click', () => openCreateModal(new Date(), null, false));
+        $('#todayBtn').addEventListener('click', () => calendar.today());
+        $('#printBtn').addEventListener('click', () => window.print());
+        $('#modalCloseBtn').addEventListener('click', closeModal);
+        $('#cancelEventBtn').addEventListener('click', closeModal);
+        $('#eventModal').addEventListener('mousedown', event => { if (event.target === $('#eventModal')) closeModal(); });
+        $('#eventForm').addEventListener('submit', saveEventFromForm);
+        $('#deleteEventBtn').addEventListener('click', deleteCurrentEvent);
+        $('#eventAllDay').addEventListener('change', syncAllDayFields);
+        $('#eventRecurrence').addEventListener('change', syncRecurrenceFields);
+
+        $('#eventSearch').addEventListener('input', event => {
+          searchQuery = event.target.value.trim().toLocaleLowerCase();
+          calendar.rerenderEvents();
+          updateDashboardSoon();
+        });
+
+        $('#viewButtons').addEventListener('click', event => {
+          const button = event.target.closest('[data-view]');
+          if (!button) return;
+          calendar.changeView(button.dataset.view);
+        });
+
+        $('#toggleAllCategories').addEventListener('click', () => {
+          const selectAll = activeCategories.size === 0;
+          activeCategories = selectAll ? new Set(Object.keys(categories)) : new Set();
+          $$('#categoryFilters input[data-category]').forEach(input => { input.checked = selectAll; });
+          calendar.rerenderEvents();
+          updateDashboardSoon();
+          updateCategoryToggleText();
+        });
+
+        $('#weekendsToggle').addEventListener('change', event => { currentOptions.weekends = event.target.checked; setCalendarOption('weekends', currentOptions.weekends); persistOptions(); });
+        $('#weekNumbersToggle').addEventListener('change', event => { currentOptions.weekNumbers = event.target.checked; setCalendarOption('weekNumbers', currentOptions.weekNumbers); persistOptions(); });
+        $('#nowIndicatorToggle').addEventListener('change', event => { currentOptions.nowIndicator = event.target.checked; setCalendarOption('nowIndicator', currentOptions.nowIndicator); persistOptions(); });
+        $('#businessHoursToggle').addEventListener('change', event => {
+          currentOptions.businessHours = event.target.checked;
+          setCalendarOption('businessHours', currentOptions.businessHours ? [
+            { daysOfWeek: [1,2,3,4,5], startTime: '09:00', endTime: '12:00' },
+            { daysOfWeek: [1,2,3,4,5], startTime: '13:00', endTime: '18:00' }
+          ] : false);
+          persistOptions();
+        });
+        $('#editableToggle').addEventListener('change', event => {
+          currentOptions.editable = event.target.checked;
+          setCalendarOption('editable', currentOptions.editable);
+          setCalendarOption('eventStartEditable', currentOptions.editable);
+          setCalendarOption('eventDurationEditable', currentOptions.editable);
+          persistOptions();
+        });
+        $('#overlapToggle').addEventListener('change', event => { currentOptions.overlap = event.target.checked; setCalendarOption('eventOverlap', currentOptions.overlap); persistOptions(); });
+        $('#constraintToggle').addEventListener('change', event => { currentOptions.constraint = event.target.checked; setCalendarOption('eventConstraint', currentOptions.constraint ? 'businessHours' : undefined); persistOptions(); });
+        $('#apiSourceToggle').addEventListener('change', event => {
+          currentOptions.apiSource = event.target.checked;
+          currentOptions.apiSource ? addApiSource() : removeApiSource();
+          persistOptions();
+        });
+
+        $('#gotoDateBtn').addEventListener('click', () => { const value = $('#gotoDate').value; if (value) calendar.gotoDate(value); });
+        $('#localeSelect').addEventListener('change', event => { currentOptions.locale = event.target.value; setCalendarOption('locale', currentOptions.locale); persistOptions(); });
+        $('#slotDurationSelect').addEventListener('change', event => { currentOptions.slotDuration = event.target.value; setCalendarOption('slotDuration', currentOptions.slotDuration); persistOptions(); });
+
+        $('#jsonExportBtn').addEventListener('click', exportJson);
+        $('#icsExportBtn').addEventListener('click', exportIcs);
+        $('#jsonImportBtn').addEventListener('click', () => $('#jsonImportInput').click());
+        $('#jsonImportInput').addEventListener('change', event => { if (event.target.files[0]) importJson(event.target.files[0]); event.target.value = ''; });
+        $('#resetBtn').addEventListener('click', resetDemo);
+        $('#logBtn').addEventListener('click', () => $('#logDrawer').classList.toggle('open'));
+        $('#logCloseBtn').addEventListener('click', () => $('#logDrawer').classList.remove('open'));
+
+        document.addEventListener('keydown', event => {
+          const tag = document.activeElement?.tagName;
+          const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+          if (event.key === 'Escape') { closeModal(); $('#logDrawer').classList.remove('open'); }
+          if (typing) return;
+          if (event.key === '/') { event.preventDefault(); $('#eventSearch').focus(); }
+          if (event.key.toLowerCase() === 'n') openCreateModal(new Date(), null, false);
+          if (event.key.toLowerCase() === 't') calendar.today();
+          if (event.key.toLowerCase() === 'm') calendar.changeView('dayGridMonth');
+          if (event.key.toLowerCase() === 'w') calendar.changeView('timeGridWeek');
+          if (event.key.toLowerCase() === 'l') calendar.changeView('listWeek');
+        });
+      }
+
+      function buildCategoryOptions() {
+        $('#eventCategory').innerHTML = Object.keys(categories).map(name => `<option value="${name}">${name}</option>`).join('');
+      }
+
+      function initialize() {
+        if (!window.FullCalendar || !window.FullCalendar.Calendar) {
+          $('#loadError').style.display = 'block';
+          $('#calendar-wrap').style.display = 'none';
+          return;
+        }
+        buildCategoryOptions();
+        buildFilters();
+        syncControlState();
+        const initialEvents = loadData();
+        syncControlState();
+        initCalendar(initialEvents);
+        buildExternalEvents();
+        bindControls();
+        updateDashboardSoon();
+        logCallback('calendarReady', 'FullCalendar 7.0.0');
+      }
+
+      document.addEventListener('DOMContentLoaded', initialize);
+    })();
+  </script>
+</body>
+</html>
