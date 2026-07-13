@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>sql.js 종합 기능 실습실</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --text: #172033;
+      --muted: #637083;
+      --line: #dce3ec;
+      --primary: #246bfd;
+      --primary-dark: #164ec0;
+      --success: #14804a;
+      --warning: #ad6800;
+      --danger: #c92a2a;
+      --code: #111827;
+      --shadow: 0 12px 35px rgba(31, 45, 61, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(36,107,253,.10), transparent 24rem),
+        radial-gradient(circle at 95% 10%, rgba(20,128,74,.08), transparent 22rem),
+        var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    code, pre, textarea.sql-editor { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+
+    .app { min-height: 100vh; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      color: white;
+      background: rgba(19, 32, 58, 0.95);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 25px rgba(15, 23, 42, .22);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #5a8cff, #22c55e);
+      font-weight: 900;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+    }
+    .brand h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .brand p { margin: 1px 0 0; color: #c9d3e4; font-size: 12px; }
+    .status-area { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.14);
+      color: #e8eef8;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #f59f00; box-shadow: 0 0 0 4px rgba(245,159,0,.15); }
+    .dot.ready { background: #40c057; box-shadow: 0 0 0 4px rgba(64,192,87,.15); }
+    .dot.error { background: #ff6b6b; box-shadow: 0 0 0 4px rgba(255,107,107,.15); }
+
+    .layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); }
+    .sidebar {
+      position: sticky;
+      top: 70px;
+      align-self: start;
+      height: calc(100vh - 70px);
+      overflow-y: auto;
+      padding: 18px 14px 24px;
+      border-right: 1px solid rgba(203, 213, 225, .8);
+      background: rgba(248, 250, 252, .78);
+      backdrop-filter: blur(10px);
+    }
+    .nav-title { padding: 8px 12px; color: #8a96a8; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+    .nav-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      margin: 3px 0;
+      border: 0;
+      border-radius: 11px;
+      color: #4a5568;
+      background: transparent;
+      text-align: left;
+      font-weight: 700;
+    }
+    .nav-btn:hover { background: #eaf0f9; color: #1e3a5f; }
+    .nav-btn.active { color: white; background: linear-gradient(135deg, #246bfd, #174db5); box-shadow: 0 8px 18px rgba(36,107,253,.23); }
+    .nav-icon { width: 22px; text-align: center; font-size: 16px; }
+    .sidebar-note {
+      margin: 18px 8px 0;
+      padding: 12px;
+      border: 1px solid #d7e1ef;
+      border-radius: 12px;
+      color: #5b687b;
+      background: rgba(255,255,255,.75);
+      font-size: 12px;
+    }
+
+    main { min-width: 0; padding: 24px; }
+    .tab-panel { display: none; animation: fade .18s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fade { from { opacity: .4; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+    .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+    .page-head h2 { margin: 0 0 4px; font-size: 26px; letter-spacing: -.035em; }
+    .page-head p { margin: 0; color: var(--muted); }
+    .head-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .card {
+      min-width: 0;
+      border: 1px solid rgba(210, 219, 230, .95);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.94);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid #e5eaf1;
+      background: linear-gradient(180deg, #fff, #fbfcfe);
+    }
+    .card-head h3 { margin: 0; font-size: 16px; }
+    .card-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .card-body { padding: 18px; }
+    .card-body.compact { padding: 12px; }
+
+    .metric {
+      padding: 17px;
+      border: 1px solid #e0e7f0;
+      border-radius: 14px;
+      background: linear-gradient(145deg, #fff, #f8fbff);
+    }
+    .metric-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .metric-value { margin-top: 7px; font-size: 24px; font-weight: 900; letter-spacing: -.04em; }
+    .metric-sub { margin-top: 3px; color: #7b8798; font-size: 11px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 38px;
+      padding: 8px 13px;
+      border: 1px solid #ccd6e3;
+      border-radius: 10px;
+      color: #334155;
+      background: white;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 2px 5px rgba(15,23,42,.03);
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #aab8ca; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn-primary { color: white; border-color: var(--primary); background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+    .btn-success { color: white; border-color: var(--success); background: var(--success); }
+    .btn-danger { color: white; border-color: var(--danger); background: var(--danger); }
+    .btn-soft { color: #2455a6; border-color: #cfe0ff; background: #edf4ff; }
+    .btn-sm { min-height: 31px; padding: 5px 9px; font-size: 12px; border-radius: 8px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .form-field { min-width: 0; }
+    .form-field.full { grid-column: 1 / -1; }
+    label { display: block; margin-bottom: 6px; color: #465569; font-size: 12px; font-weight: 800; }
+    input, select, textarea:not(.sql-editor) {
+      width: 100%;
+      border: 1px solid #cfd8e5;
+      border-radius: 10px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #6d9aff; box-shadow: 0 0 0 3px rgba(36,107,253,.12); }
+
+    .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .toolbar .grow { flex: 1; }
+    .sql-editor {
+      display: block;
+      width: 100%;
+      min-height: 240px;
+      resize: vertical;
+      border: 0;
+      padding: 18px;
+      outline: none;
+      color: #e5ecf5;
+      background: var(--code);
+      font-size: 13px;
+      line-height: 1.65;
+      tab-size: 2;
+    }
+    .editor-shell { overflow: hidden; border: 1px solid #273449; border-radius: 14px; background: var(--code); }
+    .editor-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: #a9b8ca; background: #182235; border-bottom: 1px solid #2a3850; font-size: 12px; }
+    .editor-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff6b6b; box-shadow: 15px 0 #ffd43b, 30px 0 #51cf66; margin-right: 27px; }
+
+    .result-wrap { overflow: auto; max-height: 520px; border: 1px solid #dce3ec; border-radius: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 10px 11px; border-bottom: 1px solid #e7ebf1; text-align: left; vertical-align: top; white-space: nowrap; }
+    th { position: sticky; top: 0; z-index: 2; color: #45566e; background: #f2f5f9; font-size: 12px; }
+    tr:hover td { background: #f8fbff; }
+    td.null { color: #9aa5b5; font-style: italic; }
+    .table-empty { padding: 30px; color: var(--muted); text-align: center; }
+
+    .badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .badge-ok { color: #0f6b3f; background: #dff6e9; }
+    .badge-warn { color: #8a5700; background: #fff0cc; }
+    .badge-bad { color: #a61e1e; background: #ffe3e3; }
+    .badge-info { color: #2455a6; background: #e4efff; }
+
+    .notice { padding: 12px 14px; border-radius: 11px; font-size: 13px; }
+    .notice-info { color: #244a80; border: 1px solid #cfe0ff; background: #eef5ff; }
+    .notice-warn { color: #765000; border: 1px solid #ffe19a; background: #fff8df; }
+    .notice-danger { color: #9d2020; border: 1px solid #ffc9c9; background: #fff0f0; }
+
+    .log-box {
+      max-height: 330px;
+      overflow: auto;
+      padding: 12px;
+      border-radius: 12px;
+      color: #cbd5e1;
+      background: #0f172a;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.7;
+    }
+    .log-line { border-bottom: 1px solid rgba(148,163,184,.12); padding: 3px 0; white-space: pre-wrap; word-break: break-word; }
+    .log-time { color: #64748b; }
+    .log-info { color: #93c5fd; }
+    .log-ok { color: #86efac; }
+    .log-warn { color: #fde68a; }
+    .log-error { color: #fca5a5; }
+
+    .schema-list { display: grid; gap: 7px; max-height: 440px; overflow: auto; }
+    .schema-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid #dce3ec;
+      border-radius: 10px;
+      background: white;
+      text-align: left;
+    }
+    .schema-item:hover { border-color: #8fb0ee; background: #f7faff; }
+    .schema-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 800; }
+    .code-block { margin: 0; padding: 14px; overflow: auto; border-radius: 11px; color: #d7e3f4; background: #111827; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .feature-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px; border: 1px solid #e0e7f0; border-radius: 11px; background: #fbfdff; font-size: 12px; font-weight: 800; }
+
+    .drop-zone {
+      display: grid;
+      place-items: center;
+      min-height: 150px;
+      padding: 24px;
+      border: 2px dashed #aab9cc;
+      border-radius: 14px;
+      color: #617086;
+      background: #f8fafc;
+      text-align: center;
+      transition: .15s ease;
+    }
+    .drop-zone.drag { border-color: var(--primary); background: #edf4ff; transform: scale(1.005); }
+    .drop-zone strong { display: block; color: #334155; font-size: 15px; margin-bottom: 4px; }
+
+    .bars { display: grid; gap: 12px; }
+    .bar-row { display: grid; grid-template-columns: 100px minmax(0, 1fr) 90px; align-items: center; gap: 10px; font-size: 12px; }
+    .bar-track { height: 10px; overflow: hidden; border-radius: 999px; background: #e8edf4; }
+    .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #246bfd, #35a56f); }
+    .bar-value { text-align: right; font-weight: 800; }
+
+    .split { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .mono { font-family: "SFMono-Regular", Consolas, monospace; }
+    .nowrap { white-space: nowrap; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-12 { margin-bottom: 12px; }
+    .text-right { text-align: right; }
+    .hidden { display: none !important; }
+
+    .toast-area { position: fixed; right: 20px; bottom: 20px; z-index: 100; display: grid; gap: 8px; width: min(380px, calc(100vw - 40px)); }
+    .toast { padding: 12px 14px; border-radius: 12px; color: white; background: #334155; box-shadow: 0 14px 35px rgba(15,23,42,.25); animation: toastin .18s ease; font-size: 13px; }
+    .toast.ok { background: #147d49; }
+    .toast.error { background: #b42323; }
+    @keyframes toastin { from { opacity: 0; transform: translateY(8px); } }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(244,247,251,.92);
+      backdrop-filter: blur(8px);
+    }
+    .loading-card { width: min(520px, 100%); padding: 28px; border: 1px solid #d9e2ee; border-radius: 20px; background: white; box-shadow: 0 24px 60px rgba(15,23,42,.15); text-align: center; }
+    .spinner { width: 40px; height: 40px; margin: 0 auto 14px; border: 4px solid #dce7f8; border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 1100px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .span-3 { grid-column: span 2; }
+      .split { grid-template-columns: 270px minmax(0, 1fr); }
+    }
+    @media (max-width: 820px) {
+      .topbar { position: static; align-items: flex-start; }
+      .layout { display: block; }
+      .sidebar { position: static; height: auto; display: flex; gap: 6px; overflow-x: auto; border-right: 0; border-bottom: 1px solid #dce3ec; padding: 10px; }
+      .nav-title, .sidebar-note { display: none; }
+      .nav-btn { width: auto; flex: 0 0 auto; margin: 0; padding: 9px 11px; }
+      .nav-icon { width: auto; }
+      main { padding: 16px; }
+      .grid-2, .grid-3, .grid-4, .split { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: auto; }
+      .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .page-head { display: block; }
+      .head-actions { justify-content: flex-start; margin-top: 12px; }
+    }
+    @media (max-width: 560px) {
+      .topbar { padding: 12px; }
+      .brand p { display: none; }
+      .status-area .status-pill:nth-child(2) { display: none; }
+      .nav-btn span:last-child { display: none; }
+      .form-grid, .feature-grid { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 72px minmax(0,1fr); }
+      .bar-value { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">SQL</div>
+      <div>
+        <h1>sql.js 종합 기능 실습실</h1>
+        <p>브라우저 안에서 실행되는 SQLite · WebAssembly · 단일 HTML 샘플</p>
+      </div>
+    </div>
+    <div class="status-area">
+      <span class="status-pill"><span id="statusDot" class="dot"></span><span id="statusText">엔진 초기화 중</span></span>
+      <span class="status-pill">sql.js <strong>1.14.1</strong></span>
+      <span class="status-pill" id="dbSizePill">DB 0 KB</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-title">PLAYGROUND</div>
+      <button class="nav-btn active" data-tab="dashboard"><span class="nav-icon">▦</span><span>대시보드</span></button>
+      <button class="nav-btn" data-tab="console"><span class="nav-icon">⌨</span><span>SQL 콘솔</span></button>
+      <button class="nav-btn" data-tab="crud"><span class="nav-icon">✎</span><span>CRUD·바인딩</span></button>
+      <button class="nav-btn" data-tab="schema"><span class="nav-icon">◫</span><span>스키마 탐색</span></button>
+      <button class="nav-btn" data-tab="advanced"><span class="nav-icon">ƒ</span><span>고급 API</span></button>
+      <button class="nav-btn" data-tab="storage"><span class="nav-icon">⇩</span><span>파일·저장소</span></button>
+      <button class="nav-btn" data-tab="diagnostics"><span class="nav-icon">⌁</span><span>성능·진단</span></button>
+      <button class="nav-btn" data-tab="logs"><span class="nav-icon">≡</span><span>실행 로그</span></button>
+      <div class="sidebar-note">
+        데이터베이스는 기본적으로 메모리에 존재한다. 장기 보관은 <strong>SQLite 파일 내보내기</strong> 또는 <strong>IndexedDB 저장</strong>을 사용한다.
+      </div>
+    </aside>
+
+    <main>
+      <section id="tab-dashboard" class="tab-panel active">
+        <div class="page-head">
+          <div><h2>기능 현황 대시보드</h2><p>샘플 수협 판매 데이터와 현재 SQLite 엔진 상태를 한눈에 확인</p></div>
+          <div class="head-actions">
+            <button class="btn btn-soft" id="refreshDashboardBtn">↻ 새로고침</button>
+            <button class="btn btn-primary" id="resetDbBtn">샘플 DB 초기화</button>
+          </div>
+        </div>
+
+        <div class="grid grid-4" id="metricGrid">
+          <div class="metric"><div class="metric-label">SQLite 버전</div><div class="metric-value" id="metricVersion">-</div><div class="metric-sub">WASM 내부 엔진</div></div>
+          <div class="metric"><div class="metric-label">테이블</div><div class="metric-value" id="metricTables">-</div><div class="metric-sub">사용자 테이블 수</div></div>
+          <div class="metric"><div class="metric-label">회원</div><div class="metric-value" id="metricMembers">-</div><div class="metric-sub">활성·비활성 포함</div></div>
+          <div class="metric"><div class="metric-label">주문금액</div><div class="metric-value" id="metricSales">-</div><div class="metric-sub">샘플 누적 합계</div></div>
+        </div>
+
+        <div class="grid grid-3 mt-16">
+          <article class="card span-2">
+            <div class="card-head"><div><h3>지점별 주문금액</h3><p>JOIN · GROUP BY · 집계 쿼리 결과</p></div><button class="btn btn-sm" data-run-sample="branchSales">SQL 콘솔에서 열기</button></div>
+            <div class="card-body"><div class="bars" id="branchSalesBars"></div></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>지원 기능 감지</h3><p>현재 빌드에서 실제 쿼리로 확인</p></div></div>
+            <div class="card-body"><div class="feature-grid" id="featureGrid"></div></div>
+          </article>
+        </div>
+
+        <div class="grid grid-2 mt-16">
+          <article class="card">
+            <div class="card-head"><div><h3>최근 주문</h3><p>뷰(v_order_summary) 조회</p></div><button class="btn btn-sm" data-run-sample="recentOrders">전체 보기</button></div>
+            <div class="card-body compact"><div class="result-wrap" id="recentOrdersTable"></div></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>구성 개요</h3><p>이 샘플에 포함된 sql.js 활용 범위</p></div></div>
+            <div class="card-body">
+              <div class="notice notice-info mb-12"><strong>브라우저 로컬 실행:</strong> 쿼리와 파일 처리는 서버 전송 없이 현재 탭에서 수행된다.</div>
+              <table>
+                <tbody>
+                  <tr><th>기본 API</th><td>Database, run, exec, each, prepare, bind, step, getAsObject, free</td></tr>
+                  <tr><th>SQLite 기능</th><td>DDL, CRUD, JOIN, CTE, 윈도 함수, 뷰, 인덱스, 트리거, PRAGMA</td></tr>
+                  <tr><th>고급 API</th><td>create_function, create_aggregate, updateHook, BLOB, BigInt 조회</td></tr>
+                  <tr><th>보관</th><td>SQLite import/export, IndexedDB 스냅샷, CSV·JSON 결과 저장</td></tr>
+                  <tr><th>진단</th><td>EXPLAIN QUERY PLAN, integrity_check, foreign_key_check, 벤치마크</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="tab-console" class="tab-panel">
+        <div class="page-head">
+          <div><h2>SQL 콘솔</h2><p>여러 문장 실행, 선택 영역 실행, 결과 세트·CSV·JSON 내보내기</p></div>
+          <div class="head-actions"><button class="btn" id="clearEditorBtn">편집기 지우기</button><button class="btn btn-primary" id="runSqlBtn">▶ 실행 Ctrl+Enter</button></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="toolbar grow">
+              <select id="sampleQuerySelect" style="max-width:330px"><option value="">예제 SQL 불러오기…</option></select>
+              <button class="btn btn-sm" id="formatSqlBtn">간단 정렬</button>
+              <span class="muted small" id="editorHint">선택 영역이 있으면 해당 부분만 실행</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="editor-shell">
+              <div class="editor-bar"><span class="editor-dot"></span><span>query.sql</span><span class="grow"></span><span id="queryStatus">대기 중</span></div>
+              <textarea id="sqlEditor" class="sql-editor" spellcheck="false">SELECT
+  o.order_id,
+  o.member_name,
+  o.branch_name,
+  o.status,
+  o.total_amount,
+  o.ordered_at
+FROM v_order_summary AS o
+ORDER BY o.order_id DESC
+LIMIT 10;</textarea>
+            </div>
+            <div class="toolbar mt-12">
+              <span class="badge badge-info" id="resultSummary">아직 실행하지 않음</span>
+              <span class="grow"></span>
+              <button class="btn btn-sm" id="exportCsvBtn" disabled>결과 CSV</button>
+              <button class="btn btn-sm" id="exportJsonBtn" disabled>결과 JSON</button>
+              <button class="btn btn-sm" id="copyResultBtn" disabled>결과 복사</button>
+            </div>
+            <div class="mt-12" id="queryResults"><div class="table-empty card">SQL을 실행하면 결과가 표시된다.</div></div>
+          </div>
+        </div>
+        <div class="grid grid-2 mt-16">
+          <article class="card"><div class="card-head"><div><h3>쿼리 기록</h3><p>현재 페이지 세션에서 최근 실행한 SQL</p></div><button class="btn btn-sm" id="clearHistoryBtn">기록 삭제</button></div><div class="card-body compact"><div id="queryHistory" class="schema-list"><div class="table-empty">기록 없음</div></div></div></article>
+          <article class="card"><div class="card-head"><div><h3>단축키·주의사항</h3></div></div><div class="card-body small">
+            <p><strong>Ctrl+Enter:</strong> 실행 · <strong>Tab:</strong> 두 칸 들여쓰기 · <strong>선택 실행:</strong> 드래그 후 Ctrl+Enter</p>
+            <p>DDL/DML도 즉시 반영된다. 실험 전 파일 내보내기 또는 IndexedDB 저장을 권장한다.</p>
+            <p>Prepared statement는 사용 후 반드시 <code>free()</code>하여 WASM 메모리를 해제해야 한다.</p>
+          </div></article>
+        </div>
+      </section>
+
+      <section id="tab-crud" class="tab-panel">
+        <div class="page-head"><div><h2>CRUD · 파라미터 바인딩</h2><p>run, prepare, named parameters, transaction, savepoint, each API 실습</p></div></div>
+        <div class="grid grid-3">
+          <article class="card">
+            <div class="card-head"><div><h3>회원 등록</h3><p>Prepared statement + named bind</p></div></div>
+            <div class="card-body">
+              <form id="memberForm" class="form-grid">
+                <div class="form-field"><label>회원명</label><input id="memberName" value="김바다" required /></div>
+                <div class="form-field"><label>등급</label><select id="memberGrade"><option>일반</option><option>우수</option><option>VIP</option></select></div>
+                <div class="form-field"><label>지점</label><select id="memberBranch"></select></div>
+                <div class="form-field"><label>활성 여부</label><select id="memberActive"><option value="1">활성</option><option value="0">비활성</option></select></div>
+                <div class="form-field full"><button class="btn btn-primary" type="submit">INSERT 실행</button></div>
+              </form>
+              <pre class="code-block mt-12">const stmt = db.prepare(`
+ INSERT INTO members(name, grade, branch_id, active)
+ VALUES ($name, $grade, $branch, $active)
+`);
+stmt.run({$name, $grade, $branch, $active});
+stmt.free();</pre>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>상품 재고 수정</h3><p>UPDATE + positional parameters</p></div></div>
+            <div class="card-body">
+              <form id="stockForm" class="form-grid">
+                <div class="form-field full"><label>상품</label><select id="stockProduct"></select></div>
+                <div class="form-field"><label>변경 수량</label><input id="stockDelta" type="number" value="10" /></div>
+                <div class="form-field"><label>음수 방지</label><select id="stockGuard"><option value="1">적용</option><option value="0">미적용</option></select></div>
+                <div class="form-field full"><button class="btn btn-success" type="submit">UPDATE 실행</button></div>
+              </form>
+              <div class="notice notice-info mt-12" id="rowsModifiedBox">최근 변경 행 수: 0</div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h3>조건부 삭제</h3><p>DELETE + FK 제약 오류 확인</p></div></div>
+            <div class="card-body">
+              <label>회원 선택</label><select id="deleteMember"></select>
+              <div class="toolbar mt-12"><button class="btn btn-danger" id="deleteMemberBtn">DELETE 시도</button><button class="btn" id="toggleFkBtn">FK 상태 확인</button></div>
+              <div class="notice notice-warn mt-12">주문이 연결된 회원은 외래키 제약으로 삭제가 거부된다. 제약 검증 예제로 활용한다.</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="grid grid-2 mt-16">
+          <article class="card">
+            <div class="card-head"><div><h3>주문 트랜잭션</h3><p>BEGIN · COMMIT/ROLLBACK · 복수 테이블 일괄 처리</p></div></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-field"><label>회원</label><select id="txMember"></select></div>
+                <div class="form-field"><label>상품</label><select id="txProduct"></select></div>
+                <div class="form-field"><label>수량</label><input id="txQty" type="number" min="1" value="2" /></div>
+                <div class="form-field"><label>처리 방식</label><select id="txMode"><option value="commit">정상 COMMIT</option><option value="rollback">의도적 ROLLBACK</option></select></div>
+              </div>
+              <button class="btn btn-primary mt-12" id="runTransactionBtn">트랜잭션 실행</button>
+              <pre class="code-block mt-12">BEGIN;
+INSERT INTO orders ...;
+INSERT INTO order_items ...;
+UPDATE products SET stock = stock - ? ...;
+COMMIT; -- 오류 시 ROLLBACK</pre>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>Savepoint · each()</h3><p>부분 롤백 및 행별 콜백</p></div></div>
+            <div class="card-body">
+              <div class="toolbar"><button class="btn" id="savepointDemoBtn">SAVEPOINT 실습</button><button class="btn" id="eachDemoBtn">db.each() 실습</button></div>
+              <div id="crudOutput" class="log-box mt-12"><div class="log-line">실습 버튼을 누르면 결과가 표시된다.</div></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="card mt-16">
+          <div class="card-head"><div><h3>회원 목록</h3><p>CRUD 실행 후 자동 갱신</p></div><button class="btn btn-sm" id="refreshCrudBtn">↻ 갱신</button></div>
+          <div class="card-body compact"><div class="result-wrap" id="memberTable"></div></div>
+        </article>
+      </section>
+
+      <section id="tab-schema" class="tab-panel">
+        <div class="page-head"><div><h2>스키마 탐색기</h2><p>sqlite_master와 PRAGMA를 이용한 테이블·컬럼·인덱스·뷰·트리거 분석</p></div><div class="head-actions"><button class="btn" id="createLabObjectsBtn">실험 객체 생성</button><button class="btn btn-soft" id="refreshSchemaBtn">↻ 새로고침</button></div></div>
+        <div class="split">
+          <article class="card">
+            <div class="card-head"><div><h3>데이터베이스 객체</h3><p>클릭하여 상세 구조 조회</p></div></div>
+            <div class="card-body compact"><div id="schemaList" class="schema-list"></div></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3 id="schemaDetailTitle">객체 상세</h3><p id="schemaDetailSub">왼쪽에서 객체를 선택</p></div><button class="btn btn-sm" id="copySchemaSqlBtn" disabled>정의 복사</button></div>
+            <div class="card-body">
+              <pre id="schemaSql" class="code-block">선택된 객체의 CREATE SQL이 여기에 표시된다.</pre>
+              <div class="grid grid-2 mt-16">
+                <div><h4>컬럼 / 기본 정보</h4><div class="result-wrap" id="pragmaInfo"><div class="table-empty">객체를 선택하세요.</div></div></div>
+                <div><h4>연관 인덱스 / 외래키</h4><div class="result-wrap" id="pragmaExtra"><div class="table-empty">객체를 선택하세요.</div></div></div>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="grid grid-3 mt-16">
+          <article class="card"><div class="card-head"><div><h3>임시 테이블</h3><p>TEMP 스키마</p></div></div><div class="card-body"><button class="btn" id="tempTableBtn">TEMP TABLE 생성·조회</button><div class="notice notice-info mt-12" id="tempTableOutput">현재 연결이 종료되면 임시 테이블도 사라진다.</div></div></article>
+          <article class="card"><div class="card-head"><div><h3>ATTACH DATABASE</h3><p>보조 메모리 DB 연결</p></div></div><div class="card-body"><button class="btn" id="attachDbBtn">aux DB 연결·JOIN</button><div class="notice notice-info mt-12" id="attachOutput">ATTACH ':memory:' AS aux 예제</div></div></article>
+          <article class="card"><div class="card-head"><div><h3>제약조건 검사</h3><p>UNIQUE · CHECK · FK</p></div></div><div class="card-body"><button class="btn" id="constraintDemoBtn">의도적 오류 실행</button><div class="notice notice-warn mt-12" id="constraintOutput">오류는 잡아서 화면에 표시한다.</div></div></article>
+        </div>
+      </section>
+
+      <section id="tab-advanced" class="tab-panel">
+        <div class="page-head"><div><h2>고급 sql.js API</h2><p>JavaScript 함수·집계·업데이트 훅·BLOB·BigInt·확장 SQL 기능</p></div></div>
+        <div class="grid grid-3">
+          <article class="card"><div class="card-head"><div><h3>사용자 정의 함수</h3><p>Database.create_function()</p></div></div><div class="card-body"><button class="btn btn-primary" id="udfDemoBtn">krw(), mask_name() 실행</button><div id="udfOutput" class="mt-12 result-wrap"></div></div></article>
+          <article class="card"><div class="card-head"><div><h3>사용자 정의 집계</h3><p>Database.create_aggregate()</p></div></div><div class="card-body"><button class="btn btn-primary" id="aggregateDemoBtn">js_median() 실행</button><div id="aggregateOutput" class="mt-12 result-wrap"></div></div></article>
+          <article class="card"><div class="card-head"><div><h3>Update Hook</h3><p>INSERT·UPDATE·DELETE 감지</p></div><span id="hookBadge" class="badge badge-ok">활성</span></div><div class="card-body"><div class="toolbar"><button class="btn" id="hookMutationBtn">변경 1건 발생</button><button class="btn" id="toggleHookBtn">훅 끄기</button></div><div id="hookLog" class="log-box mt-12"><div class="log-line">변경 이벤트 대기 중</div></div></div></article>
+        </div>
+
+        <div class="grid grid-2 mt-16">
+          <article class="card"><div class="card-head"><div><h3>BLOB · TypedArray</h3><p>Uint8Array 바인딩 및 hex() 확인</p></div></div><div class="card-body"><button class="btn" id="blobDemoBtn">바이너리 저장·조회</button><div id="blobOutput" class="mt-12 result-wrap"></div></div></article>
+          <article class="card"><div class="card-head"><div><h3>64비트 정수(BigInt)</h3><p>useBigInt 옵션으로 안전한 조회</p></div></div><div class="card-body"><button class="btn" id="bigIntDemoBtn">MAX_SAFE_INTEGER 초과 값 조회</button><pre id="bigIntOutput" class="code-block mt-12">실행 전</pre></div></article>
+        </div>
+
+        <article class="card mt-16">
+          <div class="card-head"><div><h3>SQLite 확장 기능 실습</h3><p>현재 빌드에서 지원 여부를 실제 실행으로 검증</p></div></div>
+          <div class="card-body">
+            <div class="toolbar">
+              <button class="btn" data-advanced-demo="json">JSON 함수</button>
+              <button class="btn" data-advanced-demo="window">윈도 함수</button>
+              <button class="btn" data-advanced-demo="cte">재귀 CTE</button>
+              <button class="btn" data-advanced-demo="math">수학 함수</button>
+              <button class="btn" data-advanced-demo="returning">RETURNING</button>
+              <button class="btn" data-advanced-demo="fts5">FTS5 감지</button>
+              <button class="btn" data-advanced-demo="date">날짜·시간</button>
+              <button class="btn" data-advanced-demo="statement">Statement 메타정보</button>
+              <button class="btn" data-advanced-demo="iterator">SQL Iterator</button>
+            </div>
+            <div id="advancedOutput" class="mt-12 result-wrap"><div class="table-empty">기능 버튼을 선택하세요.</div></div>
+          </div>
+        </article>
+      </section>
+
+      <section id="tab-storage" class="tab-panel">
+        <div class="page-head"><div><h2>파일 · 영속 저장</h2><p>SQLite 바이너리 import/export와 IndexedDB 스냅샷 관리</p></div><div class="head-actions"><button class="btn btn-primary" id="exportDbBtn">SQLite 파일 다운로드</button></div></div>
+        <div class="grid grid-2">
+          <article class="card">
+            <div class="card-head"><div><h3>SQLite 파일 가져오기</h3><p>.sqlite · .sqlite3 · .db 파일</p></div></div>
+            <div class="card-body">
+              <div id="dropZone" class="drop-zone">
+                <div><strong>SQLite 파일을 여기에 놓기</strong><span>또는 아래 버튼으로 파일 선택</span><br><button class="btn btn-soft mt-12" id="chooseDbBtn">파일 선택</button></div>
+              </div>
+              <input id="dbFileInput" class="hidden" type="file" accept=".sqlite,.sqlite3,.db,application/x-sqlite3" />
+              <div class="notice notice-warn mt-12">가져오면 현재 메모리 DB가 교체된다. 필요한 경우 먼저 내보내기 또는 스냅샷 저장을 수행한다.</div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>현재 DB 정보</h3><p>페이지·용량·객체 현황</p></div><button class="btn btn-sm" id="refreshStorageStatsBtn">↻ 갱신</button></div>
+            <div class="card-body"><div id="storageStats"></div><div class="toolbar mt-12"><button class="btn" id="exportSchemaBtn">스키마 SQL 저장</button><button class="btn" id="cloneDbBtn">메모리 복제 테스트</button><button class="btn btn-danger" id="closeReopenBtn">close() 후 재열기</button></div></div>
+          </article>
+        </div>
+
+        <div class="grid grid-2 mt-16">
+          <article class="card">
+            <div class="card-head"><div><h3>IndexedDB 스냅샷</h3><p>브라우저 저장소에 SQLite 바이너리 보관</p></div></div>
+            <div class="card-body">
+              <div class="form-grid"><div class="form-field full"><label>스냅샷 이름</label><input id="snapshotName" value="sqljs-demo-snapshot" /></div></div>
+              <div class="toolbar mt-12"><button class="btn btn-success" id="saveSnapshotBtn">현재 DB 저장</button><button class="btn" id="refreshSnapshotsBtn">목록 갱신</button></div>
+              <div class="mt-12 result-wrap" id="snapshotList"><div class="table-empty">목록 불러오는 중</div></div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>결과 데이터 교환</h3><p>콘솔의 마지막 결과 세트를 CSV·JSON으로 저장</p></div></div>
+            <div class="card-body">
+              <div class="notice notice-info">SQL 콘솔에서 조회 결과를 만든 뒤 이 영역 또는 콘솔 상단 버튼을 사용한다.</div>
+              <div class="toolbar mt-12"><button class="btn" id="storageCsvBtn">CSV 저장</button><button class="btn" id="storageJsonBtn">JSON 저장</button><button class="btn" id="copySchemaBtn">전체 스키마 복사</button></div>
+              <h4>오프라인 배치</h4>
+              <pre class="code-block">./assets/sqljs/sql-wasm.js
+./assets/sqljs/sql-wasm.wasm
+./sqljs_comprehensive_demo.html
+
+※ HTML 상단의 CDN 주소를 로컬 경로로 바꾸거나
+   사내 웹서버에서 위 구조로 제공</pre>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="tab-diagnostics" class="tab-panel">
+        <div class="page-head"><div><h2>성능 · 무결성 진단</h2><p>쿼리 실행계획, 인덱스 효과, 트랜잭션 벤치마크, PRAGMA 점검</p></div></div>
+        <div class="grid grid-2">
+          <article class="card">
+            <div class="card-head"><div><h3>EXPLAIN QUERY PLAN</h3><p>조회 SQL의 접근 경로 확인</p></div><button class="btn btn-primary" id="explainBtn">실행계획 분석</button></div>
+            <div class="card-body"><textarea id="explainSql" rows="6">SELECT o.id, m.name, o.total_amount
+FROM orders o
+JOIN members m ON m.id = o.member_id
+WHERE o.member_id = 2
+ORDER BY o.ordered_at DESC;</textarea><div id="explainOutput" class="result-wrap mt-12"></div></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h3>인덱스 비교</h3><p>DROP/CREATE 전후 실행계획 비교</p></div></div>
+            <div class="card-body"><div class="toolbar"><button class="btn btn-danger" id="dropIndexBtn">주문 인덱스 삭제</button><button class="btn btn-success" id="createIndexBtn">주문 인덱스 생성</button><button class="btn" id="comparePlanBtn">계획 비교</button></div><div id="indexPlanOutput" class="log-box mt-12"><div class="log-line">인덱스 작업 결과가 표시된다.</div></div></div>
+          </article>
+        </div>
+
+        <div class="grid grid-3 mt-16">
+          <article class="card"><div class="card-head"><div><h3>트랜잭션 벤치마크</h3><p>반복 INSERT 속도 비교</p></div></div><div class="card-body"><label>반복 횟수</label><input id="benchmarkCount" type="number" min="10" max="3000" value="500" /><button class="btn btn-primary mt-12" id="benchmarkBtn">벤치마크 실행</button><pre id="benchmarkOutput" class="code-block mt-12">실행 전</pre></div></article>
+          <article class="card"><div class="card-head"><div><h3>무결성 검사</h3><p>integrity_check · FK check</p></div></div><div class="card-body"><div class="toolbar"><button class="btn" id="integrityBtn">검사 실행</button><button class="btn" id="analyzeBtn">ANALYZE</button><button class="btn" id="vacuumBtn">VACUUM</button></div><div id="integrityOutput" class="mt-12 result-wrap"></div></div></article>
+          <article class="card"><div class="card-head"><div><h3>PRAGMA 상태</h3><p>페이지·캐시·컴파일 옵션</p></div></div><div class="card-body"><button class="btn" id="pragmaBtn">상태 조회</button><div id="pragmaOutput" class="mt-12 result-wrap"></div></div></article>
+        </div>
+
+        <article class="card mt-16"><div class="card-head"><div><h3>컴파일 옵션</h3><p>PRAGMA compile_options</p></div><button class="btn btn-sm" id="compileOptionsBtn">불러오기</button></div><div class="card-body compact"><div id="compileOptionsOutput" class="result-wrap"><div class="table-empty">버튼을 눌러 조회</div></div></div></article>
+      </section>
+
+      <section id="tab-logs" class="tab-panel">
+        <div class="page-head"><div><h2>실행 로그</h2><p>초기화, SQL 실행, 파일·저장소, 오류 이벤트 기록</p></div><div class="head-actions"><button class="btn" id="copyLogBtn">로그 복사</button><button class="btn btn-danger" id="clearLogBtn">로그 삭제</button></div></div>
+        <article class="card"><div class="card-head"><div><h3>애플리케이션 로그</h3><p>민감정보를 입력했다면 공유 전 확인</p></div></div><div class="card-body"><div id="appLog" class="log-box" style="max-height:650px"></div></div></article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="toastArea" class="toast-area"></div>
+<div id="loadingScreen" class="loading-screen">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <h2 style="margin:0 0 8px">sql.js 엔진 준비 중</h2>
+    <p id="loadingMessage" class="muted" style="margin:0">WebAssembly와 샘플 데이터베이스를 초기화하고 있다.</p>
+    <div id="loadingError" class="notice notice-danger mt-16 hidden"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const APP_VERSION = '1.0.0';
+const SQLJS_VERSION = '1.14.1';
+const CDN_BASE = `https://cdn.jsdelivr.net/npm/sql.js@${SQLJS_VERSION}/dist/`;
+const LOCAL_BASE = './assets/sqljs/';
+
+let SQL = null;
+let db = null;
+let sqlAssetBase = CDN_BASE;
+let lastResultSets = [];
+let lastResultLabel = '';
+let queryHistory = [];
+let appLogs = [];
+let hookEvents = [];
+let hookEnabled = true;
+let selectedSchemaObject = null;
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+const SAMPLE_QUERIES = {
+  recentOrders: {
+    label: '최근 주문 10건 (뷰)',
+    sql: `SELECT order_id, member_name, branch_name, status, total_amount, ordered_at\nFROM v_order_summary\nORDER BY order_id DESC\nLIMIT 10;`
+  },
+  branchSales: {
+    label: '지점별 주문금액 집계',
+    sql: `SELECT b.name AS branch_name,\n       COUNT(DISTINCT o.id) AS order_count,\n       SUM(o.total_amount) AS total_sales\nFROM branches b\nLEFT JOIN members m ON m.branch_id = b.id\nLEFT JOIN orders o ON o.member_id = m.id\nGROUP BY b.id, b.name\nORDER BY total_sales DESC;`
+  },
+  joins: {
+    label: '4개 테이블 JOIN',
+    sql: `SELECT o.id AS order_id, m.name AS member_name,\n       p.name AS product_name, oi.qty, oi.unit_price,\n       oi.qty * oi.unit_price AS line_amount\nFROM orders o\nJOIN members m ON m.id = o.member_id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nORDER BY o.id DESC, p.id;`
+  },
+  window: {
+    label: '윈도 함수 순위·누계',
+    sql: `SELECT name, category, price,\n       RANK() OVER (PARTITION BY category ORDER BY price DESC) AS price_rank,\n       SUM(price) OVER (PARTITION BY category ORDER BY price ROWS UNBOUNDED PRECEDING) AS running_total\nFROM products\nORDER BY category, price DESC;`
+  },
+  cte: {
+    label: 'CTE 기반 회원별 매출',
+    sql: `WITH member_sales AS (\n  SELECT member_id, SUM(total_amount) AS sales\n  FROM orders\n  GROUP BY member_id\n)\nSELECT m.id, m.name, m.grade, COALESCE(ms.sales, 0) AS sales\nFROM members m\nLEFT JOIN member_sales ms ON ms.member_id = m.id\nORDER BY sales DESC;`
+  },
+  recursive: {
+    label: '재귀 CTE 1~20',
+    sql: `WITH RECURSIVE numbers(n) AS (\n  VALUES(1)\n  UNION ALL\n  SELECT n + 1 FROM numbers WHERE n < 20\n)\nSELECT n, n * n AS square FROM numbers;`
+  },
+  json: {
+    label: 'JSON1 메타데이터',
+    sql: `SELECT name,\n       json_extract(metadata, '$.origin') AS origin,\n       json_extract(metadata, '$.grade') AS product_grade,\n       json_valid(metadata) AS is_valid\nFROM products;`
+  },
+  date: {
+    label: '날짜·시간 함수',
+    sql: `SELECT datetime('now', 'localtime') AS local_now,\n       date('now', 'start of month') AS month_start,\n       date('now', '+7 days') AS after_7_days,\n       julianday('now') - julianday('2026-01-01') AS days_from_2026;`
+  },
+  subquery: {
+    label: '상관 서브쿼리',
+    sql: `SELECT m.name, m.grade,\n       (SELECT COUNT(*) FROM orders o WHERE o.member_id = m.id) AS order_count,\n       (SELECT COALESCE(SUM(total_amount),0) FROM orders o WHERE o.member_id = m.id) AS total_sales\nFROM members m\nORDER BY total_sales DESC;`
+  },
+  multi: {
+    label: '복수 SELECT 결과 세트',
+    sql: `SELECT COUNT(*) AS member_count FROM members;\nSELECT COUNT(*) AS product_count FROM products;\nSELECT COUNT(*) AS order_count FROM orders;`
+  },
+  explain: {
+    label: 'EXPLAIN QUERY PLAN',
+    sql: `EXPLAIN QUERY PLAN\nSELECT * FROM orders\nWHERE member_id = 2\nORDER BY ordered_at DESC;`
+  },
+  pragma: {
+    label: 'DB PRAGMA 요약',
+    sql: `PRAGMA database_list;\nPRAGMA page_size;\nPRAGMA page_count;\nPRAGMA foreign_keys;`
+  }
+};
+
+function log(message, type = 'info') {
+  const time = new Date().toLocaleTimeString('ko-KR', {hour12: false});
+  appLogs.push({time, message: String(message), type});
+  if (appLogs.length > 500) appLogs.shift();
+  renderLogs();
+}
+
+function renderLogs() {
+  const box = $('#appLog');
+  if (!box) return;
+  box.innerHTML = appLogs.length
+    ? appLogs.map(item => `<div class="log-line"><span class="log-time">[${escapeHtml(item.time)}]</span> <span class="log-${item.type}">${escapeHtml(item.message)}</span></div>`).join('')
+    : '<div class="log-line">로그 없음</div>';
+  box.scrollTop = box.scrollHeight;
+}
+
+function toast(message, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  $('#toastArea').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function quoteIdent(name) {
+  return `"${String(name).replaceAll('"', '""')}"`;
+}
+
+function formatBytes(bytes) {
+  const units = ['B','KB','MB','GB'];
+  let value = Number(bytes) || 0;
+  let idx = 0;
+  while (value >= 1024 && idx < units.length - 1) { value /= 1024; idx++; }
+  return `${value.toFixed(idx === 0 ? 0 : 1)} ${units[idx]}`;
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat('ko-KR').format(Number(value) || 0);
+}
+
+function formatKrw(value) {
+  return `${formatNumber(value)}원`;
+}
+
+function displayValue(value) {
+  if (value === null || value === undefined) return '<span class="null">NULL</span>';
+  if (value instanceof Uint8Array) {
+    const hex = Array.from(value.slice(0, 24), b => b.toString(16).padStart(2,'0')).join(' ');
+    return `<span class="mono">BLOB[${value.length}] ${escapeHtml(hex)}${value.length > 24 ? '…' : ''}</span>`;
+  }
+  if (typeof value === 'bigint') return `<span class="mono">${escapeHtml(value.toString())}n</span>`;
+  if (typeof value === 'number') return escapeHtml(formatNumber(value));
+  return escapeHtml(value);
+}
+
+function resultToObjects(result) {
+  if (!result) return [];
+  return result.values.map(row => Object.fromEntries(result.columns.map((col, i) => [col, row[i]])));
+}
+
+function renderQueryResult(result, options = {}) {
+  if (!result || !result.columns?.length) return '<div class="table-empty">결과 행이 없다.</div>';
+  const maxRows = options.maxRows || result.values.length;
+  const rows = result.values.slice(0, maxRows);
+  return `<table><thead><tr>${result.columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(v => `<td class="${v == null ? 'null' : ''}">${displayValue(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>${result.values.length > maxRows ? `<div class="table-empty">상위 ${maxRows}행만 표시 · 전체 ${result.values.length}행</div>` : ''}`;
+}
+
+function renderResultSets(results, container) {
+  if (!results.length) {
+    container.innerHTML = `<div class="notice notice-info">명령 실행 완료 · 변경 행 ${db.getRowsModified()}</div>`;
+    return;
+  }
+  container.innerHTML = results.map((result, index) => `
+    <article class="card ${index ? 'mt-12' : ''}">
+      <div class="card-head"><div><h3>결과 세트 ${index + 1}</h3><p>${result.values.length}행 · ${result.columns.length}열</p></div></div>
+      <div class="card-body compact"><div class="result-wrap">${renderQueryResult(result, {maxRows: 500})}</div></div>
+    </article>`).join('');
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve(src);
+    script.onerror = () => reject(new Error(`스크립트 로드 실패: ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function loadSqlJsEngine() {
+  const loadingMessage = $('#loadingMessage');
+  loadingMessage.textContent = 'sql-wasm.js를 CDN에서 불러오는 중…';
+  try {
+    await loadScript(`${CDN_BASE}sql-wasm.js`);
+    sqlAssetBase = CDN_BASE;
+    log(`sql.js loader 로드: CDN ${SQLJS_VERSION}`, 'ok');
+  } catch (cdnError) {
+    log(cdnError.message, 'warn');
+    loadingMessage.textContent = 'CDN 연결 실패 · 로컬 assets/sqljs 경로를 시도 중…';
+    await loadScript(`${LOCAL_BASE}sql-wasm.js`);
+    sqlAssetBase = LOCAL_BASE;
+    log('sql.js loader 로드: 로컬 assets/sqljs', 'ok');
+  }
+
+  loadingMessage.textContent = 'WebAssembly 모듈 초기화 중…';
+  SQL = await window.initSqlJs({ locateFile: file => `${sqlAssetBase}${file}` });
+  log(`WebAssembly 초기화 완료 (${sqlAssetBase})`, 'ok');
+}
+
+function getSingleValue(sql, params) {
+  const results = db.exec(sql, params);
+  return results[0]?.values?.[0]?.[0];
+}
+
+function tableExists(name) {
+  try {
+    const stmt = db.prepare("SELECT 1 FROM sqlite_master WHERE type IN ('table','view') AND name=? LIMIT 1");
+    stmt.bind([name]);
+    const exists = stmt.step();
+    stmt.free();
+    return exists;
+  } catch {
+    return false;
+  }
+}
+
+function hasSampleSchema() {
+  return ['branches','members','products','orders','order_items'].every(tableExists);
+}
+
+function requireSampleSchema() {
+  if (hasSampleSchema()) return true;
+  toast('이 기능은 기본 샘플 스키마가 필요하다. 대시보드에서 샘플 DB 초기화를 실행하세요.', 'error');
+  return false;
+}
+
+function exportBytesPreserveSession() {
+  const bytes = db.export();
+  db.run('PRAGMA foreign_keys = ON;');
+  installExtensions();
+  return bytes;
+}
+
+function safeExec(sql) {
+  try { return {ok: true, results: db.exec(sql)}; }
+  catch (error) { return {ok: false, error}; }
+}
+
+function installExtensions() {
+  db.create_function('krw', value => `${new Intl.NumberFormat('ko-KR').format(Number(value) || 0)}원`);
+  db.create_function('mask_name', value => {
+    const s = String(value ?? '');
+    if (s.length <= 1) return '*';
+    if (s.length === 2) return `${s[0]}*`;
+    return `${s[0]}${'*'.repeat(Math.max(1, s.length - 2))}${s.at(-1)}`;
+  });
+  db.create_function('js_reverse', value => Array.from(String(value ?? '')).reverse().join(''));
+  db.create_aggregate('js_median', {
+    init: () => [],
+    step: (state, value) => { if (value !== null) state.push(Number(value)); return state; },
+    finalize: state => {
+      if (!state.length) return null;
+      state.sort((a,b) => a-b);
+      const mid = Math.floor(state.length / 2);
+      return state.length % 2 ? state[mid] : (state[mid - 1] + state[mid]) / 2;
+    }
+  });
+  setUpdateHook(hookEnabled);
+  log('JavaScript UDF·집계 함수 등록 완료', 'ok');
+}
+
+function setUpdateHook(enabled) {
+  hookEnabled = enabled;
+  if (typeof db.updateHook !== 'function') return;
+  if (!enabled) {
+    db.updateHook(null);
+  } else {
+    db.updateHook((changeType, databaseName, tableName, rowId) => {
+      const event = {time: new Date().toLocaleTimeString('ko-KR', {hour12:false}), changeType, databaseName, tableName, rowId};
+      hookEvents.unshift(event);
+      hookEvents = hookEvents.slice(0, 100);
+      renderHookLog();
+    });
+  }
+  const badge = $('#hookBadge');
+  if (badge) {
+    badge.textContent = enabled ? '활성' : '비활성';
+    badge.className = `badge ${enabled ? 'badge-ok' : 'badge-warn'}`;
+  }
+  const btn = $('#toggleHookBtn');
+  if (btn) btn.textContent = enabled ? '훅 끄기' : '훅 켜기';
+}
+
+function renderHookLog() {
+  const box = $('#hookLog');
+  if (!box) return;
+  box.innerHTML = hookEvents.length
+    ? hookEvents.map(e => `<div class="log-line"><span class="log-time">[${escapeHtml(e.time)}]</span> <span class="log-ok">${escapeHtml(e.changeType.toUpperCase())}</span> ${escapeHtml(e.databaseName)}.${escapeHtml(e.tableName)} rowid=${escapeHtml(e.rowId)}</div>`).join('')
+    : '<div class="log-line">변경 이벤트 대기 중</div>';
+}
+
+function buildSampleDatabase() {
+  if (db) {
+    try { db.close(); } catch {}
+  }
+  db = new SQL.Database();
+  const schema = `
+    PRAGMA foreign_keys = ON;
+    CREATE TABLE branches (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      region TEXT NOT NULL,
+      opened_at TEXT NOT NULL DEFAULT CURRENT_DATE
+    );
+    CREATE TABLE members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      grade TEXT NOT NULL DEFAULT '일반' CHECK (grade IN ('일반','우수','VIP')),
+      branch_id INTEGER NOT NULL,
+      joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
+      FOREIGN KEY (branch_id) REFERENCES branches(id) ON UPDATE CASCADE ON DELETE RESTRICT
+    );
+    CREATE TABLE products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      category TEXT NOT NULL,
+      price INTEGER NOT NULL CHECK (price >= 0),
+      stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+      metadata TEXT DEFAULT '{}'
+    );
+    CREATE TABLE orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      member_id INTEGER NOT NULL,
+      ordered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      status TEXT NOT NULL DEFAULT '접수' CHECK (status IN ('접수','배송중','완료','취소')),
+      total_amount INTEGER NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE RESTRICT
+    );
+    CREATE TABLE order_items (
+      order_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      qty INTEGER NOT NULL CHECK (qty > 0),
+      unit_price INTEGER NOT NULL CHECK (unit_price >= 0),
+      PRIMARY KEY (order_id, product_id),
+      FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+    ) WITHOUT ROWID;
+    CREATE TABLE audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      table_name TEXT NOT NULL,
+      row_id INTEGER,
+      changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      note TEXT
+    );
+    CREATE INDEX idx_members_branch ON members(branch_id);
+    CREATE INDEX idx_orders_member_date ON orders(member_id, ordered_at DESC);
+    CREATE INDEX idx_products_category ON products(category);
+    CREATE VIEW v_order_summary AS
+      SELECT o.id AS order_id, m.name AS member_name, b.name AS branch_name,
+             o.status, o.total_amount, o.ordered_at
+      FROM orders o
+      JOIN members m ON m.id = o.member_id
+      JOIN branches b ON b.id = m.branch_id;
+    CREATE TRIGGER tr_orders_audit_insert
+    AFTER INSERT ON orders
+    BEGIN
+      INSERT INTO audit_log(action, table_name, row_id, note)
+      VALUES ('INSERT', 'orders', NEW.id, '주문 생성');
+    END;
+    CREATE TRIGGER tr_orders_audit_update
+    AFTER UPDATE OF status, total_amount ON orders
+    BEGIN
+      INSERT INTO audit_log(action, table_name, row_id, note)
+      VALUES ('UPDATE', 'orders', NEW.id, '상태 또는 금액 변경');
+    END;
+  `;
+  db.run(schema);
+  db.run('BEGIN TRANSACTION;');
+  try {
+    const branchStmt = db.prepare('INSERT INTO branches(id, name, region, opened_at) VALUES (?, ?, ?, ?)');
+    [
+      [1,'서울본부','서울','2012-03-02'], [2,'부산지점','부산','2015-06-15'],
+      [3,'목포지점','전남','2018-09-01'], [4,'제주지점','제주','2020-11-20']
+    ].forEach(row => branchStmt.run(row));
+    branchStmt.free();
+
+    const memberStmt = db.prepare('INSERT INTO members(name, grade, branch_id, joined_at, active) VALUES ($name,$grade,$branch,$joined,$active)');
+    [
+      ['박해양','VIP',1,'2024-01-12 09:10:00',1], ['이푸른','우수',2,'2024-03-18 14:30:00',1],
+      ['최어촌','일반',3,'2024-05-02 11:20:00',1], ['정바다','우수',4,'2024-07-22 16:00:00',1],
+      ['한물결','일반',1,'2025-01-11 10:25:00',0], ['오등대','VIP',2,'2025-04-08 13:50:00',1],
+      ['김양식','우수',3,'2025-10-17 08:40:00',1], ['윤파도','일반',4,'2026-02-03 15:10:00',1]
+    ].forEach(([name,grade,branch,joined,active]) => memberStmt.run({$name:name,$grade:grade,$branch:branch,$joined:joined,$active:active}));
+    memberStmt.free();
+
+    const productStmt = db.prepare('INSERT INTO products(name, category, price, stock, metadata) VALUES (?, ?, ?, ?, ?)');
+    [
+      ['완도 전복 1kg','패류',58000,120,JSON.stringify({origin:'완도',grade:'특',cold:true})],
+      ['제주 갈치 세트','어류',72000,75,JSON.stringify({origin:'제주',grade:'상',cold:true})],
+      ['영광 굴비 10미','어류',95000,42,JSON.stringify({origin:'영광',grade:'특',cold:false})],
+      ['통영 생굴 500g','패류',24000,160,JSON.stringify({origin:'통영',grade:'상',cold:true})],
+      ['부산 고등어 6팩','어류',32000,210,JSON.stringify({origin:'부산',grade:'상',cold:true})],
+      ['서천 김 선물세트','해조류',28000,300,JSON.stringify({origin:'서천',grade:'특',cold:false})],
+      ['울릉도 오징어','연체류',45000,88,JSON.stringify({origin:'울릉도',grade:'상',cold:false})],
+      ['신안 천일염 5kg','기타',18000,500,JSON.stringify({origin:'신안',grade:'1등급',cold:false})]
+    ].forEach(row => productStmt.run(row));
+    productStmt.free();
+
+    const orderStmt = db.prepare('INSERT INTO orders(member_id, ordered_at, status, total_amount) VALUES (?, ?, ?, ?)');
+    const itemStmt = db.prepare('INSERT INTO order_items(order_id, product_id, qty, unit_price) VALUES (?, ?, ?, ?)');
+    const orders = [
+      [1,'2026-06-26 10:20:00','완료',116000,[[1,2,58000]]],
+      [2,'2026-06-28 14:05:00','완료',72000,[[2,1,72000]]],
+      [3,'2026-07-01 09:12:00','배송중',119000,[[3,1,95000],[4,1,24000]]],
+      [4,'2026-07-03 17:30:00','완료',64000,[[5,2,32000]]],
+      [6,'2026-07-05 12:40:00','접수',101000,[[6,2,28000],[7,1,45000]]],
+      [7,'2026-07-07 08:55:00','완료',90000,[[1,1,58000],[5,1,32000]]],
+      [8,'2026-07-09 15:21:00','배송중',84000,[[6,3,28000]]],
+      [1,'2026-07-10 11:10:00','완료',113000,[[2,1,72000],[4,1,24000],[8,1,17000]]],
+      [2,'2026-07-11 16:45:00','접수',190000,[[3,2,95000]]],
+      [6,'2026-07-12 13:15:00','접수',122000,[[1,1,58000],[5,2,32000]]]
+    ];
+    orders.forEach(([member,ordered,status,total,items]) => {
+      orderStmt.run([member,ordered,status,total]);
+      const orderId = getSingleValue('SELECT last_insert_rowid()');
+      items.forEach(([product,qty,price]) => itemStmt.run([orderId,product,qty,price]));
+    });
+    orderStmt.free();
+    itemStmt.free();
+    db.run('COMMIT;');
+  } catch (error) {
+    db.run('ROLLBACK;');
+    throw error;
+  }
+  hookEvents = [];
+  installExtensions();
+  log('샘플 데이터베이스 생성 완료', 'ok');
+}
+
+async function replaceDatabase(bytes, sourceLabel) {
+  const oldDb = db;
+  try {
+    const newDb = new SQL.Database(bytes);
+    newDb.exec('SELECT 1');
+    db = newDb;
+    db.run('PRAGMA foreign_keys = ON;');
+    installExtensions();
+    hookEvents = [];
+    try { oldDb?.close(); } catch {}
+    try { await refreshAll(); } catch (uiError) { log(`가져온 DB UI 갱신 일부 제한: ${uiError.message}`, 'warn'); }
+    log(`데이터베이스 교체 완료: ${sourceLabel}`, 'ok');
+    toast(hasSampleSchema() ? '데이터베이스를 불러왔다.' : '일반 SQLite DB를 불러왔다. 샘플 전용 화면 일부는 비활성화된다.', 'ok');
+  } catch (error) {
+    db = oldDb;
+    log(`DB 불러오기 실패: ${error.message}`, 'error');
+    toast(`DB 불러오기 실패: ${error.message}`, 'error');
+  }
+}
+
+async function refreshAll() {
+  refreshDashboard();
+  refreshCrudControls();
+  refreshCrudTable();
+  refreshSchema();
+  refreshStorageStats();
+  updateDbSizePill();
+  await refreshSnapshotList();
+}
+
+function refreshDashboard() {
+  if (!db) return;
+  try {
+    const sampleReady = hasSampleSchema();
+    $('#metricVersion').textContent = String(getSingleValue('SELECT sqlite_version()'));
+    $('#metricTables').textContent = formatNumber(getSingleValue("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"));
+    $('#metricMembers').textContent = sampleReady ? formatNumber(getSingleValue('SELECT COUNT(*) FROM members')) : 'N/A';
+    $('#metricSales').textContent = sampleReady ? formatKrw(getSingleValue('SELECT COALESCE(SUM(total_amount),0) FROM orders')) : 'N/A';
+
+    if (sampleReady) {
+      const branchResult = db.exec(`SELECT b.name, COALESCE(SUM(o.total_amount),0) AS sales
+        FROM branches b LEFT JOIN members m ON m.branch_id=b.id LEFT JOIN orders o ON o.member_id=m.id
+        GROUP BY b.id,b.name ORDER BY sales DESC`)[0];
+      const max = Math.max(1, ...branchResult.values.map(r => Number(r[1])));
+      $('#branchSalesBars').innerHTML = branchResult.values.map(([name,sales]) => `<div class="bar-row"><strong>${escapeHtml(name)}</strong><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, Number(sales)/max*100)}%"></div></div><div class="bar-value">${escapeHtml(formatKrw(sales))}</div></div>`).join('');
+      const recent = db.exec('SELECT order_id, member_name, branch_name, status, total_amount FROM v_order_summary ORDER BY order_id DESC LIMIT 6')[0];
+      $('#recentOrdersTable').innerHTML = renderQueryResult(recent);
+    } else {
+      $('#branchSalesBars').innerHTML = '<div class="notice notice-info">가져온 DB에는 샘플 수협 테이블이 없다. SQL 콘솔과 스키마 탐색기는 정상 사용 가능하다.</div>';
+      $('#recentOrdersTable').innerHTML = '<div class="table-empty">샘플 주문 뷰 없음</div>';
+    }
+
+    const features = [
+      ['JSON1', safeExec("SELECT json_extract('{\"a\":1}', '$.a')").ok],
+      ['Window', safeExec('SELECT row_number() OVER ()').ok],
+      ['Math', safeExec('SELECT sqrt(16)').ok],
+      ['FTS5', Number(getSingleValue("SELECT sqlite_compileoption_used('ENABLE_FTS5')")) === 1],
+      ['UpdateHook', typeof db.updateHook === 'function'],
+      ['BigInt', typeof BigInt === 'function']
+    ];
+    $('#featureGrid').innerHTML = features.map(([name,ok]) => `<div class="feature-item"><span>${escapeHtml(name)}</span><span class="badge ${ok?'badge-ok':'badge-warn'}">${ok?'지원':'미지원/감지불가'}</span></div>`).join('');
+  } catch (error) {
+    log(`대시보드 갱신 실패: ${error.message}`, 'error');
+  }
+}
+
+function refreshCrudControls() {
+  if (!db) return;
+  const ids = ['memberBranch','stockProduct','txProduct','deleteMember','txMember'];
+  try {
+    if (!hasSampleSchema()) {
+      ids.forEach(id => { const el = $(`#${id}`); if (el) el.innerHTML = '<option value="">샘플 스키마 필요</option>'; });
+      return;
+    }
+    const branchRows = resultToObjects(db.exec('SELECT id,name FROM branches ORDER BY id')[0]);
+    $('#memberBranch').innerHTML = branchRows.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+    const productRows = resultToObjects(db.exec('SELECT id,name,stock,price FROM products ORDER BY id')[0]);
+    const productOptions = productRows.map(r => `<option value="${r.id}" data-price="${r.price}">${escapeHtml(r.name)} · 재고 ${r.stock}</option>`).join('');
+    $('#stockProduct').innerHTML = productOptions;
+    $('#txProduct').innerHTML = productOptions;
+    const memberRows = resultToObjects(db.exec('SELECT id,name,grade FROM members ORDER BY id')[0]);
+    const memberOptions = memberRows.map(r => `<option value="${r.id}">#${r.id} ${escapeHtml(r.name)} (${escapeHtml(r.grade)})</option>`).join('');
+    $('#deleteMember').innerHTML = memberOptions;
+    $('#txMember').innerHTML = memberOptions;
+  } catch (error) {
+    log(`CRUD 컨트롤 갱신 실패: ${error.message}`, 'warn');
+  }
+}
+
+function refreshCrudTable() {
+  if (!db) return;
+  if (!hasSampleSchema()) { $('#memberTable').innerHTML = '<div class="table-empty">샘플 members 테이블이 없다.</div>'; return; }
+  try {
+    const result = db.exec(`SELECT m.id, m.name, m.grade, b.name AS branch, m.joined_at, m.active,
+      (SELECT COUNT(*) FROM orders o WHERE o.member_id=m.id) AS orders
+      FROM members m JOIN branches b ON b.id=m.branch_id ORDER BY m.id`)[0];
+    $('#memberTable').innerHTML = renderQueryResult(result);
+  } catch (error) {
+    $('#memberTable').innerHTML = `<div class="notice notice-danger">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function refreshSchema() {
+  if (!db) return;
+  try {
+    const rows = resultToObjects(db.exec(`SELECT type,name,tbl_name,sql FROM sqlite_master
+      WHERE name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 1 WHEN 'view' THEN 2 WHEN 'index' THEN 3 ELSE 4 END,name`)[0]);
+    const typeLabel = {table:'TABLE', view:'VIEW', index:'INDEX', trigger:'TRIGGER'};
+    $('#schemaList').innerHTML = rows.length ? rows.map(row => `<button class="schema-item" data-schema-name="${escapeHtml(row.name)}" data-schema-type="${escapeHtml(row.type)}"><span class="schema-name">${escapeHtml(row.name)}</span><span class="badge badge-info">${typeLabel[row.type] || row.type}</span></button>`).join('') : '<div class="table-empty">객체 없음</div>';
+  } catch (error) {
+    $('#schemaList').innerHTML = `<div class="notice notice-danger">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function showSchemaDetail(name, type) {
+  try {
+    const stmt = db.prepare('SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name=?');
+    stmt.bind([name]);
+    const row = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    if (!row) throw new Error('객체를 찾을 수 없다.');
+    selectedSchemaObject = row;
+    $('#schemaDetailTitle').textContent = `${row.name} · ${row.type.toUpperCase()}`;
+    $('#schemaDetailSub').textContent = row.tbl_name === row.name ? '독립 객체' : `대상 테이블: ${row.tbl_name}`;
+    $('#schemaSql').textContent = row.sql || '(자동 생성 인덱스: CREATE SQL 없음)';
+    $('#copySchemaSqlBtn').disabled = !row.sql;
+
+    if (type === 'table' || type === 'view') {
+      const info = db.exec(`PRAGMA table_info(${quoteIdent(name)})`)[0];
+      $('#pragmaInfo').innerHTML = renderQueryResult(info);
+      const index = safeExec(`PRAGMA index_list(${quoteIdent(name)})`);
+      const fk = safeExec(`PRAGMA foreign_key_list(${quoteIdent(name)})`);
+      const html = [];
+      if (index.ok && index.results[0]) html.push(`<h5 style="padding:0 10px">INDEX LIST</h5>${renderQueryResult(index.results[0])}`);
+      if (fk.ok && fk.results[0]) html.push(`<h5 style="padding:0 10px">FOREIGN KEY LIST</h5>${renderQueryResult(fk.results[0])}`);
+      $('#pragmaExtra').innerHTML = html.join('') || '<div class="table-empty">연관 정보 없음</div>';
+    } else if (type === 'index') {
+      $('#pragmaInfo').innerHTML = renderQueryResult(db.exec(`PRAGMA index_info(${quoteIdent(name)})`)[0]);
+      $('#pragmaExtra').innerHTML = renderQueryResult(db.exec(`PRAGMA index_xinfo(${quoteIdent(name)})`)[0]);
+    } else {
+      $('#pragmaInfo').innerHTML = '<div class="table-empty">PRAGMA 상세정보 대상 아님</div>';
+      $('#pragmaExtra').innerHTML = '<div class="table-empty">CREATE SQL을 확인하세요.</div>';
+    }
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
+
+function refreshStorageStats() {
+  if (!db) return;
+  try {
+    const pageSize = Number(getSingleValue('PRAGMA page_size'));
+    const pageCount = Number(getSingleValue('PRAGMA page_count'));
+    const freeList = Number(getSingleValue('PRAGMA freelist_count'));
+    const tables = Number(getSingleValue("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"));
+    const indexes = Number(getSingleValue("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%'"));
+    $('#storageStats').innerHTML = `<table><tbody>
+      <tr><th>논리 DB 크기</th><td>${escapeHtml(formatBytes(pageSize * pageCount))}</td></tr>
+      <tr><th>페이지</th><td>${formatNumber(pageCount)} × ${formatBytes(pageSize)}</td></tr>
+      <tr><th>Free pages</th><td>${formatNumber(freeList)}</td></tr>
+      <tr><th>테이블 / 인덱스</th><td>${formatNumber(tables)} / ${formatNumber(indexes)}</td></tr>
+      <tr><th>외래키</th><td>${getSingleValue('PRAGMA foreign_keys') ? 'ON' : 'OFF'}</td></tr>
+      <tr><th>자산 위치</th><td class="mono">${escapeHtml(sqlAssetBase)}</td></tr>
+    </tbody></table>`;
+  } catch (error) {
+    $('#storageStats').innerHTML = `<div class="notice notice-danger">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function updateDbSizePill() {
+  if (!db) return;
+  try {
+    const bytes = Number(getSingleValue('PRAGMA page_size')) * Number(getSingleValue('PRAGMA page_count'));
+    $('#dbSizePill').textContent = `DB ${formatBytes(bytes)}`;
+  } catch {}
+}
+
+function runEditorSql() {
+  const editor = $('#sqlEditor');
+  const selected = editor.value.slice(editor.selectionStart, editor.selectionEnd).trim();
+  const sql = selected || editor.value.trim();
+  if (!sql) return toast('실행할 SQL이 없다.', 'error');
+  const start = performance.now();
+  $('#queryStatus').textContent = '실행 중…';
+  try {
+    const results = db.exec(sql);
+    const elapsed = performance.now() - start;
+    lastResultSets = results;
+    lastResultLabel = 'sqljs-query-result';
+    renderResultSets(results, $('#queryResults'));
+    const rowCount = results.reduce((sum, r) => sum + r.values.length, 0);
+    $('#resultSummary').textContent = `${elapsed.toFixed(2)} ms · 결과 ${results.length}세트 · ${rowCount}행 · 변경 ${db.getRowsModified()}행`;
+    $('#resultSummary').className = 'badge badge-ok';
+    $('#queryStatus').textContent = '완료';
+    $('#exportCsvBtn').disabled = !results.length;
+    $('#exportJsonBtn').disabled = !results.length;
+    $('#copyResultBtn').disabled = !results.length;
+    queryHistory.unshift({sql, time: new Date().toLocaleTimeString('ko-KR', {hour12:false}), elapsed});
+    queryHistory = queryHistory.slice(0, 30);
+    renderHistory();
+    refreshDashboard(); refreshCrudControls(); refreshCrudTable(); refreshSchema(); refreshStorageStats(); updateDbSizePill();
+    log(`SQL 실행 성공 · ${elapsed.toFixed(2)}ms · ${sql.replace(/\s+/g,' ').slice(0,160)}`, 'ok');
+  } catch (error) {
+    const elapsed = performance.now() - start;
+    $('#queryResults').innerHTML = `<div class="notice notice-danger"><strong>SQL 오류</strong><br>${escapeHtml(error.message)}</div>`;
+    $('#resultSummary').textContent = `${elapsed.toFixed(2)} ms · 오류`;
+    $('#resultSummary').className = 'badge badge-bad';
+    $('#queryStatus').textContent = '오류';
+    log(`SQL 오류: ${error.message}`, 'error');
+  }
+}
+
+function renderHistory() {
+  const box = $('#queryHistory');
+  box.innerHTML = queryHistory.length ? queryHistory.map((item, index) => `<button class="schema-item" data-history-index="${index}"><span class="schema-name mono">${escapeHtml(item.sql.replace(/\s+/g,' ').slice(0,90))}</span><span class="badge badge-info">${item.elapsed.toFixed(1)}ms</span></button>`).join('') : '<div class="table-empty">기록 없음</div>';
+}
+
+function simpleFormatSql(sql) {
+  const keywords = ['SELECT','FROM','WHERE','LEFT JOIN','RIGHT JOIN','INNER JOIN','JOIN','ON','GROUP BY','ORDER BY','HAVING','LIMIT','OFFSET','UNION ALL','UNION','WITH RECURSIVE','WITH','INSERT INTO','VALUES','UPDATE','SET','DELETE FROM','CREATE TABLE','CREATE VIEW','CREATE INDEX','DROP TABLE','DROP INDEX','BEGIN','COMMIT','ROLLBACK','PRAGMA','EXPLAIN QUERY PLAN'];
+  let out = sql.replace(/\s+/g, ' ').trim();
+  keywords.sort((a,b) => b.length-a.length).forEach(k => {
+    out = out.replace(new RegExp(`\\b${k.replace(' ','\\s+')}\\b`, 'gi'), `\n${k}`);
+  });
+  return out.replace(/^\n/, '').replace(/,\s*/g, ',\n  ');
+}
+
+function exportLastResult(format) {
+  if (!lastResultSets.length) return toast('내보낼 조회 결과가 없다.', 'error');
+  const result = lastResultSets[0];
+  if (format === 'json') {
+    const objects = resultToObjects(result).map(obj => Object.fromEntries(Object.entries(obj).map(([k,v]) => [k, typeof v === 'bigint' ? v.toString() : v instanceof Uint8Array ? Array.from(v) : v])));
+    downloadBlob(new Blob([JSON.stringify(objects, null, 2)], {type:'application/json;charset=utf-8'}), `${lastResultLabel || 'result'}.json`);
+  } else {
+    const csvCell = value => {
+      if (value === null || value === undefined) return '';
+      if (value instanceof Uint8Array) value = Array.from(value).map(b => b.toString(16).padStart(2,'0')).join('');
+      const text = String(value);
+      return /[",\n]/.test(text) ? `"${text.replaceAll('"','""')}"` : text;
+    };
+    const lines = [result.columns.map(csvCell).join(','), ...result.values.map(row => row.map(csvCell).join(','))];
+    downloadBlob(new Blob(['\uFEFF' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'}), `${lastResultLabel || 'result'}.csv`);
+  }
+}
+
+function fullSchemaSql() {
+  const rows = resultToObjects(db.exec(`SELECT type,name,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 1 WHEN 'index' THEN 2 WHEN 'view' THEN 3 ELSE 4 END,name`)[0]);
+  return rows.map(r => `-- ${r.type.toUpperCase()}: ${r.name}\n${r.sql};`).join('\n\n');
+}
+
+function exportDatabase() {
+  try {
+    const bytes = exportBytesPreserveSession();
+    downloadBlob(new Blob([bytes], {type:'application/x-sqlite3'}), `sqljs-demo-${new Date().toISOString().slice(0,10)}.sqlite`);
+    log(`SQLite 파일 내보내기 · ${formatBytes(bytes.length)}`, 'ok');
+    toast('SQLite 파일을 생성했다.', 'ok');
+  } catch (error) {
+    log(`DB 내보내기 실패: ${error.message}`, 'error');
+    toast(error.message, 'error');
+  }
+}
+
+function openSnapshotDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('sqljs-comprehensive-demo', 1);
+    req.onupgradeneeded = () => {
+      const idb = req.result;
+      if (!idb.objectStoreNames.contains('snapshots')) idb.createObjectStore('snapshots', {keyPath:'name'});
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveSnapshot() {
+  const name = $('#snapshotName').value.trim();
+  if (!name) return toast('스냅샷 이름을 입력하세요.', 'error');
+  try {
+    const idb = await openSnapshotDb();
+    const bytes = exportBytesPreserveSession();
+    await new Promise((resolve,reject) => {
+      const tx = idb.transaction('snapshots','readwrite');
+      tx.objectStore('snapshots').put({name, bytes: bytes.buffer.slice(0), size: bytes.length, savedAt: new Date().toISOString()});
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    idb.close();
+    await refreshSnapshotList();
+    log(`IndexedDB 스냅샷 저장: ${name} (${formatBytes(bytes.length)})`, 'ok');
+    toast('스냅샷을 저장했다.', 'ok');
+  } catch (error) {
+    log(`스냅샷 저장 실패: ${error.message}`, 'error');
+    toast(error.message, 'error');
+  }
+}
+
+async function refreshSnapshotList() {
+  const box = $('#snapshotList');
+  if (!box || !window.indexedDB) return;
+  try {
+    const idb = await openSnapshotDb();
+    const items = await new Promise((resolve,reject) => {
+      const req = idb.transaction('snapshots','readonly').objectStore('snapshots').getAll();
+      req.onsuccess = () => resolve(req.result || []); req.onerror = () => reject(req.error);
+    });
+    idb.close();
+    items.sort((a,b) => b.savedAt.localeCompare(a.savedAt));
+    box.innerHTML = items.length ? `<table><thead><tr><th>이름</th><th>저장시각</th><th>크기</th><th>작업</th></tr></thead><tbody>${items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(new Date(item.savedAt).toLocaleString('ko-KR'))}</td><td>${escapeHtml(formatBytes(item.size))}</td><td><button class="btn btn-sm" data-snapshot-load="${escapeHtml(item.name)}">불러오기</button> <button class="btn btn-sm" data-snapshot-delete="${escapeHtml(item.name)}">삭제</button></td></tr>`).join('')}</tbody></table>` : '<div class="table-empty">저장된 스냅샷 없음</div>';
+  } catch (error) {
+    box.innerHTML = `<div class="notice notice-danger">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+async function loadSnapshot(name) {
+  try {
+    const idb = await openSnapshotDb();
+    const item = await new Promise((resolve,reject) => {
+      const req = idb.transaction('snapshots','readonly').objectStore('snapshots').get(name);
+      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+    });
+    idb.close();
+    if (!item) throw new Error('스냅샷을 찾을 수 없다.');
+    await replaceDatabase(new Uint8Array(item.bytes), `IndexedDB:${name}`);
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function deleteSnapshot(name) {
+  try {
+    const idb = await openSnapshotDb();
+    await new Promise((resolve,reject) => {
+      const tx = idb.transaction('snapshots','readwrite');
+      tx.objectStore('snapshots').delete(name);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    idb.close();
+    await refreshSnapshotList();
+    log(`IndexedDB 스냅샷 삭제: ${name}`, 'warn');
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+function bindEvents() {
+  $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => {
+    $$('.nav-btn').forEach(b => b.classList.toggle('active', b === btn));
+    $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${btn.dataset.tab}`));
+    window.scrollTo({top:0, behavior:'smooth'});
+  }));
+
+  $('#resetDbBtn').addEventListener('click', async () => { buildSampleDatabase(); await refreshAll(); toast('샘플 DB를 초기화했다.', 'ok'); });
+  $('#refreshDashboardBtn').addEventListener('click', refreshDashboard);
+  $$('[data-run-sample]').forEach(btn => btn.addEventListener('click', () => {
+    $('#sqlEditor').value = SAMPLE_QUERIES[btn.dataset.runSample].sql;
+    $('[data-tab="console"]').click();
+    runEditorSql();
+  }));
+
+  $('#runSqlBtn').addEventListener('click', runEditorSql);
+  $('#sqlEditor').addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); runEditorSql(); }
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const el = event.target; const start = el.selectionStart; const end = el.selectionEnd;
+      el.value = el.value.slice(0,start) + '  ' + el.value.slice(end); el.selectionStart = el.selectionEnd = start + 2;
+    }
+  });
+  $('#clearEditorBtn').addEventListener('click', () => { $('#sqlEditor').value = ''; $('#sqlEditor').focus(); });
+  $('#formatSqlBtn').addEventListener('click', () => { $('#sqlEditor').value = simpleFormatSql($('#sqlEditor').value); });
+  $('#sampleQuerySelect').addEventListener('change', event => { if (event.target.value) $('#sqlEditor').value = SAMPLE_QUERIES[event.target.value].sql; });
+  $('#exportCsvBtn').addEventListener('click', () => exportLastResult('csv'));
+  $('#exportJsonBtn').addEventListener('click', () => exportLastResult('json'));
+  $('#copyResultBtn').addEventListener('click', async () => {
+    const objects = lastResultSets[0] ? resultToObjects(lastResultSets[0]) : [];
+    await copyText(JSON.stringify(objects, (k,v) => typeof v === 'bigint' ? v.toString() : v, 2)); toast('결과를 복사했다.', 'ok');
+  });
+  $('#clearHistoryBtn').addEventListener('click', () => { queryHistory=[]; renderHistory(); });
+  $('#queryHistory').addEventListener('click', event => {
+    const btn = event.target.closest('[data-history-index]'); if (!btn) return;
+    $('#sqlEditor').value = queryHistory[Number(btn.dataset.historyIndex)].sql;
+  });
+
+  $('#memberForm').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!requireSampleSchema()) return;
+    const stmt = db.prepare('INSERT INTO members(name,grade,branch_id,active) VALUES ($name,$grade,$branch,$active)');
+    try {
+      stmt.run({$name:$('#memberName').value.trim(),$grade:$('#memberGrade').value,$branch:Number($('#memberBranch').value),$active:Number($('#memberActive').value)});
+      $('#rowsModifiedBox').textContent = `최근 변경 행 수: ${db.getRowsModified()}`;
+      log(`회원 INSERT · ${$('#memberName').value.trim()}`, 'ok'); toast('회원을 등록했다.', 'ok');
+    } catch (error) { toast(error.message,'error'); log(error.message,'error'); }
+    finally { stmt.free(); refreshCrudControls(); refreshCrudTable(); refreshDashboard(); updateDbSizePill(); }
+  });
+
+  $('#stockForm').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!requireSampleSchema()) return;
+    const id = Number($('#stockProduct').value); const delta = Number($('#stockDelta').value); const guard = $('#stockGuard').value === '1';
+    try {
+      db.run(guard ? 'UPDATE products SET stock=stock+? WHERE id=? AND stock+? >= 0' : 'UPDATE products SET stock=stock+? WHERE id=?', guard ? [delta,id,delta] : [delta,id]);
+      $('#rowsModifiedBox').textContent = `최근 변경 행 수: ${db.getRowsModified()}`;
+      if (!db.getRowsModified()) toast('조건을 충족하지 않아 변경되지 않았다.', 'error'); else toast('재고를 수정했다.', 'ok');
+      log(`상품 재고 UPDATE · id=${id}, delta=${delta}, rows=${db.getRowsModified()}`, 'ok');
+    } catch (error) { toast(error.message,'error'); log(error.message,'error'); }
+    refreshCrudControls(); refreshDashboard();
+  });
+
+  $('#deleteMemberBtn').addEventListener('click', () => {
+    if (!requireSampleSchema()) return;
+    const id = Number($('#deleteMember').value);
+    try { db.run('DELETE FROM members WHERE id=?',[id]); toast(`회원 #${id} 삭제 완료`, 'ok'); log(`회원 DELETE · id=${id}`, 'ok'); }
+    catch (error) { toast(`삭제 거부: ${error.message}`,'error'); log(`DELETE 제약 오류: ${error.message}`,'warn'); }
+    refreshCrudControls(); refreshCrudTable(); refreshDashboard();
+  });
+  $('#toggleFkBtn').addEventListener('click', () => toast(`PRAGMA foreign_keys = ${getSingleValue('PRAGMA foreign_keys') ? 'ON' : 'OFF'}`));
+
+  $('#runTransactionBtn').addEventListener('click', () => {
+    if (!requireSampleSchema()) return;
+    const memberId = Number($('#txMember').value); const productId = Number($('#txProduct').value); const qty = Number($('#txQty').value); const rollback = $('#txMode').value === 'rollback';
+    const stmt = db.prepare('SELECT price,stock,name FROM products WHERE id=?'); stmt.bind([productId]);
+    const product = stmt.step() ? stmt.getAsObject() : null; stmt.free();
+    if (!product || qty < 1) return toast('입력값을 확인하세요.','error');
+    try {
+      db.run('BEGIN;');
+      if (Number(product.stock) < qty) throw new Error('재고 부족');
+      db.run('INSERT INTO orders(member_id,status,total_amount) VALUES (?,\'접수\',?)',[memberId, Number(product.price)*qty]);
+      const orderId = getSingleValue('SELECT last_insert_rowid()');
+      db.run('INSERT INTO order_items(order_id,product_id,qty,unit_price) VALUES (?,?,?,?)',[orderId,productId,qty,product.price]);
+      db.run('UPDATE products SET stock=stock-? WHERE id=?',[qty,productId]);
+      if (rollback) throw new Error('사용자가 선택한 의도적 ROLLBACK');
+      db.run('COMMIT;');
+      toast(`주문 #${orderId} COMMIT 완료`,'ok'); log(`트랜잭션 COMMIT · order=${orderId}`,'ok');
+    } catch (error) {
+      try { db.run('ROLLBACK;'); } catch {}
+      toast(`ROLLBACK: ${error.message}`, rollback ? '' : 'error'); log(`트랜잭션 ROLLBACK · ${error.message}`,'warn');
+    }
+    refreshAll();
+  });
+
+  $('#savepointDemoBtn').addEventListener('click', () => {
+    const before = getSingleValue('SELECT COUNT(*) FROM audit_log');
+    try {
+      db.run('BEGIN; SAVEPOINT before_temp;');
+      db.run("INSERT INTO audit_log(action,table_name,note) VALUES ('TEST','savepoint','이 행은 롤백됨')");
+      const middle = getSingleValue('SELECT COUNT(*) FROM audit_log');
+      db.run('ROLLBACK TO before_temp; RELEASE before_temp; COMMIT;');
+      const after = getSingleValue('SELECT COUNT(*) FROM audit_log');
+      $('#crudOutput').innerHTML = `<div class="log-line"><span class="log-ok">SAVEPOINT 완료</span> 시작=${before}, 삽입 직후=${middle}, 부분 롤백 후=${after}</div>`;
+    } catch (error) { try{db.run('ROLLBACK')}catch{} $('#crudOutput').textContent=error.message; }
+  });
+
+  $('#eachDemoBtn').addEventListener('click', () => {
+    if (!requireSampleSchema()) return;
+    const lines = [];
+    db.each('SELECT id,name,grade FROM members WHERE active=$active ORDER BY id', {$active:1}, row => lines.push(`#${row.id} ${row.name} / ${row.grade}`), () => {
+      $('#crudOutput').innerHTML = lines.map(line => `<div class="log-line">${escapeHtml(line)}</div>`).join('');
+    });
+  });
+  $('#refreshCrudBtn').addEventListener('click', () => { refreshCrudControls(); refreshCrudTable(); });
+
+  $('#schemaList').addEventListener('click', event => {
+    const btn = event.target.closest('[data-schema-name]'); if (btn) showSchemaDetail(btn.dataset.schemaName, btn.dataset.schemaType);
+  });
+  $('#refreshSchemaBtn').addEventListener('click', refreshSchema);
+  $('#copySchemaSqlBtn').addEventListener('click', async () => { if(selectedSchemaObject?.sql){await copyText(selectedSchemaObject.sql);toast('정의를 복사했다.','ok');} });
+  $('#createLabObjectsBtn').addEventListener('click', () => {
+    try {
+      db.run(`CREATE TABLE IF NOT EXISTS lab_measurements(id INTEGER PRIMARY KEY, label TEXT UNIQUE, value REAL CHECK(value BETWEEN 0 AND 100), created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+              CREATE INDEX IF NOT EXISTS idx_lab_measurements_value ON lab_measurements(value);
+              CREATE VIEW IF NOT EXISTS v_lab_high_values AS SELECT * FROM lab_measurements WHERE value >= 80;`);
+      refreshSchema(); toast('실험용 테이블·인덱스·뷰를 생성했다.','ok');
+    } catch(error){toast(error.message,'error');}
+  });
+  $('#tempTableBtn').addEventListener('click', () => {
+    try { db.run('DROP TABLE IF EXISTS temp.session_values; CREATE TEMP TABLE session_values(key TEXT,value TEXT); INSERT INTO session_values VALUES (\'tab\',\'schema\'),(\'mode\',\'temporary\');'); const r=db.exec('SELECT * FROM temp.session_values')[0]; $('#tempTableOutput').innerHTML=renderQueryResult(r); }
+    catch(error){$('#tempTableOutput').textContent=error.message;}
+  });
+  $('#attachDbBtn').addEventListener('click', () => {
+    try {
+      try { db.run('DETACH DATABASE aux'); } catch {}
+      db.run("ATTACH DATABASE ':memory:' AS aux; CREATE TABLE aux.codes(code TEXT PRIMARY KEY,label TEXT); INSERT INTO aux.codes VALUES ('VIP','최우수'),('우수','우수'),('일반','일반');");
+      const r=db.exec('SELECT m.name,m.grade,c.label FROM members m JOIN aux.codes c ON c.code=m.grade ORDER BY m.id LIMIT 6')[0];
+      $('#attachOutput').innerHTML=renderQueryResult(r); db.run('DETACH DATABASE aux');
+    } catch(error){$('#attachOutput').textContent=error.message;}
+  });
+  $('#constraintDemoBtn').addEventListener('click', () => {
+    try { db.run("INSERT INTO products(name,category,price,stock) VALUES ('완도 전복 1kg','패류',-1,-1)"); $('#constraintOutput').textContent='예상과 달리 오류가 발생하지 않음'; }
+    catch(error){$('#constraintOutput').innerHTML=`<strong>예상된 제약 오류:</strong> ${escapeHtml(error.message)}`; log(`제약조건 데모: ${error.message}`,'warn');}
+  });
+
+  $('#udfDemoBtn').addEventListener('click', () => { if (!requireSampleSchema()) return; $('#udfOutput').innerHTML=renderQueryResult(db.exec('SELECT id, mask_name(name) AS masked_name, krw((SELECT COALESCE(SUM(total_amount),0) FROM orders o WHERE o.member_id=m.id)) AS sales FROM members m ORDER BY id')[0]); });
+  $('#aggregateDemoBtn').addEventListener('click', () => { if (!requireSampleSchema()) return; $('#aggregateOutput').innerHTML=renderQueryResult(db.exec('SELECT category, COUNT(*) AS products, js_median(price) AS median_price, AVG(price) AS avg_price FROM products GROUP BY category ORDER BY category')[0]); });
+  $('#toggleHookBtn').addEventListener('click', () => setUpdateHook(!hookEnabled));
+  $('#hookMutationBtn').addEventListener('click', () => { if (!requireSampleSchema()) return; db.run("INSERT INTO audit_log(action,table_name,note) VALUES ('HOOK','audit_log','updateHook 데모')"); toast('변경 이벤트를 발생시켰다.','ok'); });
+  $('#blobDemoBtn').addEventListener('click', () => {
+    try {
+      db.run('CREATE TABLE IF NOT EXISTS binary_store(id INTEGER PRIMARY KEY,name TEXT,data BLOB)');
+      const bytes = new Uint8Array([0,1,2,15,16,31,32,127,128,200,254,255]);
+      const stmt = db.prepare('INSERT INTO binary_store(name,data) VALUES (?,?)'); stmt.run(['sample.bin',bytes]); stmt.free();
+      $('#blobOutput').innerHTML=renderQueryResult(db.exec('SELECT id,name,length(data) AS bytes,hex(data) AS hex_value FROM binary_store ORDER BY id DESC LIMIT 5')[0]);
+      refreshSchema();
+    } catch(error){toast(error.message,'error');}
+  });
+  $('#bigIntDemoBtn').addEventListener('click', () => {
+    try {
+      db.run('CREATE TABLE IF NOT EXISTS big_numbers(label TEXT,value INTEGER); DELETE FROM big_numbers; INSERT INTO big_numbers VALUES (\'safe\',9007199254740991),(\'over-safe\',9007199254740993),(\'max-int64\',9223372036854775807);');
+      const stmt=db.prepare('SELECT label,value,typeof(value) AS storage_class FROM big_numbers ORDER BY rowid'); const rows=[];
+      while(stmt.step()) rows.push(stmt.getAsObject(null,{useBigInt:true})); stmt.free();
+      $('#bigIntOutput').textContent=JSON.stringify(rows,(k,v)=>typeof v==='bigint'?`${v}n`:v,2);
+      refreshSchema();
+    } catch(error){$('#bigIntOutput').textContent=error.message;}
+  });
+  $$('[data-advanced-demo]').forEach(btn => btn.addEventListener('click', () => runAdvancedDemo(btn.dataset.advancedDemo)));
+
+  $('#exportDbBtn').addEventListener('click', exportDatabase);
+  $('#chooseDbBtn').addEventListener('click', () => $('#dbFileInput').click());
+  $('#dbFileInput').addEventListener('change', async event => { const file=event.target.files[0]; if(file) await replaceDatabase(new Uint8Array(await file.arrayBuffer()),file.name); event.target.value=''; });
+  const zone=$('#dropZone');
+  ['dragenter','dragover'].forEach(type=>zone.addEventListener(type,e=>{e.preventDefault();zone.classList.add('drag');}));
+  ['dragleave','drop'].forEach(type=>zone.addEventListener(type,e=>{e.preventDefault();zone.classList.remove('drag');}));
+  zone.addEventListener('drop',async e=>{const file=e.dataTransfer.files[0];if(file)await replaceDatabase(new Uint8Array(await file.arrayBuffer()),file.name);});
+  $('#refreshStorageStatsBtn').addEventListener('click', refreshStorageStats);
+  $('#exportSchemaBtn').addEventListener('click',()=>downloadBlob(new Blob([fullSchemaSql()],{type:'text/sql;charset=utf-8'}),'sqljs-schema.sql'));
+  $('#copySchemaBtn').addEventListener('click',async()=>{await copyText(fullSchemaSql());toast('전체 스키마를 복사했다.','ok');});
+  $('#cloneDbBtn').addEventListener('click',()=>{try{const bytes=exportBytesPreserveSession();const clone=new SQL.Database(bytes);const count=clone.exec("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")[0].values[0][0];clone.close();toast(`복제 DB 검증 완료 · 테이블 ${count}개`,'ok');log(`메모리 DB 복제 테스트 · ${formatBytes(bytes.length)}`,'ok');}catch(error){toast(error.message,'error');}});
+  $('#closeReopenBtn').addEventListener('click',()=>{try{const bytes=exportBytesPreserveSession();db.close();db=new SQL.Database(bytes);db.run('PRAGMA foreign_keys=ON');installExtensions();refreshAll();toast('close() 후 바이너리로 재개방했다.','ok');log('Database.close() 및 재개방 완료','ok');}catch(error){toast(error.message,'error');}});
+  $('#saveSnapshotBtn').addEventListener('click',saveSnapshot);
+  $('#refreshSnapshotsBtn').addEventListener('click',refreshSnapshotList);
+  $('#snapshotList').addEventListener('click',e=>{const load=e.target.closest('[data-snapshot-load]');const del=e.target.closest('[data-snapshot-delete]');if(load)loadSnapshot(load.dataset.snapshotLoad);if(del)deleteSnapshot(del.dataset.snapshotDelete);});
+  $('#storageCsvBtn').addEventListener('click',()=>exportLastResult('csv'));
+  $('#storageJsonBtn').addEventListener('click',()=>exportLastResult('json'));
+
+  $('#explainBtn').addEventListener('click',()=>{try{$('#explainOutput').innerHTML=renderQueryResult(db.exec(`EXPLAIN QUERY PLAN ${$('#explainSql').value}`)[0]);}catch(error){$('#explainOutput').innerHTML=`<div class="notice notice-danger">${escapeHtml(error.message)}</div>`;}});
+  $('#dropIndexBtn').addEventListener('click',()=>{try{db.run('DROP INDEX IF EXISTS idx_orders_member_date');toast('인덱스를 삭제했다.','ok');refreshSchema();}catch(error){toast(error.message,'error');}});
+  $('#createIndexBtn').addEventListener('click',()=>{try{db.run('CREATE INDEX IF NOT EXISTS idx_orders_member_date ON orders(member_id,ordered_at DESC)');toast('인덱스를 생성했다.','ok');refreshSchema();}catch(error){toast(error.message,'error');}});
+  $('#comparePlanBtn').addEventListener('click',compareIndexPlans);
+  $('#benchmarkBtn').addEventListener('click',runBenchmark);
+  $('#integrityBtn').addEventListener('click',()=>{try{const a=db.exec('PRAGMA integrity_check')[0],b=db.exec('PRAGMA foreign_key_check')[0];$('#integrityOutput').innerHTML=`<h4>integrity_check</h4>${renderQueryResult(a)}<h4>foreign_key_check</h4>${b?renderQueryResult(b):'<div class="table-empty">위반 없음</div>'}`;}catch(error){toast(error.message,'error');}});
+  $('#analyzeBtn').addEventListener('click',()=>{try{db.run('ANALYZE');toast('ANALYZE 완료','ok');log('ANALYZE 실행','ok');}catch(error){toast(error.message,'error');}});
+  $('#vacuumBtn').addEventListener('click',()=>{try{db.run('VACUUM');toast('VACUUM 완료','ok');refreshStorageStats();log('VACUUM 실행','ok');}catch(error){toast(error.message,'error');}});
+  $('#pragmaBtn').addEventListener('click',()=>{const rows=[['foreign_keys',getSingleValue('PRAGMA foreign_keys')],['journal_mode',getSingleValue('PRAGMA journal_mode')],['page_size',getSingleValue('PRAGMA page_size')],['page_count',getSingleValue('PRAGMA page_count')],['freelist_count',getSingleValue('PRAGMA freelist_count')],['cache_size',getSingleValue('PRAGMA cache_size')],['auto_vacuum',getSingleValue('PRAGMA auto_vacuum')]];$('#pragmaOutput').innerHTML=renderQueryResult({columns:['pragma','value'],values:rows});});
+  $('#compileOptionsBtn').addEventListener('click',()=>{$('#compileOptionsOutput').innerHTML=renderQueryResult(db.exec('PRAGMA compile_options')[0]);});
+
+  $('#clearLogBtn').addEventListener('click',()=>{appLogs=[];renderLogs();});
+  $('#copyLogBtn').addEventListener('click',async()=>{await copyText(appLogs.map(l=>`[${l.time}] ${l.type.toUpperCase()} ${l.message}`).join('\n'));toast('로그를 복사했다.','ok');});
+}
+
+function runAdvancedDemo(type) {
+  let sql = '';
+  if (type === 'json') sql = `SELECT name, json_extract(metadata,'$.origin') AS origin, json_pretty(metadata) AS pretty_metadata FROM products LIMIT 5`;
+  if (type === 'window') sql = `SELECT name,category,price,RANK() OVER(PARTITION BY category ORDER BY price DESC) AS rank_in_category,SUM(price) OVER(ORDER BY id) AS running_price FROM products`;
+  if (type === 'cte') sql = `WITH RECURSIVE seq(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM seq WHERE n<15) SELECT n,n*n AS square,printf('%02d',n) AS padded FROM seq`;
+  if (type === 'math') sql = `SELECT sqrt(2) AS sqrt_2, pow(2,10) AS two_pow_10, round(sin(pi()/2),6) AS sin_90, log10(1000) AS log10_1000`;
+  if (type === 'date') sql = `SELECT datetime('now','localtime') AS now_local,date('now','start of month') AS month_start,date('now','start of month','+1 month','-1 day') AS month_end,strftime('%Y-%m-%d %H:%M','now','localtime') AS formatted`;
+  if (type === 'returning') {
+    sql = `CREATE TABLE IF NOT EXISTS returning_demo(id INTEGER PRIMARY KEY AUTOINCREMENT,note TEXT); INSERT INTO returning_demo(note) VALUES ('RETURNING test ' || datetime('now')) RETURNING id,note;`;
+  }
+  if (type === 'fts5') {
+    try {
+      const used = Number(getSingleValue("SELECT sqlite_compileoption_used('ENABLE_FTS5')"));
+      if (!used) throw new Error('현재 기본 빌드에 ENABLE_FTS5 컴파일 옵션이 없다. 별도 FTS5 빌드가 필요하다.');
+      db.run('CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(title,body); DELETE FROM docs_fts;');
+      db.run("INSERT INTO docs_fts VALUES ('양식업 AI','스마트 양식 데이터 분석'),('수산물 유통','온라인 판매와 물류 최적화')");
+      sql = `SELECT rowid,title,highlight(docs_fts,1,'[',']') AS matched FROM docs_fts WHERE docs_fts MATCH '데이터 OR 물류'`;
+    } catch (error) {
+      $('#advancedOutput').innerHTML=`<div class="notice notice-warn"><strong>FTS5 감지 결과</strong><br>${escapeHtml(error.message)}</div>`;
+      return;
+    }
+  }
+  if (type === 'statement') {
+    try {
+      const targetSql = hasSampleSchema() ? 'SELECT id,name,grade FROM members WHERE grade=? ORDER BY id' : 'SELECT sqlite_version() AS version, 42 AS answer';
+      const stmt = db.prepare(targetSql);
+      const sqlText = stmt.getSQL();
+      let normalized = '(SQLITE_ENABLE_NORMALIZE 미지원 또는 결과 없음)';
+      try { normalized = stmt.getNormalizedSQL() || normalized; } catch {}
+      const rows = [];
+      if (hasSampleSchema()) stmt.bind(['우수']);
+      while (stmt.step()) rows.push(stmt.get());
+      const columns = stmt.getColumnNames();
+      stmt.free();
+      $('#advancedOutput').innerHTML = `<div class="grid grid-2"><div><h4>Statement 정보</h4><pre class="code-block">getSQL():
+${escapeHtml(sqlText)}
+
+getNormalizedSQL():
+${escapeHtml(normalized)}
+
+getColumnNames():
+${escapeHtml(JSON.stringify(columns))}</pre></div><div><h4>step() + get() 결과</h4><div class="result-wrap">${renderQueryResult({columns,values:rows})}</div></div></div>`;
+    } catch (error) { $('#advancedOutput').innerHTML=`<div class="notice notice-danger">${escapeHtml(error.message)}</div>`; }
+    return;
+  }
+  if (type === 'iterator') {
+    try {
+      const multiSql = hasSampleSchema()
+        ? 'SELECT COUNT(*) AS members FROM members; SELECT COUNT(*) AS products FROM products; PRAGMA foreign_keys;'
+        : "SELECT sqlite_version() AS version; SELECT COUNT(*) AS objects FROM sqlite_master; PRAGMA page_count;";
+      const resultSets = [];
+      for (const stmt of db.iterateStatements(multiSql)) {
+        const columns = stmt.getColumnNames();
+        const values = [];
+        while (stmt.step()) values.push(stmt.get());
+        if (columns.length) resultSets.push({columns,values,sql:stmt.getSQL()});
+      }
+      $('#advancedOutput').innerHTML = resultSets.map((r,i)=>`<article class="card ${i?'mt-12':''}"><div class="card-head"><div><h3>Iterator 문장 ${i+1}</h3><p class="mono">${escapeHtml(r.sql)}</p></div></div><div class="card-body compact"><div class="result-wrap">${renderQueryResult(r)}</div></div></article>`).join('');
+    } catch (error) { $('#advancedOutput').innerHTML=`<div class="notice notice-danger">${escapeHtml(error.message)}</div>`; }
+    return;
+  }
+  try {
+    const results = db.exec(sql);
+    lastResultSets = results; lastResultLabel = `advanced-${type}`;
+    $('#advancedOutput').innerHTML = results.length ? results.map((r,i)=>`<div ${i?'class="mt-12"':''}>${renderQueryResult(r)}</div>`).join('') : '<div class="notice notice-info">실행 완료</div>';
+    refreshSchema();
+  } catch (error) {
+    $('#advancedOutput').innerHTML=`<div class="notice notice-danger"><strong>지원되지 않거나 실행 실패</strong><br>${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function compareIndexPlans() {
+  const query = `SELECT * FROM orders WHERE member_id=2 ORDER BY ordered_at DESC`;
+  try {
+    db.run('DROP INDEX IF EXISTS idx_orders_member_date');
+    const noIndex = db.exec(`EXPLAIN QUERY PLAN ${query}`)[0];
+    db.run('CREATE INDEX idx_orders_member_date ON orders(member_id,ordered_at DESC)');
+    const withIndex = db.exec(`EXPLAIN QUERY PLAN ${query}`)[0];
+    const formatPlan = r => r.values.map(row=>row.join(' | ')).join('\n');
+    $('#indexPlanOutput').innerHTML=`<div class="log-line"><span class="log-warn">[인덱스 없음]</span>\n${escapeHtml(formatPlan(noIndex))}</div><div class="log-line"><span class="log-ok">[복합 인덱스 있음]</span>\n${escapeHtml(formatPlan(withIndex))}</div>`;
+    refreshSchema();
+  } catch (error) { $('#indexPlanOutput').textContent=error.message; }
+}
+
+function runBenchmark() {
+  const count = Math.max(10, Math.min(3000, Number($('#benchmarkCount').value)||500));
+  try {
+    db.run('DROP TABLE IF EXISTS bench_no_tx; DROP TABLE IF EXISTS bench_tx; CREATE TABLE bench_no_tx(id INTEGER PRIMARY KEY,value TEXT); CREATE TABLE bench_tx(id INTEGER PRIMARY KEY,value TEXT);');
+    let start=performance.now();
+    let stmt=db.prepare('INSERT INTO bench_no_tx(value) VALUES (?)');
+    for(let i=0;i<count;i++) stmt.run([`row-${i}`]);
+    stmt.free();
+    const noTx=performance.now()-start;
+
+    start=performance.now();
+    db.run('BEGIN');
+    stmt=db.prepare('INSERT INTO bench_tx(value) VALUES (?)');
+    for(let i=0;i<count;i++) stmt.run([`row-${i}`]);
+    stmt.free(); db.run('COMMIT');
+    const tx=performance.now()-start;
+    $('#benchmarkOutput').textContent=`반복 횟수: ${count.toLocaleString()}\n개별 INSERT: ${noTx.toFixed(2)} ms\n트랜잭션 INSERT: ${tx.toFixed(2)} ms\n속도 비율: ${(noTx/Math.max(tx,.0001)).toFixed(2)}배\n\n※ 메모리 DB·기기 상태에 따라 결과 변동`;
+    log(`벤치마크 ${count}건 · noTx=${noTx.toFixed(2)}ms tx=${tx.toFixed(2)}ms`,'ok');
+    refreshSchema(); updateDbSizePill();
+  } catch(error){try{db.run('ROLLBACK')}catch{} $('#benchmarkOutput').textContent=error.message;}
+}
+
+async function initialize() {
+  log(`애플리케이션 시작 v${APP_VERSION}`,'info');
+  bindEvents();
+  const select=$('#sampleQuerySelect');
+  Object.entries(SAMPLE_QUERIES).forEach(([key,item])=>{const option=document.createElement('option');option.value=key;option.textContent=item.label;select.appendChild(option);});
+  try {
+    await loadSqlJsEngine();
+    buildSampleDatabase();
+    await refreshAll();
+    $('#statusDot').classList.add('ready');
+    $('#statusText').textContent='엔진 준비 완료';
+    $('#loadingScreen').classList.add('hidden');
+    log(`SQLite ${getSingleValue('SELECT sqlite_version()')} 준비 완료`,'ok');
+  } catch (error) {
+    $('#statusDot').classList.add('error');
+    $('#statusText').textContent='초기화 실패';
+    $('#loadingMessage').textContent='sql.js를 시작하지 못했다.';
+    $('#loadingError').classList.remove('hidden');
+    $('#loadingError').innerHTML=`<strong>${escapeHtml(error.message)}</strong><br><br>인터넷 연결을 확인하거나 HTML 옆에 <span class="mono">assets/sqljs/sql-wasm.js</span>와 <span class="mono">sql-wasm.wasm</span>를 배치한 뒤 웹서버로 실행하세요.`;
+    log(`초기화 실패: ${error.stack || error.message}`,'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initialize);
+</script>
+</body>
+</html>
