@@ -1,0 +1,2024 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>OpenSeadragon 6.0.2 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #09111f;
+      --panel: #111c2d;
+      --panel-2: #17243a;
+      --panel-3: #0c1627;
+      --line: #2b3b55;
+      --text: #e8eef8;
+      --muted: #93a4bd;
+      --primary: #4cc2ff;
+      --primary-2: #168bd2;
+      --success: #3ddc97;
+      --warning: #ffcd57;
+      --danger: #ff6b7a;
+      --radius: 14px;
+      --shadow: 0 14px 35px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select, textarea { font: inherit; }
+    button, select, input[type="range"], input[type="file"] { accent-color: var(--primary); }
+
+    body {
+      background:
+        radial-gradient(circle at 10% 0%, rgba(76, 194, 255, .13), transparent 32rem),
+        radial-gradient(circle at 95% 15%, rgba(61, 220, 151, .07), transparent 30rem),
+        var(--bg);
+    }
+
+    .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      min-height: 68px;
+      padding: 13px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(9, 17, 31, .86);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 2000;
+    }
+
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center;
+      font-weight: 900; letter-spacing: -.06em;
+      color: #061321;
+      background: linear-gradient(135deg, #7ad8ff, #3ddc97);
+      box-shadow: 0 9px 22px rgba(76, 194, 255, .2);
+    }
+    .brand h1 { font-size: 18px; margin: 0; line-height: 1.25; }
+    .brand p { font-size: 12px; color: var(--muted); margin: 3px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .badge {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge.ok { color: var(--success); border-color: rgba(61, 220, 151, .35); }
+    .badge.warn { color: var(--warning); border-color: rgba(255, 205, 87, .35); }
+
+    .layout {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 300px minmax(480px, 1fr) 318px;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .sidebar, .inspector {
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
+      scrollbar-width: thin;
+      scrollbar-color: #38506e transparent;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(23, 36, 58, .95), rgba(14, 25, 43, .95));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .panel-header {
+      padding: 11px 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.025);
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-header h2, .panel-header h3 { margin: 0; font-size: 13px; letter-spacing: -.01em; }
+    .panel-body { padding: 12px; }
+    .panel-body.tight { padding: 8px; }
+
+    .viewer-column { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+    .viewer-card {
+      min-height: 650px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: #030914;
+    }
+
+    .viewer-toolbar {
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      background: #111c2d;
+      border-bottom: 1px solid var(--line);
+      z-index: 10;
+    }
+
+    #viewer {
+      position: relative;
+      flex: 1;
+      min-height: 540px;
+      background:
+        linear-gradient(45deg, #07101e 25%, transparent 25%),
+        linear-gradient(-45deg, #07101e 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #07101e 75%),
+        linear-gradient(-45deg, transparent 75%, #07101e 75%),
+        #0b1525;
+      background-size: 28px 28px;
+      background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+    }
+
+    .viewer-status {
+      min-height: 34px;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 7px 10px;
+      background: #0d1727;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn {
+      border: 1px solid #354963;
+      background: #1a2a42;
+      color: var(--text);
+      border-radius: 9px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: .16s ease;
+      line-height: 1;
+      min-height: 34px;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #4d6b91; background: #203552; }
+    .btn:active { transform: translateY(0); }
+    .btn.primary { background: linear-gradient(135deg, #1797e6, #2eafdb); border-color: #46bdf2; color: white; }
+    .btn.success { background: rgba(61,220,151,.13); border-color: rgba(61,220,151,.4); color: #86f0c2; }
+    .btn.danger { background: rgba(255,107,122,.11); border-color: rgba(255,107,122,.34); color: #ff9ba7; }
+    .btn.ghost { background: transparent; }
+    .btn.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(76,194,255,.12) inset; color: #a8e5ff; }
+    .btn.small { padding: 6px 8px; min-height: 29px; font-size: 11px; border-radius: 7px; }
+    .icon-btn { width: 36px; padding: 0; display: grid; place-items: center; font-size: 16px; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .field { margin-bottom: 10px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label, .field-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .field input[type="text"], .field input[type="number"], .field select, .field textarea {
+      width: 100%;
+      border: 1px solid #334761;
+      color: var(--text);
+      background: #0b1628;
+      border-radius: 9px;
+      padding: 9px 10px;
+      outline: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(76,194,255,.1); }
+    .field input[type="range"] { width: 100%; }
+    .field textarea { resize: vertical; min-height: 90px; }
+    .row { display: flex; gap: 7px; align-items: center; }
+    .row > * { min-width: 0; }
+    .row.grow > * { flex: 1; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+    .divider { height: 1px; background: var(--line); margin: 11px 0; }
+    .help { font-size: 10px; line-height: 1.55; color: var(--muted); margin: 7px 0 0; }
+    .help strong { color: #c9d7eb; }
+
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; min-height: 32px; font-size: 11px; color: #cbd6e8;
+    }
+    .switch { position: relative; width: 40px; height: 22px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch span {
+      position: absolute; inset: 0;
+      cursor: pointer; background: #35445b;
+      border-radius: 999px; transition: .2s;
+    }
+    .switch span::before {
+      content: "";
+      position: absolute; width: 16px; height: 16px;
+      left: 3px; top: 3px; border-radius: 50%;
+      background: white; transition: .2s;
+    }
+    .switch input:checked + span { background: var(--primary-2); }
+    .switch input:checked + span::before { transform: translateX(18px); }
+
+    .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .state-card {
+      padding: 9px;
+      border: 1px solid #2c405a;
+      background: #0c182a;
+      border-radius: 9px;
+      min-width: 0;
+    }
+    .state-card .k { color: var(--muted); font-size: 10px; margin-bottom: 5px; }
+    .state-card .v { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .event-log {
+      height: 220px;
+      overflow: auto;
+      background: #07101e;
+      border: 1px solid #293c55;
+      border-radius: 9px;
+      padding: 7px;
+      font: 10px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #b9c9dd;
+    }
+    .event-row { padding: 3px 4px; border-bottom: 1px solid rgba(255,255,255,.035); }
+    .event-row:last-child { border: 0; }
+    .event-time { color: #5d7898; }
+    .event-name { color: #78d7ff; }
+    .event-error .event-name { color: #ff8997; }
+    .event-success .event-name { color: #62e7aa; }
+
+    .annotation-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; }
+    .annotation-item {
+      display: grid; grid-template-columns: 1fr auto; gap: 7px;
+      padding: 8px; border: 1px solid #2c4059; background: #0d192a; border-radius: 8px;
+    }
+    .annotation-item .title { font-size: 11px; font-weight: 700; }
+    .annotation-item .meta { font-size: 9px; color: var(--muted); margin-top: 3px; word-break: break-all; }
+
+    .annotation-point {
+      width: 20px; height: 20px;
+      border: 3px solid #fff;
+      background: #ff4f70;
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(255,79,112,.25), 0 4px 14px rgba(0,0,0,.45);
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .annotation-rect {
+      border: 3px solid #ffcd57;
+      outline: 1px solid rgba(0,0,0,.6);
+      background: rgba(255,205,87,.12);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.14) inset;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+    .draft-rect {
+      border: 2px dashed #4cc2ff;
+      background: rgba(76,194,255,.1);
+      pointer-events: none;
+    }
+    .measure-endpoint {
+      width: 11px; height: 11px; border-radius: 50%;
+      background: #3ddc97; border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,.5);
+      pointer-events: none;
+    }
+    .osd-measure-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; overflow: visible; }
+    .osd-measure-line { stroke: #3ddc97; stroke-width: 2.5; vector-effect: non-scaling-stroke; filter: drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
+    .osd-measure-temp { stroke: #4cc2ff; stroke-dasharray: 7 5; }
+    .osd-measure-label-bg { fill: rgba(4,12,24,.88); stroke: rgba(61,220,151,.75); }
+    .osd-measure-label { fill: white; font: 11px system-ui, sans-serif; text-anchor: middle; dominant-baseline: middle; }
+
+    .error-cover {
+      position: absolute; inset: 0; z-index: 2000;
+      display: none; align-items: center; justify-content: center;
+      padding: 25px; text-align: center;
+      background: rgba(5, 12, 23, .92);
+    }
+    .error-cover.show { display: flex; }
+    .error-box { max-width: 620px; border: 1px solid rgba(255,107,122,.4); background: #171725; border-radius: 14px; padding: 20px; }
+    .error-box h3 { margin: 0 0 10px; color: #ff9ca7; }
+    .error-box p { margin: 6px 0; color: #cbd6e5; font-size: 12px; line-height: 1.65; }
+
+    .toast-stack { position: fixed; right: 15px; bottom: 15px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast { min-width: 250px; max-width: 420px; padding: 11px 13px; border-radius: 10px; background: #17263b; border: 1px solid #3a5474; color: #eaf1fb; box-shadow: var(--shadow); font-size: 12px; animation: toast-in .22s ease; }
+    .toast.error { border-color: rgba(255,107,122,.5); }
+    .toast.success { border-color: rgba(61,220,151,.5); }
+    @keyframes toast-in { from { transform: translateY(10px); opacity: 0; } }
+
+    .shortcut-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .shortcut-table td { padding: 5px 3px; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .shortcut-table td:first-child { color: #9fe2ff; font-family: ui-monospace, monospace; width: 70px; }
+
+    .config-code {
+      max-height: 170px; overflow: auto;
+      margin: 0; padding: 9px;
+      border: 1px solid #293e58; border-radius: 9px;
+      background: #07101e; color: #bcd1e9;
+      font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap; word-break: break-word;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1240px) {
+      .layout { grid-template-columns: 280px minmax(440px, 1fr); }
+      .inspector { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; overflow: visible; }
+      .inspector .panel { margin: 0; }
+    }
+
+    @media (max-width: 860px) {
+      .topbar { position: static; align-items: flex-start; }
+      .layout { display: block; padding: 8px; }
+      .sidebar, .inspector { overflow: visible; display: block; }
+      .viewer-column { margin: 10px 0; }
+      .viewer-card { min-height: 610px; }
+      #viewer { min-height: 500px; }
+      .viewer-status { grid-template-columns: 1fr; gap: 3px; }
+      .inspector .panel { margin-bottom: 10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">OSD</div>
+      <div>
+        <h1>OpenSeadragon 종합 기능 실험실</h1>
+        <p>초고해상도 이미지 · DZI · IIIF · 시퀀스 · 컬렉션 · 오버레이 · 좌표 · 이벤트</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="badge ok" id="libraryBadge">OpenSeadragon 6.0.2</span>
+      <span class="badge" id="modeBadge">단일 이미지</span>
+      <button class="btn small ghost" id="saveViewBtn">뷰 저장</button>
+      <button class="btn small ghost" id="restoreViewBtn">뷰 복원</button>
+      <button class="btn small primary" id="copyLinkBtn">현재 뷰 링크 복사</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="panel-header"><h2>1. 표시 모드와 이미지 소스</h2><span class="badge" id="loadStatus">대기</span></div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="viewMode">표시 모드 <span>재초기화 방식</span></label>
+            <select id="viewMode">
+              <option value="single">단일 이미지</option>
+              <option value="sequence">시퀀스 / 페이지</option>
+              <option value="collection">컬렉션 / 다중 이미지</option>
+            </select>
+          </div>
+          <div class="field" id="singleSourceField">
+            <label for="sourcePreset">기본 예제 소스</label>
+            <select id="sourcePreset">
+              <option value="highsmith">DZI · Highsmith</option>
+              <option value="duomo">DZI · Duomo</option>
+              <option value="iiif">IIIF · Princeton</option>
+              <option value="simple">일반 JPG · Grand Canyon</option>
+              <option value="offline">내장 테스트 이미지 · 오프라인</option>
+            </select>
+          </div>
+          <button class="btn primary" id="applyModeBtn" style="width:100%">선택 모드 불러오기</button>
+
+          <div class="divider"></div>
+
+          <div class="field">
+            <label for="customUrl">사용자 URL <span>DZI / info.json / 이미지</span></label>
+            <input type="text" id="customUrl" placeholder="https://.../image.dzi 또는 .../info.json" />
+          </div>
+          <div class="grid-2">
+            <button class="btn small" id="loadUrlAutoBtn">자동 판별</button>
+            <button class="btn small" id="loadUrlImageBtn">일반 이미지로</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="field">
+            <label for="localImage">로컬 일반 이미지</label>
+            <input type="file" id="localImage" accept="image/*" />
+            <p class="help">JPG·PNG·WebP 등 단일 이미지를 브라우저 내부 피라미드로 표시. DZI는 타일 폴더 구조가 필요하므로 단일 파일 업로드만으로는 열 수 없음.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>2. 뷰포트 조작</h2><span class="badge" id="zoomBadge">1.000×</span></div>
+        <div class="panel-body">
+          <div class="grid-4">
+            <button class="btn icon-btn" data-action="zoom-in" title="확대">＋</button>
+            <button class="btn icon-btn" data-action="zoom-out" title="축소">−</button>
+            <button class="btn icon-btn" data-action="home" title="홈">⌂</button>
+            <button class="btn icon-btn" data-action="full-screen" title="전체 화면">⛶</button>
+          </div>
+          <div class="grid-3" style="margin-top:7px">
+            <button class="btn small" data-action="fit-horizontal">가로 맞춤</button>
+            <button class="btn small" data-action="fit-vertical">세로 맞춤</button>
+            <button class="btn small" data-action="fit-item">선택 이미지</button>
+          </div>
+          <div class="grid-3" style="margin-top:7px">
+            <button class="btn small" data-action="pan-left">←</button>
+            <button class="btn small" data-action="pan-up">↑</button>
+            <button class="btn small" data-action="pan-right">→</button>
+            <button class="btn small" data-action="rotate-left">↶ 15°</button>
+            <button class="btn small" data-action="pan-down">↓</button>
+            <button class="btn small" data-action="rotate-right">15° ↷</button>
+          </div>
+          <div class="field" style="margin-top:10px">
+            <label for="rotationRange">뷰포트 회전 <span id="rotationValue">0°</span></label>
+            <input type="range" id="rotationRange" min="0" max="359" value="0" />
+          </div>
+          <div class="grid-2">
+            <button class="btn small" id="flipViewportBtn">좌우 반전</button>
+            <button class="btn small" id="resetViewportBtn">회전·반전 초기화</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>3. 도구와 오버레이</h2><span class="badge" id="toolBadge">이동</span></div>
+        <div class="panel-body">
+          <div class="grid-4" id="toolButtons">
+            <button class="btn small active" data-tool="pan">이동</button>
+            <button class="btn small" data-tool="point">지점</button>
+            <button class="btn small" data-tool="rect">영역</button>
+            <button class="btn small" data-tool="measure">측정</button>
+          </div>
+          <p class="help"><strong>영역:</strong> 마우스로 드래그. <strong>측정:</strong> 시작점과 끝점을 차례로 클릭. 측정값은 원본 이미지 픽셀 기준.</p>
+          <div class="grid-2" style="margin-top:9px">
+            <button class="btn small" id="addSampleOverlayBtn">예제 영역 추가</button>
+            <button class="btn small danger" id="clearAnnotationsBtn">전체 삭제</button>
+          </div>
+          <div class="grid-2" style="margin-top:7px">
+            <button class="btn small" id="exportAnnotationsBtn">JSON 내보내기</button>
+            <label class="btn small" style="text-align:center; cursor:pointer">
+              JSON 가져오기
+              <input type="file" id="importAnnotationsInput" accept=".json,application/json" class="hidden" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>4. 선택 이미지 제어</h2><span class="badge" id="itemCountBadge">0개</span></div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="activeItemSelect">World 항목</label>
+            <select id="activeItemSelect"></select>
+          </div>
+          <div class="field">
+            <label for="itemOpacity">불투명도 <span id="itemOpacityValue">100%</span></label>
+            <input type="range" id="itemOpacity" min="0" max="100" value="100" />
+          </div>
+          <div class="field">
+            <label for="itemRotation">항목 자체 회전 <span id="itemRotationValue">0°</span></label>
+            <input type="range" id="itemRotation" min="0" max="359" value="0" />
+          </div>
+          <div class="grid-2">
+            <button class="btn small" id="itemFlipBtn">항목 좌우 반전</button>
+            <button class="btn small" id="fitItemBtn">항목에 맞춤</button>
+          </div>
+          <div class="field" style="margin-top:9px">
+            <label for="compositeOperation">합성 모드</label>
+            <select id="compositeOperation">
+              <option value="source-over">source-over</option>
+              <option value="multiply">multiply</option>
+              <option value="screen">screen</option>
+              <option value="difference">difference</option>
+              <option value="lighter">lighter</option>
+            </select>
+          </div>
+          <div class="grid-2">
+            <button class="btn small" id="clipToRectBtn">최근 영역으로 자르기</button>
+            <button class="btn small" id="polygonCropBtn">다각형 자르기</button>
+            <button class="btn small" id="resetCropBtn">자르기 해제</button>
+            <button class="btn small" id="snapshotBtn">현재 화면 PNG</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h2>5. 표시 옵션</h2></div>
+        <div class="panel-body">
+          <div class="toggle-row"><span>내비게이터 표시</span><label class="switch"><input id="navigatorToggle" type="checkbox" checked><span></span></label></div>
+          <div class="toggle-row"><span>기본 컨트롤 표시</span><label class="switch"><input id="controlsToggle" type="checkbox" checked><span></span></label></div>
+          <div class="toggle-row"><span>마우스 조작 허용</span><label class="switch"><input id="mouseNavToggle" type="checkbox" checked><span></span></label></div>
+          <div class="toggle-row"><span>키보드 조작 허용</span><label class="switch"><input id="keyboardNavToggle" type="checkbox" checked><span></span></label></div>
+          <div class="toggle-row"><span>타일 디버그 정보</span><label class="switch"><input id="debugToggle" type="checkbox"><span></span></label></div>
+          <div class="divider"></div>
+          <div class="field">
+            <label for="brightnessRange">밝기 <span id="brightnessValue">100%</span></label>
+            <input type="range" id="brightnessRange" min="40" max="180" value="100" />
+          </div>
+          <div class="field">
+            <label for="contrastRange">대비 <span id="contrastValue">100%</span></label>
+            <input type="range" id="contrastRange" min="40" max="200" value="100" />
+          </div>
+          <div class="field">
+            <label for="saturationRange">채도 <span id="saturationValue">100%</span></label>
+            <input type="range" id="saturationRange" min="0" max="220" value="100" />
+          </div>
+          <div class="field">
+            <label for="grayscaleRange">흑백 <span id="grayscaleValue">0%</span></label>
+            <input type="range" id="grayscaleRange" min="0" max="100" value="0" />
+          </div>
+          <button class="btn small" id="resetFiltersBtn" style="width:100%">필터 초기화</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="viewer-column">
+      <div class="viewer-card">
+        <div class="viewer-toolbar">
+          <button class="btn small" data-action="previous-page">이전 페이지</button>
+          <button class="btn small" data-action="next-page">다음 페이지</button>
+          <span class="badge" id="pageBadge">페이지 1 / 1</span>
+          <button class="btn small" data-action="home">홈</button>
+          <button class="btn small" data-action="zoom-in">확대</button>
+          <button class="btn small" data-action="zoom-out">축소</button>
+          <button class="btn small" id="toggleNavigatorToolbarBtn">미니맵</button>
+          <button class="btn small" id="toggleEventLogBtn">이벤트 로그</button>
+          <span style="flex:1"></span>
+          <button class="btn small success" id="addSecondImageBtn">이미지 겹쳐 추가</button>
+        </div>
+        <div id="viewer">
+          <div class="error-cover" id="errorCover">
+            <div class="error-box">
+              <h3>OpenSeadragon을 불러오지 못함</h3>
+              <p>CDN 접근이 차단되었거나 네트워크 연결이 없는 상태일 수 있음.</p>
+              <p>내부망에서 사용할 때는 OpenSeadragon 배포 파일을 내려받은 뒤 스크립트 경로와 <code>prefixUrl</code>을 로컬 폴더로 변경해야 함.</p>
+            </div>
+          </div>
+        </div>
+        <div class="viewer-status">
+          <span id="cursorStatus">커서: 뷰포트 — / 이미지 —</span>
+          <span id="centerStatus">중심: —</span>
+          <span id="boundsStatus">범위: —</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <section class="panel">
+        <div class="panel-header"><h3>실시간 상태</h3><button class="btn small ghost" id="refreshStateBtn">갱신</button></div>
+        <div class="panel-body">
+          <div class="state-grid">
+            <div class="state-card"><div class="k">Zoom</div><div class="v" id="stateZoom">—</div></div>
+            <div class="state-card"><div class="k">Rotation</div><div class="v" id="stateRotation">—</div></div>
+            <div class="state-card"><div class="k">Center X</div><div class="v" id="stateCenterX">—</div></div>
+            <div class="state-card"><div class="k">Center Y</div><div class="v" id="stateCenterY">—</div></div>
+            <div class="state-card"><div class="k">World Items</div><div class="v" id="stateItems">—</div></div>
+            <div class="state-card"><div class="k">Tiles Loaded</div><div class="v" id="stateTiles">0</div></div>
+            <div class="state-card"><div class="k">Flip</div><div class="v" id="stateFlip">false</div></div>
+            <div class="state-card"><div class="k">Fully Loaded</div><div class="v" id="stateFullyLoaded">—</div></div>
+          </div>
+          <div class="divider"></div>
+          <div class="field">
+            <label>현재 이미지 크기</label>
+            <div class="badge" id="imageSizeBadge" style="display:block; text-align:center">—</div>
+          </div>
+          <div class="field">
+            <label>현재 구성 개요</label>
+            <pre class="config-code" id="configCode"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="annotationPanel">
+        <div class="panel-header"><h3>주석 목록</h3><span class="badge" id="annotationCountBadge">0개</span></div>
+        <div class="panel-body tight">
+          <div class="annotation-list" id="annotationList">
+            <div class="help" style="padding:6px">지점·영역·측정 도구로 주석을 추가할 수 있음.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="eventPanel">
+        <div class="panel-header"><h3>이벤트 로그</h3><button class="btn small ghost" id="clearLogBtn">지우기</button></div>
+        <div class="panel-body">
+          <div class="event-log" id="eventLog"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h3>키보드 단축키</h3></div>
+        <div class="panel-body tight">
+          <table class="shortcut-table">
+            <tr><td>＋ / −</td><td>확대 / 축소</td></tr>
+            <tr><td>H</td><td>홈 위치</td></tr>
+            <tr><td>R / Shift+R</td><td>오른쪽 / 왼쪽 15° 회전</td></tr>
+            <tr><td>F</td><td>좌우 반전</td></tr>
+            <tr><td>1~4</td><td>이동·지점·영역·측정 도구</td></tr>
+            <tr><td>Esc</td><td>측정·영역 작업 취소</td></tr>
+          </table>
+          <p class="help">입력창에 포커스가 있을 때는 사용자 단축키가 동작하지 않음. OpenSeadragon 자체 키보드 탐색도 함께 활성화됨.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><h3>실행 유의사항</h3></div>
+        <div class="panel-body">
+          <p class="help" style="margin:0">
+            외부 DZI·IIIF·일반 이미지 서버가 CORS를 허용하지 않으면 메타데이터 로드나 PNG 캡처가 실패할 수 있음.
+            내장 테스트 이미지는 네트워크 이미지 서버 없이 동작하며, OpenSeadragon 라이브러리 자체는 CDN에서 불러옴.
+          </p>
+        </div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/openseadragon@6.0.2/build/openseadragon/openseadragon.min.js"
+        onerror="window.__osdLoadFailed = true"></script>
+<script>
+(() => {
+  'use strict';
+
+  const OSD_VERSION = '6.0.2';
+  const PREFIX_URL = `https://cdn.jsdelivr.net/npm/openseadragon@${OSD_VERSION}/build/openseadragon/images/`;
+
+  const PRESETS = {
+    highsmith: 'https://openseadragon.github.io/example-images/highsmith/highsmith.dzi',
+    duomo: 'https://openseadragon.github.io/example-images/duomo/duomo.dzi',
+    iiif: 'https://libimages1.princeton.edu/loris/pudl0001%2F4609321%2Fs42%2F00000001.jp2/info.json',
+    simple: {
+      type: 'image',
+      url: 'https://openseadragon.github.io/example-images/grand-canyon-landscape-overlooking.jpg',
+      buildPyramid: true,
+      crossOriginPolicy: 'Anonymous',
+      ajaxWithCredentials: false
+    }
+  };
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const round = (value, digits = 4) => Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '—';
+  const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+  const uid = (prefix = 'id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+  let viewer = null;
+  let offlineSource = null;
+  let activeMode = 'single';
+  let activePreset = 'highsmith';
+  let activeItemIndex = 0;
+  let toolMode = 'pan';
+  let annotations = [];
+  let renderedOverlayIds = new Set();
+  let draftOverlayId = null;
+  let dragState = null;
+  let pendingMeasure = null;
+  let hoverPoint = null;
+  let measureLayer = null;
+  let cursorTracker = null;
+  let tileLoadedCount = 0;
+  let tileFailedCount = 0;
+  let currentObjectUrl = null;
+  let fallbackAttempted = false;
+  let navigatorVisible = true;
+  let logVisible = true;
+  let initialHashApplied = false;
+
+  const els = {
+    viewer: $('#viewer'),
+    errorCover: $('#errorCover'),
+    viewMode: $('#viewMode'),
+    sourcePreset: $('#sourcePreset'),
+    singleSourceField: $('#singleSourceField'),
+    modeBadge: $('#modeBadge'),
+    loadStatus: $('#loadStatus'),
+    zoomBadge: $('#zoomBadge'),
+    pageBadge: $('#pageBadge'),
+    toolBadge: $('#toolBadge'),
+    activeItemSelect: $('#activeItemSelect'),
+    itemCountBadge: $('#itemCountBadge'),
+    eventLog: $('#eventLog'),
+    eventPanel: $('#eventPanel'),
+    annotationList: $('#annotationList'),
+    annotationCountBadge: $('#annotationCountBadge'),
+    configCode: $('#configCode')
+  };
+
+  function toast(message, type = '') {
+    const node = document.createElement('div');
+    node.className = `toast ${type}`.trim();
+    node.textContent = message;
+    $('#toastStack').appendChild(node);
+    setTimeout(() => node.remove(), 3300);
+  }
+
+  function logEvent(name, detail = '', type = '') {
+    const row = document.createElement('div');
+    row.className = `event-row ${type ? `event-${type}` : ''}`;
+    const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    row.innerHTML = `<span class="event-time">${time}</span> <span class="event-name">${escapeHtml(name)}</span>${detail ? ` · ${escapeHtml(detail)}` : ''}`;
+    els.eventLog.prepend(row);
+    while (els.eventLog.children.length > 100) els.eventLog.lastElementChild.remove();
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function createOfflineSource() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 3072;
+    canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
+
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#062b46');
+    grad.addColorStop(.5, '#0f5974');
+    grad.addColorStop(1, '#092d4b');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.08)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x <= canvas.width; x += 128) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += 128) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    for (let i = 0; i < 75; i++) {
+      const x = (i * 419) % canvas.width;
+      const y = (i * 283) % canvas.height;
+      const r = 18 + (i % 8) * 7;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    ctx.save();
+    ctx.translate(360, 1240);
+    ctx.fillStyle = '#e4f5ff';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(1100, 0); ctx.lineTo(930, 180); ctx.lineTo(170, 180); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#163f59';
+    ctx.fillRect(430, -240, 340, 240);
+    ctx.fillStyle = '#83d6f7';
+    for (let i = 0; i < 4; i++) ctx.fillRect(470 + i * 70, -190, 46, 76);
+    ctx.fillStyle = '#e4f5ff';
+    ctx.fillRect(575, -490, 35, 250);
+    ctx.strokeStyle = '#e4f5ff'; ctx.lineWidth = 16;
+    ctx.beginPath(); ctx.moveTo(592, -470); ctx.lineTo(850, -290); ctx.stroke();
+    ctx.restore();
+
+    const fish = (x, y, scale, color) => {
+      ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 125, 62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-105, 0); ctx.lineTo(-190, -75); ctx.lineTo(-190, 75); ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#061a2c';
+      ctx.beginPath(); ctx.arc(62, -12, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    };
+    fish(2200, 520, 1.6, '#64d9ff');
+    fish(2460, 820, 1.0, '#82f0c5');
+    fish(2060, 970, .72, '#ffd56b');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 116px system-ui, sans-serif';
+    ctx.fillText('OpenSeadragon', 170, 220);
+    ctx.fillStyle = '#8cdefc';
+    ctx.font = '600 48px system-ui, sans-serif';
+    ctx.fillText('오프라인 좌표·확대·주석 테스트 이미지', 180, 305);
+
+    ctx.font = '700 30px ui-monospace, monospace';
+    ctx.fillStyle = 'rgba(255,255,255,.86)';
+    for (let x = 256; x < canvas.width; x += 512) ctx.fillText(`X ${x}`, x + 8, 390);
+    for (let y = 512; y < canvas.height; y += 384) ctx.fillText(`Y ${y}`, 20, y - 10);
+
+    ctx.strokeStyle = '#ffcd57';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(1450, 1250, 950, 520);
+    ctx.fillStyle = 'rgba(255,205,87,.13)';
+    ctx.fillRect(1450, 1250, 950, 520);
+    ctx.fillStyle = '#ffdd82';
+    ctx.font = '700 54px system-ui, sans-serif';
+    ctx.fillText('영역 선택·자르기 테스트', 1550, 1510);
+
+    return {
+      type: 'image',
+      url: canvas.toDataURL('image/jpeg', .92),
+      buildPyramid: true
+    };
+  }
+
+  function sourceFromPreset(key) {
+    if (key === 'offline') return offlineSource;
+    const src = PRESETS[key];
+    return typeof src === 'object' ? { ...src } : src;
+  }
+
+  function buildTileSources(mode, preset) {
+    if (mode === 'single') return sourceFromPreset(preset);
+    if (mode === 'sequence') {
+      return [
+        sourceFromPreset('highsmith'),
+        sourceFromPreset('duomo'),
+        sourceFromPreset('iiif'),
+        sourceFromPreset('offline')
+      ];
+    }
+    return [
+      sourceFromPreset('offline'),
+      sourceFromPreset('simple'),
+      sourceFromPreset('highsmith'),
+      sourceFromPreset('duomo')
+    ];
+  }
+
+  function getViewerOptions(mode, preset) {
+    const tileSources = buildTileSources(mode, preset);
+    return {
+      id: 'viewer',
+      prefixUrl: PREFIX_URL,
+      tileSources,
+      sequenceMode: mode === 'sequence',
+      showReferenceStrip: mode === 'sequence',
+      referenceStripScroll: 'horizontal',
+      preserveViewport: true,
+      collectionMode: mode === 'collection',
+      collectionRows: 2,
+      collectionTileSize: 900,
+      collectionTileMargin: 60,
+      showNavigator: true,
+      navigatorPosition: 'BOTTOM_RIGHT',
+      navigatorSizeRatio: .17,
+      showNavigationControl: true,
+      showSequenceControl: true,
+      showRotationControl: true,
+      showFlipControl: true,
+      animationTime: .65,
+      blendTime: .12,
+      springStiffness: 7.5,
+      visibilityRatio: .25,
+      minZoomImageRatio: .35,
+      maxZoomPixelRatio: 8,
+      zoomPerScroll: 1.22,
+      zoomPerClick: 1.8,
+      constrainDuringPan: false,
+      gestureSettingsMouse: {
+        clickToZoom: false,
+        dblClickToZoom: true,
+        pinchToZoom: true,
+        scrollToZoom: true,
+        dragToPan: true
+      },
+      gestureSettingsTouch: {
+        pinchToZoom: true,
+        pinchRotate: true,
+        flickEnabled: true
+      },
+      placeholderFillStyle: '#12243a',
+      tileRetryMax: 1,
+      timeout: 30000,
+      debugMode: false
+    };
+  }
+
+  function destroyViewer() {
+    if (viewer && !viewer.isDestroyed()) {
+      try { viewer.destroy(); } catch (error) { console.warn(error); }
+    }
+    viewer = null;
+    if (cursorTracker) {
+      try { cursorTracker.setTracking(false); cursorTracker.destroy?.(); } catch (error) { console.warn(error); }
+    }
+    cursorTracker = null;
+    measureLayer = null;
+    renderedOverlayIds.clear();
+    draftOverlayId = null;
+    dragState = null;
+    pendingMeasure = null;
+    hoverPoint = null;
+    els.viewer.innerHTML = '';
+    els.viewer.appendChild(els.errorCover);
+    els.errorCover.classList.remove('show');
+  }
+
+  function initializeViewer(mode = 'single', preset = 'highsmith') {
+    if (!window.OpenSeadragon || window.__osdLoadFailed) {
+      els.errorCover.classList.add('show');
+      $('#libraryBadge').className = 'badge warn';
+      $('#libraryBadge').textContent = '라이브러리 로드 실패';
+      return;
+    }
+
+    destroyViewer();
+    activeMode = mode;
+    activePreset = preset;
+    activeItemIndex = 0;
+    annotations = [];
+    tileLoadedCount = 0;
+    tileFailedCount = 0;
+    fallbackAttempted = false;
+    initialHashApplied = false;
+    updateAnnotationList();
+
+    const options = getViewerOptions(mode, preset);
+    viewer = OpenSeadragon(options);
+    ensureMeasureLayer();
+    bindViewerEvents();
+    updateModeUI();
+    updateConfigCode(options);
+    els.loadStatus.textContent = '불러오는 중';
+    els.loadStatus.className = 'badge warn';
+    logEvent('initialize', `${mode} · ${preset}`);
+  }
+
+  function ensureMeasureLayer() {
+    if (!viewer || measureLayer) return;
+    measureLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    measureLayer.classList.add('osd-measure-layer');
+    measureLayer.setAttribute('aria-hidden', 'true');
+    viewer.container.appendChild(measureLayer);
+  }
+
+  function bindViewerEvents() {
+    const eventNames = [
+      'animation-start', 'animation-finish', 'zoom', 'pan', 'rotate', 'flip',
+      'page', 'full-page', 'full-screen', 'navigator-click',
+      'canvas-double-click', 'canvas-scroll', 'constrain'
+    ];
+
+    eventNames.forEach(name => {
+      viewer.addHandler(name, event => {
+        let detail = '';
+        if (name === 'page') detail = `index=${event.page}`;
+        if (name === 'rotate') detail = `${round(event.degrees, 1)}°`;
+        if (name === 'flip') detail = String(event.flipped);
+        logEvent(name, detail);
+        updateState();
+        renderMeasureSvg();
+      });
+    });
+
+    viewer.addHandler('open', () => {
+      els.loadStatus.textContent = '완료';
+      els.loadStatus.className = 'badge ok';
+      fallbackAttempted = false;
+      refreshItemSelect();
+      updateState();
+      renderAnnotations();
+      applyFilters();
+      applyHashStateOnce();
+      logEvent('open', `items=${viewer.world.getItemCount()}`, 'success');
+      toast('이미지를 불러왔음.', 'success');
+    });
+
+    viewer.addHandler('open-failed', event => {
+      const message = event.message || '이미지 열기 실패';
+      els.loadStatus.textContent = '실패';
+      els.loadStatus.className = 'badge warn';
+      logEvent('open-failed', message, 'error');
+
+      if (!fallbackAttempted && activeMode === 'single' && activePreset !== 'offline') {
+        fallbackAttempted = true;
+        toast('외부 예제를 불러오지 못해 내장 테스트 이미지로 전환함.', 'error');
+        activePreset = 'offline';
+        viewer.open(offlineSource);
+      } else {
+        toast(message, 'error');
+      }
+    });
+
+    viewer.addHandler('add-item-failed', event => {
+      tileFailedCount++;
+      logEvent('add-item-failed', event.message || '항목 추가 실패', 'error');
+      updateState();
+    });
+
+    viewer.addHandler('tile-loaded', () => {
+      tileLoadedCount++;
+      if (tileLoadedCount <= 5 || tileLoadedCount % 25 === 0) logEvent('tile-loaded', `누적=${tileLoadedCount}`, 'success');
+      updateState();
+    });
+
+    viewer.addHandler('tile-load-failed', event => {
+      tileFailedCount++;
+      logEvent('tile-load-failed', event.message || `누적=${tileFailedCount}`, 'error');
+      updateState();
+    });
+
+    viewer.addHandler('fully-loaded-change', event => {
+      $('#stateFullyLoaded').textContent = String(event.fullyLoaded);
+      logEvent('fully-loaded-change', String(event.fullyLoaded), event.fullyLoaded ? 'success' : '');
+    });
+
+    viewer.addHandler('animation', () => {
+      updateState();
+      renderMeasureSvg();
+    });
+
+    cursorTracker = new OpenSeadragon.MouseTracker({
+      element: viewer.canvas,
+      moveHandler: event => {
+        updateCursorFromPosition(event.position);
+        if (pendingMeasure) {
+          const info = pointInfoFromViewerPixel(event.position, pendingMeasure.itemIndex);
+          hoverPoint = info ? { itemIndex: info.itemIndex, image: info.image } : null;
+          renderMeasureSvg();
+        }
+      },
+      exitHandler: () => {
+        hoverPoint = null;
+        $('#cursorStatus').textContent = '커서: 뷰포트 — / 이미지 —';
+        renderMeasureSvg();
+      }
+    });
+    cursorTracker.setTracking(true);
+
+    viewer.addHandler('canvas-click', handleCanvasClick);
+    viewer.addHandler('canvas-press', handleCanvasPress);
+    viewer.addHandler('canvas-drag', handleCanvasDrag);
+    viewer.addHandler('canvas-release', handleCanvasRelease);
+
+    if (viewer.world && viewer.world.addHandler) {
+      viewer.world.addHandler('add-item', () => {
+        setTimeout(() => {
+          refreshItemSelect();
+          updateState();
+        }, 0);
+      });
+      viewer.world.addHandler('remove-item', () => {
+        refreshItemSelect();
+        updateState();
+      });
+      viewer.world.addHandler('metrics-change', () => {
+        updateState();
+        renderMeasureSvg();
+      });
+    }
+  }
+
+  function updateModeUI() {
+    const names = { single: '단일 이미지', sequence: '시퀀스', collection: '컬렉션' };
+    els.modeBadge.textContent = names[activeMode];
+    els.viewMode.value = activeMode;
+    els.singleSourceField.classList.toggle('hidden', activeMode !== 'single');
+    els.pageBadge.classList.toggle('hidden', activeMode !== 'sequence');
+    $('#addSecondImageBtn').classList.toggle('hidden', activeMode === 'sequence');
+  }
+
+  function updateConfigCode(options = null) {
+    const config = options || {
+      mode: activeMode,
+      source: activePreset,
+      sequenceMode: activeMode === 'sequence',
+      collectionMode: activeMode === 'collection',
+      navigator: navigatorVisible,
+      tool: toolMode,
+      annotations: annotations.length,
+      version: window.OpenSeadragon?.version?.versionStr || OSD_VERSION
+    };
+    const cleaned = { ...config };
+    if (Array.isArray(cleaned.tileSources)) cleaned.tileSources = `[${cleaned.tileSources.length}개 소스]`;
+    else if (typeof cleaned.tileSources === 'object') cleaned.tileSources = cleaned.tileSources.type || 'object';
+    els.configCode.textContent = JSON.stringify(cleaned, null, 2);
+  }
+
+  function updateState() {
+    if (!viewer || !viewer.viewport || !viewer.isOpen()) return;
+    const vp = viewer.viewport;
+    const zoom = vp.getZoom(true);
+    const center = vp.getCenter(true);
+    const rotation = vp.getRotation(true);
+    const bounds = vp.getBounds(true);
+    const itemCount = viewer.world.getItemCount();
+    const item = getActiveItem();
+    const size = getImageSize(item);
+
+    $('#stateZoom').textContent = `${round(zoom, 4)}×`;
+    $('#stateRotation').textContent = `${round(rotation, 1)}°`;
+    $('#stateCenterX').textContent = round(center.x, 5);
+    $('#stateCenterY').textContent = round(center.y, 5);
+    $('#stateItems').textContent = String(itemCount);
+    $('#stateTiles').textContent = tileFailedCount ? `${tileLoadedCount} / 실패 ${tileFailedCount}` : String(tileLoadedCount);
+    $('#stateFlip').textContent = String(vp.getFlip());
+    $('#stateFullyLoaded').textContent = String(viewer.getFullyLoaded?.() ?? '—');
+    $('#imageSizeBadge').textContent = size ? `${Math.round(size.x).toLocaleString()} × ${Math.round(size.y).toLocaleString()} px` : '—';
+
+    els.zoomBadge.textContent = `${round(zoom, 3)}×`;
+    $('#rotationValue').textContent = `${Math.round(rotation)}°`;
+    $('#rotationRange').value = ((Math.round(rotation) % 360) + 360) % 360;
+    $('#centerStatus').textContent = `중심: ${round(center.x, 5)}, ${round(center.y, 5)}`;
+    $('#boundsStatus').textContent = `범위: ${round(bounds.x, 4)}, ${round(bounds.y, 4)}, ${round(bounds.width, 4)}, ${round(bounds.height, 4)}`;
+    els.itemCountBadge.textContent = `${itemCount}개`;
+
+    if (activeMode === 'sequence') {
+      const page = viewer.currentPage ? viewer.currentPage() : 0;
+      const total = Array.isArray(viewer.tileSources) ? viewer.tileSources.length : 1;
+      els.pageBadge.textContent = `페이지 ${page + 1} / ${total}`;
+    }
+
+    updateConfigCode();
+  }
+
+  function getImageSize(item) {
+    if (!item) return null;
+    if (item.getContentSize) return item.getContentSize();
+    if (item.source?.dimensions) return item.source.dimensions;
+    if (Number.isFinite(item.source?.width) && Number.isFinite(item.source?.height)) {
+      return new OpenSeadragon.Point(item.source.width, item.source.height);
+    }
+    return null;
+  }
+
+  function refreshItemSelect() {
+    if (!viewer || !viewer.world) return;
+    const count = viewer.world.getItemCount();
+    els.activeItemSelect.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const option = document.createElement('option');
+      option.value = i;
+      const size = getImageSize(viewer.world.getItemAt(i));
+      option.textContent = `항목 ${i + 1}${size ? ` · ${Math.round(size.x)}×${Math.round(size.y)}` : ''}`;
+      els.activeItemSelect.appendChild(option);
+    }
+    activeItemIndex = clamp(activeItemIndex, 0, Math.max(0, count - 1));
+    els.activeItemSelect.value = activeItemIndex;
+    syncItemControls();
+  }
+
+  function getActiveItem() {
+    if (!viewer || !viewer.world || viewer.world.getItemCount() === 0) return null;
+    activeItemIndex = clamp(Number(activeItemIndex) || 0, 0, viewer.world.getItemCount() - 1);
+    return viewer.world.getItemAt(activeItemIndex);
+  }
+
+  function syncItemControls() {
+    const item = getActiveItem();
+    if (!item) return;
+    const opacity = item.getOpacity ? item.getOpacity() : 1;
+    const rotation = item.getRotation ? item.getRotation(true) : 0;
+    $('#itemOpacity').value = Math.round(opacity * 100);
+    $('#itemOpacityValue').textContent = `${Math.round(opacity * 100)}%`;
+    $('#itemRotation').value = ((Math.round(rotation) % 360) + 360) % 360;
+    $('#itemRotationValue').textContent = `${Math.round(rotation)}°`;
+    $('#compositeOperation').value = item.getCompositeOperation?.() || 'source-over';
+  }
+
+  function getItemAtViewportPoint(viewportPoint) {
+    if (!viewer?.world) return null;
+    for (let i = viewer.world.getItemCount() - 1; i >= 0; i--) {
+      const item = viewer.world.getItemAt(i);
+      const b = item.getBounds(true);
+      if (viewportPoint.x >= b.x && viewportPoint.x <= b.x + b.width &&
+          viewportPoint.y >= b.y && viewportPoint.y <= b.y + b.height) {
+        return { item, itemIndex: i };
+      }
+    }
+    return viewer.world.getItemCount() ? { item: viewer.world.getItemAt(0), itemIndex: 0 } : null;
+  }
+
+  function pointInfoFromViewerPixel(pixel, forcedItemIndex = null) {
+    if (!viewer?.viewport || !viewer.isOpen()) return null;
+    const viewport = viewer.viewport.pointFromPixel(pixel, true);
+    let itemInfo;
+    if (forcedItemIndex !== null && viewer.world.getItemAt(forcedItemIndex)) {
+      itemInfo = { item: viewer.world.getItemAt(forcedItemIndex), itemIndex: forcedItemIndex };
+    } else {
+      itemInfo = getItemAtViewportPoint(viewport);
+    }
+    if (!itemInfo) return null;
+    const image = itemInfo.item.viewportToImageCoordinates(viewport, true);
+    return { viewport, image, ...itemInfo };
+  }
+
+  function updateCursorFromPosition(position) {
+    const info = pointInfoFromViewerPixel(position);
+    if (!info) return;
+    $('#cursorStatus').textContent =
+      `커서: 뷰포트 ${round(info.viewport.x, 5)}, ${round(info.viewport.y, 5)} / 이미지 ${round(info.image.x, 1)}, ${round(info.image.y, 1)} px / 항목 ${info.itemIndex + 1}`;
+  }
+
+  function setTool(mode) {
+    toolMode = mode;
+    pendingMeasure = null;
+    dragState = null;
+    hoverPoint = null;
+    removeDraftOverlay();
+    $$('#toolButtons [data-tool]').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === mode));
+    const names = { pan: '이동', point: '지점', rect: '영역', measure: '측정' };
+    els.toolBadge.textContent = names[mode];
+    viewer?.canvas?.classList.toggle('crosshair', mode !== 'pan');
+    renderMeasureSvg();
+    updateConfigCode();
+    logEvent('tool-change', mode);
+  }
+
+  function handleCanvasClick(event) {
+    if (toolMode === 'pan' || !event.quick) return;
+    event.preventDefaultAction = true;
+    const info = pointInfoFromViewerPixel(event.position);
+    if (!info) return;
+
+    if (toolMode === 'point') {
+      addAnnotation({
+        type: 'point',
+        itemIndex: info.itemIndex,
+        x: info.image.x,
+        y: info.image.y,
+        label: `지점 ${annotations.length + 1}`
+      });
+    }
+
+    if (toolMode === 'measure') {
+      if (!pendingMeasure) {
+        pendingMeasure = {
+          itemIndex: info.itemIndex,
+          x: info.image.x,
+          y: info.image.y
+        };
+        hoverPoint = null;
+        toast('측정 종료점을 클릭해.', 'success');
+        renderMeasureSvg();
+      } else if (pendingMeasure.itemIndex !== info.itemIndex) {
+        toast('같은 이미지 항목 안에서 종료점을 선택해야 함.', 'error');
+      } else {
+        addAnnotation({
+          type: 'measure',
+          itemIndex: info.itemIndex,
+          x1: pendingMeasure.x,
+          y1: pendingMeasure.y,
+          x2: info.image.x,
+          y2: info.image.y,
+          label: `측정 ${annotations.length + 1}`
+        });
+        pendingMeasure = null;
+        hoverPoint = null;
+        renderMeasureSvg();
+      }
+    }
+  }
+
+  function handleCanvasPress(event) {
+    if (toolMode !== 'rect') return;
+    event.preventDefaultAction = true;
+    const info = pointInfoFromViewerPixel(event.position);
+    if (!info) return;
+    dragState = {
+      itemIndex: info.itemIndex,
+      startImage: info.image,
+      currentImage: info.image
+    };
+  }
+
+  function handleCanvasDrag(event) {
+    if (toolMode !== 'rect' || !dragState) return;
+    event.preventDefaultAction = true;
+    const info = pointInfoFromViewerPixel(event.position, dragState.itemIndex);
+    if (!info) return;
+    dragState.currentImage = info.image;
+    updateDraftRect();
+  }
+
+  function handleCanvasRelease(event) {
+    if (toolMode !== 'rect' || !dragState) return;
+    event.preventDefaultAction = true;
+    const info = pointInfoFromViewerPixel(event.position, dragState.itemIndex);
+    if (info) dragState.currentImage = info.image;
+
+    const rect = normalizedImageRect(dragState.startImage, dragState.currentImage);
+    const itemIndex = dragState.itemIndex;
+    dragState = null;
+    removeDraftOverlay();
+
+    if (rect.width < 5 || rect.height < 5) {
+      toast('영역이 너무 작아 추가하지 않았음.', 'error');
+      return;
+    }
+
+    addAnnotation({
+      type: 'rect',
+      itemIndex,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      label: `영역 ${annotations.length + 1}`
+    });
+  }
+
+  function normalizedImageRect(a, b) {
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    return { x, y, width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y) };
+  }
+
+  function updateDraftRect() {
+    if (!viewer || !dragState) return;
+    const item = viewer.world.getItemAt(dragState.itemIndex);
+    if (!item) return;
+    const r = normalizedImageRect(dragState.startImage, dragState.currentImage);
+    const viewportRect = item.imageToViewportRectangle(new OpenSeadragon.Rect(r.x, r.y, r.width, r.height));
+
+    if (!draftOverlayId) {
+      const element = document.createElement('div');
+      draftOverlayId = 'draft-annotation-rect';
+      element.id = draftOverlayId;
+      element.className = 'draft-rect';
+      viewer.addOverlay({ element, location: viewportRect });
+    } else {
+      viewer.updateOverlay(draftOverlayId, viewportRect);
+    }
+  }
+
+  function removeDraftOverlay() {
+    if (viewer && draftOverlayId) viewer.removeOverlay(draftOverlayId);
+    draftOverlayId = null;
+  }
+
+  function addAnnotation(annotation) {
+    annotation.id = annotation.id || uid('ann');
+    annotation.createdAt = annotation.createdAt || new Date().toISOString();
+    annotations.push(annotation);
+    renderAnnotations();
+    updateAnnotationList();
+    logEvent('annotation-add', `${annotation.type} · item=${annotation.itemIndex + 1}`, 'success');
+  }
+
+  function deleteAnnotation(id) {
+    annotations = annotations.filter(a => a.id !== id);
+    renderAnnotations();
+    updateAnnotationList();
+    logEvent('annotation-remove', id);
+  }
+
+  function renderAnnotations() {
+    if (!viewer || !viewer.isOpen()) return;
+    renderedOverlayIds.forEach(id => viewer.removeOverlay(id));
+    renderedOverlayIds.clear();
+
+    annotations.forEach(annotation => {
+      const item = viewer.world.getItemAt(annotation.itemIndex);
+      if (!item) return;
+
+      if (annotation.type === 'point') {
+        const element = document.createElement('div');
+        element.id = `overlay-${annotation.id}`;
+        element.className = 'annotation-point';
+        element.title = `${annotation.label} · ${round(annotation.x, 1)}, ${round(annotation.y, 1)} px`;
+        element.addEventListener('click', event => {
+          event.stopPropagation();
+          focusAnnotation(annotation);
+        });
+        const location = item.imageToViewportCoordinates(annotation.x, annotation.y);
+        viewer.addOverlay({
+          element,
+          location,
+          placement: OpenSeadragon.Placement.CENTER,
+          checkResize: false
+        });
+        renderedOverlayIds.add(element.id);
+      }
+
+      if (annotation.type === 'rect') {
+        const element = document.createElement('div');
+        element.id = `overlay-${annotation.id}`;
+        element.className = 'annotation-rect';
+        element.title = `${annotation.label} · ${Math.round(annotation.width)}×${Math.round(annotation.height)} px`;
+        element.addEventListener('click', event => {
+          event.stopPropagation();
+          focusAnnotation(annotation);
+        });
+        const location = item.imageToViewportRectangle(
+          new OpenSeadragon.Rect(annotation.x, annotation.y, annotation.width, annotation.height)
+        );
+        viewer.addOverlay({ element, location });
+        renderedOverlayIds.add(element.id);
+      }
+
+      if (annotation.type === 'measure') {
+        [1, 2].forEach(index => {
+          const element = document.createElement('div');
+          element.id = `overlay-${annotation.id}-p${index}`;
+          element.className = 'measure-endpoint';
+          const location = item.imageToViewportCoordinates(annotation[`x${index}`], annotation[`y${index}`]);
+          viewer.addOverlay({
+            element,
+            location,
+            placement: OpenSeadragon.Placement.CENTER,
+            checkResize: false
+          });
+          renderedOverlayIds.add(element.id);
+        });
+      }
+    });
+
+    renderMeasureSvg();
+  }
+
+  function focusAnnotation(annotation) {
+    const item = viewer?.world?.getItemAt(annotation.itemIndex);
+    if (!item) return;
+    activeItemIndex = annotation.itemIndex;
+    els.activeItemSelect.value = activeItemIndex;
+    syncItemControls();
+
+    if (annotation.type === 'rect') {
+      const rect = item.imageToViewportRectangle(new OpenSeadragon.Rect(annotation.x, annotation.y, annotation.width, annotation.height));
+      viewer.viewport.fitBounds(rect, false);
+    } else {
+      const x = annotation.type === 'point' ? annotation.x : (annotation.x1 + annotation.x2) / 2;
+      const y = annotation.type === 'point' ? annotation.y : (annotation.y1 + annotation.y2) / 2;
+      viewer.viewport.panTo(item.imageToViewportCoordinates(x, y));
+      viewer.viewport.zoomTo(Math.max(viewer.viewport.getZoom(), 2));
+    }
+  }
+
+  function renderMeasureSvg() {
+    if (!measureLayer || !viewer || !viewer.isOpen()) return;
+    measureLayer.innerHTML = '';
+
+    annotations.filter(a => a.type === 'measure').forEach(annotation => {
+      const item = viewer.world.getItemAt(annotation.itemIndex);
+      if (!item) return;
+      const p1 = item.imageToViewerElementCoordinates(new OpenSeadragon.Point(annotation.x1, annotation.y1));
+      const p2 = item.imageToViewerElementCoordinates(new OpenSeadragon.Point(annotation.x2, annotation.y2));
+      drawMeasureLine(p1, p2, measurementText(annotation), false);
+    });
+
+    if (pendingMeasure && hoverPoint && pendingMeasure.itemIndex === hoverPoint.itemIndex) {
+      const item = viewer.world.getItemAt(pendingMeasure.itemIndex);
+      if (item) {
+        const p1 = item.imageToViewerElementCoordinates(new OpenSeadragon.Point(pendingMeasure.x, pendingMeasure.y));
+        const p2 = item.imageToViewerElementCoordinates(hoverPoint.image);
+        const temp = {
+          x1: pendingMeasure.x, y1: pendingMeasure.y,
+          x2: hoverPoint.image.x, y2: hoverPoint.image.y
+        };
+        drawMeasureLine(p1, p2, measurementText(temp), true);
+      }
+    }
+  }
+
+  function measurementText(annotation) {
+    const distance = Math.hypot(annotation.x2 - annotation.x1, annotation.y2 - annotation.y1);
+    return `${Math.round(distance).toLocaleString()} px`;
+  }
+
+  function drawMeasureLine(p1, p2, label, temporary) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
+    line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
+    line.setAttribute('class', `osd-measure-line${temporary ? ' osd-measure-temp' : ''}`);
+    measureLayer.appendChild(line);
+
+    const mx = (p1.x + p2.x) / 2;
+    const my = (p1.y + p2.y) / 2;
+    const width = Math.max(70, label.length * 8 + 16);
+    const bg = document.createElementNS(ns, 'rect');
+    bg.setAttribute('x', mx - width / 2); bg.setAttribute('y', my - 13);
+    bg.setAttribute('width', width); bg.setAttribute('height', 26);
+    bg.setAttribute('rx', 7); bg.setAttribute('class', 'osd-measure-label-bg');
+    measureLayer.appendChild(bg);
+
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', mx); text.setAttribute('y', my + .5);
+    text.setAttribute('class', 'osd-measure-label');
+    text.textContent = label;
+    measureLayer.appendChild(text);
+  }
+
+  function updateAnnotationList() {
+    els.annotationCountBadge.textContent = `${annotations.length}개`;
+    els.annotationList.innerHTML = '';
+    if (!annotations.length) {
+      els.annotationList.innerHTML = '<div class="help" style="padding:6px">지점·영역·측정 도구로 주석을 추가할 수 있음.</div>';
+      return;
+    }
+
+    const typeNames = { point: '지점', rect: '영역', measure: '측정' };
+    annotations.forEach((annotation, index) => {
+      const node = document.createElement('div');
+      node.className = 'annotation-item';
+      let meta = `항목 ${annotation.itemIndex + 1}`;
+      if (annotation.type === 'point') meta += ` · (${round(annotation.x, 1)}, ${round(annotation.y, 1)})`;
+      if (annotation.type === 'rect') meta += ` · ${Math.round(annotation.width)}×${Math.round(annotation.height)} px`;
+      if (annotation.type === 'measure') meta += ` · ${measurementText(annotation)}`;
+
+      node.innerHTML = `
+        <div>
+          <div class="title">${index + 1}. ${escapeHtml(annotation.label || typeNames[annotation.type])} <span class="badge">${typeNames[annotation.type]}</span></div>
+          <div class="meta">${escapeHtml(meta)}</div>
+        </div>
+        <div class="row">
+          <button class="btn small" data-focus="${annotation.id}">보기</button>
+          <button class="btn small danger" data-delete="${annotation.id}">삭제</button>
+        </div>`;
+      els.annotationList.appendChild(node);
+    });
+
+    $$('[data-focus]', els.annotationList).forEach(btn => {
+      btn.addEventListener('click', () => focusAnnotation(annotations.find(a => a.id === btn.dataset.focus)));
+    });
+    $$('[data-delete]', els.annotationList).forEach(btn => {
+      btn.addEventListener('click', () => deleteAnnotation(btn.dataset.delete));
+    });
+  }
+
+  function addSampleOverlay() {
+    const item = getActiveItem();
+    const size = getImageSize(item);
+    if (!item || !size) return toast('이미지 크기를 확인할 수 없음.', 'error');
+    addAnnotation({
+      type: 'rect',
+      itemIndex: activeItemIndex,
+      x: size.x * .28,
+      y: size.y * .28,
+      width: size.x * .22,
+      height: size.y * .18,
+      label: `예제 관심 영역 ${annotations.length + 1}`
+    });
+  }
+
+  function applyFilters() {
+    if (!viewer?.container) return;
+    const b = $('#brightnessRange').value;
+    const c = $('#contrastRange').value;
+    const s = $('#saturationRange').value;
+    const g = $('#grayscaleRange').value;
+    const filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%) grayscale(${g}%)`;
+    viewer.container.querySelectorAll('canvas, .openseadragon-canvas img').forEach(node => {
+      if (!node.closest('.navigator')) node.style.filter = filter;
+    });
+    $('#brightnessValue').textContent = `${b}%`;
+    $('#contrastValue').textContent = `${c}%`;
+    $('#saturationValue').textContent = `${s}%`;
+    $('#grayscaleValue').textContent = `${g}%`;
+  }
+
+  function resetFilters() {
+    $('#brightnessRange').value = 100;
+    $('#contrastRange').value = 100;
+    $('#saturationRange').value = 100;
+    $('#grayscaleRange').value = 0;
+    applyFilters();
+  }
+
+  function exportAnnotations() {
+    const data = {
+      schema: 'openseadragon-demo-annotations-v1',
+      exportedAt: new Date().toISOString(),
+      mode: activeMode,
+      source: activePreset,
+      annotations
+    };
+    downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), 'openseadragon-annotations.json');
+    toast('주석 JSON을 내보냈음.', 'success');
+  }
+
+  async function importAnnotations(file) {
+    try {
+      const data = JSON.parse(await file.text());
+      const list = Array.isArray(data) ? data : data.annotations;
+      if (!Array.isArray(list)) throw new Error('annotations 배열이 없음');
+      annotations = list.map(a => ({ ...a, id: a.id || uid('ann') }));
+      renderAnnotations();
+      updateAnnotationList();
+      toast(`${annotations.length}개 주석을 가져왔음.`, 'success');
+    } catch (error) {
+      toast(`JSON 가져오기 실패: ${error.message}`, 'error');
+    }
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function captureSnapshot() {
+    if (!viewer) return;
+    const canvas = viewer.drawer?.canvas || viewer.container.querySelector('canvas');
+    if (!canvas) return toast('캡처할 Canvas 렌더러를 찾지 못했음.', 'error');
+    try {
+      canvas.toBlob(blob => {
+        if (!blob) throw new Error('Blob 생성 실패');
+        downloadBlob(blob, `openseadragon-view-${Date.now()}.png`);
+        toast('현재 렌더링 화면을 PNG로 저장했음.', 'success');
+      }, 'image/png');
+    } catch (error) {
+      toast('외부 이미지 CORS 제한으로 PNG 캡처가 차단됨. 내장 이미지를 사용해 봐.', 'error');
+      logEvent('snapshot-failed', error.message, 'error');
+    }
+  }
+
+  function saveViewState() {
+    if (!viewer?.viewport || !viewer.isOpen()) return;
+    const center = viewer.viewport.getCenter();
+    const state = {
+      mode: activeMode,
+      preset: activePreset,
+      center: { x: center.x, y: center.y },
+      zoom: viewer.viewport.getZoom(),
+      rotation: viewer.viewport.getRotation(),
+      flip: viewer.viewport.getFlip()
+    };
+    localStorage.setItem('osd-demo-view-state', JSON.stringify(state));
+    toast('현재 뷰를 브라우저에 저장했음.', 'success');
+  }
+
+  function restoreViewState() {
+    const raw = localStorage.getItem('osd-demo-view-state');
+    if (!raw) return toast('저장된 뷰가 없음.', 'error');
+    try {
+      const state = JSON.parse(raw);
+      if (state.mode !== activeMode || (state.mode === 'single' && state.preset !== activePreset)) {
+        activeMode = state.mode || 'single';
+        activePreset = state.preset || 'highsmith';
+        initializeViewer(activeMode, activePreset);
+        viewer.addOnceHandler('open', () => applyViewState(state));
+      } else {
+        applyViewState(state);
+      }
+    } catch (error) {
+      toast('저장된 뷰 형식이 올바르지 않음.', 'error');
+    }
+  }
+
+  function applyViewState(state) {
+    if (!viewer?.viewport) return;
+    viewer.viewport.panTo(new OpenSeadragon.Point(state.center.x, state.center.y), true);
+    viewer.viewport.zoomTo(state.zoom, null, true);
+    viewer.viewport.setRotation(state.rotation || 0, true);
+    viewer.viewport.setFlip(Boolean(state.flip));
+    viewer.viewport.applyConstraints();
+    updateState();
+  }
+
+  async function copyViewLink() {
+    if (!viewer?.viewport || !viewer.isOpen()) return;
+    const c = viewer.viewport.getCenter();
+    const params = new URLSearchParams({
+      mode: activeMode,
+      preset: activePreset,
+      x: c.x.toFixed(7),
+      y: c.y.toFixed(7),
+      z: viewer.viewport.getZoom().toFixed(7),
+      r: viewer.viewport.getRotation().toFixed(2),
+      f: viewer.viewport.getFlip() ? '1' : '0'
+    });
+    location.hash = params.toString();
+    const url = location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('현재 위치 링크를 복사했음.', 'success');
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+      toast('현재 위치 링크를 복사했음.', 'success');
+    }
+  }
+
+  function applyHashStateOnce() {
+    if (initialHashApplied || !location.hash.slice(1)) return;
+    initialHashApplied = true;
+    const params = new URLSearchParams(location.hash.slice(1));
+    const x = Number(params.get('x'));
+    const y = Number(params.get('y'));
+    const z = Number(params.get('z'));
+    const r = Number(params.get('r'));
+    const f = params.get('f') === '1';
+    if ([x, y, z].every(Number.isFinite)) {
+      viewer.viewport.panTo(new OpenSeadragon.Point(x, y), true);
+      viewer.viewport.zoomTo(z, null, true);
+      if (Number.isFinite(r)) viewer.viewport.setRotation(r, true);
+      viewer.viewport.setFlip(f);
+      viewer.viewport.applyConstraints();
+      logEvent('hash-view-applied', location.hash.slice(1), 'success');
+    }
+  }
+
+  function loadCustomUrl(forceImage = false) {
+    const url = $('#customUrl').value.trim();
+    if (!url) return toast('URL을 입력해.', 'error');
+    activeMode = 'single';
+    activePreset = 'custom-url';
+    initializeViewer('single', 'offline');
+    activePreset = 'custom-url';
+    const source = forceImage || /\.(png|jpe?g|webp|gif|avif)(\?|#|$)/i.test(url)
+      ? { type: 'image', url, buildPyramid: true, crossOriginPolicy: 'Anonymous', ajaxWithCredentials: false }
+      : url;
+    viewer.open(source);
+    updateModeUI();
+    logEvent('custom-url', url);
+  }
+
+  function loadLocalImage(file) {
+    if (!file) return;
+    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(file);
+    activeMode = 'single';
+    activePreset = 'local-image';
+    initializeViewer('single', 'offline');
+    activePreset = 'local-image';
+    viewer.open({ type: 'image', url: currentObjectUrl, buildPyramid: true });
+    updateModeUI();
+    logEvent('local-image', `${file.name} · ${Math.round(file.size / 1024)} KB`);
+  }
+
+  function addSecondImage() {
+    if (!viewer?.isOpen()) return;
+    viewer.addTiledImage({
+      tileSource: sourceFromPreset('duomo'),
+      x: .12,
+      y: .12,
+      width: .55,
+      opacity: .72,
+      success: event => {
+        activeItemIndex = viewer.world.getIndexOfItem(event.item);
+        refreshItemSelect();
+        viewer.viewport.goHome();
+        toast('두 번째 타일 이미지를 겹쳐 추가했음.', 'success');
+        logEvent('addTiledImage', `index=${activeItemIndex}`, 'success');
+      },
+      error: event => toast(`추가 이미지 실패: ${event.message || ''}`, 'error')
+    });
+  }
+
+  function clipToLastRect() {
+    const item = getActiveItem();
+    const rect = [...annotations].reverse().find(a => a.type === 'rect' && a.itemIndex === activeItemIndex);
+    if (!item || !rect) return toast('선택 항목에 적용할 영역 주석이 없음.', 'error');
+    item.setClip(new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height));
+    viewer.viewport.fitBounds(item.getBounds(), false);
+    logEvent('setClip', `${Math.round(rect.width)}×${Math.round(rect.height)}`, 'success');
+  }
+
+  function applyPolygonCrop() {
+    const item = getActiveItem();
+    const size = getImageSize(item);
+    if (!item || !size || !item.setCroppingPolygons) return toast('다각형 자르기를 지원하지 않는 항목임.', 'error');
+    const w = size.x, h = size.y;
+    item.setCroppingPolygons([[
+      new OpenSeadragon.Point(w * .5, h * .12),
+      new OpenSeadragon.Point(w * .88, h * .5),
+      new OpenSeadragon.Point(w * .5, h * .88),
+      new OpenSeadragon.Point(w * .12, h * .5)
+    ]]);
+    logEvent('setCroppingPolygons', 'diamond', 'success');
+  }
+
+  function resetCrop() {
+    const item = getActiveItem();
+    if (!item) return;
+    item.setClip?.(null);
+    if (item.resetCroppingPolygons) item.resetCroppingPolygons();
+    else item.setCroppingPolygons?.([]);
+    viewer.forceRedraw();
+    logEvent('crop-reset', '', 'success');
+  }
+
+  function panByFraction(dx, dy) {
+    if (!viewer?.viewport) return;
+    const bounds = viewer.viewport.getBounds();
+    viewer.viewport.panBy(new OpenSeadragon.Point(bounds.width * dx, bounds.height * dy));
+    viewer.viewport.applyConstraints();
+  }
+
+  function handleAction(action) {
+    if (!viewer?.viewport) return;
+    const vp = viewer.viewport;
+    const zoom = vp.getZoom();
+    const rotation = vp.getRotation();
+
+    const actions = {
+      'zoom-in': () => vp.zoomBy(1.4).applyConstraints(),
+      'zoom-out': () => vp.zoomBy(1 / 1.4).applyConstraints(),
+      'home': () => vp.goHome(),
+      'full-screen': () => viewer.setFullScreen(!viewer.isFullScreen()),
+      'fit-horizontal': () => vp.fitHorizontally(false),
+      'fit-vertical': () => vp.fitVertically(false),
+      'fit-item': () => {
+        const item = getActiveItem();
+        if (item) vp.fitBounds(item.getBounds(), false);
+      },
+      'pan-left': () => panByFraction(-.18, 0),
+      'pan-right': () => panByFraction(.18, 0),
+      'pan-up': () => panByFraction(0, -.18),
+      'pan-down': () => panByFraction(0, .18),
+      'rotate-left': () => vp.setRotation(rotation - 15),
+      'rotate-right': () => vp.setRotation(rotation + 15),
+      'previous-page': () => viewer.goToPreviousPage?.(),
+      'next-page': () => viewer.goToNextPage?.()
+    };
+    actions[action]?.();
+    updateState();
+  }
+
+  function toggleNavigator() {
+    navigatorVisible = !navigatorVisible;
+    if (viewer?.navigator?.element) viewer.navigator.element.style.display = navigatorVisible ? '' : 'none';
+    $('#navigatorToggle').checked = navigatorVisible;
+    logEvent('navigator-visible', String(navigatorVisible));
+  }
+
+  function bindUI() {
+    els.viewMode.addEventListener('change', () => {
+      els.singleSourceField.classList.toggle('hidden', els.viewMode.value !== 'single');
+    });
+
+    $('#applyModeBtn').addEventListener('click', () => {
+      initializeViewer(els.viewMode.value, els.sourcePreset.value);
+    });
+
+    $('#loadUrlAutoBtn').addEventListener('click', () => loadCustomUrl(false));
+    $('#loadUrlImageBtn').addEventListener('click', () => loadCustomUrl(true));
+    $('#localImage').addEventListener('change', event => loadLocalImage(event.target.files?.[0]));
+
+    $$('[data-action]').forEach(btn => btn.addEventListener('click', () => handleAction(btn.dataset.action)));
+    $$('#toolButtons [data-tool]').forEach(btn => btn.addEventListener('click', () => setTool(btn.dataset.tool)));
+
+    $('#rotationRange').addEventListener('input', event => {
+      viewer?.viewport?.setRotation(Number(event.target.value), true);
+      $('#rotationValue').textContent = `${event.target.value}°`;
+      updateState();
+    });
+
+    $('#flipViewportBtn').addEventListener('click', () => {
+      if (!viewer?.viewport) return;
+      viewer.viewport.setFlip(!viewer.viewport.getFlip());
+      updateState();
+    });
+
+    $('#resetViewportBtn').addEventListener('click', () => {
+      if (!viewer?.viewport) return;
+      viewer.viewport.setRotation(0);
+      viewer.viewport.setFlip(false);
+      viewer.viewport.goHome();
+    });
+
+    $('#addSampleOverlayBtn').addEventListener('click', addSampleOverlay);
+    $('#clearAnnotationsBtn').addEventListener('click', () => {
+      annotations = [];
+      pendingMeasure = null;
+      renderAnnotations();
+      updateAnnotationList();
+      toast('모든 주석을 삭제했음.', 'success');
+    });
+    $('#exportAnnotationsBtn').addEventListener('click', exportAnnotations);
+    $('#importAnnotationsInput').addEventListener('change', event => {
+      const file = event.target.files?.[0];
+      if (file) importAnnotations(file);
+      event.target.value = '';
+    });
+
+    els.activeItemSelect.addEventListener('change', event => {
+      activeItemIndex = Number(event.target.value);
+      syncItemControls();
+      updateState();
+    });
+
+    $('#itemOpacity').addEventListener('input', event => {
+      const value = Number(event.target.value) / 100;
+      getActiveItem()?.setOpacity(value);
+      $('#itemOpacityValue').textContent = `${event.target.value}%`;
+    });
+
+    $('#itemRotation').addEventListener('input', event => {
+      getActiveItem()?.setRotation(Number(event.target.value), true);
+      $('#itemRotationValue').textContent = `${event.target.value}°`;
+      renderAnnotations();
+    });
+
+    $('#itemFlipBtn').addEventListener('click', () => {
+      const item = getActiveItem();
+      if (!item) return;
+      item.setFlip(!item.getFlip?.());
+      renderAnnotations();
+    });
+
+    $('#fitItemBtn').addEventListener('click', () => handleAction('fit-item'));
+    $('#compositeOperation').addEventListener('change', event => {
+      getActiveItem()?.setCompositeOperation(event.target.value);
+    });
+    $('#clipToRectBtn').addEventListener('click', clipToLastRect);
+    $('#polygonCropBtn').addEventListener('click', applyPolygonCrop);
+    $('#resetCropBtn').addEventListener('click', resetCrop);
+    $('#snapshotBtn').addEventListener('click', captureSnapshot);
+
+    $('#navigatorToggle').addEventListener('change', event => {
+      navigatorVisible = event.target.checked;
+      if (viewer?.navigator?.element) viewer.navigator.element.style.display = navigatorVisible ? '' : 'none';
+    });
+    $('#controlsToggle').addEventListener('change', event => viewer?.setControlsEnabled(event.target.checked));
+    $('#mouseNavToggle').addEventListener('change', event => viewer?.setMouseNavEnabled(event.target.checked));
+    $('#keyboardNavToggle').addEventListener('change', event => viewer?.setKeyboardNavEnabled(event.target.checked));
+    $('#debugToggle').addEventListener('change', event => viewer?.setDebugMode(event.target.checked));
+
+    ['brightnessRange', 'contrastRange', 'saturationRange', 'grayscaleRange'].forEach(id => {
+      $(`#${id}`).addEventListener('input', applyFilters);
+    });
+    $('#resetFiltersBtn').addEventListener('click', resetFilters);
+
+    $('#saveViewBtn').addEventListener('click', saveViewState);
+    $('#restoreViewBtn').addEventListener('click', restoreViewState);
+    $('#copyLinkBtn').addEventListener('click', copyViewLink);
+    $('#addSecondImageBtn').addEventListener('click', addSecondImage);
+    $('#toggleNavigatorToolbarBtn').addEventListener('click', toggleNavigator);
+    $('#refreshStateBtn').addEventListener('click', updateState);
+    $('#clearLogBtn').addEventListener('click', () => els.eventLog.innerHTML = '');
+    $('#toggleEventLogBtn').addEventListener('click', () => {
+      logVisible = !logVisible;
+      els.eventPanel.classList.toggle('hidden', !logVisible);
+    });
+
+    document.addEventListener('keydown', event => {
+      const target = event.target;
+      if (target.matches('input, textarea, select') || target.isContentEditable) return;
+      if (event.key === '+' || event.key === '=') handleAction('zoom-in');
+      if (event.key === '-') handleAction('zoom-out');
+      if (event.key.toLowerCase() === 'h') handleAction('home');
+      if (event.key.toLowerCase() === 'f') $('#flipViewportBtn').click();
+      if (event.key.toLowerCase() === 'r') handleAction(event.shiftKey ? 'rotate-left' : 'rotate-right');
+      if (event.key === '1') setTool('pan');
+      if (event.key === '2') setTool('point');
+      if (event.key === '3') setTool('rect');
+      if (event.key === '4') setTool('measure');
+      if (event.key === 'Escape') {
+        pendingMeasure = null;
+        dragState = null;
+        hoverPoint = null;
+        removeDraftOverlay();
+        renderMeasureSvg();
+        toast('현재 도구 작업을 취소했음.');
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      viewer?.forceResize();
+      renderMeasureSvg();
+    });
+
+    window.addEventListener('hashchange', () => {
+      initialHashApplied = false;
+      applyHashStateOnce();
+    });
+  }
+
+  function init() {
+    offlineSource = createOfflineSource();
+    bindUI();
+
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const mode = ['single', 'sequence', 'collection'].includes(hash.get('mode')) ? hash.get('mode') : 'single';
+    const preset = ['highsmith', 'duomo', 'iiif', 'simple', 'offline'].includes(hash.get('preset')) ? hash.get('preset') : 'highsmith';
+    els.viewMode.value = mode;
+    els.sourcePreset.value = preset;
+    initializeViewer(mode, preset);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>
