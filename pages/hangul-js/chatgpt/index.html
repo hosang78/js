@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hangul.js Feature Lab — 한글 처리 실습 페이지</title>
+  <style>
+    :root {
+      --ink: #10233d;
+      --muted: #63748a;
+      --line: #dbe4ee;
+      --paper: #ffffff;
+      --canvas: #f5f8fc;
+      --navy: #12355b;
+      --blue: #246bfd;
+      --sky: #eaf2ff;
+      --mint: #e9f8f3;
+      --mint-ink: #14755f;
+      --orange: #fff2e6;
+      --orange-ink: #b85b14;
+      --red: #fbecef;
+      --red-ink: #be3650;
+      --shadow: 0 14px 30px rgba(27, 64, 112, .08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+      letter-spacing: -0.02em;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { max-width: 1480px; margin: 0 auto; padding: 28px 24px 70px; }
+    .hero {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 22px; align-items: end;
+      color: #fff; padding: 34px 38px; border-radius: 26px;
+      background:
+        radial-gradient(circle at 87% 18%, rgba(94, 172, 255, .45), transparent 22%),
+        radial-gradient(circle at 69% 112%, rgba(89, 225, 190, .24), transparent 34%),
+        linear-gradient(125deg, #0e2c50 0%, #123d70 52%, #19558c 100%);
+      box-shadow: 0 18px 40px rgba(19, 58, 105, .22);
+      overflow: hidden;
+      position: relative;
+    }
+    .hero::after { content: "ㅎㄱ"; position: absolute; right: 34px; top: -28px; opacity: .08; font-size: 178px; font-weight: 900; line-height: 1; }
+    .eyebrow, .section-kicker { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .eyebrow { color: #a9cef9; }
+    h1 { margin: 9px 0 11px; font-size: clamp(29px, 4vw, 45px); line-height: 1.08; letter-spacing: -0.055em; }
+    .hero p { margin: 0; max-width: 760px; color: #d7e7f8; font-size: 15px; line-height: 1.65; }
+    .engine-panel { z-index: 1; min-width: 250px; padding: 16px 18px; border: 1px solid rgba(255,255,255,.20); border-radius: 15px; background: rgba(255,255,255,.1); backdrop-filter: blur(8px); }
+    .engine-panel small { display: block; color: #c4def7; font-size: 11px; font-weight: 700; }
+    .engine-panel strong { display: block; margin-top: 5px; font-size: 15px; }
+    .engine-panel span { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 8px; border-radius: 99px; color: #e4fff6; background: rgba(29, 224, 156, .18); font-size: 11px; font-weight: 800; }
+    .engine-panel span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #64e9bb; }
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 22px; margin-top: 22px; }
+    .side {
+      position: sticky; top: 18px; align-self: start; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255,255,255,.92); box-shadow: var(--shadow);
+    }
+    .side-title { padding: 7px 10px 11px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+    .nav-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 11px; color: #4c6077; background: transparent; text-align: left; font-size: 13px; font-weight: 800; }
+    .nav-link:hover, .nav-link.active { color: var(--blue); background: var(--sky); }
+    .nav-dot { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 8px; color: #3972ca; background: #edf4ff; font-size: 11px; }
+    .content { min-width: 0; }
+    section { margin-bottom: 22px; scroll-margin-top: 18px; }
+    .section-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; padding: 4px 2px 11px; }
+    .section-kicker { color: var(--blue); }
+    h2 { margin: 3px 0 0; font-size: 24px; letter-spacing: -0.045em; }
+    .section-note { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; text-align: right; }
+    .card, .api-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+    .card { padding: 22px; }
+    .work-grid { display: grid; grid-template-columns: minmax(300px, .86fr) minmax(420px, 1.14fr); gap: 18px; }
+    .input-label { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: #40546b; font-size: 13px; font-weight: 800; }
+    .input-label small { color: var(--muted); font-weight: 700; }
+    .text-input, textarea, select { width: 100%; border: 1px solid #cfdbe8; border-radius: 12px; color: var(--ink); background: #fff; outline: none; transition: .16s ease; }
+    .text-input { height: 46px; padding: 0 14px; }
+    textarea { min-height: 92px; resize: vertical; padding: 12px 14px; line-height: 1.55; }
+    select { height: 42px; padding: 0 10px; }
+    .text-input:focus, textarea:focus, select:focus { border-color: #77a6ff; box-shadow: 0 0 0 4px rgba(36,107,253,.10); }
+    .preset-row, .chip-row, .button-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+    .chip, .mini-btn, .tab-btn { border: 1px solid #d8e2ee; border-radius: 99px; color: #41566f; background: #fff; font-size: 12px; font-weight: 800; transition: .14s ease; }
+    .chip { padding: 6px 10px; }
+    .chip:hover, .mini-btn:hover, .tab-btn:hover { transform: translateY(-1px); border-color: #9fbdf5; color: var(--blue); background: #f8fbff; }
+    .action { border: 0; border-radius: 11px; padding: 10px 13px; color: #fff; background: var(--blue); font-size: 13px; font-weight: 800; box-shadow: 0 8px 15px rgba(36,107,253,.18); }
+    .action.ghost { color: #3162ad; background: #edf4ff; box-shadow: none; }
+    .action.danger { color: #a4374d; background: var(--red); box-shadow: none; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    .stat { padding: 13px; border-radius: 13px; background: #f7faff; }
+    .stat-label { color: #62748b; font-size: 11px; font-weight: 800; }
+    .stat-value { margin-top: 5px; font-size: 18px; font-weight: 900; letter-spacing: -0.04em; }
+    .output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+    .result { min-width: 0; padding: 14px; border: 1px solid #e1e9f1; border-radius: 14px; background: #fbfdff; }
+    .result.wide { grid-column: 1 / -1; }
+    .result-label { display: flex; justify-content: space-between; gap: 8px; color: #5b6e84; font-size: 11px; font-weight: 900; }
+    .result-label code { color: #3f70b6; font-size: 10px; }
+    .result-value { margin-top: 9px; min-height: 25px; overflow-wrap: anywhere; color: #172e4a; font-size: 15px; font-weight: 800; line-height: 1.45; }
+    .result-value.small { font-size: 12px; font-weight: 700; }
+    .token-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .token { padding: 4px 7px; border-radius: 7px; color: #245eaf; background: #eaf2ff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .group-list { display: flex; flex-wrap: wrap; gap: 7px; }
+    .group { padding: 5px 7px; border-radius: 8px; color: #176a5b; background: var(--mint); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    .subhead { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin: 22px 0 11px; }
+    .subhead h3 { margin: 0; font-size: 16px; letter-spacing: -0.04em; }
+    .subhead p { margin: 0; color: var(--muted); font-size: 12px; }
+    .automata { padding: 18px; border: 1px dashed #b6cde9; border-radius: 15px; background: linear-gradient(135deg, #fafdff, #f1f7ff); }
+    .builder { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 10px; align-items: end; }
+    .assembled-preview { padding: 10px 13px; border-radius: 12px; color: #23528c; background: #e5f0ff; font-size: 17px; font-weight: 900; text-align: center; }
+    .code-line { margin-top: 10px; padding: 10px 12px; overflow: auto; border-radius: 10px; color: #3a5070; background: rgba(21, 57, 95, .06); font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+    .search-layout { display: grid; grid-template-columns: minmax(280px, .7fr) minmax(370px, 1.3fr); gap: 18px; }
+    .search-box { padding: 18px; border-radius: 15px; background: #f8fbff; border: 1px solid #e1ebf6; }
+    .search-box + .search-box { margin-top: 12px; }
+    .inline-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .check-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; color: #53667c; font-size: 12px; font-weight: 700; }
+    .check-row input { accent-color: var(--blue); }
+    .search-summary { display: flex; justify-content: space-between; gap: 10px; margin: 0 0 10px; color: #50647b; font-size: 13px; font-weight: 800; }
+    .candidate-list { display: grid; gap: 8px; }
+    .candidate { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 11px 13px; border: 1px solid #e0e8f1; border-radius: 12px; background: #fff; }
+    .candidate-main { min-width: 0; }
+    .candidate-title { font-size: 14px; font-weight: 900; }
+    .candidate-meta { margin-top: 3px; color: #78889a; font-size: 11px; }
+    .hit { padding: 1px 3px; border-radius: 4px; color: #915100; background: #ffe4be; }
+    .match-badge { flex: 0 0 auto; padding: 5px 8px; border-radius: 99px; color: var(--mint-ink); background: var(--mint); font-size: 11px; font-weight: 900; }
+    .no-match { padding: 24px; border-radius: 12px; color: #718399; background: #f8fafc; font-size: 13px; font-weight: 700; text-align: center; }
+    .predicate-layout { display: grid; grid-template-columns: minmax(250px, .65fr) minmax(0, 1.35fr); gap: 18px; }
+    .char-stage { display: grid; place-items: center; min-height: 180px; margin-top: 14px; border-radius: 16px; color: #194f85; background: linear-gradient(135deg, #eff6ff, #e1f5ff); font-size: 88px; font-weight: 900; line-height: 1; }
+    .predicate-table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid #e2eaf2; border-radius: 14px; }
+    .predicate-table th, .predicate-table td { padding: 10px 12px; border-bottom: 1px solid #e9eef4; text-align: left; font-size: 12px; }
+    .predicate-table tr:last-child th, .predicate-table tr:last-child td { border-bottom: 0; }
+    .predicate-table th { width: 46%; color: #53677e; background: #fbfdff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .bool { display: inline-flex; min-width: 45px; justify-content: center; padding: 4px 7px; border-radius: 99px; font-size: 11px; font-weight: 900; }
+    .bool.true { color: var(--mint-ink); background: var(--mint); }
+    .bool.false { color: #79899b; background: #eef2f6; }
+    .particle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+    .particle { padding: 10px; border-radius: 11px; color: #50647a; background: #f7faff; text-align: center; font-size: 12px; font-weight: 800; }
+    .particle strong { display: block; margin-top: 4px; color: #275d9b; font-size: 15px; }
+    .transform-layout { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr); gap: 18px; }
+    .toggle-list { display: grid; gap: 7px; }
+    .toggle-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; border: 1px solid #e1e8f0; border-radius: 11px; background: #fff; color: #4b6078; font-size: 12px; font-weight: 800; }
+    .switch { position: relative; width: 37px; height: 22px; flex: 0 0 auto; }
+    .switch input { appearance: none; width: 100%; height: 100%; margin: 0; border-radius: 99px; outline: none; background: #ccd8e5; transition: .18s; }
+    .switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.18); transition: .18s; }
+    .switch input:checked { background: var(--blue); }
+    .switch input:checked::after { transform: translateX(15px); }
+    .transform-output { padding: 20px; border-radius: 16px; color: #1d4d83; background: linear-gradient(135deg, #eef5ff, #f4fbff); }
+    .transform-output .big { min-height: 67px; margin: 8px 0 12px; font-size: 24px; font-weight: 900; line-height: 1.35; overflow-wrap: anywhere; }
+    .api-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .api-card { padding: 16px; min-height: 156px; }
+    .api-card h3 { margin: 0; color: #1e5da9; font: 800 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .api-card p { min-height: 39px; margin: 8px 0; color: #596d83; font-size: 12px; line-height: 1.5; }
+    .api-card code { display: block; padding: 7px 8px; overflow: auto; border-radius: 8px; color: #385879; background: #f5f8fc; font-size: 10px; white-space: nowrap; }
+    .api-tag { display: inline-block; margin-top: 8px; padding: 4px 7px; border-radius: 99px; color: var(--orange-ink); background: var(--orange); font-size: 10px; font-weight: 900; }
+    .footer-note { display: flex; gap: 12px; align-items: flex-start; padding: 16px 18px; border: 1px solid #dfe8f4; border-radius: 14px; color: #607287; background: #fbfdff; font-size: 12px; line-height: 1.6; }
+    .footer-note b { color: #315d91; }
+    .legend { display: flex; flex-wrap: wrap; gap: 7px; }
+    .legend span { padding: 4px 8px; border-radius: 99px; color: #4d6480; background: #f0f4f8; font-size: 11px; font-weight: 800; }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; display: flex; overflow: auto; gap: 3px; } .side-title { display: none; } .nav-link { width: auto; min-width: max-content; } .work-grid, .search-layout, .predicate-layout, .transform-layout { grid-template-columns: 1fr; } .api-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 720px) { .shell { padding: 14px 12px 45px; } .hero { grid-template-columns: 1fr; padding: 27px 22px; } .engine-panel { min-width: 0; } .section-head { display: block; } .section-note { margin-top: 7px; text-align: left; } .card { padding: 15px; } .stat-grid { grid-template-columns: repeat(2, 1fr); } .output-grid, .inline-fields, .builder, .particle-grid { grid-template-columns: 1fr; } .api-grid { grid-template-columns: 1fr; } h2 { font-size: 21px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Hangul.js Interactive Feature Lab</div>
+        <h1>한글 분해·조합·검색을<br>한 페이지에서 실습</h1>
+        <p>Hangul.js의 공식 API와 이를 조합한 실무형 한글 검색·조사 선택·자모 변환 예시를 넣은 단일 HTML 샘플입니다. 값을 직접 바꾸며 처리 과정을 확인해 보세요.</p>
+      </div>
+      <div class="engine-panel">
+        <small>현재 실행 엔진</small>
+        <strong id="engineName">라이브러리 확인 중</strong>
+        <span id="engineState">준비 중</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="side" aria-label="기능 탐색">
+        <div class="side-title">FEATURE MAP</div>
+        <button class="nav-link active" data-scroll="live"><span class="nav-dot">01</span>분해·조합</button>
+        <button class="nav-link" data-scroll="search"><span class="nav-dot">02</span>한글 검색</button>
+        <button class="nav-link" data-scroll="predicate"><span class="nav-dot">03</span>한글 판별</button>
+        <button class="nav-link" data-scroll="transform"><span class="nav-dot">04</span>자모 변환</button>
+        <button class="nav-link" data-scroll="api"><span class="nav-dot">05</span>API 맵</button>
+      </aside>
+
+      <div class="content">
+        <section id="live">
+          <div class="section-head">
+            <div><div class="section-kicker">01 · Core Lab</div><h2>분해·조합 실시간 실험</h2></div>
+            <p class="section-note">완성형 한글, 자음·모음, 영문·숫자가 섞여도<br>각 API의 반환 형태를 바로 비교합니다.</p>
+          </div>
+          <div class="work-grid">
+            <article class="card">
+              <div class="input-label"><label for="sourceText">원본 텍스트</label><small>입력 즉시 반영</small></div>
+              <textarea id="sourceText">수협중앙회 AI 도우미, 매드캣MK2!</textarea>
+              <div class="preset-row" id="sourcePresets">
+                <button class="chip" data-value="가나다라마바사">기본 음절</button>
+                <button class="chip" data-value="값이 비싼 ㅙㅚㅢ">겹자모·받침</button>
+                <button class="chip" data-value="옽ㅏ / 달걀 / 도우미">조합 주의</button>
+                <button class="chip" data-value="간장공장공장장">범위 검색</button>
+              </div>
+              <div class="stat-grid">
+                <div class="stat"><div class="stat-label">문자 수</div><div class="stat-value" id="charCount">0</div></div>
+                <div class="stat"><div class="stat-label">분해 자모 수</div><div class="stat-value" id="jamoCount">0</div></div>
+                <div class="stat"><div class="stat-label">초성 트랙</div><div class="stat-value" id="choseongTrack">-</div></div>
+              </div>
+              <div class="subhead"><h3>자모 입력 오토마타</h3><p><code>Hangul.assemble()</code> 실습</p></div>
+              <div class="automata">
+                <div class="builder">
+                  <div><div class="input-label"><label for="jamoInput">자모를 띄어쓰기 또는 쉼표로 입력</label></div><input id="jamoInput" class="text-input" value="ㄱ ㅏ ㄴ ㅏ ㄷ ㅏ" /></div>
+                  <div><div class="input-label"><label>조합 결과</label></div><div class="assembled-preview" id="assembledPreview">가나다</div></div>
+                </div>
+                <div class="chip-row" id="jamoPresets">
+                  <button class="chip" data-jamo="ㄱ ㅏ ㄴ ㅏ ㄷ ㅏ">가나다</button>
+                  <button class="chip" data-jamo="ㅗ ㅐ">ㅙ</button>
+                  <button class="chip" data-jamo="ㄹ ㅂ ㅅ">ㄼㅅ</button>
+                  <button class="chip" data-jamo="ㄷ ㅏ ㄹ ㄱ ㅑ ㄹ">달걀</button>
+                  <button class="chip" data-jamo="ㅅ ㅜ ㅎ ㅕ ㅂ">수협</button>
+                </div>
+                <div class="code-line" id="assembleCode"></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="output-grid">
+                <div class="result wide"><div class="result-label"><span>평면 분해</span><code>Hangul.disassemble(text)</code></div><div class="result-value token-list" id="flatDisassembly"></div></div>
+                <div class="result wide"><div class="result-label"><span>글자별 그룹 분해</span><code>Hangul.d(text, true)</code></div><div class="result-value group-list" id="groupedDisassembly"></div></div>
+                <div class="result"><div class="result-label"><span>분해 문자열</span><code>Hangul.ds(text)</code></div><div class="result-value small" id="disassembledString"></div></div>
+                <div class="result"><div class="result-label"><span>분해→조합</span><code>Hangul.a(Hangul.d(text))</code></div><div class="result-value" id="reassembledText"></div></div>
+                <div class="result"><div class="result-label"><span>초성 트랙</span><code>응용: d(text,true)</code></div><div class="result-value" id="choseongDetail"></div></div>
+                <div class="result"><div class="result-label"><span>조합 주의 확인</span><code>disassemble ≠ inverse</code></div><div class="result-value small" id="roundtripNote"></div></div>
+              </div>
+              <div class="subhead"><h3>처리 흐름</h3><p>두벌식 키 입력 관점</p></div>
+              <div class="code-line" id="flowCode"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="search">
+          <div class="section-head">
+            <div><div class="section-kicker">02 · Search Lab</div><h2>자모 기반 검색·일치 구간 강조</h2></div>
+            <p class="section-note">일반 문자열 검색과 Hangul.js 검색의 차이를 확인하고,<br>반복 검색용 <code>Searcher</code> 및 <code>rangeSearch</code>를 함께 실습합니다.</p>
+          </div>
+          <div class="card search-layout">
+            <div>
+              <div class="search-box">
+                <div class="input-label"><label for="searchTarget">비교 대상 텍스트</label><small>단일 비교</small></div>
+                <input id="searchTarget" class="text-input" value="달걀은 고단백 식재료입니다" />
+                <div class="inline-fields" style="margin-top:10px">
+                  <div><div class="input-label"><label for="searchQuery">검색어</label></div><input id="searchQuery" class="text-input" value="닭" /></div>
+                  <div><div class="input-label"><label for="rangeQuery">구간 검색어</label></div><input id="rangeQuery" class="text-input" value="달" /></div>
+                </div>
+                <div class="chip-row" id="searchPresets">
+                  <button class="chip" data-t="달걀" data-q="닭" data-r="닭">달걀 ← 닭</button>
+                  <button class="chip" data-t="도우미 시스템" data-q="도움" data-r="도움">도우미 ← 도움</button>
+                  <button class="chip" data-t="간장공장공장장" data-q="공장" data-r="공장">반복 구간</button>
+                  <button class="chip" data-t="수협중앙회" data-q="수협" data-r="협">일반 매칭</button>
+                </div>
+                <div class="code-line" id="searchCompare"></div>
+              </div>
+              <div class="search-box">
+                <div class="input-label"><label for="catalogQuery">카탈로그 검색</label><small>Searcher / 초성 확장</small></div>
+                <input id="catalogQuery" class="text-input" value="ㅅㅎ" placeholder="예: 수협, ㅅㅎ, 어선, 금융" />
+                <label class="check-row"><input id="choseongMode" type="checkbox" checked /> <span>초성 전용 검색을 추가 적용 <small>(<code>disassemble</code> 기반 응용)</small></span></label>
+                <div class="chip-row" id="catalogPresets">
+                  <button class="chip" data-q="수협">수협</button>
+                  <button class="chip" data-q="ㅅㅎ">ㅅㅎ</button>
+                  <button class="chip" data-q="어선">어선</button>
+                  <button class="chip" data-q="ㄴㄹㅈ">ㄴㄹㅈ</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="search-summary"><span id="searchMeta">검색 결과</span><div class="legend"><span>Hangul.search</span><span>Searcher</span><span>초성 확장</span></div></div>
+              <div class="candidate-list" id="candidateList"></div>
+              <div class="subhead" style="margin-top:18px"><h3>rangeSearch 일치 구간</h3><p>텍스트 인덱스 기준 반환</p></div>
+              <div class="result"><div class="result-label"><span>반환 범위</span><code>Hangul.rangeSearch(a, b)</code></div><div class="result-value small" id="rangeResult"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="predicate">
+          <div class="section-head">
+            <div><div class="section-kicker">03 · Predicate Lab</div><h2>한글·자모·종성 판별과 조사 선택</h2></div>
+            <p class="section-note">문자 하나 또는 문자열의 첫 글자를 기준으로 판별하며,<br><code>All</code> 계열 함수로 전체 문자열 검증도 할 수 있습니다.</p>
+          </div>
+          <div class="card predicate-layout">
+            <div>
+              <div class="input-label"><label for="predicateInput">판별할 문자 또는 문자열</label><small>첫 글자 기준</small></div>
+              <input id="predicateInput" class="text-input" value="협" />
+              <div class="chip-row" id="predicatePresets">
+                <button class="chip" data-char="협">협</button>
+                <button class="chip" data-char="수">수</button>
+                <button class="chip" data-char="ㄳ">ㄳ</button>
+                <button class="chip" data-char="ㅙ">ㅙ</button>
+                <button class="chip" data-char="A">A</button>
+              </div>
+              <div class="char-stage" id="charStage">협</div>
+              <div class="subhead"><h3>실무형 조사 선택</h3><p>받침 판별 응용</p></div>
+              <div class="particle-grid" id="particleGrid"></div>
+            </div>
+            <div>
+              <table class="predicate-table" aria-label="Hangul.js 판별 함수 결과">
+                <thead><tr><th>API</th><th>결과</th><th>설명</th></tr></thead>
+                <tbody id="predicateTable"></tbody>
+              </table>
+              <div class="subhead"><h3>끝소리 검사</h3><p><code>endsWithConsonant</code> / <code>endsWith</code></p></div>
+              <div class="inline-fields">
+                <div><div class="input-label"><label for="endingText">끝소리 검사 텍스트</label></div><input id="endingText" class="text-input" value="수협" /></div>
+                <div><div class="input-label"><label for="endingTarget">목표 자모</label></div><select id="endingTarget"><option value="ㅂ">ㅂ</option><option value="ㄱ">ㄱ</option><option value="ㅇ">ㅇ</option><option value="ㅁ">ㅁ</option><option value="ㅎ">ㅎ</option></select></div>
+              </div>
+              <div class="output-grid" style="margin-top:11px">
+                <div class="result"><div class="result-label"><span>받침 또는 자음으로 종료</span><code>endsWithConsonant</code></div><div class="result-value" id="endingConsonant"></div></div>
+                <div class="result"><div class="result-label"><span>지정 자모로 종료</span><code>endsWith</code></div><div class="result-value" id="endingTargetResult"></div></div>
+              </div>
+              <div class="code-line" id="predicateCode"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="transform">
+          <div class="section-head">
+            <div><div class="section-kicker">04 · Transform Lab</div><h2>분해→자모 변환→재조합</h2></div>
+            <p class="section-note">Hangul.js의 공식 예제와 같은 방식으로 자모 배열을 바꾼 뒤<br>다시 조합하는 텍스트 변환 파이프라인입니다.</p>
+          </div>
+          <div class="card transform-layout">
+            <div>
+              <div class="input-label"><label for="transformInput">변환 대상 문장</label></div>
+              <textarea id="transformInput">아버지가 방에 들어가신다</textarea>
+              <div class="subhead"><h3>변환 규칙</h3><p>자모 단위 토글</p></div>
+              <div class="toggle-list">
+                <label class="toggle-item"><span>예사·거센소리 → 된소리 <small>(ㄱ/ㅋ→ㄲ 등)</small></span><span class="switch"><input id="tenseToggle" type="checkbox" checked /></span></label>
+                <label class="toggle-item"><span>모음 ㅐ ↔ ㅔ 교환</span><span class="switch"><input id="vowelToggle" type="checkbox" /></span></label>
+                <label class="toggle-item"><span>종성 ㅇ 제거</span><span class="switch"><input id="jongToggle" type="checkbox" /></span></label>
+              </div>
+            </div>
+            <div class="transform-output">
+              <div class="section-kicker">Pipeline Result</div>
+              <div class="big" id="transformResult"></div>
+              <div class="result-label"><span>분해 후 자모</span><code>Hangul.d(text).map(rule)</code></div>
+              <div class="result-value token-list" id="transformTokens"></div>
+              <div class="code-line" id="transformCode"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="api">
+          <div class="section-head">
+            <div><div class="section-kicker">05 · API Map</div><h2>이 페이지에 포함한 Hangul.js 기능</h2></div>
+            <p class="section-note">별칭 API, 반복 검색 최적화, 전체 문자열 판별까지<br>샘플 화면에서 바로 확인할 수 있게 구성했습니다.</p>
+          </div>
+          <div class="api-grid" id="apiGrid"></div>
+          <div class="footer-note" style="margin-top:14px">
+            <div>ⓘ</div>
+            <div><b>구현·운영 참고</b><br>Hangul.js 저장소는 최소 유지보수 상태로 안내되고 있습니다. 이 샘플은 라이브러리의 현재 공개 API를 학습·검증하는 데 초점을 둔 페이지이며, 신규 제품 도입 시에는 유지보수 상태·라이선스·보안 검토가 필요합니다. 외부 CDN을 불러오지 못하는 환경을 위해 기능 실습용 호환 엔진도 포함했습니다.</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- 온라인이면 공식 hangul-js를 우선 사용. 차단 환경에서는 아래 내장 호환 엔진으로 자동 전환합니다. -->
+  <script src="https://unpkg.com/hangul-js@0.2.6/hangul.min.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      function createHangulCompat() {
+        const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+        const JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+        const JONG = ['', 'ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+        const complexVowel = { 'ㅘ':['ㅗ','ㅏ'], 'ㅙ':['ㅗ','ㅐ'], 'ㅚ':['ㅗ','ㅣ'], 'ㅝ':['ㅜ','ㅓ'], 'ㅞ':['ㅜ','ㅔ'], 'ㅟ':['ㅜ','ㅣ'], 'ㅢ':['ㅡ','ㅣ'] };
+        const complexJong = { 'ㄳ':['ㄱ','ㅅ'], 'ㄵ':['ㄴ','ㅈ'], 'ㄶ':['ㄴ','ㅎ'], 'ㄺ':['ㄹ','ㄱ'], 'ㄻ':['ㄹ','ㅁ'], 'ㄼ':['ㄹ','ㅂ'], 'ㄽ':['ㄹ','ㅅ'], 'ㄾ':['ㄹ','ㅌ'], 'ㄿ':['ㄹ','ㅍ'], 'ㅀ':['ㄹ','ㅎ'], 'ㅄ':['ㅂ','ㅅ'] };
+        const vowelMerge = { 'ㅗㅏ':'ㅘ', 'ㅗㅐ':'ㅙ', 'ㅗㅣ':'ㅚ', 'ㅜㅓ':'ㅝ', 'ㅜㅔ':'ㅞ', 'ㅜㅣ':'ㅟ', 'ㅡㅣ':'ㅢ' };
+        const jongMerge = {};
+        Object.keys(complexJong).forEach(k => { jongMerge[complexJong[k].join('')] = k; });
+        const initialMerge = { 'ㄱㄱ':'ㄲ','ㄷㄷ':'ㄸ','ㅂㅂ':'ㅃ','ㅅㅅ':'ㅆ','ㅈㅈ':'ㅉ' };
+        const isCompleteCode = code => code >= 0xAC00 && code <= 0xD7A3;
+        const toString = input => Array.isArray(input) ? input.join('') : String(input ?? '');
+        const isConsonantChar = c => Object.prototype.hasOwnProperty.call(Object.fromEntries([...CHO, ...JONG.slice(1)].map(x=>[x,true])), c);
+        const isVowelChar = c => JUNG.includes(c);
+        const decomposeChar = c => {
+          const code = c.charCodeAt(0);
+          if (isCompleteCode(code)) {
+            const offset = code - 0xAC00;
+            const jongIdx = offset % 28;
+            const jungIdx = Math.floor(offset / 28) % 21;
+            const choIdx = Math.floor(offset / 588);
+            const out = [CHO[choIdx]];
+            out.push(...(complexVowel[JUNG[jungIdx]] || [JUNG[jungIdx]]));
+            if (jongIdx) out.push(...(complexJong[JONG[jongIdx]] || [JONG[jongIdx]]));
+            return out;
+          }
+          if (complexJong[c]) return [...complexJong[c]];
+          if (complexVowel[c]) return [...complexVowel[c]];
+          return [c];
+        };
+        const disassemble = (input, grouped) => {
+          const str = toString(input);
+          const groups = Array.from(str).map(decomposeChar);
+          return grouped ? groups : groups.flat();
+        };
+        const compose = (lead, vowel, tail) => {
+          if (!CHO.includes(lead) || !JUNG.includes(vowel)) return (lead || '') + (vowel || '') + (tail || '');
+          const code = 0xAC00 + (CHO.indexOf(lead) * 21 + JUNG.indexOf(vowel)) * 28 + Math.max(0, JONG.indexOf(tail || ''));
+          return String.fromCharCode(code);
+        };
+        const assemble = (input) => {
+          const arr = Array.isArray(input) ? input.map(String) : disassemble(input);
+          const out = [];
+          let lead = null, vowel = null, tail = null, looseVowel = null;
+          const flush = () => {
+            if (lead !== null && vowel !== null) out.push(compose(lead, vowel, tail));
+            else if (lead !== null) out.push(lead);
+            if (looseVowel !== null) out.push(looseVowel);
+            lead = vowel = tail = looseVowel = null;
+          };
+          const flushSyllableOnly = () => {
+            if (lead !== null && vowel !== null) out.push(compose(lead, vowel, tail));
+            else if (lead !== null) out.push(lead);
+            lead = vowel = tail = null;
+          };
+          for (const ch of arr) {
+            if (isVowelChar(ch)) {
+              if (looseVowel !== null && lead === null) {
+                const merged = vowelMerge[looseVowel + ch];
+                if (merged) looseVowel = merged; else { out.push(looseVowel); looseVowel = ch; }
+                continue;
+              }
+              if (lead === null && vowel === null) { looseVowel = ch; continue; }
+              if (lead !== null && vowel === null) { vowel = ch; continue; }
+              if (lead !== null && vowel !== null && tail !== null) {
+                const split = complexJong[tail];
+                if (split) { tail = split[0]; flushSyllableOnly(); lead = split[1]; vowel = ch; }
+                else { const moved = tail; tail = null; flushSyllableOnly(); lead = moved; vowel = ch; }
+                continue;
+              }
+              if (lead !== null && vowel !== null) {
+                const merged = vowelMerge[vowel + ch];
+                if (merged) vowel = merged;
+                else { flushSyllableOnly(); looseVowel = ch; }
+              }
+              continue;
+            }
+            if (isConsonantChar(ch)) {
+              if (looseVowel !== null) { out.push(looseVowel); looseVowel = null; }
+              if (lead === null) { lead = CHO.includes(ch) ? ch : null; if (!lead) out.push(ch); continue; }
+              if (vowel === null) {
+                const mergedInitial = initialMerge[lead + ch];
+                const mergedLooseJong = jongMerge[lead + ch];
+                if (mergedInitial) lead = mergedInitial;
+                else if (mergedLooseJong) lead = mergedLooseJong;
+                else { out.push(lead); lead = CHO.includes(ch) ? ch : null; if (!lead) out.push(ch); }
+                continue;
+              }
+              if (tail === null) { if (JONG.includes(ch)) tail = ch; else { flushSyllableOnly(); lead = CHO.includes(ch) ? ch : null; if (!lead) out.push(ch); } }
+              else {
+                const mergedTail = jongMerge[tail + ch];
+                if (mergedTail) tail = mergedTail;
+                else { flushSyllableOnly(); lead = CHO.includes(ch) ? ch : null; if (!lead) out.push(ch); }
+              }
+              continue;
+            }
+            flush(); out.push(ch);
+          }
+          flush();
+          return out.join('');
+        };
+        const rangeSearch = (a, b) => {
+          const source = toString(a), query = toString(b);
+          if (!query.length) return [];
+          const flat = disassemble(source).join('');
+          const needle = disassemble(query).join('');
+          const groups = disassemble(source, true);
+          const indexes = [];
+          let at = flat.indexOf(needle);
+          while (at !== -1) { indexes.push(at); at = flat.indexOf(needle, at + needle.length); }
+          const charAt = (flatIdx, end) => {
+            let acc = 0;
+            for (let i = 0; i < groups.length; i++) {
+              acc += groups[i].length;
+              if (end ? flatIdx <= acc : flatIdx < acc) return i;
+            }
+            return Math.max(0, groups.length - 1);
+          };
+          return indexes.map(index => [charAt(index, false), charAt(index + needle.length, true)]);
+        };
+        function Searcher(query) { this.string = toString(query); this.disassembled = disassemble(query).join(''); }
+        Searcher.prototype.search = function (text) { return disassemble(text).join('').indexOf(this.disassembled); };
+        const first = x => toString(x).charAt(0);
+        const last = x => { const s = toString(x); return s.charAt(s.length - 1); };
+        const hasComplete = c => isCompleteCode((first(c) || '').charCodeAt(0));
+        const consonants = Object.keys(Object.fromEntries([...CHO, ...JONG.slice(1)].map(x=>[x,true])));
+        const obj = {
+          disassemble, d: disassemble,
+          disassembleToString: input => disassemble(input).join(''), ds: input => disassemble(input).join(''),
+          assemble, a: assemble,
+          search: (a,b) => disassemble(a).join('').indexOf(disassemble(b).join('')),
+          rangeSearch, Searcher,
+          endsWithConsonant: input => { const c = last(input); if (hasComplete(c)) return ((c.charCodeAt(0)-0xAC00) % 28) > 0; return consonants.includes(c); },
+          endsWith: (input,target) => disassemble(input).pop() === target,
+          isHangul: hasComplete, isComplete: hasComplete,
+          isConsonant: input => consonants.includes(first(input)),
+          isVowel: input => JUNG.includes(first(input)),
+          isCho: input => CHO.includes(first(input)),
+          isJong: input => JONG.slice(1).includes(first(input)),
+          isHangulAll: input => typeof input === 'string' && Array.from(input).every(c=>hasComplete(c)),
+          isCompleteAll: input => typeof input === 'string' && Array.from(input).every(c=>hasComplete(c)),
+          isConsonantAll: input => typeof input === 'string' && Array.from(input).every(c=>consonants.includes(c)),
+          isVowelAll: input => typeof input === 'string' && Array.from(input).every(c=>JUNG.includes(c)),
+          isChoAll: input => typeof input === 'string' && Array.from(input).every(c=>CHO.includes(c)),
+          isJongAll: input => typeof input === 'string' && Array.from(input).every(c=>JONG.slice(1).includes(c))
+        };
+        return obj;
+      }
+
+      const usingOfficial = typeof window.Hangul !== 'undefined' && typeof window.Hangul.disassemble === 'function';
+      if (!usingOfficial) window.Hangul = createHangulCompat();
+      const H = window.Hangul;
+      const engineName = usingOfficial ? 'Hangul.js 0.2.6 (CDN)' : '내장 Hangul.js 호환 엔진';
+      document.getElementById('engineName').textContent = engineName;
+      document.getElementById('engineState').textContent = usingOfficial ? '공식 API 로드 완료' : 'CDN 미연결 · 오프라인 실습 가능';
+
+      const $ = (id) => document.getElementById(id);
+      const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+      const bool = (v) => `<span class="bool ${v ? 'true' : 'false'}">${v ? 'true' : 'false'}</span>`;
+      const first = (s) => Array.from(String(s || ''))[0] || '';
+      const jamoRegex = /[ㄱ-ㅎㅏ-ㅣ]/;
+      function getChoseong(text) {
+        return H.disassemble(String(text || ''), true)
+          .map(group => group.find(x => H.isCho(x)) || '')
+          .join('');
+      }
+      function codeLiteral(value) { return JSON.stringify(String(value ?? '')); }
+      function tokens(list, cls) { return list.length ? list.map(v => `<span class="${cls}">${esc(v)}</span>`).join('') : '<span style="color:#8a98a8;font-size:12px">(빈 결과)</span>'; }
+      function arrayLiteral(arr) { return `[${arr.map(v => JSON.stringify(v)).join(', ')}]`; }
+      function selectedRanges(text, ranges) {
+        if (!ranges.length) return esc(text);
+        const chars = Array.from(text);
+        const marked = new Set();
+        ranges.forEach(([a,b]) => { for (let i=a;i<=b;i++) marked.add(i); });
+        return chars.map((ch,i) => marked.has(i) ? `<mark class="hit">${esc(ch)}</mark>` : esc(ch)).join('');
+      }
+      function highlightNormal(text, query) {
+        if (!query) return esc(text);
+        const at = text.indexOf(query);
+        if (at < 0) return esc(text);
+        return esc(text.slice(0,at)) + `<mark class="hit">${esc(text.slice(at, at + query.length))}</mark>` + esc(text.slice(at + query.length));
+      }
+
+      function renderCore() {
+        const text = $('sourceText').value;
+        const flat = H.disassemble(text);
+        const grouped = H.disassemble(text, true);
+        const reassembled = H.assemble(flat);
+        const choseong = getChoseong(text).replace(/\s/g, '·') || '-';
+        $('charCount').textContent = Array.from(text).length;
+        $('jamoCount').textContent = flat.length;
+        $('choseongTrack').textContent = choseong;
+        $('flatDisassembly').innerHTML = tokens(flat, 'token');
+        $('groupedDisassembly').innerHTML = tokens(grouped.map(g => `[${g.join(' ')}]`), 'group');
+        $('disassembledString').textContent = H.disassembleToString ? H.disassembleToString(text) : flat.join('');
+        $('reassembledText').textContent = reassembled || '(빈 값)';
+        $('choseongDetail').textContent = choseong;
+        $('roundtripNote').textContent = reassembled === text ? '현재 입력은 분해 후 재조합 결과가 같습니다.' : `재조합 결과: “${reassembled}” — Hangul.assemble은 분해 함수의 완전한 역함수가 아닙니다.`;
+        $('flowCode').textContent = `const input = ${codeLiteral(text)};\nconst jamo = Hangul.d(input);\n// ${arrayLiteral(flat.slice(0, 34))}${flat.length > 34 ? ' …' : ''}\nconst rebuilt = Hangul.a(jamo); // ${JSON.stringify(reassembled)}`;
+      }
+      function renderAssemble() {
+        const raw = $('jamoInput').value;
+        const arr = raw.trim() ? raw.trim().split(/[\s,|/]+/).filter(Boolean) : [];
+        const result = H.assemble(arr);
+        $('assembledPreview').textContent = result || '—';
+        $('assembleCode').textContent = `Hangul.assemble(${arrayLiteral(arr)})  // ${JSON.stringify(result)}`;
+      }
+
+      const catalog = [
+        { title:'수협중앙회', desc:'조직명 · 복합 명사' },
+        { title:'수산업협동조합', desc:'협동조합 · 제도/조직' },
+        { title:'노량진수산시장', desc:'유통 · 시장' },
+        { title:'상호금융', desc:'금융 · 서비스' },
+        { title:'어선안전조업', desc:'어업인 안전 · 현장' },
+        { title:'어업양식지원', desc:'양식 · 지원' },
+        { title:'수협 AI 도우미', desc:'업무 지원 · 예시' },
+        { title:'달걀', desc:'Hangul.search 예시' },
+        { title:'달구지', desc:'Searcher 예시' },
+        { title:'도우미 시스템', desc:'자모 포함 검색 예시' }
+      ];
+      function matchesChoseong(text, query) {
+        const q = String(query || '').replace(/\s/g,'');
+        if (!q || !Array.from(q).every(c => H.isCho(c))) return false;
+        return getChoseong(text).includes(q);
+      }
+      function renderSearch() {
+        const target = $('searchTarget').value;
+        const query = $('searchQuery').value;
+        const rangeQ = $('rangeQuery').value;
+        const nativeIndex = target.indexOf(query);
+        const hangulIndex = H.search(target, query);
+        const ranges = rangeQ ? H.rangeSearch(target, rangeQ) : [];
+        $('searchCompare').textContent = `target.indexOf(${codeLiteral(query)})  // ${nativeIndex}\nHangul.search(target, ${codeLiteral(query)})  // ${hangulIndex}\nHangul.rangeSearch(target, ${codeLiteral(rangeQ)})  // ${JSON.stringify(ranges)}`;
+        $('rangeResult').innerHTML = ranges.length
+          ? `${selectedRanges(target, ranges)}<br><span style="color:#72839a">반환값: ${esc(JSON.stringify(ranges))}</span>`
+          : '<span style="color:#8492a1">일치하는 구간이 없습니다.</span>';
+
+        const catalogQuery = $('catalogQuery').value.trim();
+        const allowChoseong = $('choseongMode').checked;
+        const searcher = new H.Searcher(catalogQuery);
+        const rows = catalog.map(item => {
+          const hangulFound = catalogQuery ? H.search(item.title, catalogQuery) >= 0 : true;
+          const searcherFound = catalogQuery ? searcher.search(item.title) >= 0 : true;
+          const choseongFound = allowChoseong && matchesChoseong(item.title, catalogQuery);
+          return { ...item, found: hangulFound || searcherFound || choseongFound, hangulFound, searcherFound, choseongFound };
+        }).filter(x => x.found);
+        $('searchMeta').textContent = `“${catalogQuery || '전체'}” · ${rows.length}건`;
+        if (!rows.length) { $('candidateList').innerHTML = '<div class="no-match">일치 항목이 없습니다. “수협”, “ㅅㅎ”, “어선”, “ㄴㄹㅈ” 등을 입력해 보세요.</div>'; return; }
+        $('candidateList').innerHTML = rows.map(item => {
+          const rangesForItem = catalogQuery && item.hangulFound ? H.rangeSearch(item.title, catalogQuery) : [];
+          const title = rangesForItem.length ? selectedRanges(item.title, rangesForItem) : (item.choseongFound ? highlightNormal(item.title, '') : esc(item.title));
+          const badges = [item.hangulFound && 'Hangul.search', item.searcherFound && 'Searcher', item.choseongFound && '초성 확장'].filter(Boolean).join(' · ');
+          return `<div class="candidate"><div class="candidate-main"><div class="candidate-title">${title}</div><div class="candidate-meta">${esc(item.desc)} · 초성: ${esc(getChoseong(item.title))}</div></div><div class="match-badge">${esc(badges)}</div></div>`;
+        }).join('');
+      }
+
+      function makeParticle(word, pair) {
+        const has = H.endsWithConsonant(word);
+        if (pair === '으로/로') {
+          const last = H.disassemble(word).slice(-1)[0];
+          return (!has || last === 'ㄹ') ? '로' : '으로';
+        }
+        const [yes,no] = pair.split('/');
+        return has ? yes : no;
+      }
+      function renderPredicate() {
+        const raw = $('predicateInput').value;
+        const char = first(raw);
+        $('charStage').textContent = char || '—';
+        const checks = [
+          ['Hangul.isComplete', H.isComplete(char), '완성형 한글(가~힣) 여부'],
+          ['Hangul.isHangul', H.isHangul(char), 'isComplete 별칭'],
+          ['Hangul.isConsonant', H.isConsonant(char), '자음 여부'],
+          ['Hangul.isVowel', H.isVowel(char), '모음 여부'],
+          ['Hangul.isCho', H.isCho(char), '초성으로 가능한 자음'],
+          ['Hangul.isJong', H.isJong(char), '종성으로 가능한 자음'],
+          ['Hangul.isCompleteAll', H.isCompleteAll(raw), '문자열 전체 완성형 한글 여부'],
+          ['Hangul.isConsonantAll', H.isConsonantAll(raw), '문자열 전체 자음 여부'],
+          ['Hangul.isVowelAll', H.isVowelAll(raw), '문자열 전체 모음 여부'],
+          ['Hangul.isChoAll', H.isChoAll(raw), '문자열 전체 초성 가능 여부'],
+          ['Hangul.isJongAll', H.isJongAll(raw), '문자열 전체 종성 가능 여부']
+        ];
+        $('predicateTable').innerHTML = checks.map(([api, value, desc]) => `<tr><th>${api}(${esc(JSON.stringify(api.includes('All') ? raw : char))})</th><td>${bool(value)}</td><td style="color:#748499">${esc(desc)}</td></tr>`).join('');
+        const particles = ['은/는','이/가','을/를','과/와','으로/로'];
+        $('particleGrid').innerHTML = particles.map(pair => `<div class="particle">${pair}<strong>${esc(raw || '단어')}${makeParticle(raw || '단어', pair)}</strong></div>`).join('');
+        renderEnding();
+      }
+      function renderEnding() {
+        const word = $('endingText').value;
+        const target = $('endingTarget').value;
+        const consonant = H.endsWithConsonant(word);
+        const endsWith = H.endsWith(word, target);
+        $('endingConsonant').innerHTML = `${bool(consonant)} <span style="font-size:12px;color:#6b7c90">${esc(word)} → ${consonant ? '받침/자음 있음' : '받침/자음 없음'}</span>`;
+        $('endingTargetResult').innerHTML = `${bool(endsWith)} <span style="font-size:12px;color:#6b7c90">마지막 분해 자모 = ${esc(H.disassemble(word).slice(-1)[0] || '—')}</span>`;
+        $('predicateCode').textContent = `Hangul.endsWithConsonant(${codeLiteral(word)})  // ${consonant}\nHangul.endsWith(${codeLiteral(word)}, ${codeLiteral(target)})  // ${endsWith}\nHangul.disassemble(${codeLiteral(word)}).slice(-1)  // ${arrayLiteral(H.disassemble(word).slice(-1))}`;
+      }
+
+      function renderTransform() {
+        const input = $('transformInput').value;
+        const tense = $('tenseToggle').checked;
+        const vowelSwap = $('vowelToggle').checked;
+        const dropJong = $('jongToggle').checked;
+        const source = H.disassemble(input);
+        const tenseMap = { 'ㄱ':'ㄲ','ㅋ':'ㄲ','ㄷ':'ㄸ','ㅌ':'ㄸ','ㅂ':'ㅃ','ㅍ':'ㅃ','ㅅ':'ㅆ','ㅈ':'ㅉ','ㅊ':'ㅉ' };
+        const map = source.map((jamo, index, all) => {
+          let x = jamo;
+          if (tense && tenseMap[x]) x = tenseMap[x];
+          if (vowelSwap && x === 'ㅐ') x = 'ㅔ'; else if (vowelSwap && x === 'ㅔ') x = 'ㅐ';
+          if (dropJong && x === 'ㅇ') {
+            const prev = all[index - 1] || '';
+            const next = all[index + 1] || '';
+            if (H.isVowel(prev) && (!next || !H.isVowel(next))) return '';
+          }
+          return x;
+        }).filter(Boolean);
+        const result = H.assemble(map);
+        $('transformResult').textContent = result || '—';
+        $('transformTokens').innerHTML = tokens(map, 'token');
+        $('transformCode').textContent = `const jamo = Hangul.d(${codeLiteral(input)});\nconst changed = jamo.map(rule);\nHangul.a(changed); // ${JSON.stringify(result)}`;
+      }
+
+      const apis = [
+        ['Hangul.disassemble / d', '완성형 한글을 자음·모음 배열로 분해합니다. grouped 옵션으로 글자별 배열도 반환합니다.', 'Hangul.d("수협", true)', '분해'],
+        ['Hangul.disassembleToString / ds', '분해 결과를 배열이 아닌 자모 문자열로 받습니다.', 'Hangul.ds("수협")', '분해'],
+        ['Hangul.assemble / a', '자모 배열을 두벌식 입력 흐름에 따라 한글로 조합합니다.', 'Hangul.a(["ㅅ","ㅜ","ㅎ","ㅕ","ㅂ"])', '조합'],
+        ['Hangul.search', '자모 분해 결과를 기준으로 포함 위치를 검색합니다. -1이면 미일치입니다.', 'Hangul.search("달걀", "닭")', '검색'],
+        ['new Hangul.Searcher', '검색어 자모 분해를 한 번만 수행해 여러 후보를 반복 검색할 때 사용합니다.', 'new Hangul.Searcher("닭").search("달구지")', '검색'],
+        ['Hangul.rangeSearch', '일치한 모든 범위를 원본 문자열의 인덱스 범위로 반환합니다.', 'Hangul.rangeSearch("간장공장공장장", "공장")', '검색'],
+        ['Hangul.endsWithConsonant', '받침이 있거나 자음으로 끝나는지 판별합니다. 조사 선택에 활용할 수 있습니다.', 'Hangul.endsWithConsonant("수협")', '종성'],
+        ['Hangul.endsWith', '분해된 마지막 자모가 지정 값과 같은지 확인합니다.', 'Hangul.endsWith("수협", "ㅂ")', '종성'],
+        ['Hangul.isComplete / isHangul', '완성형 한글 문자(가~힣)인지 확인합니다. isHangul은 별칭입니다.', 'Hangul.isComplete("협")', '판별'],
+        ['Hangul.isConsonant / isVowel', '자음 또는 모음인지 확인합니다.', 'Hangul.isVowel("ㅘ")', '판별'],
+        ['Hangul.isCho / isJong', '초성이나 종성으로 사용할 수 있는 자음인지 확인합니다.', 'Hangul.isJong("ㄳ")', '판별'],
+        ['*All 계열', '문자열의 모든 문자가 특정 조건을 만족하는지 확인합니다.', 'Hangul.isChoAll("ㄱㄴㄷ")', '전체 검증']
+      ];
+      function renderApi() {
+        $('apiGrid').innerHTML = apis.map(([name, desc, code, tag]) => `<article class="api-card"><h3>${esc(name)}</h3><p>${esc(desc)}</p><code>${esc(code)}</code><span class="api-tag">${esc(tag)}</span></article>`).join('');
+      }
+
+      document.querySelectorAll('.nav-link').forEach(button => button.addEventListener('click', () => {
+        document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+        button.classList.add('active');
+        $(button.dataset.scroll).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      document.querySelectorAll('#sourcePresets .chip').forEach(button => button.addEventListener('click', () => { $('sourceText').value = button.dataset.value; renderCore(); }));
+      document.querySelectorAll('#jamoPresets .chip').forEach(button => button.addEventListener('click', () => { $('jamoInput').value = button.dataset.jamo; renderAssemble(); }));
+      document.querySelectorAll('#searchPresets .chip').forEach(button => button.addEventListener('click', () => { $('searchTarget').value = button.dataset.t; $('searchQuery').value = button.dataset.q; $('rangeQuery').value = button.dataset.r; renderSearch(); }));
+      document.querySelectorAll('#catalogPresets .chip').forEach(button => button.addEventListener('click', () => { $('catalogQuery').value = button.dataset.q; renderSearch(); }));
+      document.querySelectorAll('#predicatePresets .chip').forEach(button => button.addEventListener('click', () => { $('predicateInput').value = button.dataset.char; renderPredicate(); }));
+      ['sourceText'].forEach(id => $(id).addEventListener('input', renderCore));
+      ['jamoInput'].forEach(id => $(id).addEventListener('input', renderAssemble));
+      ['searchTarget','searchQuery','rangeQuery','catalogQuery','choseongMode'].forEach(id => $(id).addEventListener(id === 'choseongMode' ? 'change' : 'input', renderSearch));
+      ['predicateInput'].forEach(id => $(id).addEventListener('input', renderPredicate));
+      ['endingText','endingTarget'].forEach(id => $(id).addEventListener(id === 'endingTarget' ? 'change' : 'input', renderEnding));
+      ['transformInput','tenseToggle','vowelToggle','jongToggle'].forEach(id => $(id).addEventListener(id === 'transformInput' ? 'input' : 'change', renderTransform));
+
+      renderCore(); renderAssemble(); renderSearch(); renderPredicate(); renderTransform(); renderApi();
+    })();
+  </script>
+</body>
+</html>
