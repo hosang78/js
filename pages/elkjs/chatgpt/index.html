@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ELK.js 종합 기능 플레이그라운드</title>
+  <script src="https://cdn.jsdelivr.net/npm/elkjs@0.11.1/lib/elk.bundled.min.js"></script>
+  <style>
+    :root{
+      --bg:#f3f6fb;--panel:#fff;--line:#dbe3ef;--text:#172033;--muted:#667085;
+      --primary:#2457d6;--primary2:#163b99;--soft:#eaf0ff;--danger:#c93636;
+      --shadow:0 10px 30px rgba(25,48,89,.09);--radius:14px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+    header{background:linear-gradient(120deg,#122451,#2457d6);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand h1{font-size:21px;margin:0 0 5px}.brand p{margin:0;font-size:13px;opacity:.82}
+    .header-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:8px 12px;border-radius:9px;font-weight:700;font-size:13px}
+    .btn:hover{filter:brightness(.98);transform:translateY(-1px)}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .btn.ghost{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff}
+    .btn.danger{color:var(--danger)}
+    main{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:0}
+    aside{background:#fbfcfe;border-right:1px solid var(--line);padding:14px;overflow:auto}
+    .workspace{padding:14px;display:grid;grid-template-rows:auto minmax(430px,1fr) auto;gap:12px;min-width:0}
+    .section{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+    .section h2{font-size:14px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+    .section h2 span{font-size:11px;color:var(--muted);font-weight:500}
+    .field{display:grid;gap:5px;margin-bottom:10px}
+    label{font-size:12px;font-weight:800;color:#344054}
+    select,input[type="number"],input[type="text"]{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;color:var(--text)}
+    input[type="range"]{width:100%}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .check{display:flex;align-items:center;gap:7px;font-size:12px;margin:8px 0;color:#344054}
+    .preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .preset{border:1px solid var(--line);background:#fff;padding:9px 7px;border-radius:9px;text-align:left;font-weight:700;font-size:12px}
+    .preset.active{border-color:var(--primary);background:var(--soft);color:var(--primary2)}
+    .toolbar{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .toolbar .divider{width:1px;height:25px;background:var(--line)}
+    .status{margin-left:auto;font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+    .canvas-shell{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-height:430px;box-shadow:var(--shadow)}
+    .canvas-shell.grid{background-image:linear-gradient(#e9edf5 1px,transparent 1px),linear-gradient(90deg,#e9edf5 1px,transparent 1px);background-size:24px 24px}
+    svg{width:100%;height:100%;display:block;user-select:none}
+    .empty,.loading,.error{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;color:var(--muted);pointer-events:none}
+    .loading{background:rgba(255,255,255,.74);z-index:5;font-weight:800;color:var(--primary)}
+    .error{color:var(--danger);background:#fff8f8;z-index:6}
+    .hidden{display:none!important}
+    .node rect{fill:#fff;stroke:#3157a4;stroke-width:1.5;filter:drop-shadow(0 3px 5px rgba(29,49,82,.12))}
+    .node.compound>rect{fill:#f5f8ff;stroke:#7b91c4;stroke-dasharray:5 3}
+    .node.selected>rect{stroke:#f18a00;stroke-width:3}
+    .node text{font-size:12px;fill:#15213a;font-weight:700;pointer-events:none}
+    .port{fill:#2457d6;stroke:#fff;stroke-width:1.5}
+    .port-label{font-size:9px!important;fill:#667085!important;font-weight:500!important}
+    .edge{fill:none;stroke:#61749a;stroke-width:1.8}
+    .edge.highlight{stroke:#f18a00;stroke-width:3}
+    .edge-label rect{fill:#fff;stroke:#d0d8e6}
+    .edge-label text{font-size:10px;fill:#475467}
+    .details{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);gap:12px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px;min-width:0}
+    .tabs{display:flex;gap:5px;border-bottom:1px solid var(--line);margin:-3px -2px 10px;padding:0 2px}
+    .tab{border:0;background:transparent;padding:8px 10px;font-size:12px;font-weight:800;color:var(--muted);border-bottom:2px solid transparent}
+    .tab.active{color:var(--primary);border-color:var(--primary)}
+    textarea,pre{width:100%;height:210px;margin:0;border:1px solid var(--line);border-radius:9px;padding:10px;background:#111827;color:#d5def0;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;white-space:pre}
+    textarea{resize:vertical}
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+    .metric{padding:10px;border-radius:10px;background:#f6f8fc;border:1px solid #e9edf4}
+    .metric b{display:block;font-size:17px}.metric span{font-size:10px;color:var(--muted)}
+    .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;background:#2457d6}
+    .log{height:160px}
+    .kbd{border:1px solid #cfd6e3;border-bottom-width:2px;border-radius:5px;padding:1px 5px;background:#fff;font-size:10px}
+    .toast{position:fixed;right:20px;bottom:20px;background:#172033;color:#fff;padding:11px 14px;border-radius:9px;box-shadow:var(--shadow);z-index:99;font-size:13px}
+    @media(max-width:1000px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);max-height:none}.workspace{min-height:800px}.details{grid-template-columns:1fr}}
+    @media(max-width:600px){header{align-items:flex-start;flex-direction:column}.row,.preset-grid,.metrics{grid-template-columns:1fr}.status{width:100%;margin-left:0}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>ELK.js 종합 기능 플레이그라운드</h1>
+      <p>자동 그래프 배치 · 포트 · 복합 노드 · 엣지 라우팅 · JSON 편집 · SVG 내보내기</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn ghost" id="btnDocs">ELK 옵션 참조</button>
+      <button class="btn ghost" id="btnReset">초기화</button>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <div class="section">
+        <h2>예제 그래프 <span>즉시 전환</span></h2>
+        <div class="preset-grid" id="presetGrid"></div>
+      </div>
+
+      <div class="section">
+        <h2>레이아웃 엔진 <span>핵심 옵션</span></h2>
+        <div class="field">
+          <label for="algorithm">알고리즘</label>
+          <select id="algorithm">
+            <option value="layered">Layered — 흐름도·DAG</option>
+            <option value="stress">Stress — 네트워크</option>
+            <option value="mrtree">Mr. Tree — 트리</option>
+            <option value="radial">Radial — 방사형</option>
+            <option value="box">Box — 격자 정렬</option>
+            <option value="random">Random — 임의 배치</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="direction">방향</label>
+          <select id="direction">
+            <option value="RIGHT">왼쪽 → 오른쪽</option>
+            <option value="DOWN">위 → 아래</option>
+            <option value="LEFT">오른쪽 → 왼쪽</option>
+            <option value="UP">아래 → 위</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="routing">엣지 라우팅</label>
+          <select id="routing">
+            <option value="ORTHOGONAL">직교</option>
+            <option value="SPLINES">스플라인</option>
+            <option value="POLYLINE">폴리라인</option>
+          </select>
+        </div>
+        <div class="row">
+          <div class="field"><label for="nodeSpace">노드 간격</label><input id="nodeSpace" type="number" min="5" max="200" value="45"></div>
+          <div class="field"><label for="layerSpace">레이어 간격</label><input id="layerSpace" type="number" min="5" max="250" value="70"></div>
+        </div>
+        <div class="field">
+          <label for="crossing">교차 최소화</label>
+          <select id="crossing">
+            <option value="LAYER_SWEEP">Layer sweep</option>
+            <option value="INTERACTIVE">Interactive</option>
+            <option value="NONE">사용 안 함</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cycle">사이클 처리</label>
+          <select id="cycle">
+            <option value="GREEDY">Greedy</option>
+            <option value="DEPTH_FIRST">Depth first</option>
+            <option value="MODEL_ORDER">Model order</option>
+          </select>
+        </div>
+        <label class="check"><input id="compact" type="checkbox" checked> 연결 요소 압축</label>
+        <label class="check"><input id="hierarchy" type="checkbox" checked> 계층 간 엣지 활성화</label>
+        <label class="check"><input id="mergeEdges" type="checkbox"> 공통 엣지 병합</label>
+        <button class="btn primary" id="btnLayout" style="width:100%">레이아웃 실행</button>
+      </div>
+
+      <div class="section">
+        <h2>그래프 생성기 <span>성능 시험</span></h2>
+        <div class="row">
+          <div class="field"><label for="rndNodes">노드 수</label><input id="rndNodes" type="number" min="2" max="300" value="35"></div>
+          <div class="field"><label for="rndEdges">엣지 수</label><input id="rndEdges" type="number" min="1" max="800" value="55"></div>
+        </div>
+        <button class="btn" id="btnRandom" style="width:100%">랜덤 그래프 생성</button>
+      </div>
+
+      <div class="section">
+        <h2>표시 설정</h2>
+        <label class="check"><input id="showPorts" type="checkbox" checked> 포트 표시</label>
+        <label class="check"><input id="showLabels" type="checkbox" checked> 엣지 라벨 표시</label>
+        <label class="check"><input id="showGrid" type="checkbox" checked> 배경 격자 표시</label>
+        <label class="check"><input id="animate" type="checkbox" checked> 전환 애니메이션</label>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div class="toolbar">
+        <button class="btn" id="zoomIn">＋ 확대</button>
+        <button class="btn" id="zoomOut">－ 축소</button>
+        <button class="btn" id="fit">화면 맞춤</button>
+        <button class="btn" id="actual">100%</button>
+        <span class="divider"></span>
+        <button class="btn" id="exportSvg">SVG 저장</button>
+        <button class="btn" id="exportJson">결과 JSON</button>
+        <button class="btn" id="copyJson">JSON 복사</button>
+        <div class="status">
+          <span id="statusAlgo">알고리즘: -</span>
+          <span id="statusTime">실행: -</span>
+          <span id="statusZoom">배율: 100%</span>
+        </div>
+      </div>
+
+      <div class="canvas-shell grid" id="canvasShell">
+        <svg id="svg" aria-label="ELK 레이아웃 결과">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#61749a"></path>
+            </marker>
+          </defs>
+          <g id="viewport"><g id="edgeLayer"></g><g id="nodeLayer"></g></g>
+        </svg>
+        <div class="empty" id="empty">왼쪽에서 예제를 선택하거나 레이아웃을 실행하세요.</div>
+        <div class="loading hidden" id="loading">ELK.js가 레이아웃을 계산하고 있습니다…</div>
+        <div class="error hidden" id="error"></div>
+      </div>
+
+      <div class="details">
+        <div class="card">
+          <div class="tabs">
+            <button class="tab active" data-tab="input">입력 JSON</button>
+            <button class="tab" data-tab="output">결과 JSON</button>
+            <button class="tab" data-tab="options">적용 옵션</button>
+          </div>
+          <textarea id="inputJson" spellcheck="false"></textarea>
+          <pre id="outputJson" class="hidden"></pre>
+          <pre id="optionJson" class="hidden"></pre>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn primary" id="applyJson">JSON 적용</button>
+            <button class="btn" id="formatJson">정렬</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="metrics">
+            <div class="metric"><b id="mNodes">0</b><span>노드</span></div>
+            <div class="metric"><b id="mEdges">0</b><span>엣지</span></div>
+            <div class="metric"><b id="mBends">0</b><span>꺾임점</span></div>
+          </div>
+          <div class="legend">
+            <span><i class="dot"></i>일반 노드</span>
+            <span><i class="dot" style="background:#f5f8ff;border:1px dashed #7b91c4"></i>복합 노드</span>
+            <span><i class="dot" style="background:#f18a00"></i>선택 항목</span>
+          </div>
+          <h3 style="font-size:13px;margin:15px 0 8px">이벤트 로그</h3>
+          <pre class="log" id="log"></pre>
+          <p style="font-size:11px;color:var(--muted);line-height:1.55;margin:10px 0 0">
+            마우스 휠: 확대/축소 · 빈 공간 드래그: 이동 · 노드 클릭: 강조 ·
+            <span class="kbd">Esc</span>: 선택 해제
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const elk = new ELK();
+  let sourceGraph = null, resultGraph = null, currentPreset = 'workflow';
+  let transform = {x:0,y:0,k:1}, dragging=false, dragStart=null, selectedId=null;
+
+  const presets = {
+    workflow: {
+      name:'업무 흐름도', algorithm:'layered',
+      graph:{
+        id:'root',
+        children:[
+          node('접수',105,52),node('검토',105,52),node('보완요청',110,52),
+          node('승인',105,52),node('반려',105,52),node('완료',105,52)
+        ],
+        edges:[
+          edge('e1','접수','검토','신청'),
+          edge('e2','검토','승인','적합'),
+          edge('e3','검토','보완요청','보완 필요'),
+          edge('e4','보완요청','검토','재접수'),
+          edge('e5','검토','반려','부적합'),
+          edge('e6','승인','완료','처리')
+        ]
+      }
+    },
+    ports: {
+      name:'고정 포트', algorithm:'layered',
+      graph:{
+        id:'root',
+        children:[
+          portNode('데이터 수집',130,90,['in','api','file']),
+          portNode('검증 엔진',140,100,['raw','ok','error']),
+          portNode('업무 시스템',140,90,['valid','result']),
+          portNode('오류 큐',120,70,['err'])
+        ],
+        edges:[
+          portEdge('p1','데이터 수집.api','검증 엔진.raw','API'),
+          portEdge('p2','데이터 수집.file','검증 엔진.raw','파일'),
+          portEdge('p3','검증 엔진.ok','업무 시스템.valid','정상'),
+          portEdge('p4','검증 엔진.error','오류 큐.err','오류'),
+          portEdge('p5','업무 시스템.result','데이터 수집.in','피드백')
+        ]
+      }
+    },
+    compound: {
+      name:'복합·계층', algorithm:'layered',
+      graph:{
+        id:'root',
+        children:[
+          {id:'회원조합',width:330,height:230,children:[
+            node('민원채널',105,55),node('조합업무',105,55),node('현장지원',105,55)
+          ]},
+          {id:'중앙회',width:360,height:260,children:[
+            node('통합접수',105,55),node('업무분석',105,55),node('지원부서',105,55),node('결과회신',105,55)
+          ]},
+          node('외부기관',115,58)
+        ],
+        edges:[
+          edge('c1','민원채널','조합업무','내부'),
+          edge('c2','조합업무','통합접수','요청'),
+          edge('c3','통합접수','업무분석','분류'),
+          edge('c4','업무분석','지원부서','배정'),
+          edge('c5','지원부서','결과회신','처리'),
+          edge('c6','결과회신','현장지원','지원'),
+          edge('c7','외부기관','업무분석','연계')
+        ]
+      }
+    },
+    labels: {
+      name:'라벨·자기루프', algorithm:'layered',
+      graph:{
+        id:'root',
+        children:[node('대기',100,54),node('처리중',110,54),node('완료',100,54),node('예외',100,54)],
+        edges:[
+          edge('l1','대기','처리중','작업 시작'),
+          edge('l2','처리중','처리중','재시도'),
+          edge('l3','처리중','완료','성공'),
+          edge('l4','처리중','예외','실패'),
+          edge('l5','예외','대기','복구')
+        ]
+      }
+    },
+    network: {
+      name:'네트워크', algorithm:'stress',
+      graph:{
+        id:'root',
+        children:['A','B','C','D','E','F','G','H','I','J'].map(x=>node('센터 '+x,86,46)),
+        edges:[
+          ['A','B'],['A','C'],['A','D'],['B','E'],['C','E'],['C','F'],['D','G'],
+          ['E','H'],['F','H'],['F','I'],['G','I'],['H','J'],['I','J'],['B','F']
+        ].map((x,i)=>edge('n'+i,'센터 '+x[0],'센터 '+x[1],''))
+      }
+    },
+    tree: {
+      name:'조직 트리', algorithm:'mrtree',
+      graph:{
+        id:'root',
+        children:['중앙회','본부 A','본부 B','본부 C','부서 A1','부서 A2','부서 B1','부서 B2','부서 C1','부서 C2'].map(x=>node(x,100,48)),
+        edges:[
+          ['중앙회','본부 A'],['중앙회','본부 B'],['중앙회','본부 C'],
+          ['본부 A','부서 A1'],['본부 A','부서 A2'],['본부 B','부서 B1'],
+          ['본부 B','부서 B2'],['본부 C','부서 C1'],['본부 C','부서 C2']
+        ].map((x,i)=>edge('t'+i,x[0],x[1],''))
+      }
+    },
+    radial: {
+      name:'방사형', algorithm:'radial',
+      graph:{
+        id:'root',
+        children:['허브','채널 1','채널 2','채널 3','채널 4','채널 5','채널 6','세부 1','세부 2','세부 3'].map(x=>node(x,88,44)),
+        edges:[
+          ['허브','채널 1'],['허브','채널 2'],['허브','채널 3'],['허브','채널 4'],['허브','채널 5'],['허브','채널 6'],
+          ['채널 1','세부 1'],['채널 3','세부 2'],['채널 5','세부 3']
+        ].map((x,i)=>edge('r'+i,x[0],x[1],''))
+      }
+    },
+    disconnected: {
+      name:'분리 구성요소', algorithm:'box',
+      graph:{
+        id:'root',
+        children:['A1','A2','A3','B1','B2','B3','C1','C2','D1'].map(x=>node(x,75,42)),
+        edges:[
+          ['A1','A2'],['A2','A3'],['B1','B2'],['B1','B3'],['C1','C2']
+        ].map((x,i)=>edge('d'+i,x[0],x[1],''))
+      }
+    }
+  };
+
+  function node(id,w=100,h=50){return {id,width:w,height:h,labels:[{text:id,width:Math.max(40,id.length*12),height:18}]};}
+  function edge(id,s,t,label=''){
+    const e={id,sources:[s],targets:[t]};
+    if(label)e.labels=[{text:label,width:Math.max(28,label.length*11),height:18}];
+    return e;
+  }
+  function portNode(id,w,h,ports){
+    const obj=node(id,w,h);
+    obj.layoutOptions={'elk.portConstraints':'FIXED_SIDE'};
+    obj.ports=ports.map((p,i)=>({
+      id:id+'.'+p,width:10,height:10,
+      layoutOptions:{'elk.port.side': i===0?'WEST':(i%2?'EAST':'SOUTH')},
+      labels:[{text:p,width:p.length*7+6,height:12}]
+    }));
+    return obj;
+  }
+  function portEdge(id,s,t,label){return edge(id,s,t,label);}
+
+  function deepClone(v){return JSON.parse(JSON.stringify(v));}
+  function log(msg){
+    const t=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+    $('#log').textContent=`[${t}] ${msg}\n`+$('#log').textContent;
+  }
+  function toast(msg){
+    const el=$('#toast'); el.textContent=msg; el.classList.remove('hidden');
+    clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.add('hidden'),1800);
+  }
+  function escapeXml(s=''){return String(s).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));}
+
+  function buildOptions(){
+    const algorithm=$('#algorithm').value;
+    const o={
+      'elk.algorithm':algorithm,
+      'elk.direction':$('#direction').value,
+      'elk.edgeRouting':$('#routing').value,
+      'elk.spacing.nodeNode':String(+$('#nodeSpace').value||45),
+      'elk.layered.spacing.nodeNodeBetweenLayers':String(+$('#layerSpace').value||70),
+      'elk.spacing.componentComponent':'70',
+      'elk.layered.crossingMinimization.strategy':$('#crossing').value,
+      'elk.layered.cycleBreaking.strategy':$('#cycle').value,
+      'elk.separateConnectedComponents':'true',
+      'elk.layered.compaction.connectedComponents':$('#compact').checked?'true':'false',
+      'elk.hierarchyHandling':$('#hierarchy').checked?'INCLUDE_CHILDREN':'SEPARATE_CHILDREN',
+      'elk.layered.mergeEdges':$('#mergeEdges').checked?'true':'false',
+      'elk.padding':'[top=32,left=32,bottom=32,right=32]'
+    };
+    $('#optionJson').textContent=JSON.stringify(o,null,2);
+    return o;
+  }
+
+  async function runLayout(autoFit=true){
+    hideMessages(); $('#loading').classList.remove('hidden');
+    try{
+      const parsed=JSON.parse($('#inputJson').value);
+      sourceGraph=deepClone(parsed);
+      sourceGraph.layoutOptions={...(sourceGraph.layoutOptions||{}),...buildOptions()};
+      const started=performance.now();
+      resultGraph=await elk.layout(sourceGraph);
+      const elapsed=performance.now()-started;
+      $('#outputJson').textContent=JSON.stringify(resultGraph,null,2);
+      render(resultGraph);
+      updateMetrics(resultGraph);
+      $('#statusAlgo').textContent='알고리즘: '+$('#algorithm').value;
+      $('#statusTime').textContent='실행: '+elapsed.toFixed(1)+'ms';
+      log(`레이아웃 완료 — ${$('#algorithm').value}, ${elapsed.toFixed(1)}ms`);
+      if(autoFit) requestAnimationFrame(fitView);
+    }catch(err){
+      $('#error').textContent='레이아웃 오류\n'+err.message;
+      $('#error').classList.remove('hidden');
+      log('오류 — '+err.message);
+    }finally{$('#loading').classList.add('hidden');}
+  }
+  function hideMessages(){$('#empty').classList.add('hidden');$('#error').classList.add('hidden');}
+
+  function render(graph){
+    $('#edgeLayer').innerHTML='';$('#nodeLayer').innerHTML='';
+    const nodeMap=new Map();
+    function walkNodes(g,ox=0,oy=0){
+      (g.children||[]).forEach(n=>{
+        const x=ox+(n.x||0),y=oy+(n.y||0);
+        nodeMap.set(n.id,{...n,absX:x,absY:y});
+        drawNode(n,x,y);
+        walkNodes(n,x,y);
+      });
+    }
+    walkNodes(graph,0,0);
+    function walkEdges(g,ox=0,oy=0){
+      (g.edges||[]).forEach(e=>drawEdge(e,ox,oy));
+      (g.children||[]).forEach(n=>walkEdges(n,ox+(n.x||0),oy+(n.y||0)));
+    }
+    walkEdges(graph,0,0);
+  }
+
+  function drawNode(n,x,y){
+    const compound=(n.children||[]).length>0;
+    const g=svgEl('g',{class:'node'+(compound?' compound':'')+(selectedId===n.id?' selected':''),'data-id':n.id,transform:`translate(${x},${y})`});
+    g.append(svgEl('rect',{x:0,y:0,width:n.width||100,height:n.height||50,rx:compound?12:8,ry:compound?12:8}));
+    const title=(n.labels&&n.labels[0]&&n.labels[0].text)||n.id;
+    const txt=svgEl('text',{x:compound?12:(n.width||100)/2,y:compound?20:(n.height||50)/2+4,'text-anchor':compound?'start':'middle'});
+    txt.textContent=title;g.append(txt);
+    if($('#showPorts').checked)(n.ports||[]).forEach(p=>{
+      const px=(p.x||0)+(p.width||10)/2,py=(p.y||0)+(p.height||10)/2;
+      g.append(svgEl('circle',{class:'port',cx:px,cy:py,r:5,title:p.id}));
+      if(p.labels&&p.labels[0]){
+        const pl=svgEl('text',{class:'port-label',x:px+7,y:py+3});pl.textContent=p.labels[0].text;g.append(pl);
+      }
+    });
+    g.addEventListener('click',ev=>{ev.stopPropagation();selectedId=n.id;highlightSelection();log('노드 선택 — '+n.id);});
+    $('#nodeLayer').append(g);
+  }
+  function drawEdge(e,ox,oy){
+    const sections=e.sections||[];
+    sections.forEach((s,idx)=>{
+      const pts=[s.startPoint,...(s.bendPoints||[]),s.endPoint];
+      let d=`M ${pts[0].x+ox} ${pts[0].y+oy}`;
+      for(let i=1;i<pts.length;i++) d+=` L ${pts[i].x+ox} ${pts[i].y+oy}`;
+      const p=svgEl('path',{class:'edge'+(selectedId===e.id?' highlight':''),'data-id':e.id,d,markerEnd:'url(#arrow)'});
+      p.addEventListener('click',ev=>{ev.stopPropagation();selectedId=e.id;highlightSelection();log('엣지 선택 — '+e.id);});
+      $('#edgeLayer').append(p);
+    });
+    if($('#showLabels').checked)(e.labels||[]).forEach(l=>{
+      if(l.x==null||l.y==null)return;
+      const g=svgEl('g',{class:'edge-label',transform:`translate(${l.x+ox},${l.y+oy})`});
+      g.append(svgEl('rect',{x:0,y:0,width:l.width||40,height:l.height||18,rx:4}));
+      const t=svgEl('text',{x:(l.width||40)/2,y:(l.height||18)/2+3,'text-anchor':'middle'});t.textContent=l.text||'';g.append(t);
+      $('#edgeLayer').append(g);
+    });
+  }
+  function svgEl(tag,attrs={}){
+    const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+    Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));return el;
+  }
+  function highlightSelection(){
+    $$('.node').forEach(x=>x.classList.toggle('selected',x.dataset.id===selectedId));
+    $$('.edge').forEach(x=>x.classList.toggle('highlight',x.dataset.id===selectedId));
+  }
+
+  function countGraph(g){
+    let nodes=0,edges=(g.edges||[]).length,bends=0;
+    (g.edges||[]).forEach(e=>(e.sections||[]).forEach(s=>bends+=(s.bendPoints||[]).length));
+    (g.children||[]).forEach(n=>{nodes++;const c=countGraph(n);nodes+=c.nodes;edges+=c.edges;bends+=c.bends;});
+    return {nodes,edges,bends};
+  }
+  function updateMetrics(g){
+    const c=countGraph(g);$('#mNodes').textContent=c.nodes;$('#mEdges').textContent=c.edges;$('#mBends').textContent=c.bends;
+  }
+
+  function setTransform(x=transform.x,y=transform.y,k=transform.k){
+    transform={x,y,k:Math.min(4,Math.max(.12,k))};
+    $('#viewport').setAttribute('transform',`translate(${transform.x},${transform.y}) scale(${transform.k})`);
+    $('#viewport').style.transition=$('#animate').checked?'transform .22s ease':'none';
+    $('#statusZoom').textContent='배율: '+Math.round(transform.k*100)+'%';
+  }
+  function fitView(){
+    if(!resultGraph)return;
+    const box=$('#canvasShell').getBoundingClientRect(), pad=45;
+    const w=resultGraph.width||500,h=resultGraph.height||400;
+    const k=Math.min((box.width-pad*2)/w,(box.height-pad*2)/h,1.5);
+    setTransform((box.width-w*k)/2,(box.height-h*k)/2,k);
+  }
+  function zoomAt(factor,cx,cy){
+    const old=transform.k,nk=Math.min(4,Math.max(.12,old*factor));
+    setTransform(cx-(cx-transform.x)*(nk/old),cy-(cy-transform.y)*(nk/old),nk);
+  }
+
+  function selectPreset(key){
+    currentPreset=key;
+    $$('.preset').forEach(x=>x.classList.toggle('active',x.dataset.key===key));
+    const p=presets[key];$('#algorithm').value=p.algorithm;
+    sourceGraph=deepClone(p.graph);$('#inputJson').value=JSON.stringify(sourceGraph,null,2);
+    log('예제 선택 — '+p.name);runLayout();
+  }
+  function randomGraph(){
+    const n=Math.min(300,Math.max(2,+$('#rndNodes').value||35));
+    const m=Math.min(800,Math.max(1,+$('#rndEdges').value||55));
+    const children=Array.from({length:n},(_,i)=>node('N'+(i+1),60+Math.floor(Math.random()*35),35+Math.floor(Math.random()*18)));
+    const pairs=new Set(),edges=[];
+    while(edges.length<m&&pairs.size<n*(n-1)){
+      let a=Math.floor(Math.random()*n),b=Math.floor(Math.random()*n);if(a===b)continue;
+      const key=a+'-'+b;if(pairs.has(key))continue;pairs.add(key);
+      edges.push(edge('E'+(edges.length+1),children[a].id,children[b].id,edges.length<10?'e'+(edges.length+1):''));
+    }
+    sourceGraph={id:'root',children,edges};$('#inputJson').value=JSON.stringify(sourceGraph,null,2);
+    currentPreset='';$$('.preset').forEach(x=>x.classList.remove('active'));log(`랜덤 그래프 생성 — 노드 ${n}, 엣지 ${edges.length}`);runLayout();
+  }
+
+  function download(name,text,type){
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  function exportSvg(){
+    const clone=$('#svg').cloneNode(true);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    clone.setAttribute('viewBox',`0 0 ${$('#canvasShell').clientWidth} ${$('#canvasShell').clientHeight}`);
+    const css=document.querySelector('style').textContent;
+    const style=svgEl('style');style.textContent=css;clone.insertBefore(style,clone.firstChild);
+    download('elkjs-layout.svg',new XMLSerializer().serializeToString(clone),'image/svg+xml');
+    log('SVG 파일 저장');toast('SVG를 저장했습니다.');
+  }
+
+  function init(){
+    const grid=$('#presetGrid');
+    Object.entries(presets).forEach(([key,p])=>{
+      const b=document.createElement('button');b.className='preset';b.dataset.key=key;b.textContent=p.name;b.onclick=()=>selectPreset(key);grid.append(b);
+    });
+    bind();selectPreset('workflow');
+  }
+  function bind(){
+    $('#btnLayout').onclick=()=>runLayout();
+    $('#applyJson').onclick=()=>runLayout();
+    $('#formatJson').onclick=()=>{try{$('#inputJson').value=JSON.stringify(JSON.parse($('#inputJson').value),null,2);toast('JSON을 정렬했습니다.');}catch(e){toast('JSON 형식 오류');}};
+    $('#btnRandom').onclick=randomGraph;
+    $('#fit').onclick=fitView;$('#actual').onclick=()=>setTransform(30,30,1);
+    $('#zoomIn').onclick=()=>zoomAt(1.25,$('#canvasShell').clientWidth/2,$('#canvasShell').clientHeight/2);
+    $('#zoomOut').onclick=()=>zoomAt(.8,$('#canvasShell').clientWidth/2,$('#canvasShell').clientHeight/2);
+    $('#exportSvg').onclick=exportSvg;
+    $('#exportJson').onclick=()=>resultGraph&&download('elkjs-result.json',JSON.stringify(resultGraph,null,2),'application/json');
+    $('#copyJson').onclick=async()=>{if(!resultGraph)return;await navigator.clipboard.writeText(JSON.stringify(resultGraph,null,2));toast('결과 JSON을 복사했습니다.');};
+    $('#btnDocs').onclick=()=>window.open('https://eclipse.dev/elk/reference/options.html','_blank','noopener');
+    $('#btnReset').onclick=()=>selectPreset('workflow');
+    $('#showGrid').onchange=e=>$('#canvasShell').classList.toggle('grid',e.target.checked);
+    $('#showPorts').onchange=()=>resultGraph&&render(resultGraph);
+    $('#showLabels').onchange=()=>resultGraph&&render(resultGraph);
+    $$('.tab').forEach(t=>t.onclick=()=>{
+      $$('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+      ['input','output','option'].forEach(x=>$('#'+x+'Json').classList.toggle('hidden',x!==t.dataset.tab));
+      $('#applyJson').parentElement.classList.toggle('hidden',t.dataset.tab!=='input');
+    });
+    $('#svg').addEventListener('wheel',e=>{e.preventDefault();const r=$('#svg').getBoundingClientRect();zoomAt(e.deltaY<0?1.12:.89,e.clientX-r.left,e.clientY-r.top);},{passive:false});
+    $('#svg').addEventListener('pointerdown',e=>{if(e.target.closest('.node,.edge'))return;dragging=true;dragStart={x:e.clientX-transform.x,y:e.clientY-transform.y};$('#svg').setPointerCapture(e.pointerId);selectedId=null;highlightSelection();});
+    $('#svg').addEventListener('pointermove',e=>{if(dragging)setTransform(e.clientX-dragStart.x,e.clientY-dragStart.y,transform.k);});
+    $('#svg').addEventListener('pointerup',()=>dragging=false);
+    window.addEventListener('keydown',e=>{if(e.key==='Escape'){selectedId=null;highlightSelection();}});
+    window.addEventListener('resize',()=>resultGraph&&fitView());
+    ['algorithm','direction','routing','nodeSpace','layerSpace','crossing','cycle','compact','hierarchy','mergeEdges'].forEach(id=>$('#'+id).addEventListener('change',buildOptions));
+  }
+  init();
+})();
+</script>
+</body>
+</html>
