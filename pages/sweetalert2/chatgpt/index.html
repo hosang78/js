@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>SweetAlert2 종합 기능 실습실</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.css" />
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: rgba(255,255,255,.88);
+      --surface-solid: #ffffff;
+      --surface-2: #eef2f8;
+      --text: #162033;
+      --muted: #687386;
+      --line: #dfe5ef;
+      --primary: #6858e8;
+      --primary-2: #8d7cf6;
+      --primary-soft: #eeebff;
+      --success: #1b9c6a;
+      --danger: #df4b5e;
+      --warning: #d99420;
+      --shadow: 0 18px 50px rgba(35,45,75,.10);
+      --radius: 20px;
+      --header-h: 74px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(104,88,232,.13), transparent 30%),
+        radial-gradient(circle at 92% 12%, rgba(35,180,170,.11), transparent 24%),
+        var(--bg);
+      transition: background .25s ease, color .25s ease;
+    }
+
+    body.dark {
+      --bg: #0d1220;
+      --surface: rgba(20,28,45,.88);
+      --surface-solid: #151d2e;
+      --surface-2: #1d273b;
+      --text: #eef3ff;
+      --muted: #9eabc0;
+      --line: #2b3851;
+      --primary: #9b8cff;
+      --primary-2: #b8adff;
+      --primary-soft: #2a2551;
+      --shadow: 0 18px 55px rgba(0,0,0,.28);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      min-height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px clamp(16px, 3vw, 38px);
+      background: color-mix(in srgb, var(--surface-solid) 84%, transparent);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      background: linear-gradient(145deg, #8877ff, #5543d5);
+      box-shadow: 0 10px 25px rgba(104,88,232,.30);
+      flex: 0 0 auto;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(17px, 2vw, 22px);
+      letter-spacing: -.04em;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .icon-btn, .ghost-btn, .primary-btn, .chip, .run-btn, .code-btn {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-solid);
+      color: var(--text);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+
+    .icon-btn:hover, .ghost-btn:hover, .chip:hover, .code-btn:hover {
+      border-color: color-mix(in srgb, var(--primary) 55%, var(--line));
+      transform: translateY(-1px);
+    }
+
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .ghost-btn, .primary-btn {
+      min-height: 42px;
+      padding: 0 14px;
+      font-weight: 750;
+    }
+
+    .primary-btn, .run-btn {
+      color: white;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--primary-2), var(--primary));
+      box-shadow: 0 8px 20px rgba(104,88,232,.22);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 22px;
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 24px clamp(14px, 2.6vw, 38px) 70px;
+    }
+
+    .main-column { min-width: 0; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: clamp(24px, 4vw, 48px);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--primary-soft) 78%, var(--surface-solid)), var(--surface-solid));
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 330px;
+      height: 330px;
+      border-radius: 50%;
+      right: -150px;
+      top: -170px;
+      background: radial-gradient(circle, rgba(255,255,255,.85), rgba(255,255,255,0));
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--primary-soft) 76%, transparent);
+      color: var(--primary);
+      font-weight: 850;
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+
+    .hero h2 {
+      max-width: 850px;
+      margin: 18px 0 12px;
+      font-size: clamp(31px, 5vw, 58px);
+      line-height: 1.06;
+      letter-spacing: -.065em;
+    }
+
+    .hero .lead {
+      max-width: 830px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(14px, 1.7vw, 18px);
+      line-height: 1.75;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(115px, 1fr));
+      gap: 10px;
+      margin-top: 27px;
+      max-width: 820px;
+    }
+
+    .stat {
+      padding: 15px 16px;
+      border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--surface-solid) 72%, transparent);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 21px;
+      letter-spacing: -.03em;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      position: sticky;
+      top: calc(var(--header-h) + 10px);
+      z-index: 30;
+      margin: 18px 0;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--surface-solid) 86%, transparent);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 12px 30px rgba(35,45,75,.07);
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .search-box::before {
+      content: "⌕";
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-52%);
+      color: var(--muted);
+      font-size: 20px;
+      pointer-events: none;
+    }
+
+    .search-box input {
+      width: 100%;
+      height: 45px;
+      padding: 0 14px 0 41px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      color: var(--text);
+      background: var(--surface-solid);
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent);
+    }
+
+    .chips {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding-top: 10px;
+      scrollbar-width: thin;
+    }
+
+    .chip {
+      white-space: nowrap;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .chip.active {
+      color: white;
+      border-color: transparent;
+      background: var(--primary);
+    }
+
+    .result-count {
+      padding: 0 5px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 15px;
+      margin: 32px 3px 14px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: -.04em;
+    }
+
+    .section-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 13px;
+    }
+
+    .demo-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 205px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 9px 24px rgba(35,45,75,.045);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .demo-card:hover {
+      transform: translateY(-3px);
+      border-color: color-mix(in srgb, var(--primary) 35%, var(--line));
+      box-shadow: 0 15px 34px rgba(35,45,75,.09);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .demo-no {
+      display: inline-flex;
+      min-width: 30px;
+      height: 30px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border-radius: 10px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-weight: 900;
+      font-size: 11px;
+    }
+
+    .card-badge {
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .demo-card h4 {
+      margin: 15px 0 7px;
+      font-size: 16px;
+      letter-spacing: -.035em;
+    }
+
+    .demo-card p {
+      flex: 1;
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 13px;
+    }
+
+    .tag {
+      padding: 4px 7px;
+      border-radius: 7px;
+      color: var(--muted);
+      background: var(--surface-2);
+      font-size: 9px;
+      font-weight: 760;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .run-btn, .code-btn {
+      height: 38px;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .code-btn {
+      width: 47px;
+      background: var(--surface-solid);
+    }
+
+    .side-column {
+      position: relative;
+    }
+
+    .side-sticky {
+      position: sticky;
+      top: calc(var(--header-h) + 18px);
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 12px 30px rgba(35,45,75,.06);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 16px 17px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-head h3 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .panel-body { padding: 14px 16px 17px; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--warning);
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--warning) 13%, transparent);
+    }
+
+    .status-dot.ok {
+      background: var(--success);
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 13%, transparent);
+    }
+
+    .status-dot.error {
+      background: var(--danger);
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 13%, transparent);
+    }
+
+    .status-meta {
+      display: grid;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .meta-line strong {
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .logs {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .log-empty {
+      padding: 22px 5px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .log-item {
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface-solid);
+    }
+
+    .log-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .log-top strong {
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-top time {
+      color: var(--muted);
+      font-size: 9px;
+      white-space: nowrap;
+    }
+
+    .log-value {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 9px;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+
+    .target-demo {
+      position: relative;
+      min-height: 175px;
+      margin-top: 8px;
+      overflow: hidden;
+      border: 1px dashed color-mix(in srgb, var(--primary) 45%, var(--line));
+      border-radius: 13px;
+      background:
+        linear-gradient(45deg, transparent 48%, color-mix(in srgb, var(--line) 45%, transparent) 49%, color-mix(in srgb, var(--line) 45%, transparent) 51%, transparent 52%);
+      background-size: 18px 18px;
+    }
+
+    .target-demo .placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    #swal-target .swal2-container {
+      position: absolute !important;
+      inset: 0 !important;
+    }
+
+    #swal-target .swal2-popup {
+      font-size: .58rem !important;
+      max-width: calc(100% - 16px) !important;
+      padding: .8em !important;
+    }
+
+    #swal-target .swal2-title { font-size: 1.6em !important; }
+    #swal-target .swal2-actions { margin-top: .7em !important; }
+
+    .notice {
+      margin-top: 14px;
+      padding: 12px 13px;
+      border-radius: 12px;
+      color: var(--muted);
+      background: var(--surface-2);
+      font-size: 10px;
+      line-height: 1.6;
+    }
+
+    .footer {
+      max-width: 1680px;
+      margin: 0 auto;
+      padding: 0 clamp(14px, 2.6vw, 38px) 40px;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      padding: 50px 20px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      color: var(--muted);
+      text-align: center;
+      background: var(--surface);
+    }
+
+    .swal-code-popup {
+      width: min(900px, 94vw) !important;
+    }
+
+    .code-wrap {
+      position: relative;
+      text-align: left;
+    }
+
+    .code-wrap pre {
+      max-height: 55vh;
+      margin: 0;
+      padding: 17px;
+      overflow: auto;
+      border-radius: 13px;
+      color: #dbe7ff;
+      background: #111827;
+      font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .copy-code {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      padding: 7px 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      color: white;
+      background: rgba(255,255,255,.1);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .swal-business-popup {
+      border-radius: 24px !important;
+      border: 1px solid rgba(104,88,232,.20) !important;
+      box-shadow: 0 30px 90px rgba(35,31,75,.25) !important;
+    }
+
+    .swal-business-title {
+      color: #30266f !important;
+      letter-spacing: -.04em !important;
+    }
+
+    .swal-business-confirm {
+      padding: 12px 23px !important;
+      border-radius: 12px !important;
+      background: linear-gradient(135deg, #8a7afa, #5e4bd5) !important;
+      box-shadow: 0 8px 19px rgba(94,75,213,.25) !important;
+    }
+
+    .swal-business-cancel {
+      padding: 12px 20px !important;
+      border-radius: 12px !important;
+      background: #eef0f6 !important;
+      color: #495267 !important;
+    }
+
+    .swal2-popup.swal-dark-custom {
+      color: #eef3ff !important;
+      background: #151d2e !important;
+    }
+
+    .swal2-popup.swal-dark-custom .swal2-title,
+    .swal2-popup.swal-dark-custom .swal2-html-container,
+    .swal2-popup.swal-dark-custom .swal2-footer {
+      color: #eef3ff !important;
+    }
+
+    .swal2-popup.swal-dark-custom .swal2-input,
+    .swal2-popup.swal-dark-custom .swal2-textarea,
+    .swal2-popup.swal-dark-custom .swal2-select {
+      color: #eef3ff !important;
+      background: #0f1726 !important;
+      border-color: #33415d !important;
+    }
+
+    @keyframes popInCustom {
+      0% { opacity: 0; transform: translateY(22px) scale(.92) rotate(-1deg); }
+      100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+    }
+
+    @keyframes popOutCustom {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: translateY(-18px) scale(.92); }
+    }
+
+    .swal-pop-in { animation: popInCustom .35s cubic-bezier(.2,.9,.25,1.2) both !important; }
+    .swal-pop-out { animation: popOutCustom .24s ease both !important; }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+      .side-sticky { position: static; grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .demo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 720px) {
+      :root { --header-h: 67px; }
+      .app-header { padding: 10px 13px; }
+      .brand p { display: none; }
+      .brand-mark { width: 42px; height: 42px; border-radius: 13px; }
+      .header-actions .ghost-btn { display: none; }
+      .layout { padding: 14px 10px 55px; }
+      .hero { padding: 25px 20px; border-radius: 22px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { top: calc(var(--header-h) + 6px); }
+      .search-row { align-items: stretch; }
+      .result-count { display: none; }
+      .demo-grid { grid-template-columns: 1fr; }
+      .side-sticky { grid-template-columns: 1fr; }
+      .demo-card { min-height: 190px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">S2</div>
+      <div>
+        <h1>SweetAlert2 종합 기능 실습실</h1>
+        <p>클릭으로 확인하는 모달·토스트·입력·비동기·고급 API 샘플</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="ghost-btn" id="randomBtn" type="button">무작위 데모</button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="화면 테마 전환" title="화면 테마 전환">◐</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main class="main-column">
+      <section class="hero">
+        <span class="eyebrow">SweetAlert2 v11.26.25 · Interactive Playground</span>
+        <h2>팝업 하나로 구현하는<br />사용자 인터랙션의 거의 모든 것</h2>
+        <p class="lead">
+          기본 알림부터 확인·거절 분기, 17종 입력, 검증, 토스트, 타이머 제어, 비동기 로딩,
+          단계형 폼, 테마, 드래그, 특정 영역 렌더링, 생명주기 훅과 정적 API까지 직접 실행할 수 있다.
+        </p>
+        <div class="stats">
+          <div class="stat"><strong id="demoCount">0</strong><span>실행형 데모</span></div>
+          <div class="stat"><strong id="categoryCount">0</strong><span>기능 분류</span></div>
+          <div class="stat"><strong>17</strong><span>입력 타입</span></div>
+          <div class="stat"><strong>0</strong><span>외부 의존성</span></div>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="데모 검색 및 필터">
+        <div class="search-row">
+          <div class="search-box">
+            <input id="searchInput" type="search" placeholder="제목, 설명, 옵션명 검색 (예: preConfirm, toast, timer)" autocomplete="off" />
+          </div>
+          <span class="result-count" id="resultCount"></span>
+        </div>
+        <div class="chips" id="categoryChips"></div>
+      </section>
+
+      <div id="demoSections"></div>
+    </main>
+
+    <aside class="side-column">
+      <div class="side-sticky">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>라이브러리 상태</h3>
+            <span id="versionBadge" class="card-badge">확인 중</span>
+          </div>
+          <div class="panel-body">
+            <div class="status-row">
+              <span class="status-dot" id="statusDot"></span>
+              <strong id="statusText">CDN 연결 확인 중</strong>
+            </div>
+            <div class="status-meta">
+              <div class="meta-line"><span>배포 방식</span><strong>jsDelivr CDN</strong></div>
+              <div class="meta-line"><span>고정 버전</span><strong>11.26.25</strong></div>
+              <div class="meta-line"><span>라이선스</span><strong>MIT</strong></div>
+              <div class="meta-line"><span>접근성</span><strong>WAI-ARIA</strong></div>
+            </div>
+            <div class="notice">
+              인터넷이 차단된 환경에서는 CDN 파일을 로컬로 내려받아
+              CSS·JS 경로만 교체하면 동일하게 사용할 수 있다.
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>최근 실행 기록</h3>
+            <button class="code-btn" id="clearLogBtn" type="button" title="기록 지우기">×</button>
+          </div>
+          <div class="panel-body">
+            <div class="logs" id="logs">
+              <div class="log-empty">아직 실행한 데모가 없다.<br />카드의 실행 버튼을 눌러 결과를 확인해보자.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h3>target 렌더링 영역</h3></div>
+          <div class="panel-body">
+            <div class="target-demo" id="swal-target">
+              <span class="placeholder">특정 영역 렌더링 데모가 이곳에 표시됨</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="footer">
+    SweetAlert2 공식 API를 학습하기 위한 단일 HTML 데모 · 사용자 입력을 html 옵션에 넣을 때는 반드시 별도 이스케이프·정화 필요
+  </footer>
+
+  <template id="swal-template-demo">
+    <swal-title>선언형 템플릿 팝업</swal-title>
+    <swal-icon type="info" color="#6858e8"></swal-icon>
+    <swal-html>
+      <div style="line-height:1.7">
+        HTML의 <code>&lt;template&gt;</code> 요소 안에서 제목·본문·아이콘·버튼을 정의했다.
+      </div>
+    </swal-html>
+    <swal-button type="confirm" color="#6858e8">템플릿 확인</swal-button>
+    <swal-button type="cancel">닫기</swal-button>
+    <swal-footer>template: '#swal-template-demo'</swal-footer>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.min.js"
+          onerror="window.__swalFailed = true"></script>
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      const svgImage = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="260" viewBox="0 0 600 260">' +
+        '<defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#7767eb"/><stop offset="1" stop-color="#2cc4b6"/></linearGradient></defs>' +
+        '<rect width="600" height="260" rx="34" fill="url(#g)"/>' +
+        '<circle cx="490" cy="65" r="82" fill="rgba(255,255,255,.14)"/>' +
+        '<path d="M64 172c65-74 118-94 181-48 70 51 113 35 168-28 37-43 77-36 123 4v95H64z" fill="rgba(255,255,255,.2)"/>' +
+        '<text x="52" y="92" fill="white" font-family="Arial,sans-serif" font-size="35" font-weight="700">SweetAlert2</text>' +
+        '<text x="54" y="132" fill="rgba(255,255,255,.82)" font-family="Arial,sans-serif" font-size="18">Custom imageUrl demo</text>' +
+        '</svg>'
+      );
+
+      const categoryInfo = {
+        "기본·아이콘": "제목, 본문, 내장 아이콘, HTML, 이미지와 푸터",
+        "확인·버튼": "확인·거절·취소 분기, 버튼 구성, 닫기 제한",
+        "위치·토스트": "위치, 토스트, 진행 표시줄, grow와 backdrop",
+        "타이머·제어": "자동 닫기, 일시정지, 업데이트, 정적 제어 API",
+        "입력·검증": "텍스트부터 파일까지 입력 타입과 검증",
+        "비동기·흐름": "로딩, preConfirm, 단계형 폼과 진행 단계",
+        "디자인·고급": "테마, 스타일, 드래그, target, 훅과 고급 옵션"
+      };
+
+      const demos = [
+        {
+          id: "basic", category: "기본·아이콘", title: "가장 기본적인 알림",
+          desc: "title과 text만 지정하는 최소 구성. 일반 alert()를 대체하는 출발점이다.",
+          tags: ["title", "text", "Swal.fire"],
+          code: `Swal.fire({
+  title: '기본 알림',
+  text: '가장 단순한 SweetAlert2 팝업입니다.'
+})`
+        },
+        {
+          id: "shorthand", category: "기본·아이콘", title: "단축 인자 문법",
+          desc: "객체 대신 제목·본문·아이콘을 순서대로 전달하는 간단한 호출 방식이다.",
+          tags: ["shorthand", "info"],
+          code: `Swal.fire(
+  '단축 문법',
+  '제목, 본문, 아이콘을 순서대로 전달합니다.',
+  'info'
+)`
+        },
+        {
+          id: "success", category: "기본·아이콘", title: "성공 아이콘",
+          desc: "작업 저장·등록·전송 완료 등 긍정적인 결과 안내에 적합하다.",
+          tags: ["icon: success", "iconColor"],
+          code: `Swal.fire({
+  icon: 'success',
+  title: '저장 완료',
+  text: '입력한 내용이 정상적으로 저장되었습니다.'
+})`
+        },
+        {
+          id: "error", category: "기본·아이콘", title: "오류 아이콘",
+          desc: "처리 실패, 유효하지 않은 요청, 서버 오류 등의 경고 표현이다.",
+          tags: ["icon: error"],
+          code: `Swal.fire({
+  icon: 'error',
+  title: '처리 실패',
+  text: '요청 처리 중 오류가 발생했습니다.'
+})`
+        },
+        {
+          id: "warning", category: "기본·아이콘", title: "경고 아이콘",
+          desc: "주의가 필요하지만 아직 확정되지 않은 작업에 사용하는 경고 표현이다.",
+          tags: ["icon: warning"],
+          code: `Swal.fire({
+  icon: 'warning',
+  title: '주의 필요',
+  text: '이 작업은 기존 데이터에 영향을 줄 수 있습니다.'
+})`
+        },
+        {
+          id: "question", category: "기본·아이콘", title: "질문 아이콘",
+          desc: "사용자의 판단이나 선택이 필요한 안내에 사용하는 질문 표현이다.",
+          tags: ["icon: question"],
+          code: `Swal.fire({
+  icon: 'question',
+  title: '계속할까요?',
+  text: '다음 단계로 이동하시겠습니까?'
+})`
+        },
+        {
+          id: "html", category: "기본·아이콘", title: "커스텀 HTML 본문",
+          desc: "표, 강조 문구, 배지, 링크 등 복합 콘텐츠를 html 속성으로 구성한다.",
+          tags: ["html", "XSS 주의"],
+          code: `Swal.fire({
+  title: '업무 처리 요약',
+  html: '<b>3건</b> 완료 · <mark>1건</mark> 확인 필요',
+  icon: 'info'
+})`
+        },
+        {
+          id: "footer", category: "기본·아이콘", title: "푸터와 링크",
+          desc: "본문 아래에 보조 설명, 정책 링크, 문의 경로 등을 별도로 표시한다.",
+          tags: ["footer", "link"],
+          code: `Swal.fire({
+  icon: 'info',
+  title: '개인정보 처리 안내',
+  text: '입력 정보는 처리 목적에만 사용됩니다.',
+  footer: '<a href="#">자세한 정책 보기</a>'
+})`
+        },
+        {
+          id: "image", category: "기본·아이콘", title: "커스텀 이미지",
+          desc: "imageUrl, imageWidth, imageHeight, imageAlt로 배너·상품·안내 이미지를 넣는다.",
+          tags: ["imageUrl", "imageAlt"],
+          code: `Swal.fire({
+  title: '커스텀 이미지',
+  imageUrl: 'data:image/svg+xml,...',
+  imageWidth: 520,
+  imageHeight: 225,
+  imageAlt: 'SweetAlert2 예시 배너'
+})`
+        },
+        {
+          id: "icon-html", category: "기본·아이콘", title: "아이콘 HTML 교체",
+          desc: "기본 아이콘의 내부 콘텐츠를 iconHtml로 교체해 숫자·문자·기호를 표현한다.",
+          tags: ["iconHtml", "iconColor"],
+          code: `Swal.fire({
+  icon: 'info',
+  iconHtml: '7',
+  iconColor: '#6858e8',
+  title: '7개의 새 알림'
+})`
+        },
+
+        {
+          id: "confirm", category: "확인·버튼", title: "삭제 확인 분기",
+          desc: "확인 결과의 isConfirmed 값을 검사해 실제 처리 여부를 분기한다.",
+          tags: ["showCancelButton", "isConfirmed"],
+          code: `const result = await Swal.fire({
+  icon: 'warning',
+  title: '정말 삭제할까요?',
+  text: '삭제한 데이터는 복구할 수 없습니다.',
+  showCancelButton: true,
+  confirmButtonText: '삭제',
+  cancelButtonText: '취소'
+})
+
+if (result.isConfirmed) {
+  Swal.fire('삭제 완료', '', 'success')
+}`
+        },
+        {
+          id: "three-way", category: "확인·버튼", title: "확인·거절·취소 3분기",
+          desc: "showDenyButton과 showCancelButton을 함께 사용해 세 가지 선택지를 제공한다.",
+          tags: ["showDenyButton", "isDenied"],
+          code: `const result = await Swal.fire({
+  title: '변경 내용을 저장할까요?',
+  showDenyButton: true,
+  showCancelButton: true,
+  confirmButtonText: '저장',
+  denyButtonText: '저장 안 함',
+  cancelButtonText: '계속 편집'
+})`
+        },
+        {
+          id: "reverse-focus", category: "확인·버튼", title: "버튼 순서·초점 제어",
+          desc: "reverseButtons로 순서를 바꾸고 focusCancel로 취소 버튼에 초기 초점을 둔다.",
+          tags: ["reverseButtons", "focusCancel"],
+          code: `Swal.fire({
+  icon: 'warning',
+  title: '위험한 작업',
+  showCancelButton: true,
+  reverseButtons: true,
+  focusCancel: true
+})`
+        },
+        {
+          id: "close-button", category: "확인·버튼", title: "닫기 버튼과 ARIA",
+          desc: "우측 상단 닫기 버튼을 표시하고 보조기기용 aria-label을 지정한다.",
+          tags: ["showCloseButton", "closeButtonAriaLabel"],
+          code: `Swal.fire({
+  title: '닫기 버튼',
+  showCloseButton: true,
+  closeButtonAriaLabel: '안내창 닫기',
+  showConfirmButton: false
+})`
+        },
+        {
+          id: "locked", category: "확인·버튼", title: "외부 클릭·ESC 차단",
+          desc: "중요 동의나 필수 확인 절차에서 외부 클릭과 Escape 키로 닫히지 않게 한다.",
+          tags: ["allowOutsideClick", "allowEscapeKey"],
+          code: `Swal.fire({
+  title: '필수 확인',
+  text: '확인 버튼을 눌러야 닫힙니다.',
+  allowOutsideClick: false,
+  allowEscapeKey: false
+})`
+        },
+        {
+          id: "no-confirm", category: "확인·버튼", title: "확인 버튼 없는 안내",
+          desc: "showConfirmButton을 끄고 닫기 버튼 또는 타이머만 사용하는 공지형 팝업이다.",
+          tags: ["showConfirmButton: false"],
+          code: `Swal.fire({
+  toast: true,
+  position: 'bottom',
+  text: '잠시 후 자동으로 닫힙니다.',
+  showConfirmButton: false,
+  timer: 2500
+})`
+        },
+        {
+          id: "button-colors", category: "확인·버튼", title: "버튼 문구·색상",
+          desc: "확인·거절·취소 버튼의 텍스트와 배경색을 개별 지정한다.",
+          tags: ["confirmButtonColor", "denyButtonColor"],
+          code: `Swal.fire({
+  title: '처리 방법 선택',
+  showDenyButton: true,
+  showCancelButton: true,
+  confirmButtonText: '승인',
+  denyButtonText: '반려',
+  cancelButtonText: '보류',
+  confirmButtonColor: '#1b9c6a',
+  denyButtonColor: '#df4b5e'
+})`
+        },
+        {
+          id: "return-input-deny", category: "확인·버튼", title: "거절 시 입력값 반환",
+          desc: "returnInputValueOnDeny를 사용해 거절 버튼을 눌러도 입력 내용을 결과에 남긴다.",
+          tags: ["preDeny", "returnInputValueOnDeny"],
+          code: `Swal.fire({
+  input: 'text',
+  showDenyButton: true,
+  confirmButtonText: '승인',
+  denyButtonText: '의견과 함께 반려',
+  returnInputValueOnDeny: true,
+  preDeny: value => value || false
+})`
+        },
+
+        {
+          id: "position-grid", category: "위치·토스트", title: "9개 위치 순회",
+          desc: "top-start부터 bottom-end까지 대표 위치를 짧은 토스트로 순차 표시한다.",
+          tags: ["position", "toast"],
+          code: `for (const position of [
+  'top-start', 'top', 'top-end',
+  'center-start', 'center', 'center-end',
+  'bottom-start', 'bottom', 'bottom-end'
+]) {
+  await Swal.fire({ toast: true, position, timer: 450 })
+}`
+        },
+        {
+          id: "toast", category: "위치·토스트", title: "기본 토스트",
+          desc: "화면을 막지 않는 작은 알림. 저장·복사·동기화 결과에 자주 사용한다.",
+          tags: ["toast", "top-end"],
+          code: `Swal.fire({
+  toast: true,
+  position: 'top-end',
+  icon: 'success',
+  title: '저장되었습니다.',
+  showConfirmButton: false,
+  timer: 2500
+})`
+        },
+        {
+          id: "toast-mixin", category: "위치·토스트", title: "토스트 Mixin",
+          desc: "Swal.mixin으로 공통 옵션을 재사용해 여러 곳에서 일관된 토스트를 만든다.",
+          tags: ["Swal.mixin", "timerProgressBar"],
+          code: `const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  timer: 2500,
+  timerProgressBar: true,
+  showConfirmButton: false
+})
+
+Toast.fire({ icon: 'info', title: '동기화 중입니다.' })`
+        },
+        {
+          id: "toast-hover", category: "위치·토스트", title: "마우스 오버 시 타이머 정지",
+          desc: "didOpen에서 mouseenter·mouseleave 이벤트를 연결해 읽는 동안 자동 닫기를 멈춘다.",
+          tags: ["stopTimer", "resumeTimer", "didOpen"],
+          code: `Swal.fire({
+  toast: true,
+  timer: 4000,
+  timerProgressBar: true,
+  didOpen: popup => {
+    popup.addEventListener('mouseenter', Swal.stopTimer)
+    popup.addEventListener('mouseleave', Swal.resumeTimer)
+  }
+})`
+        },
+        {
+          id: "custom-backdrop", category: "위치·토스트", title: "커스텀 Backdrop",
+          desc: "backdrop에 CSS 배경값을 전달해 팝업 뒤 오버레이를 직접 디자인한다.",
+          tags: ["backdrop", "rgba"],
+          code: `Swal.fire({
+  title: '강조된 안내',
+  backdrop: 'rgba(39, 26, 92, .72)',
+  icon: 'info'
+})`
+        },
+        {
+          id: "no-backdrop", category: "위치·토스트", title: "Backdrop 없는 모달",
+          desc: "backdrop을 끄면 화면을 가리지 않는 비차단형 안내를 만들 수 있다.",
+          tags: ["backdrop: false", "position"],
+          code: `Swal.fire({
+  position: 'bottom-end',
+  backdrop: false,
+  title: '비차단 안내',
+  timer: 2500
+})`
+        },
+        {
+          id: "grow-fullscreen", category: "위치·토스트", title: "전체 화면 Grow",
+          desc: "grow: 'fullscreen'으로 전체 화면을 활용하는 집중 안내나 단계 화면을 만든다.",
+          tags: ["grow: fullscreen"],
+          code: `Swal.fire({
+  grow: 'fullscreen',
+  title: '전체 화면 팝업',
+  text: 'grow 옵션으로 화면을 가득 채웠습니다.'
+})`
+        },
+
+        {
+          id: "timer", category: "타이머·제어", title: "자동 닫기와 진행 표시줄",
+          desc: "timer와 timerProgressBar로 남은 시간을 시각적으로 보여준다.",
+          tags: ["timer", "timerProgressBar"],
+          code: `Swal.fire({
+  title: '3초 후 자동 종료',
+  timer: 3000,
+  timerProgressBar: true,
+  showConfirmButton: false
+})`
+        },
+        {
+          id: "countdown", category: "타이머·제어", title: "실시간 남은 시간 표시",
+          desc: "Swal.getTimerLeft()를 주기적으로 읽어 본문을 실시간 갱신한다.",
+          tags: ["getTimerLeft", "didOpen", "willClose"],
+          code: `let interval
+Swal.fire({
+  timer: 5000,
+  didOpen: () => {
+    interval = setInterval(() => {
+      Swal.getHtmlContainer().textContent =
+        Math.ceil(Swal.getTimerLeft() / 1000) + '초 남음'
+    }, 100)
+  },
+  willClose: () => clearInterval(interval)
+})`
+        },
+        {
+          id: "timer-controls", category: "타이머·제어", title: "타이머 정지·재개·연장",
+          desc: "stopTimer, resumeTimer, increaseTimer를 커스텀 버튼과 연결한다.",
+          tags: ["stopTimer", "resumeTimer", "increaseTimer"],
+          code: `Swal.fire({
+  timer: 7000,
+  html: '<button id="pause">정지</button> ...',
+  didOpen: () => {
+    pause.onclick = Swal.stopTimer
+    resume.onclick = Swal.resumeTimer
+    add.onclick = () => Swal.increaseTimer(3000)
+  }
+})`
+        },
+        {
+          id: "program-close", category: "타이머·제어", title: "코드로 닫기",
+          desc: "Swal.close()를 호출해 사용자의 클릭 없이 현재 팝업을 종료한다.",
+          tags: ["Swal.close"],
+          code: `Swal.fire({
+  title: '코드로 닫기',
+  text: '1.8초 뒤 Swal.close()가 호출됩니다.',
+  showConfirmButton: false
+})
+
+setTimeout(() => Swal.close(), 1800)`
+        },
+        {
+          id: "program-confirm", category: "타이머·제어", title: "코드로 확인 클릭",
+          desc: "Swal.clickConfirm()으로 확인 버튼 클릭을 프로그래밍 방식으로 실행한다.",
+          tags: ["clickConfirm"],
+          code: `Swal.fire({
+  title: '자동 확인',
+  preConfirm: () => '자동 처리 완료',
+  didOpen: () => setTimeout(Swal.clickConfirm, 1500)
+})`
+        },
+        {
+          id: "disable-buttons", category: "타이머·제어", title: "버튼 비활성화·활성화",
+          desc: "disableButtons와 enableButtons로 처리 중 중복 클릭을 통제한다.",
+          tags: ["disableButtons", "enableButtons"],
+          code: `Swal.fire({
+  didOpen: () => {
+    Swal.disableButtons()
+    setTimeout(() => Swal.enableButtons(), 1800)
+  }
+})`
+        },
+        {
+          id: "update", category: "타이머·제어", title: "열린 팝업 실시간 업데이트",
+          desc: "Swal.update()로 제목, 본문, 아이콘, 버튼 문구를 닫지 않고 변경한다.",
+          tags: ["Swal.update", "isVisible"],
+          code: `Swal.fire({
+  title: '처리 중...',
+  icon: 'info',
+  didOpen: () => setTimeout(() => {
+    Swal.update({
+      title: '처리 완료',
+      icon: 'success',
+      confirmButtonText: '확인'
+    })
+  }, 1400)
+})`
+        },
+        {
+          id: "getters", category: "타이머·제어", title: "현재 팝업 DOM 조회",
+          desc: "getPopup, getTitle, getConfirmButton, getFocusableElements 등 getter API를 확인한다.",
+          tags: ["getPopup", "getFocusableElements"],
+          code: `Swal.fire({
+  didOpen: () => {
+    const count = Swal.getFocusableElements().length
+    Swal.getHtmlContainer().textContent =
+      '포커스 가능 요소: ' + count + '개'
+  }
+})`
+        },
+
+        {
+          id: "input-text", category: "입력·검증", title: "텍스트 입력",
+          desc: "inputLabel, inputPlaceholder, inputValue로 기본 텍스트 입력창을 구성한다.",
+          tags: ["input: text", "inputPlaceholder"],
+          code: `Swal.fire({
+  title: '담당자 이름',
+  input: 'text',
+  inputLabel: '이름을 입력하세요.',
+  inputPlaceholder: '예: 홍길동'
+})`
+        },
+        {
+          id: "input-email", category: "입력·검증", title: "이메일 기본 검증",
+          desc: "input: 'email'은 이메일 형식을 기본 검증하며 validationMessage를 바꿀 수 있다.",
+          tags: ["input: email", "validationMessage"],
+          code: `Swal.fire({
+  title: '이메일 입력',
+  input: 'email',
+  validationMessage: '올바른 이메일 주소를 입력하세요.'
+})`
+        },
+        {
+          id: "input-url", category: "입력·검증", title: "URL 기본 검증",
+          desc: "웹 주소 형식을 검사하는 url 입력 타입과 사용자 정의 오류 문구를 사용한다.",
+          tags: ["input: url"],
+          code: `Swal.fire({
+  title: '웹 주소 입력',
+  input: 'url',
+  inputPlaceholder: 'https://example.com'
+})`
+        },
+        {
+          id: "input-password", category: "입력·검증", title: "비밀번호 입력",
+          desc: "password 타입과 minlength, autocomplete 같은 inputAttributes를 지정한다.",
+          tags: ["input: password", "inputAttributes"],
+          code: `Swal.fire({
+  title: '비밀번호 확인',
+  input: 'password',
+  inputAttributes: {
+    minlength: '4',
+    autocomplete: 'current-password'
+  }
+})`
+        },
+        {
+          id: "input-number", category: "입력·검증", title: "숫자 입력과 범위",
+          desc: "number 입력에 min, max, step을 적용하고 inputValidator로 업무 규칙을 검증한다.",
+          tags: ["input: number", "min/max"],
+          code: `Swal.fire({
+  input: 'number',
+  inputAttributes: { min: '1', max: '100', step: '1' },
+  inputValidator: value =>
+    Number(value) > 50 ? '50 이하로 입력하세요.' : undefined
+})`
+        },
+        {
+          id: "input-textarea", category: "입력·검증", title: "여러 줄 텍스트",
+          desc: "textarea로 의견, 사유, 메모 등 긴 문장을 입력받는다.",
+          tags: ["input: textarea"],
+          code: `Swal.fire({
+  title: '검토 의견',
+  input: 'textarea',
+  inputPlaceholder: '의견을 입력하세요.',
+  inputAttributes: { maxlength: '300' }
+})`
+        },
+        {
+          id: "input-select", category: "입력·검증", title: "선택 목록",
+          desc: "inputOptions 객체를 사용해 select 옵션과 표시 텍스트를 구성한다.",
+          tags: ["input: select", "inputOptions"],
+          code: `Swal.fire({
+  input: 'select',
+  inputOptions: {
+    planning: '기획',
+    support: '지원',
+    technology: '기술'
+  },
+  inputPlaceholder: '부서를 선택하세요.'
+})`
+        },
+        {
+          id: "input-radio", category: "입력·검증", title: "라디오 선택",
+          desc: "여러 후보 중 한 항목만 선택하도록 radio 입력과 필수 검증을 구성한다.",
+          tags: ["input: radio", "inputValidator"],
+          code: `Swal.fire({
+  input: 'radio',
+  inputOptions: { high: '높음', normal: '보통', low: '낮음' },
+  inputValidator: value => !value && '우선순위를 선택하세요.'
+})`
+        },
+        {
+          id: "input-checkbox", category: "입력·검증", title: "체크박스 동의",
+          desc: "inputValue로 초기 상태를 지정하고 inputValidator로 필수 동의를 확인한다.",
+          tags: ["input: checkbox"],
+          code: `Swal.fire({
+  input: 'checkbox',
+  inputValue: 0,
+  inputPlaceholder: '개인정보 처리에 동의합니다.',
+  inputValidator: value => !value && '동의가 필요합니다.'
+})`
+        },
+        {
+          id: "input-range", category: "입력·검증", title: "범위 슬라이더",
+          desc: "range 타입에 최소·최대·간격을 지정해 점수나 비율을 선택한다.",
+          tags: ["input: range", "step"],
+          code: `Swal.fire({
+  input: 'range',
+  inputLabel: '만족도',
+  inputAttributes: { min: '0', max: '100', step: '5' },
+  inputValue: 70
+})`
+        },
+        {
+          id: "input-file", category: "입력·검증", title: "파일 선택",
+          desc: "accept 속성으로 허용 파일 유형을 제한하고 선택한 File 객체를 반환받는다.",
+          tags: ["input: file", "accept"],
+          code: `const result = await Swal.fire({
+  title: '이미지 선택',
+  input: 'file',
+  inputAttributes: { accept: 'image/*' },
+  inputValidator: file => !file && '파일을 선택하세요.'
+})
+
+console.log(result.value)`
+        },
+        {
+          id: "input-date", category: "입력·검증", title: "날짜 입력",
+          desc: "브라우저 기본 date picker를 사용해 날짜를 입력받는다.",
+          tags: ["input: date"],
+          code: `Swal.fire({
+  title: '처리 예정일',
+  input: 'date',
+  inputAttributes: { min: '2026-01-01' }
+})`
+        },
+        {
+          id: "input-time", category: "입력·검증", title: "시간 입력",
+          desc: "time 타입과 step 속성을 사용해 업무 시간을 분 단위로 선택한다.",
+          tags: ["input: time"],
+          code: `Swal.fire({
+  title: '예약 시간',
+  input: 'time',
+  inputAttributes: { step: '900' }
+})`
+        },
+        {
+          id: "input-month", category: "입력·검증", title: "연·월 입력",
+          desc: "month 타입으로 월별 보고서 기준월이나 결산월을 선택한다.",
+          tags: ["input: month"],
+          code: `Swal.fire({
+  title: '보고 기준월',
+  input: 'month',
+  inputValue: '2026-07'
+})`
+        },
+        {
+          id: "multi-input", category: "입력·검증", title: "커스텀 다중 입력",
+          desc: "html에 여러 입력 요소를 배치하고 preConfirm에서 값을 한꺼번에 수집·검증한다.",
+          tags: ["html inputs", "preConfirm"],
+          code: `Swal.fire({
+  title: '담당 업무 등록',
+  html: '<input id="name" class="swal2-input">...',
+  focusConfirm: false,
+  preConfirm: () => {
+    const name = document.getElementById('name').value
+    if (!name) return Swal.showValidationMessage('이름을 입력하세요.')
+    return { name }
+  }
+})`
+        },
+        {
+          id: "trim-control", category: "입력·검증", title: "자동 공백 제거 제어",
+          desc: "inputAutoTrim을 false로 설정해 앞뒤 공백을 그대로 반환하는 차이를 확인한다.",
+          tags: ["inputAutoTrim"],
+          code: `Swal.fire({
+  input: 'text',
+  inputValue: '  앞뒤 공백 유지  ',
+  inputAutoTrim: false
+})`
+        },
+        {
+          id: "async-input-options", category: "입력·검증", title: "비동기 선택 옵션",
+          desc: "Promise를 반환하는 inputOptions로 서버에서 받아온 것처럼 선택 목록을 지연 생성한다.",
+          tags: ["async inputOptions", "Promise"],
+          code: `Swal.fire({
+  input: 'select',
+  inputOptions: new Promise(resolve => {
+    setTimeout(() => resolve({
+      a: '회원지원부',
+      b: 'ICT전략실'
+    }), 900)
+  })
+})`
+        },
+
+        {
+          id: "validation", category: "비동기·흐름", title: "preConfirm 사용자 검증",
+          desc: "입력값을 검사하고 showValidationMessage를 호출하면 팝업을 닫지 않고 오류를 표시한다.",
+          tags: ["preConfirm", "showValidationMessage"],
+          code: `Swal.fire({
+  input: 'text',
+  preConfirm: value => {
+    if (value !== 'SWEET') {
+      Swal.showValidationMessage('SWEET를 입력하세요.')
+      return false
+    }
+    return value
+  }
+})`
+        },
+        {
+          id: "async-loader", category: "비동기·흐름", title: "비동기 로더",
+          desc: "showLoaderOnConfirm과 비동기 preConfirm으로 서버 요청 대기 상태를 표현한다.",
+          tags: ["showLoaderOnConfirm", "async preConfirm"],
+          code: `Swal.fire({
+  title: '서버 처리 시뮬레이션',
+  showCancelButton: true,
+  showLoaderOnConfirm: true,
+  preConfirm: async () => {
+    await new Promise(resolve => setTimeout(resolve, 1800))
+    return { status: 'ok' }
+  },
+  allowOutsideClick: () => !Swal.isLoading()
+})`
+        },
+        {
+          id: "async-failure", category: "비동기·흐름", title: "비동기 실패와 재시도",
+          desc: "첫 번째 요청은 실패시키고 검증 메시지를 표시한 뒤 다시 확인하면 성공하도록 구현한다.",
+          tags: ["retry", "isLoading"],
+          code: `let attempts = 0
+Swal.fire({
+  showLoaderOnConfirm: true,
+  preConfirm: async () => {
+    await delay(900)
+    attempts += 1
+    if (attempts === 1) {
+      Swal.showValidationMessage('일시적 오류입니다. 다시 시도하세요.')
+      return false
+    }
+    return 'success'
+  }
+})`
+        },
+        {
+          id: "wizard", category: "비동기·흐름", title: "3단계 입력 마법사",
+          desc: "여러 Swal.fire 호출을 await로 연결해 단계별 입력을 순차 수집한다.",
+          tags: ["async/await", "wizard"],
+          code: `const name = await Swal.fire({ input: 'text' })
+if (!name.isConfirmed) return
+
+const dept = await Swal.fire({ input: 'select', inputOptions: {...} })
+if (!dept.isConfirmed) return
+
+await Swal.fire({ icon: 'success', title: '등록 완료' })`
+        },
+        {
+          id: "progress-wizard", category: "비동기·흐름", title: "진행 단계 표시",
+          desc: "progressSteps와 currentProgressStep을 지정해 현재 단계 위치를 시각화한다.",
+          tags: ["progressSteps", "currentProgressStep"],
+          code: `const steps = ['1', '2', '3']
+await Swal.fire({
+  progressSteps: steps,
+  currentProgressStep: 0,
+  input: 'text'
+})`
+        },
+        {
+          id: "mixin", category: "비동기·흐름", title: "공통 설정 Mixin",
+          desc: "여러 팝업의 버튼 문구·색상·테마·애니메이션을 하나의 인스턴스로 재사용한다.",
+          tags: ["Swal.mixin", "reuse"],
+          code: `const BusinessSwal = Swal.mixin({
+  confirmButtonText: '업무 처리',
+  cancelButtonText: '취소',
+  showCancelButton: true
+})
+
+BusinessSwal.fire({ title: '공통 설정 적용' })`
+        },
+
+        {
+          id: "theme-dark", category: "디자인·고급", title: "내장 Dark 테마",
+          desc: "theme: 'dark'로 SweetAlert2의 내장 다크 테마를 팝업 단위로 적용한다.",
+          tags: ["theme: dark"],
+          code: `Swal.fire({
+  theme: 'dark',
+  icon: 'info',
+  title: 'Dark 테마',
+  text: '팝업 단위로 테마를 지정했습니다.'
+})`
+        },
+        {
+          id: "theme-auto", category: "디자인·고급", title: "시스템 연동 Auto 테마",
+          desc: "theme: 'auto'로 운영체제의 라이트·다크 선호 설정을 자동 반영한다.",
+          tags: ["theme: auto", "prefers-color-scheme"],
+          code: `Swal.fire({
+  theme: 'auto',
+  title: 'Auto 테마',
+  text: '시스템 색상 모드를 따릅니다.'
+})`
+        },
+        {
+          id: "custom-style", category: "디자인·고급", title: "customClass 전체 스타일링",
+          desc: "popup, title, confirmButton, cancelButton에 CSS 클래스를 각각 연결한다.",
+          tags: ["customClass", "buttonsStyling"],
+          code: `Swal.fire({
+  title: '업무 승인 요청',
+  showCancelButton: true,
+  buttonsStyling: false,
+  customClass: {
+    popup: 'swal-business-popup',
+    title: 'swal-business-title',
+    confirmButton: 'swal-business-confirm',
+    cancelButton: 'swal-business-cancel'
+  }
+})`
+        },
+        {
+          id: "dimensions", category: "디자인·고급", title: "크기·여백·배경",
+          desc: "width, padding, color, background로 팝업의 기본 박스 디자인을 변경한다.",
+          tags: ["width", "padding", "background"],
+          code: `Swal.fire({
+  width: 680,
+  padding: '2.6rem',
+  color: '#ffffff',
+  background: 'linear-gradient(135deg,#34287d,#1b8f98)',
+  title: '커스텀 박스'
+})`
+        },
+        {
+          id: "animation", category: "디자인·고급", title: "사용자 정의 등장·퇴장 애니메이션",
+          desc: "showClass와 hideClass에 직접 정의한 CSS 애니메이션 클래스를 지정한다.",
+          tags: ["showClass", "hideClass"],
+          code: `Swal.fire({
+  title: '커스텀 애니메이션',
+  showClass: { popup: 'swal-pop-in' },
+  hideClass: { popup: 'swal-pop-out' }
+})`
+        },
+        {
+          id: "no-animation", category: "디자인·고급", title: "애니메이션 비활성화",
+          desc: "animation: false로 즉시 나타나고 즉시 사라지는 팝업을 만든다.",
+          tags: ["animation: false"],
+          code: `Swal.fire({
+  animation: false,
+  title: '애니메이션 없음'
+})`
+        },
+        {
+          id: "draggable", category: "디자인·고급", title: "드래그 가능한 팝업",
+          desc: "draggable 옵션을 켜면 제목 영역을 잡고 팝업 위치를 이동할 수 있다.",
+          tags: ["draggable"],
+          code: `Swal.fire({
+  draggable: true,
+  title: '나를 드래그해보세요',
+  text: '제목 영역을 잡고 이동할 수 있습니다.'
+})`
+        },
+        {
+          id: "target", category: "디자인·고급", title: "특정 DOM 영역에 렌더링",
+          desc: "target에 요소를 전달해 body 전체가 아닌 우측 실습 영역 안에 팝업을 표시한다.",
+          tags: ["target", "backdrop: false"],
+          code: `Swal.fire({
+  target: document.getElementById('swal-target'),
+  backdrop: false,
+  title: '영역 내부 팝업'
+})`
+        },
+        {
+          id: "template", category: "디자인·고급", title: "HTML Template 선언형 구성",
+          desc: "template 요소와 swal-title·swal-html·swal-button 태그로 팝업을 선언한다.",
+          tags: ["template", "declarative"],
+          code: `Swal.fire({
+  template: '#swal-template-demo'
+})`
+        },
+        {
+          id: "lifecycle", category: "디자인·고급", title: "생명주기 훅",
+          desc: "willOpen, didOpen, didRender, willClose, didClose, didDestroy 실행 순서를 기록한다.",
+          tags: ["willOpen", "didDestroy"],
+          code: `Swal.fire({
+  willOpen: () => events.push('willOpen'),
+  didOpen: () => events.push('didOpen'),
+  didRender: () => events.push('didRender'),
+  willClose: () => events.push('willClose'),
+  didClose: () => events.push('didClose'),
+  didDestroy: () => events.push('didDestroy')
+})`
+        },
+        {
+          id: "top-layer", category: "디자인·고급", title: "Top Layer 표시",
+          desc: "topLayer: true로 브라우저 최상위 레이어에 팝업을 배치하는 최신 고급 옵션이다.",
+          tags: ["topLayer"],
+          code: `Swal.fire({
+  topLayer: true,
+  icon: 'info',
+  title: 'Top Layer 팝업'
+})`
+        },
+        {
+          id: "accessibility", category: "디자인·고급", title: "접근성 레이블",
+          desc: "확인·취소·닫기 버튼에 구체적인 ARIA 레이블을 지정해 화면낭독기 정보를 보완한다.",
+          tags: ["confirmButtonAriaLabel", "cancelButtonAriaLabel"],
+          code: `Swal.fire({
+  showCancelButton: true,
+  showCloseButton: true,
+  confirmButtonAriaLabel: '신청 내용을 최종 제출',
+  cancelButtonAriaLabel: '제출하지 않고 돌아가기',
+  closeButtonAriaLabel: '팝업 닫기'
+})`
+        },
+        {
+          id: "focus-return", category: "디자인·고급", title: "초점 복귀 제어",
+          desc: "returnFocus 설정으로 팝업 종료 후 실행 버튼에 초점을 돌려보낼지 결정한다.",
+          tags: ["returnFocus", "focusConfirm"],
+          code: `Swal.fire({
+  returnFocus: true,
+  focusConfirm: true,
+  title: '닫은 뒤 실행 버튼으로 초점 복귀'
+})`
+        }
+      ];
+
+      const handlers = {
+        basic: () => fire({ title: "기본 알림", text: "가장 단순한 SweetAlert2 팝업입니다.", confirmButtonText: "확인" }),
+        shorthand: () => Swal.fire("단축 문법", "제목, 본문, 아이콘을 순서대로 전달합니다.", "info"),
+        success: () => fire({ icon: "success", iconColor: "#1b9c6a", title: "저장 완료", text: "입력한 내용이 정상적으로 저장되었습니다." }),
+        error: () => fire({ icon: "error", title: "처리 실패", text: "요청 처리 중 오류가 발생했습니다." }),
+        warning: () => fire({ icon: "warning", title: "주의 필요", text: "이 작업은 기존 데이터에 영향을 줄 수 있습니다." }),
+        question: () => fire({ icon: "question", title: "계속할까요?", text: "다음 단계로 이동하시겠습니까?" }),
+        html: () => fire({
+          title: "업무 처리 요약",
+          html: `
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:8px 0 15px">
+              <div style="padding:13px;border-radius:12px;background:#eef9f5"><b style="font-size:22px;color:#16845b">3</b><br><small>처리 완료</small></div>
+              <div style="padding:13px;border-radius:12px;background:#fff7e8"><b style="font-size:22px;color:#cc8619">1</b><br><small>확인 필요</small></div>
+              <div style="padding:13px;border-radius:12px;background:#f1efff"><b style="font-size:22px;color:#6858e8">8</b><br><small>전체 건수</small></div>
+            </div>
+            <p style="margin:0;line-height:1.7">복합적인 <strong>HTML 콘텐츠</strong>를 본문에 넣을 수 있습니다.</p>`,
+          icon: "info"
+        }),
+        footer: () => fire({
+          icon: "info",
+          title: "개인정보 처리 안내",
+          text: "입력 정보는 업무 처리 목적에만 사용됩니다.",
+          footer: '<a href="https://sweetalert2.github.io/" target="_blank" rel="noopener">SweetAlert2 공식 문서 보기</a>'
+        }),
+        image: () => fire({
+          title: "커스텀 이미지",
+          text: "imageUrl에는 일반 URL뿐 아니라 Data URI도 사용할 수 있습니다.",
+          imageUrl: svgImage,
+          imageWidth: 520,
+          imageHeight: 225,
+          imageAlt: "SweetAlert2 커스텀 이미지 예시"
+        }),
+        "icon-html": () => fire({ icon: "info", iconHtml: "7", iconColor: "#6858e8", title: "7개의 새 알림", text: "iconHtml로 기본 아이콘 내부를 교체했습니다." }),
+
+        confirm: async () => {
+          const result = await fire({
+            icon: "warning",
+            title: "정말 삭제할까요?",
+            text: "삭제한 데이터는 복구할 수 없습니다.",
+            showCancelButton: true,
+            confirmButtonText: "삭제",
+            cancelButtonText: "취소",
+            confirmButtonColor: "#df4b5e",
+            reverseButtons: true,
+            focusCancel: true
+          });
+          if (result.isConfirmed) {
+            await fire({ icon: "success", title: "삭제 완료", text: "샘플 데이터가 삭제된 것으로 처리했습니다." });
+          } else {
+            await toast("info", "삭제가 취소되었습니다.");
+          }
+          return result;
+        },
+        "three-way": async () => {
+          const result = await fire({
+            title: "변경 내용을 저장할까요?",
+            text: "세 가지 결과 분기를 확인할 수 있습니다.",
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: "저장",
+            denyButtonText: "저장 안 함",
+            cancelButtonText: "계속 편집"
+          });
+          const message = result.isConfirmed ? "저장했습니다." : result.isDenied ? "저장하지 않았습니다." : "편집을 계속합니다.";
+          await toast(result.isConfirmed ? "success" : result.isDenied ? "warning" : "info", message);
+          return result;
+        },
+        "reverse-focus": () => fire({
+          icon: "warning",
+          title: "위험한 작업",
+          text: "취소 버튼에 초기 초점이 있으며 버튼 순서가 반대입니다.",
+          showCancelButton: true,
+          confirmButtonText: "실행",
+          cancelButtonText: "취소",
+          reverseButtons: true,
+          focusCancel: true
+        }),
+        "close-button": () => fire({
+          title: "닫기 버튼",
+          html: "우측 상단의 <b>×</b> 버튼으로 닫아보세요.",
+          showCloseButton: true,
+          closeButtonAriaLabel: "안내창 닫기",
+          showConfirmButton: false
+        }),
+        locked: () => fire({
+          title: "필수 확인",
+          text: "외부 클릭과 ESC 키로는 닫히지 않습니다.",
+          icon: "info",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          confirmButtonText: "내용을 확인했습니다"
+        }),
+        "no-confirm": () => fire({
+          toast: true,
+          position: "bottom",
+          icon: "info",
+          text: "확인 버튼 없이 잠시 후 자동으로 닫힙니다.",
+          showConfirmButton: false,
+          timer: 2500,
+          timerProgressBar: true
+        }),
+        "button-colors": () => fire({
+          title: "처리 방법 선택",
+          showDenyButton: true,
+          showCancelButton: true,
+          confirmButtonText: "승인",
+          denyButtonText: "반려",
+          cancelButtonText: "보류",
+          confirmButtonColor: "#1b9c6a",
+          denyButtonColor: "#df4b5e",
+          cancelButtonColor: "#69758b"
+        }),
+        "return-input-deny": async () => {
+          const result = await fire({
+            title: "검토 의견",
+            input: "text",
+            inputPlaceholder: "의견을 입력한 뒤 승인 또는 반려",
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: "승인",
+            denyButtonText: "의견과 함께 반려",
+            cancelButtonText: "취소",
+            returnInputValueOnDeny: true,
+            preDeny: (value) => {
+              if (!value.trim()) {
+                Swal.showValidationMessage("반려하려면 의견을 입력하세요.");
+                return false;
+              }
+              return value;
+            }
+          });
+          if (result.isConfirmed || result.isDenied) {
+            await fire({
+              icon: result.isConfirmed ? "success" : "warning",
+              title: result.isConfirmed ? "승인됨" : "반려됨",
+              text: result.value ? `입력값: ${String(result.value)}` : "입력값 없음"
+            });
+          }
+          return result;
+        },
+
+        "position-grid": async () => {
+          const positions = ["top-start", "top", "top-end", "center-start", "center", "center-end", "bottom-start", "bottom", "bottom-end"];
+          for (const position of positions) {
+            await Swal.fire({
+              theme: activeSwalTheme(),
+              toast: true,
+              position,
+              icon: "info",
+              title: position,
+              showConfirmButton: false,
+              timer: 520,
+              timerProgressBar: true
+            });
+          }
+          return { value: positions };
+        },
+        toast: () => toast("success", "저장되었습니다."),
+        "toast-mixin": () => {
+          const Toast = Swal.mixin({
+            theme: activeSwalTheme(),
+            toast: true,
+            position: "top-end",
+            timer: 2600,
+            timerProgressBar: true,
+            showConfirmButton: false
+          });
+          return Toast.fire({ icon: "info", title: "Mixin 토스트: 동기화 중입니다." });
+        },
+        "toast-hover": () => Swal.fire({
+          theme: activeSwalTheme(),
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "마우스를 올리면 타이머가 멈춥니다.",
+          showConfirmButton: false,
+          timer: 4500,
+          timerProgressBar: true,
+          didOpen: (popup) => {
+            popup.addEventListener("mouseenter", Swal.stopTimer);
+            popup.addEventListener("mouseleave", Swal.resumeTimer);
+          }
+        }),
+        "custom-backdrop": () => fire({
+          title: "강조된 안내",
+          text: "Backdrop을 보라색 반투명 오버레이로 지정했습니다.",
+          icon: "info",
+          backdrop: "rgba(39, 26, 92, .76)"
+        }),
+        "no-backdrop": () => fire({
+          position: "bottom-end",
+          backdrop: false,
+          icon: "info",
+          title: "비차단 안내",
+          text: "배경을 가리지 않고 우측 아래에 표시됩니다.",
+          timer: 2800,
+          timerProgressBar: true,
+          showConfirmButton: false
+        }),
+        "grow-fullscreen": () => fire({
+          grow: "fullscreen",
+          icon: "info",
+          title: "전체 화면 팝업",
+          html: "<p>grow: 'fullscreen' 옵션이 적용되었습니다.</p><p>집중 안내·전체 화면 입력 흐름에 활용할 수 있습니다.</p>"
+        }),
+
+        timer: () => fire({
+          title: "3초 후 자동 종료",
+          html: "timer와 timerProgressBar가 함께 적용되었습니다.",
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false
+        }),
+        countdown: () => {
+          let interval;
+          return fire({
+            title: "남은 시간",
+            html: '<strong id="countdown-value" style="font-size:40px;color:#6858e8">5.0초</strong><br><small>Swal.getTimerLeft() 값을 실시간 표시</small>',
+            timer: 5000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            didOpen: () => {
+              interval = setInterval(() => {
+                const el = $("#countdown-value");
+                const left = Swal.getTimerLeft();
+                if (el && typeof left === "number") el.textContent = `${(left / 1000).toFixed(1)}초`;
+              }, 80);
+            },
+            willClose: () => clearInterval(interval)
+          });
+        },
+        "timer-controls": () => fire({
+          title: "타이머 제어",
+          html: `
+            <div style="font-size:42px;font-weight:900;color:#6858e8;margin-bottom:12px" id="timer-left">7.0초</div>
+            <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap">
+              <button class="swal2-styled" style="background:#df4b5e" id="timer-stop">정지</button>
+              <button class="swal2-styled" style="background:#1b9c6a" id="timer-resume">재개</button>
+              <button class="swal2-styled" style="background:#6858e8" id="timer-add">+3초</button>
+            </div>`,
+          timer: 7000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+          didOpen: () => {
+            $("#timer-stop").onclick = () => Swal.stopTimer();
+            $("#timer-resume").onclick = () => Swal.resumeTimer();
+            $("#timer-add").onclick = () => Swal.increaseTimer(3000);
+            const interval = setInterval(() => {
+              const left = Swal.getTimerLeft();
+              const el = $("#timer-left");
+              if (el && typeof left === "number") el.textContent = `${(left / 1000).toFixed(1)}초`;
+              if (!Swal.isVisible()) clearInterval(interval);
+            }, 100);
+          }
+        }),
+        "program-close": async () => {
+          const promise = fire({
+            title: "코드로 닫기",
+            text: "1.8초 뒤 Swal.close()가 호출됩니다.",
+            showConfirmButton: false,
+            allowOutsideClick: false
+          });
+          setTimeout(() => Swal.close({ isDismissed: true, dismiss: "timer", value: "Swal.close 호출" }), 1800);
+          return promise;
+        },
+        "program-confirm": () => fire({
+          title: "자동 확인",
+          text: "1.5초 뒤 Swal.clickConfirm()이 호출됩니다.",
+          preConfirm: () => "자동 확인 완료",
+          didOpen: () => setTimeout(() => Swal.clickConfirm(), 1500)
+        }),
+        "disable-buttons": () => fire({
+          title: "버튼 잠금",
+          html: '<p id="button-state">1.8초 동안 버튼을 사용할 수 없습니다.</p>',
+          showCancelButton: true,
+          didOpen: () => {
+            Swal.disableButtons();
+            setTimeout(() => {
+              Swal.enableButtons();
+              const el = $("#button-state");
+              if (el) el.textContent = "버튼이 다시 활성화되었습니다.";
+            }, 1800);
+          }
+        }),
+        update: () => fire({
+          title: "처리 중...",
+          text: "1.4초 뒤 Swal.update()로 내용이 바뀝니다.",
+          icon: "info",
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          didOpen: () => {
+            setTimeout(() => {
+              if (Swal.isVisible()) {
+                Swal.update({
+                  title: "처리 완료",
+                  text: "열린 팝업을 닫지 않고 업데이트했습니다.",
+                  icon: "success",
+                  showConfirmButton: true,
+                  confirmButtonText: "확인",
+                  allowOutsideClick: true
+                });
+              }
+            }, 1400);
+          }
+        }),
+        getters: () => fire({
+          title: "현재 팝업 DOM 조회",
+          html: '<div id="getter-output" style="text-align:left;line-height:1.8"></div>',
+          showCancelButton: true,
+          didOpen: () => {
+            const rows = [
+              ["Swal.isVisible()", String(Swal.isVisible())],
+              ["getPopup()", Swal.getPopup()?.tagName || "-"],
+              ["getTitle()", Swal.getTitle()?.textContent || "-"],
+              ["getConfirmButton()", Swal.getConfirmButton()?.textContent || "-"],
+              ["getFocusableElements()", `${Swal.getFocusableElements().length}개`]
+            ];
+            $("#getter-output").innerHTML = rows.map(([k, v]) =>
+              `<div style="display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding:6px 0"><code>${k}</code><b>${v}</b></div>`
+            ).join("");
+          }
+        }),
+
+        "input-text": () => fire({ title: "담당자 이름", input: "text", inputLabel: "이름을 입력하세요.", inputPlaceholder: "예: 홍길동", inputValue: "김수협" }),
+        "input-email": () => fire({ title: "이메일 입력", input: "email", inputPlaceholder: "name@example.com", validationMessage: "올바른 이메일 주소를 입력하세요." }),
+        "input-url": () => fire({ title: "웹 주소 입력", input: "url", inputPlaceholder: "https://example.com", validationMessage: "http:// 또는 https://로 시작하는 주소를 입력하세요." }),
+        "input-password": () => fire({
+          title: "비밀번호 확인",
+          input: "password",
+          inputPlaceholder: "4자 이상",
+          inputAttributes: { minlength: "4", autocomplete: "current-password" },
+          inputValidator: (value) => value.length < 4 ? "4자 이상 입력하세요." : undefined
+        }),
+        "input-number": () => fire({
+          title: "처리 건수",
+          input: "number",
+          inputLabel: "1~50 사이 정수",
+          inputValue: 10,
+          inputAttributes: { min: "1", max: "100", step: "1" },
+          inputValidator: (value) => Number(value) > 50 ? "업무 규칙상 50 이하로 입력하세요." : undefined
+        }),
+        "input-textarea": () => fire({
+          title: "검토 의견",
+          input: "textarea",
+          inputPlaceholder: "검토 의견을 입력하세요.",
+          inputAttributes: { maxlength: "300", rows: "5" },
+          inputValidator: (value) => value.trim().length < 5 ? "5자 이상 입력하세요." : undefined
+        }),
+        "input-select": () => fire({
+          title: "담당 부서 선택",
+          input: "select",
+          inputOptions: { planning: "기획조정실", support: "회원지원부", ict: "ICT전략실", fisheries: "어업양식지원부" },
+          inputPlaceholder: "부서를 선택하세요.",
+          inputValidator: (value) => !value ? "부서를 선택하세요." : undefined
+        }),
+        "input-radio": () => fire({
+          title: "업무 우선순위",
+          input: "radio",
+          inputOptions: { high: "높음", normal: "보통", low: "낮음" },
+          inputValidator: (value) => !value ? "우선순위를 선택하세요." : undefined
+        }),
+        "input-checkbox": () => fire({
+          title: "필수 동의",
+          input: "checkbox",
+          inputValue: 0,
+          inputPlaceholder: "개인정보 처리에 동의합니다.",
+          confirmButtonText: "제출",
+          inputValidator: (value) => !value ? "동의가 필요합니다." : undefined
+        }),
+        "input-range": () => fire({
+          title: "만족도 점수",
+          input: "range",
+          inputLabel: "0점부터 100점까지 선택",
+          inputAttributes: { min: "0", max: "100", step: "5" },
+          inputValue: 70
+        }),
+        "input-file": async () => {
+          const result = await fire({
+            title: "이미지 선택",
+            input: "file",
+            inputAttributes: { accept: "image/*" },
+            inputValidator: (file) => !file ? "파일을 선택하세요." : undefined,
+            showCancelButton: true
+          });
+          if (result.isConfirmed && result.value) {
+            const file = result.value;
+            await fire({
+              icon: "success",
+              title: "파일 선택 완료",
+              html: `<b>${escapeHtml(file.name || "파일")}</b><br><small>${formatBytes(file.size || 0)} · ${escapeHtml(file.type || "유형 미확인")}</small>`
+            });
+          }
+          return result;
+        },
+        "input-date": () => fire({ title: "처리 예정일", input: "date", inputValue: "2026-07-15", inputAttributes: { min: "2026-01-01", max: "2027-12-31" } }),
+        "input-time": () => fire({ title: "예약 시간", input: "time", inputValue: "09:00", inputAttributes: { step: "900" } }),
+        "input-month": () => fire({ title: "보고 기준월", input: "month", inputValue: "2026-07" }),
+        "multi-input": () => fire({
+          title: "담당 업무 등록",
+          html: `
+            <input id="multi-name" class="swal2-input" placeholder="담당자 이름" value="김수협">
+            <select id="multi-dept" class="swal2-select" style="display:flex">
+              <option value="">부서 선택</option>
+              <option value="회원지원부">회원지원부</option>
+              <option value="ICT전략실">ICT전략실</option>
+              <option value="어업양식지원부">어업양식지원부</option>
+            </select>
+            <textarea id="multi-task" class="swal2-textarea" placeholder="업무 내용">AI 활용 과제 검토</textarea>`,
+          focusConfirm: false,
+          showCancelButton: true,
+          preConfirm: () => {
+            const name = $("#multi-name").value.trim();
+            const dept = $("#multi-dept").value;
+            const task = $("#multi-task").value.trim();
+            if (!name) return Swal.showValidationMessage("담당자 이름을 입력하세요.");
+            if (!dept) return Swal.showValidationMessage("부서를 선택하세요.");
+            if (!task) return Swal.showValidationMessage("업무 내용을 입력하세요.");
+            return { name, dept, task };
+          }
+        }),
+        "trim-control": async () => {
+          const result = await fire({
+            title: "자동 공백 제거 비활성화",
+            input: "text",
+            inputValue: "  앞뒤 공백 유지  ",
+            inputAutoTrim: false,
+            inputLabel: "그대로 확인 버튼을 눌러보세요."
+          });
+          if (result.isConfirmed) {
+            await fire({
+              title: "반환값 확인",
+              html: `<code style="display:block;padding:12px;background:#111827;color:#fff;border-radius:10px">${escapeHtml(JSON.stringify(result.value))}</code>`
+            });
+          }
+          return result;
+        },
+        "async-input-options": () => fire({
+          title: "비동기 부서 목록",
+          input: "select",
+          inputPlaceholder: "목록 로딩 후 선택",
+          inputOptions: new Promise(resolve => {
+            setTimeout(() => resolve({
+              support: "회원지원부",
+              ict: "ICT전략실",
+              fisheries: "어업양식지원부",
+              finance: "자금운용본부"
+            }), 900);
+          }),
+          inputValidator: value => !value ? "항목을 선택하세요." : undefined
+        }),
+
+        validation: () => fire({
+          title: "검증 키워드 입력",
+          text: "SWEET를 정확히 입력하세요.",
+          input: "text",
+          inputPlaceholder: "SWEET",
+          showCancelButton: true,
+          preConfirm: (value) => {
+            if (value !== "SWEET") {
+              Swal.showValidationMessage("대문자로 SWEET를 입력해야 합니다.");
+              return false;
+            }
+            return { keyword: value, valid: true };
+          }
+        }),
+        "async-loader": async () => {
+          const result = await fire({
+            title: "서버 처리 시뮬레이션",
+            text: "확인하면 1.8초 동안 로더가 표시됩니다.",
+            showCancelButton: true,
+            confirmButtonText: "요청 실행",
+            showLoaderOnConfirm: true,
+            preConfirm: async () => {
+              await delay(1800);
+              return { status: "ok", processedAt: new Date().toISOString() };
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+          });
+          if (result.isConfirmed) await toast("success", "비동기 처리가 완료되었습니다.");
+          return result;
+        },
+        "async-failure": async () => {
+          let attempts = 0;
+          const result = await fire({
+            title: "실패 후 재시도",
+            text: "첫 번째 확인은 실패하고 두 번째 확인은 성공합니다.",
+            showCancelButton: true,
+            confirmButtonText: "요청",
+            showLoaderOnConfirm: true,
+            preConfirm: async () => {
+              await delay(900);
+              attempts += 1;
+              if (attempts === 1) {
+                Swal.showValidationMessage("일시적 오류입니다. 확인 버튼을 다시 눌러 재시도하세요.");
+                return false;
+              }
+              return { attempts, status: "success" };
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+          });
+          return result;
+        },
+        wizard: async () => {
+          const name = await fire({
+            title: "1단계 · 담당자",
+            input: "text",
+            inputValue: "김수협",
+            showCancelButton: true,
+            confirmButtonText: "다음",
+            inputValidator: v => !v.trim() ? "이름을 입력하세요." : undefined
+          });
+          if (!name.isConfirmed) return name;
+
+          const dept = await fire({
+            title: "2단계 · 부서",
+            input: "select",
+            inputOptions: { support: "회원지원부", ict: "ICT전략실", fisheries: "어업양식지원부" },
+            inputPlaceholder: "부서 선택",
+            showCancelButton: true,
+            confirmButtonText: "다음",
+            inputValidator: v => !v ? "부서를 선택하세요." : undefined
+          });
+          if (!dept.isConfirmed) return dept;
+
+          const priority = await fire({
+            title: "3단계 · 우선순위",
+            input: "radio",
+            inputOptions: { high: "높음", normal: "보통", low: "낮음" },
+            inputValue: "normal",
+            showCancelButton: true,
+            confirmButtonText: "완료"
+          });
+          if (!priority.isConfirmed) return priority;
+
+          const data = { name: name.value, department: dept.value, priority: priority.value };
+          await fire({
+            icon: "success",
+            title: "등록 완료",
+            html: `<pre style="text-align:left;background:#111827;color:#fff;padding:14px;border-radius:10px">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`
+          });
+          return { isConfirmed: true, value: data };
+        },
+        "progress-wizard": async () => {
+          const steps = ["1", "2", "3"];
+          const values = [];
+          const questions = [
+            { title: "신청인", input: "text", inputValue: "김수협" },
+            { title: "신청 유형", input: "select", inputOptions: { new: "신규", change: "변경", cancel: "해지" }, inputPlaceholder: "유형 선택" },
+            { title: "요청 사유", input: "textarea", inputValue: "업무 처리 예시" }
+          ];
+
+          for (let i = 0; i < questions.length; i++) {
+            const result = await fire({
+              ...questions[i],
+              progressSteps: steps,
+              currentProgressStep: i,
+              progressStepsDistance: "22px",
+              showCancelButton: true,
+              confirmButtonText: i === questions.length - 1 ? "제출" : "다음",
+              inputValidator: v => !String(v || "").trim() ? "값을 입력하거나 선택하세요." : undefined
+            });
+            if (!result.isConfirmed) return result;
+            values.push(result.value);
+          }
+
+          await fire({ icon: "success", title: "진행 단계 완료", text: `3개 입력값을 수집했습니다: ${values.join(" / ")}` });
+          return { isConfirmed: true, value: values };
+        },
+        mixin: () => {
+          const BusinessSwal = Swal.mixin({
+            theme: activeSwalTheme(),
+            confirmButtonText: "업무 처리",
+            cancelButtonText: "취소",
+            confirmButtonColor: "#6858e8",
+            showCancelButton: true,
+            reverseButtons: true
+          });
+          return BusinessSwal.fire({
+            title: "공통 설정 적용",
+            text: "Mixin에 지정한 버튼 문구·색상·순서가 재사용되었습니다.",
+            icon: "info"
+          });
+        },
+
+        "theme-dark": () => Swal.fire({ theme: "dark", icon: "info", title: "Dark 테마", text: "팝업 단위로 내장 다크 테마를 지정했습니다." }),
+        "theme-auto": () => Swal.fire({ theme: "auto", icon: "info", title: "Auto 테마", text: "운영체제의 prefers-color-scheme 설정을 따릅니다." }),
+        "custom-style": () => Swal.fire({
+          theme: "light",
+          title: "업무 승인 요청",
+          text: "customClass와 buttonsStyling: false를 적용한 예시입니다.",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "승인 처리",
+          cancelButtonText: "보류",
+          buttonsStyling: false,
+          customClass: {
+            popup: "swal-business-popup",
+            title: "swal-business-title",
+            confirmButton: "swal-business-confirm",
+            cancelButton: "swal-business-cancel"
+          }
+        }),
+        dimensions: () => Swal.fire({
+          title: "커스텀 박스",
+          html: "width · padding · color · background 적용",
+          icon: "info",
+          width: 680,
+          padding: "2.6rem",
+          color: "#ffffff",
+          background: "linear-gradient(135deg,#34287d,#1b8f98)",
+          confirmButtonColor: "#ffffff",
+          customClass: { confirmButton: "dimension-confirm" },
+          didOpen: () => {
+            const btn = Swal.getConfirmButton();
+            if (btn) {
+              btn.style.color = "#34287d";
+              btn.style.fontWeight = "800";
+            }
+          }
+        }),
+        animation: () => fire({
+          title: "커스텀 애니메이션",
+          text: "showClass와 hideClass에 직접 만든 CSS 클래스를 지정했습니다.",
+          icon: "success",
+          showClass: { popup: "swal-pop-in" },
+          hideClass: { popup: "swal-pop-out" }
+        }),
+        "no-animation": () => fire({ animation: false, title: "애니메이션 없음", text: "즉시 나타나고 즉시 사라집니다.", icon: "info" }),
+        draggable: () => fire({ draggable: true, title: "나를 드래그해보세요", text: "제목 영역을 잡고 팝업을 이동할 수 있습니다.", icon: "info" }),
+        target: () => Swal.fire({
+          target: $("#swal-target"),
+          theme: activeSwalTheme(),
+          backdrop: false,
+          position: "center",
+          icon: "info",
+          title: "영역 내부 팝업",
+          text: "target 옵션으로 우측 패널 안에 렌더링했습니다.",
+          confirmButtonText: "닫기"
+        }),
+        template: () => Swal.fire({ template: "#swal-template-demo", theme: activeSwalTheme() }),
+        lifecycle: async () => {
+          const events = [];
+          await fire({
+            title: "생명주기 훅 기록",
+            text: "닫으면 실행 순서를 결과 팝업으로 표시합니다.",
+            willOpen: () => events.push("willOpen"),
+            didOpen: () => events.push("didOpen"),
+            didRender: () => {
+              if (!events.includes("didRender")) events.push("didRender");
+            },
+            willClose: () => events.push("willClose"),
+            didClose: () => events.push("didClose"),
+            didDestroy: () => events.push("didDestroy")
+          });
+          await delay(120);
+          return fire({
+            icon: "info",
+            title: "훅 실행 순서",
+            html: `<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">${events.map((e, i) => `<span style="padding:7px 9px;border-radius:8px;background:#eeebff;color:#5543d5;font-weight:800">${i + 1}. ${e}</span>`).join("")}</div>`
+          });
+        },
+        "top-layer": () => fire({ topLayer: true, icon: "info", title: "Top Layer 팝업", text: "브라우저 최상위 레이어 배치 옵션을 사용했습니다." }),
+        accessibility: () => fire({
+          icon: "question",
+          title: "접근성 레이블",
+          text: "버튼에 구체적인 ARIA 레이블이 설정되어 있습니다.",
+          showCancelButton: true,
+          showCloseButton: true,
+          confirmButtonText: "최종 제출",
+          cancelButtonText: "돌아가기",
+          confirmButtonAriaLabel: "신청 내용을 최종 제출",
+          cancelButtonAriaLabel: "제출하지 않고 이전 화면으로 돌아가기",
+          closeButtonAriaLabel: "접근성 예시 팝업 닫기"
+        }),
+        "focus-return": () => fire({
+          returnFocus: true,
+          focusConfirm: true,
+          icon: "info",
+          title: "초점 복귀",
+          text: "팝업을 닫으면 방금 누른 실행 버튼으로 초점이 돌아갑니다."
+        })
+      };
+
+      let activeCategory = "전체";
+      let query = "";
+      let logs = [];
+
+      function activeSwalTheme() {
+        return document.body.classList.contains("dark") ? "dark" : "light";
+      }
+
+      function fire(options) {
+        const merged = { theme: activeSwalTheme(), ...options };
+        return Swal.fire(merged);
+      }
+
+      function toast(icon, title) {
+        return Swal.fire({
+          theme: activeSwalTheme(),
+          toast: true,
+          position: "top-end",
+          icon,
+          title,
+          showConfirmButton: false,
+          timer: 2400,
+          timerProgressBar: true,
+          didOpen: popup => {
+            popup.addEventListener("mouseenter", Swal.stopTimer);
+            popup.addEventListener("mouseleave", Swal.resumeTimer);
+          }
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes) return "0 B";
+        const units = ["B", "KB", "MB", "GB"];
+        const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
+      }
+
+      function summarizeResult(result) {
+        if (result === undefined) return "완료";
+        if (result instanceof Error) return result.message;
+        if (result && result.isConfirmed) return `확인 · ${safeString(result.value)}`;
+        if (result && result.isDenied) return `거절 · ${safeString(result.value)}`;
+        if (result && result.isDismissed) return `닫힘 · ${result.dismiss || "dismiss"}`;
+        return safeString(result);
+      }
+
+      function safeString(value) {
+        if (value === undefined) return "값 없음";
+        if (value instanceof File) return `${value.name} (${formatBytes(value.size)})`;
+        try {
+          const text = typeof value === "string" ? value : JSON.stringify(value);
+          return text.length > 160 ? text.slice(0, 157) + "..." : text;
+        } catch {
+          return String(value);
+        }
+      }
+
+      async function runDemo(id, button) {
+        if (!window.Swal) {
+          alert("SweetAlert2를 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근 여부를 확인하세요.");
+          return;
+        }
+
+        const demo = demos.find(item => item.id === id);
+        const handler = handlers[id];
+        if (!demo || !handler) return;
+
+        const originalText = button?.textContent;
+        if (button) {
+          button.disabled = true;
+          button.textContent = "실행 중";
+        }
+
+        try {
+          const result = await handler();
+          pushLog(demo.title, summarizeResult(result));
+        } catch (error) {
+          console.error(error);
+          pushLog(demo.title, `오류: ${error.message}`);
+          await fire({ icon: "error", title: "데모 실행 오류", text: error.message });
+        } finally {
+          if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+          }
+        }
+      }
+
+      function pushLog(title, value) {
+        logs.unshift({ title, value, time: new Date() });
+        logs = logs.slice(0, 8);
+        renderLogs();
+      }
+
+      function renderLogs() {
+        const container = $("#logs");
+        if (!logs.length) {
+          container.innerHTML = '<div class="log-empty">아직 실행한 데모가 없다.<br />카드의 실행 버튼을 눌러 결과를 확인해보자.</div>';
+          return;
+        }
+
+        container.innerHTML = logs.map(log => `
+          <div class="log-item">
+            <div class="log-top">
+              <strong>${escapeHtml(log.title)}</strong>
+              <time>${log.time.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time>
+            </div>
+            <div class="log-value">${escapeHtml(log.value)}</div>
+          </div>
+        `).join("");
+      }
+
+      async function showCode(id) {
+        const demo = demos.find(item => item.id === id);
+        if (!demo || !window.Swal) return;
+
+        await Swal.fire({
+          theme: activeSwalTheme(),
+          customClass: { popup: "swal-code-popup" },
+          title: demo.title,
+          html: `
+            <div class="code-wrap">
+              <button class="copy-code" id="copy-code-btn" type="button">코드 복사</button>
+              <pre><code>${escapeHtml(demo.code)}</code></pre>
+            </div>`,
+          showConfirmButton: false,
+          showCloseButton: true,
+          didOpen: () => {
+            $("#copy-code-btn").onclick = async () => {
+              try {
+                await navigator.clipboard.writeText(demo.code);
+                $("#copy-code-btn").textContent = "복사 완료";
+              } catch {
+                $("#copy-code-btn").textContent = "복사 실패";
+              }
+            };
+          }
+        });
+      }
+
+      function renderChips() {
+        const categories = ["전체", ...Object.keys(categoryInfo)];
+        $("#categoryChips").innerHTML = categories.map(category => `
+          <button type="button" class="chip ${category === activeCategory ? "active" : ""}" data-category="${escapeHtml(category)}">
+            ${escapeHtml(category)}
+          </button>
+        `).join("");
+
+        $$(".chip").forEach(button => {
+          button.addEventListener("click", () => {
+            activeCategory = button.dataset.category;
+            renderChips();
+            renderDemos();
+          });
+        });
+      }
+
+      function getFilteredDemos() {
+        const keyword = query.trim().toLowerCase();
+        return demos.filter(demo => {
+          const categoryMatch = activeCategory === "전체" || demo.category === activeCategory;
+          const haystack = [demo.title, demo.desc, demo.category, ...demo.tags, demo.code].join(" ").toLowerCase();
+          return categoryMatch && (!keyword || haystack.includes(keyword));
+        });
+      }
+
+      function renderDemos() {
+        const filtered = getFilteredDemos();
+        $("#resultCount").textContent = `${filtered.length}개 표시`;
+
+        if (!filtered.length) {
+          $("#demoSections").innerHTML = '<div class="empty-state">검색 조건에 맞는 데모가 없습니다.</div>';
+          return;
+        }
+
+        const grouped = Object.keys(categoryInfo)
+          .map(category => [category, filtered.filter(demo => demo.category === category)])
+          .filter(([, items]) => items.length);
+
+        let runningNo = 0;
+        $("#demoSections").innerHTML = grouped.map(([category, items]) => `
+          <section class="demo-section" data-section="${escapeHtml(category)}">
+            <div class="section-title">
+              <div>
+                <h3>${escapeHtml(category)}</h3>
+                <p>${escapeHtml(categoryInfo[category])}</p>
+              </div>
+              <span class="card-badge">${items.length} examples</span>
+            </div>
+            <div class="demo-grid">
+              ${items.map(demo => {
+                const index = ++runningNo;
+                return `
+                  <article class="demo-card">
+                    <div class="card-top">
+                      <span class="demo-no">${String(index).padStart(2, "0")}</span>
+                      <span class="card-badge">${escapeHtml(demo.category)}</span>
+                    </div>
+                    <h4>${escapeHtml(demo.title)}</h4>
+                    <p>${escapeHtml(demo.desc)}</p>
+                    <div class="tags">${demo.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
+                    <div class="card-actions">
+                      <button type="button" class="run-btn" data-run="${demo.id}">실행</button>
+                      <button type="button" class="code-btn" data-code="${demo.id}" title="코드 보기">&lt;/&gt;</button>
+                    </div>
+                  </article>`;
+              }).join("")}
+            </div>
+          </section>
+        `).join("");
+
+        $$("[data-run]").forEach(button => button.addEventListener("click", () => runDemo(button.dataset.run, button)));
+        $$("[data-code]").forEach(button => button.addEventListener("click", () => showCode(button.dataset.code)));
+      }
+
+      function setLibraryStatus() {
+        const dot = $("#statusDot");
+        const text = $("#statusText");
+        const badge = $("#versionBadge");
+
+        if (window.Swal) {
+          dot.className = "status-dot ok";
+          text.textContent = "정상 로드됨";
+          badge.textContent = `v${Swal.version || "11.x"}`;
+        } else {
+          dot.className = "status-dot error";
+          text.textContent = "라이브러리 로드 실패";
+          badge.textContent = "오프라인";
+        }
+      }
+
+      function initTheme() {
+        const stored = localStorage.getItem("sweetalert2-demo-theme");
+        const preferDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (stored === "dark" || (!stored && preferDark)) document.body.classList.add("dark");
+        updateThemeButton();
+      }
+
+      function updateThemeButton() {
+        const dark = document.body.classList.contains("dark");
+        $("#themeBtn").textContent = dark ? "☀" : "◐";
+        $("#themeBtn").title = dark ? "라이트 모드로 전환" : "다크 모드로 전환";
+      }
+
+      function init() {
+        initTheme();
+        setLibraryStatus();
+
+        $("#demoCount").textContent = demos.length;
+        $("#categoryCount").textContent = Object.keys(categoryInfo).length;
+
+        renderChips();
+        renderDemos();
+
+        $("#searchInput").addEventListener("input", (event) => {
+          query = event.target.value;
+          renderDemos();
+        });
+
+        $("#themeBtn").addEventListener("click", () => {
+          document.body.classList.toggle("dark");
+          localStorage.setItem("sweetalert2-demo-theme", document.body.classList.contains("dark") ? "dark" : "light");
+          updateThemeButton();
+        });
+
+        $("#randomBtn").addEventListener("click", () => {
+          const candidates = getFilteredDemos();
+          const demo = candidates[Math.floor(Math.random() * candidates.length)] || demos[0];
+          const button = document.querySelector(`[data-run="${demo.id}"]`);
+          runDemo(demo.id, button);
+        });
+
+        $("#clearLogBtn").addEventListener("click", () => {
+          logs = [];
+          renderLogs();
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
