@@ -37,6 +37,14 @@ ChatGPT/Codex는 이 저장소에 직접 push할 권한이 없다. 그래서 사
    ChatGPT 탭을 눌렀을 때 방금 올린 데모가 iframe에 정상 렌더링되는지 확인 → git commit & push
    (커밋 메시지에 ChatGPT가 작성한 내용을 대신 반영한 것임을 명시)
 
+**토큰 절약을 위한 대안 — 사용자가 GitHub에서 직접 올리는 방법**: `pages/<slug>/`가 이미 존재하는
+라이브러리(= `meta.json`, `claude/`, 탭 껍데기가 이미 있는 경우)는 Claude 없이도 사용자가 GitHub
+웹에서 직접 반영할 수 있다. `claude/nodejs-password-protected-app-phjpp3` 브랜치의
+`pages/<slug>/chatgpt/` 경로에서 "Add file → Upload files"로 파일을 올리고 파일명을 `index.html`로
+맞춘 뒤 그 브랜치에 바로 커밋하면 끝 (내용 검증·git 작업 전부 불필요, 몇 분 내 자동 배포됨). 다만
+`pages/<slug>/` 자체가 아직 없는 **새 라이브러리**는 `meta.json`과 탭 껍데기를 새로 만들어야 하므로
+이 경우는 계속 Claude에게 요청하도록 안내한다.
+
 ## 라이브러리 이름만 입력했을 때의 기본 동작
 
 사용자가 별도 설명 없이 **라이브러리 이름만** 입력하면(예: "Chart.js", "D3.js"), 아래 규칙대로 새 데모 페이지를 자동으로 만든다.
