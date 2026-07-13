@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Cropper.js 2.1.1 종합 기능 샘플</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: rgba(255,255,255,.94);
+      --panel-solid: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dfe5ef;
+      --accent: #146ef5;
+      --accent-2: #0a4fbe;
+      --accent-soft: #eaf2ff;
+      --success: #087443;
+      --warning: #a15c00;
+      --danger: #c43232;
+      --shadow: 0 12px 36px rgba(33, 48, 75, .09);
+      --radius: 18px;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0d1420;
+      --panel: rgba(20,29,43,.94);
+      --panel-solid: #141d2b;
+      --text: #eef3fb;
+      --muted: #9eabc0;
+      --line: #29364a;
+      --accent: #6aa3ff;
+      --accent-2: #9fc2ff;
+      --accent-soft: #192d4d;
+      --success: #55d49a;
+      --warning: #ffc56f;
+      --danger: #ff8585;
+      --shadow: 0 18px 50px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 5% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button, label, select { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+
+    .app { width: min(1840px, 100%); margin: 0 auto; padding: 22px; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      margin-bottom: 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .logo {
+      width: 48px; height: 48px; flex: 0 0 auto; border-radius: 15px;
+      display: grid; place-items: center; color: white; font-weight: 900; font-size: 18px;
+      background: linear-gradient(135deg, #0c5bd8, #48a6ff); box-shadow: 0 9px 22px rgba(20,110,245,.26);
+    }
+    .brand h1 { margin: 0; font-size: clamp(20px, 2.4vw, 30px); letter-spacing: -.04em; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+    .header-actions { display: flex; gap: 8px; }
+
+    .badge-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px;
+      border: 1px solid var(--line); border-radius: 999px; background: var(--panel-solid);
+      color: var(--muted); font-size: 11px; font-weight: 700;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+    .dot.ok { background: #16a56a; }
+    .dot.error { background: #e34a4a; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(240px, 300px) minmax(440px, 1fr) minmax(260px, 330px);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+      box-shadow: var(--shadow); overflow: hidden; backdrop-filter: blur(12px);
+    }
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      min-height: 52px; padding: 12px 15px; border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2, .section-title { margin: 0; font-size: 14px; letter-spacing: -.02em; }
+    .panel-body { padding: 14px; }
+    .sidebar { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; }
+    .sidebar::-webkit-scrollbar, .log::-webkit-scrollbar { width: 7px; }
+    .sidebar::-webkit-scrollbar-thumb, .log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 20px; }
+
+    .section { padding: 13px 0; border-bottom: 1px dashed var(--line); }
+    .section:first-child { padding-top: 0; }
+    .section:last-child { border: 0; padding-bottom: 0; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .hint { color: var(--muted); font-size: 11px; }
+
+    .btn {
+      min-height: 36px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px;
+      background: var(--panel-solid); color: var(--text); font-weight: 700; font-size: 12px;
+      transition: .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+    .btn.primary { border-color: transparent; background: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-2); }
+    .btn.soft { background: var(--accent-soft); border-color: transparent; color: var(--accent-2); }
+    .btn.danger { color: var(--danger); }
+    .btn.icon { width: 40px; padding: 0; font-size: 17px; }
+    .btn.active { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); background: var(--accent-soft); color: var(--accent-2); }
+
+    .grid-2, .grid-3, .grid-4 { display: grid; gap: 7px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .stack { display: grid; gap: 8px; }
+
+    .field { display: grid; gap: 5px; }
+    .field > span, .label { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .input, .select, .textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px;
+      background: var(--panel-solid); color: var(--text); outline: none;
+    }
+    .input, .select { height: 36px; padding: 0 10px; }
+    .textarea { min-height: 88px; padding: 9px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    input[type="color"] { width: 42px; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-solid); }
+
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; }
+    .switch-row span { font-size: 12px; font-weight: 650; }
+    .switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; border-radius: 99px; background: #b9c1cd; transition: .2s; }
+    .slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: white; transition: .2s; box-shadow: 0 1px 4px rgba(0,0,0,.28); }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(16px); }
+
+    .dropzone {
+      position: relative; display: grid; place-items: center; min-height: 112px; padding: 15px;
+      border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-soft), transparent); text-align: center;
+    }
+    .dropzone.dragover { border-color: var(--accent); transform: scale(1.01); }
+    .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .dropzone strong { font-size: 13px; }
+    .dropzone small { display: block; color: var(--muted); margin-top: 4px; font-size: 10px; }
+
+    .sample-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+    .sample {
+      position: relative; overflow: hidden; aspect-ratio: 1.35; border: 1px solid var(--line);
+      border-radius: 10px; background: #d8e8ff; padding: 0;
+    }
+    .sample img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .sample span { position: absolute; left: 4px; bottom: 4px; padding: 2px 5px; border-radius: 6px; background: rgba(0,0,0,.66); color: #fff; font-size: 9px; }
+
+    .editor-panel { min-width: 0; }
+    .editor-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+      padding: 10px; border-bottom: 1px solid var(--line); background: var(--panel-solid);
+    }
+    .toolbar-sep { width: 1px; align-self: stretch; min-height: 34px; background: var(--line); margin: 0 2px; }
+    .status-text { margin-left: auto; color: var(--muted); font-size: 11px; }
+
+    .stage-wrap { position: relative; padding: 12px; background: color-mix(in srgb, var(--bg) 72%, #111 28%); }
+    #cropperStage { position: relative; min-height: 480px; border-radius: 13px; overflow: hidden; background: #1b2432; }
+    #cropperStage cropper-canvas { width: 100%; height: clamp(480px, 64vh, 720px); }
+    #cropperStage cropper-selection { min-width: 24px; min-height: 24px; }
+    #sourceImage { display: none; }
+    .loading-overlay {
+      position: absolute; inset: 12px; z-index: 20; display: grid; place-items: center;
+      border-radius: 13px; background: color-mix(in srgb, var(--panel-solid) 92%, transparent);
+    }
+    .loading-box { text-align: center; max-width: 420px; padding: 30px; }
+    .spinner { width: 34px; height: 34px; margin: 0 auto 13px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .bottom-strip {
+      display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center;
+      padding: 10px 13px; border-top: 1px solid var(--line); background: var(--panel-solid);
+    }
+    .coord-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+    .coord { padding: 6px 8px; border-radius: 8px; background: var(--bg); min-width: 0; }
+    .coord b { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+    .coord small { color: var(--muted); font-size: 9px; }
+
+    .preview-box { border: 1px solid var(--line); border-radius: 13px; overflow: hidden; background: repeating-conic-gradient(#e6eaf0 0 25%, #fff 0 50%) 50% / 16px 16px; }
+    .preview-box cropper-viewer { width: 100%; height: 190px; }
+    .mini-previews { display: grid; grid-template-columns: 80px 52px 1fr; gap: 8px; align-items: end; margin-top: 8px; }
+    .mini { overflow: hidden; border: 1px solid var(--line); background: repeating-conic-gradient(#e6eaf0 0 25%, #fff 0 50%) 50% / 12px 12px; }
+    .mini cropper-viewer { width: 100%; height: 100%; }
+    .mini.square { width: 80px; height: 80px; border-radius: 10px; }
+    .mini.circle { width: 52px; height: 52px; border-radius: 50%; }
+    .mini.wide { width: 100%; height: 52px; border-radius: 9px; }
+
+    .data-table { display: grid; grid-template-columns: 90px 1fr; gap: 5px 8px; margin: 0; font-size: 11px; }
+    .data-table dt { color: var(--muted); }
+    .data-table dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-family: ui-monospace, Consolas, monospace; }
+    .log { height: 170px; overflow: auto; padding: 9px; border-radius: 10px; background: #101827; color: #d3dded; font: 10px/1.6 ui-monospace, Consolas, monospace; }
+    .log-line { display: grid; grid-template-columns: 58px 1fr; gap: 7px; border-bottom: 1px solid rgba(255,255,255,.05); padding: 2px 0; }
+    .log-time { color: #7e91ad; }
+    .log-action { color: #79b6ff; }
+
+    .output-preview { min-height: 170px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: repeating-conic-gradient(#e6eaf0 0 25%, #fff 0 50%) 50% / 16px 16px; }
+    .output-preview img { max-width: 100%; max-height: 260px; display: block; }
+    .output-empty { padding: 30px 15px; color: var(--muted); text-align: center; font-size: 12px; }
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; z-index: 99; transform: translate(-50%, 20px);
+      max-width: min(92vw, 560px); padding: 11px 15px; border-radius: 12px; background: #101827; color: #fff;
+      box-shadow: 0 16px 45px rgba(0,0,0,.28); opacity: 0; pointer-events: none; transition: .22s;
+      font-size: 12px; font-weight: 700;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%,0); }
+    .toast.error { background: #a62121; }
+
+    dialog { width: min(760px, calc(100% - 28px)); border: 1px solid var(--line); border-radius: 18px; padding: 0; background: var(--panel-solid); color: var(--text); box-shadow: 0 30px 90px rgba(0,0,0,.35); }
+    dialog::backdrop { background: rgba(4,10,20,.68); backdrop-filter: blur(4px); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+    .dialog-body { padding: 16px; max-height: 75vh; overflow: auto; }
+    .feature-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+    .feature-item { padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 12px; }
+
+    @media (max-width: 1280px) {
+      .layout { grid-template-columns: 260px minmax(430px,1fr); }
+      .right-panel { grid-column: 1 / -1; position: static; max-height: none; }
+      .right-panel .panel-body { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+      .right-panel .section { border: 0; padding: 0; }
+    }
+    @media (max-width: 860px) {
+      .app { padding: 10px; }
+      .topbar { align-items: flex-start; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+      .left-panel { order: 2; }
+      .editor-panel { order: 1; }
+      .right-panel { order: 3; }
+      .right-panel .panel-body { grid-template-columns: 1fr; }
+      #cropperStage { min-height: 420px; }
+      #cropperStage cropper-canvas { height: 55vh; min-height: 420px; }
+      .bottom-strip { grid-template-columns: 1fr; }
+      .status-text { width: 100%; margin-left: 0; }
+    }
+    @media (max-width: 540px) {
+      .brand p, .badge-row { display: none; }
+      .logo { width: 42px; height: 42px; }
+      .header-actions .btn:not(.icon) { display: none; }
+      .coord-grid { grid-template-columns: repeat(2,1fr); }
+      .grid-4 { grid-template-columns: repeat(2,1fr); }
+      .feature-list { grid-template-columns: 1fr; }
+      #cropperStage cropper-canvas { height: 50vh; min-height: 360px; }
+      #cropperStage { min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">CROP</div>
+        <div>
+          <h1>Cropper.js 종합 기능 실험실</h1>
+          <p>업로드부터 다중 선택, 변형, 미리보기, 고급 내보내기까지 한 페이지에서 테스트</p>
+          <div class="badge-row">
+            <span class="badge"><span id="libDot" class="dot"></span><span id="libBadge">Cropper.js 2.1.1 로딩 중</span></span>
+            <span class="badge">Web Components</span>
+            <span class="badge">단일 HTML</span>
+            <span class="badge">브라우저 내 처리</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="helpBtn" class="btn">기능 안내</button>
+        <button id="themeBtn" class="btn icon" title="화면 테마 전환">◐</button>
+        <button id="fullscreenBtn" class="btn icon" title="전체 화면">⛶</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel sidebar left-panel">
+        <div class="panel-head"><h2>입력 및 편집 설정</h2><span class="hint">SOURCE</span></div>
+        <div class="panel-body">
+          <section class="section">
+            <div class="section-title"><span>이미지 불러오기</span><span class="hint">드롭·붙여넣기 지원</span></div>
+            <div id="dropzone" class="dropzone">
+              <input id="fileInput" type="file" accept="image/*" />
+              <div><strong>이미지를 놓거나 눌러서 선택</strong><small>PNG · JPG · WebP · GIF · SVG 등</small></div>
+            </div>
+            <div class="stack" style="margin-top:8px">
+              <div style="display:flex; gap:6px">
+                <input id="urlInput" class="input" type="url" placeholder="https://... 이미지 URL" />
+                <button id="urlLoadBtn" class="btn">URL</button>
+              </div>
+              <div class="sample-grid" id="sampleGrid"></div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>자르기 비율</span><span id="ratioLabel" class="hint">자유</span></div>
+            <div class="grid-4" id="ratioButtons">
+              <button class="btn active" data-ratio="free">자유</button>
+              <button class="btn" data-ratio="1">1:1</button>
+              <button class="btn" data-ratio="1.3333333333">4:3</button>
+              <button class="btn" data-ratio="1.5">3:2</button>
+              <button class="btn" data-ratio="1.7777777778">16:9</button>
+              <button class="btn" data-ratio="0.5625">9:16</button>
+              <button class="btn" data-ratio="2.3333333333">21:9</button>
+              <button class="btn" data-ratio="custom">직접</button>
+            </div>
+            <div id="customRatioWrap" class="grid-2" style="display:none; margin-top:7px">
+              <label class="field"><span>가로</span><input id="ratioW" class="input" type="number" value="5" min="0.01" step="0.01"></label>
+              <label class="field"><span>세로</span><input id="ratioH" class="input" type="number" value="4" min="0.01" step="0.01"></label>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>선택 영역 조작</span><span class="hint">CROP BOX</span></div>
+            <div class="grid-3">
+              <button class="btn" data-sel-move="0,-10">위</button><button class="btn" data-sel-action="center">가운데</button><button class="btn" data-sel-move="0,10">아래</button>
+              <button class="btn" data-sel-move="-10,0">왼쪽</button><button class="btn" data-sel-action="reset">초기화</button><button class="btn" data-sel-move="10,0">오른쪽</button>
+              <button class="btn" data-sel-action="zoomOut">축소</button><button class="btn danger" data-sel-action="clear">지우기</button><button class="btn" data-sel-action="zoomIn">확대</button>
+            </div>
+            <div class="grid-4" style="margin-top:8px">
+              <label class="field"><span>X</span><input id="selX" class="input" type="number" step="1"></label>
+              <label class="field"><span>Y</span><input id="selY" class="input" type="number" step="1"></label>
+              <label class="field"><span>W</span><input id="selW" class="input" type="number" min="1" step="1"></label>
+              <label class="field"><span>H</span><input id="selH" class="input" type="number" min="1" step="1"></label>
+            </div>
+            <button id="applySelectionBtn" class="btn soft" style="width:100%; margin-top:7px">좌표·크기 적용</button>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>인터페이스 옵션</span><span class="hint">ELEMENTS</span></div>
+            <div class="stack">
+              <div class="switch-row"><span>다중 선택 허용</span><label class="switch"><input id="multipleToggle" type="checkbox"><span class="slider"></span></label></div>
+              <div class="switch-row"><span>키보드 제어</span><label class="switch"><input id="keyboardToggle" type="checkbox" checked><span class="slider"></span></label></div>
+              <div class="switch-row"><span>선택 영역 이동</span><label class="switch"><input id="movableToggle" type="checkbox" checked><span class="slider"></span></label></div>
+              <div class="switch-row"><span>선택 영역 크기 변경</span><label class="switch"><input id="resizableToggle" type="checkbox" checked><span class="slider"></span></label></div>
+              <div class="switch-row"><span>캔버스 잠금</span><label class="switch"><input id="disabledToggle" type="checkbox"><span class="slider"></span></label></div>
+              <div class="switch-row"><span>격자 표시</span><label class="switch"><input id="gridToggle" type="checkbox" checked><span class="slider"></span></label></div>
+              <div class="switch-row"><span>중앙 십자선</span><label class="switch"><input id="crosshairToggle" type="checkbox" checked><span class="slider"></span></label></div>
+              <div class="switch-row"><span>바깥 음영</span><label class="switch"><input id="shadeToggle" type="checkbox" checked><span class="slider"></span></label></div>
+            </div>
+            <div style="display:flex; align-items:end; gap:10px; margin-top:10px">
+              <label class="field" style="flex:1"><span>휠 확대 단계 <b id="wheelStepLabel">0.10</b></span><input id="wheelStep" type="range" min="0.01" max="0.5" value="0.1" step="0.01"></label>
+              <label class="field"><span>테마색</span><input id="accentPicker" type="color" value="#146ef5"></label>
+            </div>
+            <p class="hint" style="margin:8px 0 0">선택 영역을 누른 뒤 방향키 이동, +/− 확대·축소, Delete 삭제</p>
+          </section>
+        </div>
+      </aside>
+
+      <section class="panel editor-panel">
+        <div class="panel-head"><h2>이미지 편집 캔버스</h2><span id="sourceSummary" class="hint">샘플 이미지</span></div>
+        <div class="editor-toolbar">
+          <button class="btn" data-image-action="moveLeft" title="이미지 왼쪽 이동">←</button>
+          <button class="btn" data-image-action="moveUp" title="이미지 위 이동">↑</button>
+          <button class="btn" data-image-action="moveDown" title="이미지 아래 이동">↓</button>
+          <button class="btn" data-image-action="moveRight" title="이미지 오른쪽 이동">→</button>
+          <span class="toolbar-sep"></span>
+          <button class="btn" data-image-action="zoomOut">− 축소</button>
+          <button class="btn" data-image-action="zoomIn">＋ 확대</button>
+          <span class="toolbar-sep"></span>
+          <button class="btn" data-image-action="rotateLeft">↶ 15°</button>
+          <button class="btn" data-image-action="rotateRight">↷ 15°</button>
+          <button class="btn" data-image-action="flipX">↔ 반전</button>
+          <button class="btn" data-image-action="flipY">↕ 반전</button>
+          <span class="toolbar-sep"></span>
+          <button class="btn" data-image-action="contain">맞춤</button>
+          <button class="btn" data-image-action="cover">채우기</button>
+          <button class="btn" data-image-action="reset">전체 초기화</button>
+          <span class="toolbar-sep"></span>
+          <button id="undoBtn" class="btn" disabled>실행 취소</button>
+          <button id="redoBtn" class="btn" disabled>다시 실행</button>
+          <span id="editorStatus" class="status-text">준비 중</span>
+        </div>
+
+        <div class="stage-wrap">
+          <div id="cropperStage"></div>
+          <img id="sourceImage" alt="자르기 원본" />
+          <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-box"><div class="spinner"></div><strong>Cropper.js를 불러오는 중</strong><p class="hint">인터넷 연결이 필요하다. 라이브러리 로딩 후 샘플이 자동으로 실행된다.</p></div>
+          </div>
+        </div>
+
+        <div class="bottom-strip">
+          <div class="coord-grid">
+            <div class="coord"><small>X 위치</small><b id="coordX">0</b></div>
+            <div class="coord"><small>Y 위치</small><b id="coordY">0</b></div>
+            <div class="coord"><small>너비</small><b id="coordW">0</b></div>
+            <div class="coord"><small>높이</small><b id="coordH">0</b></div>
+          </div>
+          <div style="display:flex; gap:7px">
+            <button id="exportAllBtn" class="btn">모든 선택 미리보기</button>
+            <button id="generateBtn" class="btn primary">선택 영역 생성</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel sidebar right-panel">
+        <div class="panel-head"><h2>미리보기 및 출력</h2><span class="hint">OUTPUT</span></div>
+        <div class="panel-body">
+          <section class="section">
+            <div class="section-title"><span>실시간 미리보기</span><span id="selectionCount" class="hint">1개 선택</span></div>
+            <div class="preview-box"><cropper-viewer selection="#mainSelection" resize="both"></cropper-viewer></div>
+            <div class="mini-previews">
+              <div class="mini square"><cropper-viewer selection="#mainSelection" resize="both"></cropper-viewer></div>
+              <div class="mini circle"><cropper-viewer selection="#mainSelection" resize="both"></cropper-viewer></div>
+              <div class="mini wide"><cropper-viewer selection="#mainSelection" resize="both"></cropper-viewer></div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>이미지 고급 변형</span><span class="hint">TRANSFORM</span></div>
+            <div class="grid-2">
+              <label class="field"><span>회전 각도</span><input id="customRotate" class="input" type="number" value="30" step="1"></label>
+              <button id="customRotateBtn" class="btn" style="align-self:end">회전 적용</button>
+              <label class="field"><span>기울이기 X</span><input id="skewX" class="input" type="number" value="5" step="1"></label>
+              <label class="field"><span>기울이기 Y</span><input id="skewY" class="input" type="number" value="0" step="1"></label>
+            </div>
+            <button id="skewBtn" class="btn soft" style="width:100%; margin-top:7px">Skew 적용</button>
+            <label class="field" style="margin-top:8px"><span>확대·축소 미세 조정</span><input id="zoomRange" type="range" min="-0.5" max="0.5" value="0" step="0.01"></label>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>내보내기 설정</span><span class="hint">CANVAS</span></div>
+            <div class="grid-2">
+              <label class="field"><span>파일 형식</span><select id="formatSelect" class="select"><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select></label>
+              <label class="field"><span>품질 <b id="qualityLabel">0.92</b></span><input id="qualityRange" type="range" min="0.1" max="1" value="0.92" step="0.01"></label>
+              <label class="field"><span>출력 너비(px)</span><input id="outWidth" class="input" type="number" min="1" max="8192" placeholder="원본 비율"></label>
+              <label class="field"><span>출력 높이(px)</span><input id="outHeight" class="input" type="number" min="1" max="8192" placeholder="자동 계산"></label>
+              <label class="field"><span>필터</span><select id="filterSelect" class="select"><option value="none">없음</option><option value="grayscale(100%)">흑백</option><option value="sepia(100%)">세피아</option><option value="contrast(130%)">대비 강화</option><option value="brightness(120%)">밝게</option><option value="saturate(145%)">채도 강화</option></select></label>
+              <label class="field"><span>배경색(JPEG)</span><input id="backgroundColor" type="color" value="#ffffff"></label>
+              <label class="field"><span>보간 품질</span><select id="smoothingQuality" class="select"><option value="low">낮음</option><option value="medium">보통</option><option value="high" selected>높음</option></select></label>
+              <label class="field"><span>대상</span><select id="exportTarget" class="select"><option value="selection">선택 영역</option><option value="canvas">전체 캔버스</option></select></label>
+            </div>
+            <div class="grid-2" style="margin-top:8px">
+              <button id="downloadBtn" class="btn primary">파일 다운로드</button>
+              <button id="copyImageBtn" class="btn">이미지 복사</button>
+              <button id="copyDataUrlBtn" class="btn">Data URL 복사</button>
+              <button id="copyJsonBtn" class="btn">좌표 JSON 복사</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>생성 결과</span><span id="outputInfo" class="hint">아직 없음</span></div>
+            <div id="outputPreview" class="output-preview"><div class="output-empty">‘선택 영역 생성’을 누르면 결과가 표시된다.</div></div>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>현재 데이터</span><button id="refreshDataBtn" class="btn" style="min-height:28px;padding:4px 8px">새로고침</button></div>
+            <dl class="data-table">
+              <dt>원본 크기</dt><dd id="naturalSize">-</dd>
+              <dt>선택 비율</dt><dd id="currentRatio">-</dd>
+              <dt>Transform</dt><dd id="matrixData">-</dd>
+              <dt>원본 파일</dt><dd id="fileData">샘플</dd>
+            </dl>
+          </section>
+
+          <section class="section">
+            <div class="section-title"><span>이벤트 로그</span><button id="clearLogBtn" class="btn" style="min-height:28px;padding:4px 8px">비우기</button></div>
+            <div id="eventLog" class="log"></div>
+          </section>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="helpDialog">
+    <div class="dialog-head"><strong>포함된 주요 기능</strong><button id="closeHelpBtn" class="btn icon">×</button></div>
+    <div class="dialog-body">
+      <div class="feature-list">
+        <div class="feature-item"><b>이미지 입력</b><br>파일 선택, 드래그 앤 드롭, 클립보드 붙여넣기, URL, 내장 샘플</div>
+        <div class="feature-item"><b>선택 영역</b><br>자유·고정 비율, 좌표 직접 입력, 이동, 확대, 중앙 정렬, 초기화, 삭제</div>
+        <div class="feature-item"><b>이미지 변형</b><br>이동, 확대·축소, 회전, 가로·세로 반전, 기울이기, contain·cover</div>
+        <div class="feature-item"><b>Web Components</b><br>Canvas, Image, Shade, Handle, Selection, Grid, Crosshair, Viewer</div>
+        <div class="feature-item"><b>고급 선택</b><br>다중 선택, 키보드 제어, 이동·리사이즈 잠금, 캔버스 비활성화</div>
+        <div class="feature-item"><b>내보내기</b><br>PNG·JPEG·WebP, 크기 지정, 품질, 배경, 보간, 필터, Blob·Data URL</div>
+        <div class="feature-item"><b>미리보기</b><br>대형·정사각형·원형·가로형 실시간 Viewer와 다중 결과 갤러리</div>
+        <div class="feature-item"><b>개발 보조</b><br>좌표·행렬·원본 정보, 이벤트 로그, JSON 복사, 실행 취소·다시 실행</div>
+      </div>
+      <p class="hint" style="margin:14px 0 0">주의: URL 이미지는 원격 서버가 CORS를 허용해야 캔버스 내보내기가 가능하다. 이 페이지는 Cropper.js CDN 로딩을 위해 인터넷 연결이 필요하다.</p>
+    </div>
+  </dialog>
+
+  <dialog id="multiDialog">
+    <div class="dialog-head"><strong>다중 선택 결과</strong><button id="closeMultiBtn" class="btn icon">×</button></div>
+    <div class="dialog-body"><div id="multiResults" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px"></div></div>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const VERSION = '2.1.1';
+    const CDN_LIST = [
+      `https://cdn.jsdelivr.net/npm/cropperjs@${VERSION}/dist/cropper.min.js`,
+      `https://unpkg.com/cropperjs@${VERSION}/dist/cropper.min.js`,
+      `https://cdn.jsdelivr.net/npm/cropperjs@${VERSION}/dist/cropper.js`,
+      `https://unpkg.com/cropperjs@${VERSION}/dist/cropper.js`,
+      `https://unpkg.com/cropperjs@${VERSION}`
+    ];
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+    const round = (n, p = 1) => Number.isFinite(n) ? Number(n.toFixed(p)) : 0;
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    let cropper = null;
+    let cropperCanvas = null;
+    let cropperImage = null;
+    let mainSelection = null;
+    let currentObjectUrl = null;
+    let currentFile = { name: '내장 샘플', type: 'image/svg+xml', size: 0 };
+    let outputCanvas = null;
+    let outputBlob = null;
+    let outputUrl = null;
+    let history = [];
+    let historyIndex = -1;
+    let restoring = false;
+    let zoomRangePrevious = 0;
+    let toastTimer = null;
+    let updateQueued = false;
+
+    const template = `
+      <cropper-canvas background scale-step="0.1">
+        <cropper-image crossorigin="anonymous" rotatable scalable skewable translatable></cropper-image>
+        <cropper-shade></cropper-shade>
+        <cropper-handle action="select" plain></cropper-handle>
+        <cropper-selection id="mainSelection" initial-coverage="0.66" movable resizable zoomable keyboard outlined>
+          <cropper-grid role="grid" bordered covered></cropper-grid>
+          <cropper-crosshair centered></cropper-crosshair>
+          <cropper-handle action="move" theme-color="rgba(255,255,255,.32)"></cropper-handle>
+          <cropper-handle action="n-resize"></cropper-handle>
+          <cropper-handle action="e-resize"></cropper-handle>
+          <cropper-handle action="s-resize"></cropper-handle>
+          <cropper-handle action="w-resize"></cropper-handle>
+          <cropper-handle action="ne-resize"></cropper-handle>
+          <cropper-handle action="nw-resize"></cropper-handle>
+          <cropper-handle action="se-resize"></cropper-handle>
+          <cropper-handle action="sw-resize"></cropper-handle>
+        </cropper-selection>
+      </cropper-canvas>`;
+
+    function showToast(message, type = 'normal') {
+      const toast = $('#toast');
+      toast.textContent = message;
+      toast.className = `toast show${type === 'error' ? ' error' : ''}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.className = 'toast', 2600);
+    }
+
+    function logEvent(action, detail = '') {
+      const log = $('#eventLog');
+      const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      const safeDetail = typeof detail === 'string' ? detail : JSON.stringify(detail);
+      line.innerHTML = `<span class="log-time">${time}</span><span><b class="log-action">${action}</b>${safeDetail ? ` · ${safeDetail}` : ''}</span>`;
+      log.prepend(line);
+      while (log.children.length > 80) log.lastElementChild.remove();
+    }
+
+    function loadScript(src, timeoutMs = 2200) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        let settled = false;
+        const finish = (error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          script.onload = null;
+          script.onerror = null;
+          if (error) {
+            script.remove();
+            reject(error);
+          } else {
+            resolve();
+          }
+        };
+        const timer = setTimeout(() => finish(new Error(`로드 시간 초과: ${src}`)), timeoutMs);
+        script.src = src;
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => finish();
+        script.onerror = () => finish(new Error(`로드 실패: ${src}`));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadCropperLibrary() {
+      if (window.Cropper) return;
+      let lastError = null;
+      for (const src of CDN_LIST) {
+        try {
+          await loadScript(src);
+          if (window.Cropper) return;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('Cropper.js를 불러오지 못했다.');
+    }
+
+    function svgData(svg) {
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function sampleImages() {
+      const landscape = `<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="950" viewBox="0 0 1500 950">
+        <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#7bc7ff"/><stop offset="1" stop-color="#e8f6ff"/></linearGradient><linearGradient id="sea" x2="0" y2="1"><stop stop-color="#0878ba"/><stop offset="1" stop-color="#023a70"/></linearGradient></defs>
+        <rect width="1500" height="560" fill="url(#sky)"/><rect y="560" width="1500" height="390" fill="url(#sea)"/><circle cx="1220" cy="180" r="85" fill="#fff1aa"/>
+        <path d="M0 620 Q160 560 330 625 T660 620 T990 625 T1320 615 T1600 620 V950 H0Z" fill="#0b68a4" opacity=".75"/>
+        <path d="M520 580 L970 580 L1080 690 L450 690Z" fill="#ecf1f5"/><path d="M660 430 H890 L940 580 H620Z" fill="#fff"/><rect x="705" y="466" width="70" height="62" rx="7" fill="#245277"/><rect x="790" y="466" width="70" height="62" rx="7" fill="#245277"/><path d="M760 430 V300 H785 V430" fill="#27384b"/><path d="M785 318 L990 410" stroke="#27384b" stroke-width="15"/><path d="M990 410 L1130 570" stroke="#27384b" stroke-width="10"/><path d="M1130 570 q35 55 0 110" fill="none" stroke="#ffb12c" stroke-width="8"/>
+        <g fill="#fff" opacity=".85"><path d="M180 250 q35-35 70 0 q35-35 70 0 q-35-12-70 10 q-35-22-70-10"/><path d="M340 160 q28-28 56 0 q28-28 56 0 q-28-10-56 8 q-28-18-56-8"/></g>
+        <text x="90" y="120" font-size="54" font-family="sans-serif" font-weight="800" fill="#0a3e68">바다와 어선</text><text x="92" y="170" font-size="25" font-family="sans-serif" fill="#245979">Cropper.js 가로형 샘플 이미지</text>
+      </svg>`;
+
+      const portrait = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1400" viewBox="0 0 900 1400">
+        <defs><linearGradient id="p1" x2="0" y2="1"><stop stop-color="#4536a9"/><stop offset=".58" stop-color="#ee7f77"/><stop offset="1" stop-color="#f7bd6d"/></linearGradient></defs>
+        <rect width="900" height="1400" fill="url(#p1)"/><circle cx="660" cy="300" r="150" fill="#ffe9b3" opacity=".9"/><path d="M0 840 Q210 690 420 840 T900 820 V1400 H0Z" fill="#163e70"/><path d="M0 980 Q210 850 420 990 T900 960 V1400 H0Z" fill="#09274a"/>
+        <path d="M330 990 H570 L525 590 H375Z" fill="#f6f2e9"/><rect x="365" y="725" width="170" height="95" fill="#cf493f"/><path d="M350 590 L450 470 L550 590Z" fill="#e24f45"/><rect x="422" y="410" width="56" height="90" fill="#303b4c"/><path d="M425 410 L450 305 L475 410Z" fill="#fff0a7"/><path d="M450 350 Q700 300 870 220" stroke="#fff6c4" stroke-width="34" opacity=".35"/>
+        <text x="70" y="120" font-size="60" font-family="sans-serif" font-weight="800" fill="white">등대의 저녁</text><text x="72" y="175" font-size="25" font-family="sans-serif" fill="#fff" opacity=".85">세로형 · 9:16 테스트</text>
+      </svg>`;
+
+      const graphic = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+        <rect width="1200" height="1200" fill="#eff5ff"/><circle cx="1030" cy="160" r="260" fill="#b7d6ff"/><circle cx="130" cy="1060" r="310" fill="#c9f0e6"/><rect x="115" y="120" width="970" height="960" rx="60" fill="#fff" stroke="#c9d6ea" stroke-width="8"/>
+        <rect x="180" y="190" width="840" height="330" rx="36" fill="#146ef5"/><text x="230" y="315" font-size="58" font-family="sans-serif" font-weight="800" fill="#fff">CROPPER.JS</text><text x="230" y="395" font-size="32" font-family="sans-serif" fill="#d9e9ff">이미지 자르기 · 회전 · 확대</text>
+        <g transform="translate(205 590)"><rect width="220" height="310" rx="28" fill="#eef4ff"/><rect x="265" width="220" height="310" rx="28" fill="#eefaf5"/><rect x="530" width="220" height="310" rx="28" fill="#fff5e8"/><text x="63" y="115" font-size="78" font-family="sans-serif" fill="#146ef5">1:1</text><text x="310" y="115" font-size="70" font-family="sans-serif" fill="#18885d">4:3</text><text x="555" y="115" font-size="62" font-family="sans-serif" fill="#d57b0b">16:9</text><text x="60" y="210" font-size="24" font-family="sans-serif" fill="#53657d">정사각형</text><text x="323" y="210" font-size="24" font-family="sans-serif" fill="#53657d">문서형</text><text x="585" y="210" font-size="24" font-family="sans-serif" fill="#53657d">와이드</text></g>
+        <text x="190" y="1015" font-size="28" font-family="sans-serif" fill="#53657d">Web Components 기반 종합 기능 샘플</text>
+      </svg>`;
+
+      return [
+        { name: '가로', src: svgData(landscape) },
+        { name: '세로', src: svgData(portrait) },
+        { name: '그래픽', src: svgData(graphic) }
+      ];
+    }
+
+    function renderSamples() {
+      const grid = $('#sampleGrid');
+      sampleImages().forEach((sample, index) => {
+        const button = document.createElement('button');
+        button.className = 'sample';
+        button.type = 'button';
+        button.innerHTML = `<img alt="${sample.name} 샘플"><span>${sample.name}</span>`;
+        $('img', button).src = sample.src;
+        button.addEventListener('click', () => loadSource(sample.src, { name: `${sample.name} 내장 샘플.svg`, type: 'image/svg+xml', size: 0 }));
+        grid.appendChild(button);
+        if (index === 0) $('#sourceImage').src = sample.src;
+      });
+    }
+
+    function getCropperCtor() {
+      const exported = window.Cropper;
+      return exported && (exported.default || exported.Cropper || exported);
+    }
+
+    async function initCropper() {
+      const CropperCtor = getCropperCtor();
+      if (typeof CropperCtor !== 'function') throw new Error('Cropper 생성자를 찾지 못했다.');
+
+      cropper = new CropperCtor($('#sourceImage'), {
+        container: '#cropperStage',
+        template
+      });
+
+      cropperCanvas = cropper.getCropperCanvas();
+      cropperImage = cropper.getCropperImage();
+      mainSelection = cropper.getCropperSelection();
+
+      if (!cropperCanvas || !cropperImage || !mainSelection) throw new Error('Cropper 구성 요소 초기화에 실패했다.');
+
+      await cropperImage.$ready();
+      cropperImage.$center('contain');
+      mainSelection.$reset();
+      attachCropperEvents();
+      applyVisualOptions();
+      updateAllData();
+      pushHistory('초기 상태');
+
+      $('#loadingOverlay').style.display = 'none';
+      $('#libDot').className = 'dot ok';
+      $('#libBadge').textContent = `Cropper.js ${VERSION} 연결됨`;
+      $('#editorStatus').textContent = '편집 가능';
+      logEvent('ready', `Cropper.js ${VERSION}`);
+    }
+
+    function attachCropperEvents() {
+      cropperCanvas.addEventListener('actionstart', event => logEvent('actionstart', event.detail?.action || ''));
+      cropperCanvas.addEventListener('actionmove', event => {
+        if (!updateQueued) {
+          updateQueued = true;
+          requestAnimationFrame(() => { updateQueued = false; updateAllData(); });
+        }
+      });
+      cropperCanvas.addEventListener('actionend', event => {
+        logEvent('actionend', event.detail?.action || '');
+        updateAllData();
+        pushHistory(`포인터 ${event.detail?.action || '작업'}`);
+      });
+      cropperCanvas.addEventListener('action', event => {
+        const action = event.detail?.action;
+        if (action === 'scale' || action === 'rotate' || action === 'transform') updateAllData();
+      });
+      cropperImage.addEventListener('transform', event => {
+        $('#matrixData').textContent = event.detail.matrix.map(n => round(n, 3)).join(', ');
+      });
+      mainSelection.addEventListener('change', () => updateAllData());
+    }
+
+    async function loadSource(src, fileInfo) {
+      if (!cropperImage) return;
+      $('#editorStatus').textContent = '이미지 불러오는 중';
+      try {
+        cropperImage.src = src;
+        await cropperImage.$ready();
+        cropperImage.$resetTransform().$center('contain');
+        mainSelection.hidden = false;
+        mainSelection.$reset();
+        currentFile = fileInfo;
+        history = [];
+        historyIndex = -1;
+        pushHistory('이미지 변경');
+        updateSourceData();
+        updateAllData();
+        clearOutput();
+        $('#editorStatus').textContent = '이미지 변경 완료';
+        logEvent('source', fileInfo.name);
+      } catch (error) {
+        console.error(error);
+        showToast('이미지를 불러오지 못했다. URL의 CORS 설정이나 파일 형식을 확인해 줘.', 'error');
+        $('#editorStatus').textContent = '불러오기 실패';
+      }
+    }
+
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        showToast('이미지 파일만 선택할 수 있다.', 'error');
+        return;
+      }
+      if (file.size > 30 * 1024 * 1024) {
+        showToast('30MB 이하 이미지를 권장한다.', 'error');
+        return;
+      }
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(file);
+      loadSource(currentObjectUrl, { name: file.name, type: file.type, size: file.size });
+    }
+
+    function updateSourceData() {
+      cropperImage.$ready(img => {
+        $('#naturalSize').textContent = `${img.naturalWidth} × ${img.naturalHeight}px`;
+        $('#sourceSummary').textContent = `${currentFile.name} · ${img.naturalWidth}×${img.naturalHeight}`;
+      });
+      $('#fileData').textContent = `${currentFile.name}${currentFile.size ? ` · ${(currentFile.size / 1024).toFixed(1)}KB` : ''}`;
+    }
+
+    function getSelections() {
+      return cropper?.getCropperSelections ? [...(cropper.getCropperSelections() || [])] : (mainSelection ? [mainSelection] : []);
+    }
+
+    function activeSelection() {
+      const active = getSelections().find(item => item.active) || mainSelection || getSelections()[0];
+      return active;
+    }
+
+    function updateAllData() {
+      if (!cropperImage || !mainSelection) return;
+      const selection = activeSelection();
+      if (!selection) return;
+      const values = { x: selection.x, y: selection.y, width: selection.width, height: selection.height };
+      $('#coordX').textContent = `${round(values.x)} px`;
+      $('#coordY').textContent = `${round(values.y)} px`;
+      $('#coordW').textContent = `${round(values.width)} px`;
+      $('#coordH').textContent = `${round(values.height)} px`;
+      $('#selX').value = round(values.x);
+      $('#selY').value = round(values.y);
+      $('#selW').value = Math.max(1, round(values.width));
+      $('#selH').value = Math.max(1, round(values.height));
+      const ratio = values.height ? values.width / values.height : 0;
+      $('#currentRatio').textContent = ratio ? `${round(ratio, 4)} (${round(values.width)}:${round(values.height)})` : '-';
+      $('#matrixData').textContent = cropperImage.$getTransform().map(n => round(n, 3)).join(', ');
+      const count = getSelections().length;
+      $('#selectionCount').textContent = `${count}개 선택`;
+      updateSourceData();
+    }
+
+    function setAspectRatio(value, label, button) {
+      const selection = activeSelection();
+      if (!selection) return;
+      selection.aspectRatio = value;
+      if (Number.isFinite(value)) {
+        const area = Math.max(100, selection.width * selection.height);
+        let width = Math.sqrt(area * value);
+        let height = width / value;
+        const rect = cropperCanvas.getBoundingClientRect();
+        const scale = Math.min(1, (rect.width * .9) / width, (rect.height * .9) / height);
+        width *= scale; height *= scale;
+        selection.$change(selection.x, selection.y, width, height, value).$center();
+      } else {
+        selection.$render();
+      }
+      $('#ratioLabel').textContent = label;
+      $$('#ratioButtons .btn').forEach(btn => btn.classList.toggle('active', btn === button));
+      updateAllData();
+      pushHistory(`비율 ${label}`);
+    }
+
+    function applyVisualOptions() {
+      if (!cropperCanvas || !mainSelection) return;
+      cropperCanvas.disabled = $('#disabledToggle').checked;
+      cropperCanvas.scaleStep = Number($('#wheelStep').value);
+      getSelections().forEach(selection => {
+        selection.multiple = $('#multipleToggle').checked;
+        selection.keyboard = $('#keyboardToggle').checked;
+        selection.movable = $('#movableToggle').checked;
+        selection.resizable = $('#resizableToggle').checked;
+      });
+      const grid = $('cropper-grid', cropperCanvas);
+      const crosshair = $('cropper-crosshair', cropperCanvas);
+      const shade = $('cropper-shade', cropperCanvas);
+      if (grid) grid.hidden = !$('#gridToggle').checked;
+      if (crosshair) crosshair.hidden = !$('#crosshairToggle').checked;
+      if (shade) shade.hidden = !$('#shadeToggle').checked;
+      const accent = $('#accentPicker').value;
+      cropperCanvas.themeColor = accent;
+      $$('cropper-handle', cropperCanvas).forEach(handle => {
+        if (handle.getAttribute('action') !== 'move') handle.themeColor = accent;
+      });
+      document.documentElement.style.setProperty('--accent', accent);
+    }
+
+    function imageAction(action) {
+      if (!cropperImage) return;
+      const map = {
+        moveLeft: () => cropperImage.$move(-15, 0),
+        moveRight: () => cropperImage.$move(15, 0),
+        moveUp: () => cropperImage.$move(0, -15),
+        moveDown: () => cropperImage.$move(0, 15),
+        zoomIn: () => cropperImage.$zoom(.1),
+        zoomOut: () => cropperImage.$zoom(-.1),
+        rotateLeft: () => cropperImage.$rotate('-15deg'),
+        rotateRight: () => cropperImage.$rotate('15deg'),
+        flipX: () => cropperImage.$scale(-1, 1),
+        flipY: () => cropperImage.$scale(1, -1),
+        contain: () => cropperImage.$center('contain'),
+        cover: () => cropperImage.$center('cover'),
+        reset: () => {
+          cropperImage.$resetTransform().$center('contain');
+          getSelections().slice(1).forEach(selection => selection.remove());
+          mainSelection.hidden = false;
+          mainSelection.$reset();
+        }
+      };
+      map[action]?.();
+      updateAllData();
+      pushHistory(action);
+      logEvent('image', action);
+    }
+
+    function selectionAction(action) {
+      const selection = activeSelection();
+      if (!selection) return;
+      const map = {
+        center: () => selection.$center(),
+        reset: () => { selection.hidden = false; selection.$reset(); },
+        clear: () => selection.$clear(),
+        zoomIn: () => selection.$zoom(.1),
+        zoomOut: () => selection.$zoom(-.1)
+      };
+      map[action]?.();
+      updateAllData();
+      pushHistory(`selection ${action}`);
+      logEvent('selection', action);
+    }
+
+    function snapshot() {
+      if (!cropperImage || !mainSelection) return null;
+      return {
+        matrix: [...cropperImage.$getTransform()],
+        selection: {
+          x: mainSelection.x,
+          y: mainSelection.y,
+          width: mainSelection.width,
+          height: mainSelection.height,
+          hidden: mainSelection.hidden,
+          aspectRatio: Number.isFinite(mainSelection.aspectRatio) ? mainSelection.aspectRatio : null
+        }
+      };
+    }
+
+    function pushHistory(reason) {
+      if (restoring) return;
+      const state = snapshot();
+      if (!state) return;
+      const serialized = JSON.stringify(state);
+      if (historyIndex >= 0 && JSON.stringify(history[historyIndex]?.state) === serialized) return;
+      history = history.slice(0, historyIndex + 1);
+      history.push({ reason, state });
+      if (history.length > 40) history.shift();
+      historyIndex = history.length - 1;
+      updateHistoryButtons();
+    }
+
+    function restoreHistory(index) {
+      const entry = history[index];
+      if (!entry) return;
+      restoring = true;
+      const { matrix, selection } = entry.state;
+      cropperImage.$setTransform(matrix);
+      mainSelection.aspectRatio = selection.aspectRatio ?? NaN;
+      mainSelection.hidden = selection.hidden;
+      mainSelection.$change(selection.x, selection.y, selection.width, selection.height, selection.aspectRatio ?? NaN);
+      restoring = false;
+      historyIndex = index;
+      updateHistoryButtons();
+      updateAllData();
+      logEvent('history', entry.reason);
+    }
+
+    function updateHistoryButtons() {
+      $('#undoBtn').disabled = historyIndex <= 0;
+      $('#redoBtn').disabled = historyIndex < 0 || historyIndex >= history.length - 1;
+    }
+
+    function exportOptions(selection) {
+      let width = Number($('#outWidth').value) || 0;
+      let height = Number($('#outHeight').value) || 0;
+      const ratio = selection?.height ? selection.width / selection.height : 1;
+      if (width && !height) height = Math.max(1, Math.round(width / ratio));
+      if (height && !width) width = Math.max(1, Math.round(height * ratio));
+      if (width) width = clamp(Math.round(width), 1, 8192);
+      if (height) height = clamp(Math.round(height), 1, 8192);
+      const format = $('#formatSelect').value;
+      const background = $('#backgroundColor').value;
+      const filter = $('#filterSelect').value;
+      const smoothing = $('#smoothingQuality').value;
+      return {
+        ...(width ? { width } : {}),
+        ...(height ? { height } : {}),
+        beforeDraw(context, canvas) {
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = smoothing;
+          if (format === 'image/jpeg') {
+            context.save();
+            context.fillStyle = background;
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.restore();
+          }
+          context.filter = filter;
+        }
+      };
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Blob 생성 실패')), type, quality);
+      });
+    }
+
+    async function generateOutput({ silent = false } = {}) {
+      const selection = activeSelection();
+      if (!selection && $('#exportTarget').value === 'selection') throw new Error('선택 영역이 없다.');
+      const target = $('#exportTarget').value === 'canvas' ? cropperCanvas : selection;
+      if (!target?.$toCanvas) throw new Error('내보낼 수 있는 대상이 없다.');
+
+      $('#editorStatus').textContent = '결과 생성 중';
+      const options = exportOptions(selection || mainSelection);
+      const canvas = await target.$toCanvas(options);
+      const format = $('#formatSelect').value;
+      const quality = Number($('#qualityRange').value);
+      const blob = await canvasToBlob(canvas, format, quality);
+
+      if (outputUrl) URL.revokeObjectURL(outputUrl);
+      outputCanvas = canvas;
+      outputBlob = blob;
+      outputUrl = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.alt = '자르기 결과';
+      img.src = outputUrl;
+      const preview = $('#outputPreview');
+      preview.innerHTML = '';
+      preview.appendChild(img);
+      $('#outputInfo').textContent = `${canvas.width}×${canvas.height} · ${(blob.size / 1024).toFixed(1)}KB`;
+      $('#editorStatus').textContent = '결과 생성 완료';
+      logEvent('export', `${format}, ${canvas.width}×${canvas.height}`);
+      if (!silent) showToast('선택 영역 결과를 생성했다.');
+      return { canvas, blob, url: outputUrl };
+    }
+
+    function clearOutput() {
+      if (outputUrl) URL.revokeObjectURL(outputUrl);
+      outputUrl = null; outputBlob = null; outputCanvas = null;
+      $('#outputPreview').innerHTML = '<div class="output-empty">‘선택 영역 생성’을 누르면 결과가 표시된다.</div>';
+      $('#outputInfo').textContent = '아직 없음';
+    }
+
+    async function downloadOutput() {
+      try {
+        await generateOutput({ silent: true });
+        const format = $('#formatSelect').value;
+        const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[format] || 'png';
+        const base = currentFile.name.replace(/\.[^.]+$/, '').replace(/[^\w가-힣-]+/g, '_') || 'cropped';
+        const a = document.createElement('a');
+        a.href = outputUrl;
+        a.download = `${base}_crop_${outputCanvas.width}x${outputCanvas.height}.${ext}`;
+        a.click();
+        logEvent('download', a.download);
+      } catch (error) {
+        showToast(error.message || '다운로드에 실패했다.', 'error');
+      }
+    }
+
+    async function copyImage() {
+      try {
+        await generateOutput({ silent: true });
+        if (!navigator.clipboard || !window.ClipboardItem) throw new Error('이 브라우저 또는 file:// 환경에서는 이미지 복사를 지원하지 않는다.');
+        const pngBlob = outputBlob.type === 'image/png' ? outputBlob : await canvasToBlob(outputCanvas, 'image/png', 1);
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+        showToast('이미지를 클립보드에 복사했다.');
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+
+    async function copyDataUrl() {
+      try {
+        await generateOutput({ silent: true });
+        const dataUrl = outputCanvas.toDataURL($('#formatSelect').value, Number($('#qualityRange').value));
+        await navigator.clipboard.writeText(dataUrl);
+        showToast(`Data URL을 복사했다. (${dataUrl.length.toLocaleString()}자)`);
+      } catch (error) { showToast('Data URL 복사 실패: ' + error.message, 'error'); }
+    }
+
+    async function copyJson() {
+      try {
+        const selections = getSelections().map((selection, index) => ({
+          index: index + 1,
+          x: round(selection.x, 3), y: round(selection.y, 3),
+          width: round(selection.width, 3), height: round(selection.height, 3),
+          aspectRatio: Number.isFinite(selection.aspectRatio) ? round(selection.aspectRatio, 6) : null
+        }));
+        const data = { file: currentFile, transform: cropperImage.$getTransform(), selections };
+        await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+        showToast('좌표와 변형 정보를 JSON으로 복사했다.');
+      } catch (error) { showToast('JSON 복사 실패: ' + error.message, 'error'); }
+    }
+
+    async function exportAllSelections() {
+      const selections = getSelections().filter(selection => !selection.hidden && selection.width > 0 && selection.height > 0);
+      const target = $('#multiResults');
+      target.innerHTML = '';
+      if (!selections.length) {
+        target.innerHTML = '<p class="hint">내보낼 선택 영역이 없다.</p>';
+      } else {
+        for (let i = 0; i < selections.length; i++) {
+          const selection = selections[i];
+          const card = document.createElement('div');
+          card.style.cssText = 'border:1px solid var(--line);border-radius:12px;padding:9px;background:var(--bg)';
+          card.innerHTML = `<div style="height:150px;display:grid;place-items:center;background:repeating-conic-gradient(#e6eaf0 0 25%,#fff 0 50%) 50%/14px 14px;border-radius:8px;overflow:hidden"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px"><b style="font-size:12px">선택 ${i + 1}</b><button class="btn" style="min-height:30px;padding:4px 8px">다운로드</button></div>`;
+          const canvas = await selection.$toCanvas(exportOptions(selection));
+          canvas.style.cssText = 'max-width:100%;max-height:100%';
+          card.firstElementChild.appendChild(canvas);
+          $('button', card).addEventListener('click', async () => {
+            const format = $('#formatSelect').value;
+            const quality = Number($('#qualityRange').value);
+            const blob = await canvasToBlob(canvas, format, quality);
+            const url = URL.createObjectURL(blob);
+            const ext = format === 'image/jpeg' ? 'jpg' : format.split('/')[1];
+            const a = document.createElement('a'); a.href = url; a.download = `selection_${i + 1}.${ext}`; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          });
+          target.appendChild(card);
+        }
+      }
+      $('#multiDialog').showModal();
+      logEvent('multi-export', `${selections.length}개`);
+    }
+
+    function bindUi() {
+      $('#fileInput').addEventListener('change', event => handleFile(event.target.files[0]));
+      const dropzone = $('#dropzone');
+      ['dragenter', 'dragover'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.add('dragover'); }));
+      ['dragleave', 'drop'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.remove('dragover'); }));
+      dropzone.addEventListener('drop', event => handleFile(event.dataTransfer.files[0]));
+      document.addEventListener('paste', event => {
+        const file = [...(event.clipboardData?.files || [])].find(item => item.type.startsWith('image/'));
+        if (file) { handleFile(file); showToast('클립보드 이미지를 불러왔다.'); }
+      });
+
+      $('#urlLoadBtn').addEventListener('click', () => {
+        const url = $('#urlInput').value.trim();
+        if (!url) return showToast('이미지 URL을 입력해 줘.', 'error');
+        loadSource(url, { name: url.split('/').pop()?.split('?')[0] || 'URL 이미지', type: 'remote', size: 0 });
+      });
+
+      $('#ratioButtons').addEventListener('click', event => {
+        const button = event.target.closest('[data-ratio]');
+        if (!button) return;
+        const raw = button.dataset.ratio;
+        $('#customRatioWrap').style.display = raw === 'custom' ? 'grid' : 'none';
+        if (raw === 'custom') {
+          const value = Number($('#ratioW').value) / Number($('#ratioH').value);
+          setAspectRatio(value, `${$('#ratioW').value}:${$('#ratioH').value}`, button);
+        } else if (raw === 'free') setAspectRatio(NaN, '자유', button);
+        else setAspectRatio(Number(raw), button.textContent.trim(), button);
+      });
+      ['ratioW', 'ratioH'].forEach(id => $('#' + id).addEventListener('change', () => {
+        const customButton = $('[data-ratio="custom"]');
+        if (!customButton.classList.contains('active')) return;
+        const w = Number($('#ratioW').value), h = Number($('#ratioH').value);
+        if (w > 0 && h > 0) setAspectRatio(w / h, `${w}:${h}`, customButton);
+      }));
+
+      $$('[data-image-action]').forEach(button => button.addEventListener('click', () => imageAction(button.dataset.imageAction)));
+      $$('[data-sel-action]').forEach(button => button.addEventListener('click', () => selectionAction(button.dataset.selAction)));
+      $$('[data-sel-move]').forEach(button => button.addEventListener('click', () => {
+        const selection = activeSelection();
+        if (!selection) return;
+        const [x, y] = button.dataset.selMove.split(',').map(Number);
+        selection.$move(x, y); updateAllData(); pushHistory('선택 이동');
+      }));
+      $('#applySelectionBtn').addEventListener('click', () => {
+        const selection = activeSelection();
+        const x = Number($('#selX').value), y = Number($('#selY').value);
+        const w = Math.max(1, Number($('#selW').value)), h = Math.max(1, Number($('#selH').value));
+        selection.hidden = false;
+        selection.$change(x, y, w, h, selection.aspectRatio);
+        updateAllData(); pushHistory('좌표 적용');
+      });
+
+      ['multipleToggle','keyboardToggle','movableToggle','resizableToggle','disabledToggle','gridToggle','crosshairToggle','shadeToggle'].forEach(id => $('#' + id).addEventListener('change', applyVisualOptions));
+      $('#multipleToggle').addEventListener('change', () => showToast($('#multipleToggle').checked ? '빈 영역을 드래그하면 선택 영역을 추가할 수 있다.' : '다중 선택을 해제했다.'));
+      $('#wheelStep').addEventListener('input', () => { $('#wheelStepLabel').textContent = Number($('#wheelStep').value).toFixed(2); applyVisualOptions(); });
+      $('#accentPicker').addEventListener('input', applyVisualOptions);
+
+      $('#customRotateBtn').addEventListener('click', () => { cropperImage.$rotate(`${Number($('#customRotate').value) || 0}deg`); updateAllData(); pushHistory('사용자 회전'); });
+      $('#skewBtn').addEventListener('click', () => { cropperImage.$skew(`${Number($('#skewX').value) || 0}deg`, `${Number($('#skewY').value) || 0}deg`); updateAllData(); pushHistory('기울이기'); });
+      $('#zoomRange').addEventListener('input', () => {
+        const current = Number($('#zoomRange').value);
+        cropperImage.$zoom(current - zoomRangePrevious);
+        zoomRangePrevious = current;
+        updateAllData();
+      });
+      $('#zoomRange').addEventListener('change', () => { pushHistory('미세 확대'); $('#zoomRange').value = 0; zoomRangePrevious = 0; });
+
+      $('#undoBtn').addEventListener('click', () => restoreHistory(historyIndex - 1));
+      $('#redoBtn').addEventListener('click', () => restoreHistory(historyIndex + 1));
+      $('#generateBtn').addEventListener('click', () => generateOutput().catch(error => showToast(error.message, 'error')));
+      $('#downloadBtn').addEventListener('click', downloadOutput);
+      $('#copyImageBtn').addEventListener('click', copyImage);
+      $('#copyDataUrlBtn').addEventListener('click', copyDataUrl);
+      $('#copyJsonBtn').addEventListener('click', copyJson);
+      $('#exportAllBtn').addEventListener('click', () => exportAllSelections().catch(error => showToast(error.message, 'error')));
+      $('#refreshDataBtn').addEventListener('click', updateAllData);
+      $('#clearLogBtn').addEventListener('click', () => $('#eventLog').innerHTML = '');
+      $('#qualityRange').addEventListener('input', () => $('#qualityLabel').textContent = Number($('#qualityRange').value).toFixed(2));
+      ['formatSelect','qualityRange','outWidth','outHeight','filterSelect','backgroundColor','smoothingQuality','exportTarget'].forEach(id => $('#' + id).addEventListener('change', clearOutput));
+
+      $('#themeBtn').addEventListener('click', () => {
+        const root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('cropper-demo-theme', root.dataset.theme);
+      });
+      $('#fullscreenBtn').addEventListener('click', async () => {
+        try { document.fullscreenElement ? await document.exitFullscreen() : await document.documentElement.requestFullscreen(); }
+        catch { showToast('전체 화면을 사용할 수 없는 환경이다.', 'error'); }
+      });
+      $('#helpBtn').addEventListener('click', () => $('#helpDialog').showModal());
+      $('#closeHelpBtn').addEventListener('click', () => $('#helpDialog').close());
+      $('#closeMultiBtn').addEventListener('click', () => $('#multiDialog').close());
+      [$('#helpDialog'), $('#multiDialog')].forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); }));
+
+      window.addEventListener('beforeunload', () => {
+        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+        if (outputUrl) URL.revokeObjectURL(outputUrl);
+      });
+    }
+
+    function launchOfflineFallback(loadError) {
+      const oldStyle = document.getElementById('offlineFallbackStyle');
+      if (oldStyle) oldStyle.remove();
+
+      const style = document.createElement('style');
+      style.id = 'offlineFallbackStyle';
+      style.textContent = `
+        :root{--of-bg:#f3f6fb;--of-panel:#fff;--of-text:#172033;--of-muted:#687386;--of-line:#dbe2ec;--of-blue:#146ef5;--of-soft:#eaf2ff;--of-danger:#c43737;--of-shadow:0 12px 34px rgba(26,44,75,.10)}
+        html[data-theme="dark"]{--of-bg:#0d1420;--of-panel:#151f2d;--of-text:#edf3fc;--of-muted:#a6b0c1;--of-line:#2b394c;--of-blue:#6ea6ff;--of-soft:#1b3153;--of-danger:#ff8585;--of-shadow:0 15px 38px rgba(0,0,0,.28)}
+        *{box-sizing:border-box}body{margin:0;min-width:320px;background:var(--of-bg);color:var(--of-text);font-family:Pretendard,"Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;line-height:1.45}
+        button,input,select{font:inherit}button{cursor:pointer}.of-app{width:min(1780px,100%);margin:auto;padding:18px}.of-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.of-brand{display:flex;align-items:center;gap:12px}.of-logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#0d5bd8,#50adff);display:grid;place-items:center;color:#fff;font-weight:900}.of-brand h1{font-size:clamp(20px,2.5vw,29px);margin:0;letter-spacing:-.04em}.of-brand p{margin:2px 0 0;font-size:12px;color:var(--of-muted)}
+        .of-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.of-badge{font-size:11px;font-weight:750;padding:4px 8px;border-radius:999px;border:1px solid var(--of-line);background:var(--of-panel)}.of-badge.warn{color:#a45e00;background:#fff7e7}.of-actions{display:flex;gap:7px}
+        .of-btn{min-height:36px;padding:7px 11px;border:1px solid var(--of-line);border-radius:10px;background:var(--of-panel);color:var(--of-text);font-size:12px;font-weight:760}.of-btn:hover{border-color:var(--of-blue)}.of-btn.primary{background:var(--of-blue);border-color:transparent;color:#fff}.of-btn.soft{background:var(--of-soft);border-color:transparent;color:var(--of-blue)}.of-btn.danger{color:var(--of-danger)}.of-btn.active{outline:2px solid color-mix(in srgb,var(--of-blue) 45%,transparent);background:var(--of-soft);color:var(--of-blue)}.of-btn:disabled{opacity:.45;cursor:not-allowed}
+        .of-layout{display:grid;grid-template-columns:minmax(245px,300px) minmax(420px,1fr) minmax(260px,330px);gap:14px;align-items:start}.of-panel{background:var(--of-panel);border:1px solid var(--of-line);border-radius:17px;box-shadow:var(--of-shadow);overflow:hidden}.of-head{min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid var(--of-line)}.of-head h2{font-size:14px;margin:0}.of-body{padding:13px}.of-side{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}.of-section{padding:12px 0;border-bottom:1px dashed var(--of-line)}.of-section:first-child{padding-top:0}.of-section:last-child{border:0;padding-bottom:0}.of-title{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:800;margin-bottom:9px}.of-hint{font-size:11px;color:var(--of-muted)}
+        .of-grid2,.of-grid3,.of-grid4{display:grid;gap:7px}.of-grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.of-grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.of-grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.of-stack{display:grid;gap:7px}.of-field{display:grid;gap:4px}.of-field span{font-size:11px;color:var(--of-muted);font-weight:700}.of-input,.of-select{width:100%;height:36px;border:1px solid var(--of-line);border-radius:9px;background:var(--of-panel);color:var(--of-text);padding:0 9px}.of-row{display:flex;align-items:center;gap:7px}.of-row>*{min-width:0}.of-switch{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}.of-switch input{accent-color:var(--of-blue)}
+        .of-drop{position:relative;border:1.5px dashed var(--of-line);border-radius:12px;min-height:90px;display:grid;place-items:center;text-align:center;padding:12px;background:color-mix(in srgb,var(--of-bg) 75%,transparent)}.of-drop.drag{border-color:var(--of-blue);background:var(--of-soft)}.of-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}.of-drop strong{display:block;font-size:12px}.of-drop small{display:block;margin-top:3px;color:var(--of-muted)}.of-samples{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.of-sample{padding:0;overflow:hidden;border:1px solid var(--of-line);border-radius:9px;background:var(--of-panel);color:var(--of-text)}.of-sample img{display:block;width:100%;height:58px;object-fit:cover}.of-sample span{display:block;padding:4px;font-size:10px;font-weight:750}
+        .of-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--of-line)}.of-stageWrap{position:relative;background:#aeb4ba;min-height:520px;overflow:hidden;touch-action:none}.of-canvas{display:block;width:100%;height:clamp(400px,60vh,760px);touch-action:none;user-select:none}.of-status{margin-left:auto;align-self:center;color:var(--of-muted);font-size:11px}.of-bottom{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--of-line)}.of-coords{display:grid;grid-template-columns:repeat(4,minmax(70px,1fr));gap:7px;flex:1}.of-coord{padding:8px 10px;border-radius:10px;background:var(--of-bg)}.of-coord small{display:block;font-size:10px;color:var(--of-muted)}.of-coord b{font-size:13px}
+        .of-previewMain{height:180px;border:1px solid var(--of-line);border-radius:11px;overflow:hidden;background:repeating-conic-gradient(#e7ebf0 0 25%,#fff 0 50%) 50%/14px 14px}.of-previewMain canvas,.of-mini canvas{width:100%;height:100%;display:block}.of-minis{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:7px;margin-top:7px}.of-mini{height:74px;border:1px solid var(--of-line);border-radius:9px;overflow:hidden;background:repeating-conic-gradient(#e7ebf0 0 25%,#fff 0 50%) 50%/12px 12px}.of-mini.circle{border-radius:50%;aspect-ratio:1;margin:auto;width:74px}.of-output{min-height:150px;border:1px solid var(--of-line);border-radius:11px;background:repeating-conic-gradient(#e7ebf0 0 25%,#fff 0 50%) 50%/14px 14px;display:grid;place-items:center;overflow:hidden}.of-output canvas{max-width:100%;max-height:250px}.of-empty{font-size:11px;color:var(--of-muted);padding:15px;text-align:center}.of-data{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:0;font-size:11px}.of-data dt{color:var(--of-muted)}.of-data dd{margin:0;text-align:right;overflow-wrap:anywhere}.of-log{height:130px;overflow:auto;background:#0d1522;color:#d8e3f2;border-radius:10px;padding:8px;font:10px/1.55 ui-monospace,Consolas,monospace}.of-log div{border-bottom:1px solid rgba(255,255,255,.07);padding:2px 0}.of-toast{position:fixed;z-index:9999;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#182334;color:#fff;padding:10px 14px;border-radius:10px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:.2s}.of-toast.show{transform:translate(-50%,0);opacity:1}.of-toast.error{background:#9d2828}
+        .of-dialog{border:0;border-radius:16px;background:var(--of-panel);color:var(--of-text);width:min(760px,calc(100% - 28px));box-shadow:0 25px 80px rgba(0,0,0,.3);padding:0}.of-dialog::backdrop{background:rgba(3,9,18,.62)}.of-dialogHead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--of-line)}.of-dialogBody{padding:14px;max-height:72vh;overflow:auto}.of-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.of-card{border:1px solid var(--of-line);border-radius:11px;padding:8px;background:var(--of-bg)}.of-card canvas{width:100%;height:140px;object-fit:contain;background:#fff;border-radius:7px}.of-cardFoot{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:11px}
+        @media(max-width:1180px){.of-layout{grid-template-columns:270px minmax(0,1fr)}.of-right{grid-column:1/-1;position:static;max-height:none}.of-right .of-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.of-right .of-section{border:0;padding:0}}
+        @media(max-width:780px){.of-app{padding:10px}.of-layout{grid-template-columns:1fr}.of-side{position:static;max-height:none}.of-left{order:2}.of-editor{order:1}.of-right{order:3}.of-right .of-body{display:block}.of-right .of-section{padding:12px 0;border-bottom:1px dashed var(--of-line)}.of-stageWrap{min-height:380px}.of-canvas{height:52vh;min-height:380px}.of-bottom{align-items:stretch;flex-direction:column}.of-brand p,.of-badges{display:none}.of-actions .labelBtn{display:none}.of-status{width:100%;margin-left:0}}
+        @media(max-width:500px){.of-grid4{grid-template-columns:repeat(2,1fr)}.of-coords{grid-template-columns:repeat(2,1fr)}.of-toolbar .of-btn{padding:7px 9px}.of-logo{width:42px;height:42px}}
+      `;
+      document.head.appendChild(style);
+
+      document.body.innerHTML = `
+        <div class="of-app">
+          <header class="of-top">
+            <div class="of-brand"><div class="of-logo">CROP</div><div><h1>Cropper.js 기능 샘플</h1><p>CDN 실패 시에도 동작하는 오프라인 호환 편집기</p><div class="of-badges"><span class="of-badge warn">Cropper.js CDN 로드 실패</span><span class="of-badge">내장 Canvas 자동 전환</span><span class="of-badge">단일 HTML</span></div></div></div>
+            <div class="of-actions"><button id="ofRetry" class="of-btn labelBtn">Cropper.js 다시 시도</button><button id="ofTheme" class="of-btn">◐</button><button id="ofFull" class="of-btn">⛶</button></div>
+          </header>
+          <main class="of-layout">
+            <aside class="of-panel of-side of-left"><div class="of-head"><h2>입력 및 선택 영역</h2><span class="of-hint">OFFLINE</span></div><div class="of-body">
+              <section class="of-section"><div class="of-title"><span>이미지 불러오기</span><span class="of-hint">드롭·붙여넣기</span></div><div id="ofDrop" class="of-drop"><input id="ofFile" type="file" accept="image/*"><div><strong>이미지를 놓거나 눌러서 선택</strong><small>PNG · JPG · WebP · GIF · SVG</small></div></div><div class="of-row" style="margin-top:7px"><input id="ofUrl" class="of-input" placeholder="https://... 이미지 URL"><button id="ofUrlBtn" class="of-btn">URL</button></div><div id="ofSamples" class="of-samples" style="margin-top:7px"></div></section>
+              <section class="of-section"><div class="of-title"><span>자르기 비율</span><span id="ofRatioText" class="of-hint">자유</span></div><div id="ofRatios" class="of-grid4"><button class="of-btn active" data-r="free">자유</button><button class="of-btn" data-r="1">1:1</button><button class="of-btn" data-r="1.3333333333">4:3</button><button class="of-btn" data-r="1.5">3:2</button><button class="of-btn" data-r="1.7777777778">16:9</button><button class="of-btn" data-r="0.5625">9:16</button><button class="of-btn" data-r="2.3333333333">21:9</button><button class="of-btn" data-r="custom">직접</button></div><div id="ofCustomRatio" class="of-grid2" style="display:none;margin-top:7px"><label class="of-field"><span>가로</span><input id="ofRatioW" class="of-input" type="number" value="5" min=".01" step=".01"></label><label class="of-field"><span>세로</span><input id="ofRatioH" class="of-input" type="number" value="4" min=".01" step=".01"></label></div></section>
+              <section class="of-section"><div class="of-title"><span>선택 영역 관리</span><span id="ofSelCount" class="of-hint">1개</span></div><div class="of-grid3"><button id="ofPrevSel" class="of-btn">이전</button><button id="ofAddSel" class="of-btn soft">새 선택</button><button id="ofNextSel" class="of-btn">다음</button><button id="ofCenterSel" class="of-btn">가운데</button><button id="ofResetSel" class="of-btn">초기화</button><button id="ofDeleteSel" class="of-btn danger">삭제</button></div><div class="of-grid4" style="margin-top:7px"><label class="of-field"><span>X</span><input id="ofX" class="of-input" type="number"></label><label class="of-field"><span>Y</span><input id="ofY" class="of-input" type="number"></label><label class="of-field"><span>W</span><input id="ofW" class="of-input" type="number" min="10"></label><label class="of-field"><span>H</span><input id="ofH" class="of-input" type="number" min="10"></label></div><button id="ofApplyBox" class="of-btn soft" style="width:100%;margin-top:7px">좌표·크기 적용</button></section>
+              <section class="of-section"><div class="of-title"><span>표시 및 조작</span><span class="of-hint">UI</span></div><div class="of-stack"><label class="of-switch"><span>다중 선택 허용</span><input id="ofMulti" type="checkbox" checked></label><label class="of-switch"><span>키보드 제어</span><input id="ofKeyboard" type="checkbox" checked></label><label class="of-switch"><span>선택 영역 이동</span><input id="ofMovable" type="checkbox" checked></label><label class="of-switch"><span>선택 영역 크기 변경</span><input id="ofResizable" type="checkbox" checked></label><label class="of-switch"><span>3×3 격자</span><input id="ofGrid" type="checkbox" checked></label><label class="of-switch"><span>중앙 십자선</span><input id="ofCross" type="checkbox" checked></label><label class="of-switch"><span>바깥 음영</span><input id="ofShade" type="checkbox" checked></label></div><label class="of-field" style="margin-top:9px"><span>휠 확대 단계 <b id="ofWheelLabel">0.10</b></span><input id="ofWheel" type="range" min=".01" max=".5" step=".01" value=".1"></label><p class="of-hint">선택 영역: 드래그 이동·핸들 크기 변경 · 빈 곳: 이미지 이동 · 휠/핀치: 확대</p></section>
+            </div></aside>
+
+            <section class="of-panel of-editor"><div class="of-head"><h2>이미지 편집 캔버스</h2><span id="ofSource" class="of-hint">내장 샘플</span></div><div class="of-toolbar">
+              <button class="of-btn" data-img="left">←</button><button class="of-btn" data-img="up">↑</button><button class="of-btn" data-img="down">↓</button><button class="of-btn" data-img="right">→</button><button class="of-btn" data-img="zoomOut">− 축소</button><button class="of-btn" data-img="zoomIn">＋ 확대</button><button class="of-btn" data-img="rotL">↶ 15°</button><button class="of-btn" data-img="rotR">↷ 15°</button><button class="of-btn" data-img="flipX">↔ 반전</button><button class="of-btn" data-img="flipY">↕ 반전</button><button class="of-btn" data-img="contain">맞춤</button><button class="of-btn" data-img="cover">채우기</button><button class="of-btn" data-img="reset">전체 초기화</button><button id="ofUndo" class="of-btn" disabled>실행 취소</button><button id="ofRedo" class="of-btn" disabled>다시 실행</button><span id="ofStatus" class="of-status">오프라인 호환 모드</span>
+            </div><div id="ofStage" class="of-stageWrap"><canvas id="ofCanvas" class="of-canvas"></canvas></div><div class="of-bottom"><div class="of-coords"><div class="of-coord"><small>X 위치</small><b id="ofCX">0</b></div><div class="of-coord"><small>Y 위치</small><b id="ofCY">0</b></div><div class="of-coord"><small>너비</small><b id="ofCW">0</b></div><div class="of-coord"><small>높이</small><b id="ofCH">0</b></div></div><div class="of-row"><button id="ofAll" class="of-btn">모든 선택</button><button id="ofGenerate" class="of-btn primary">선택 영역 생성</button></div></div></section>
+
+            <aside class="of-panel of-side of-right"><div class="of-head"><h2>미리보기 및 출력</h2><span class="of-hint">CANVAS</span></div><div class="of-body">
+              <section class="of-section"><div class="of-title"><span>실시간 미리보기</span><span id="ofActiveText" class="of-hint">선택 1</span></div><div class="of-previewMain"><canvas id="ofPrevMain"></canvas></div><div class="of-minis"><div class="of-mini"><canvas id="ofPrevSquare"></canvas></div><div class="of-mini circle"><canvas id="ofPrevCircle"></canvas></div><div class="of-mini"><canvas id="ofPrevWide"></canvas></div></div></section>
+              <section class="of-section"><div class="of-title"><span>고급 변형</span><span class="of-hint">IMAGE</span></div><div class="of-grid2"><label class="of-field"><span>회전 각도</span><input id="ofRotate" class="of-input" type="number" value="30"></label><button id="ofRotateBtn" class="of-btn" style="align-self:end">회전 적용</button><label class="of-field"><span>밝기 %</span><input id="ofBrightness" class="of-input" type="number" value="100" min="0" max="300"></label><label class="of-field"><span>대비 %</span><input id="ofContrast" class="of-input" type="number" value="100" min="0" max="300"></label></div><label class="of-field" style="margin-top:7px"><span>확대·축소</span><input id="ofZoom" type="range" min=".2" max="4" value="1" step=".01"></label></section>
+              <section class="of-section"><div class="of-title"><span>내보내기 설정</span><span class="of-hint">PNG/JPEG/WebP</span></div><div class="of-grid2"><label class="of-field"><span>파일 형식</span><select id="ofFormat" class="of-select"><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select></label><label class="of-field"><span>품질 <b id="ofQualityText">0.92</b></span><input id="ofQuality" type="range" min=".1" max="1" step=".01" value=".92"></label><label class="of-field"><span>출력 너비</span><input id="ofOutW" class="of-input" type="number" min="1" max="8192" placeholder="선택 크기"></label><label class="of-field"><span>출력 높이</span><input id="ofOutH" class="of-input" type="number" min="1" max="8192" placeholder="자동 계산"></label><label class="of-field"><span>필터</span><select id="ofFilter" class="of-select"><option value="none">없음</option><option value="grayscale(100%)">흑백</option><option value="sepia(100%)">세피아</option><option value="saturate(145%)">채도 강화</option><option value="brightness(120%)">밝게</option><option value="contrast(130%)">대비 강화</option></select></label><label class="of-field"><span>배경색</span><input id="ofBg" type="color" value="#ffffff" style="height:36px;width:100%"></label><label class="of-field"><span>보간 품질</span><select id="ofSmooth" class="of-select"><option value="low">낮음</option><option value="medium">보통</option><option value="high" selected>높음</option></select></label><label class="of-field"><span>대상</span><select id="ofTarget" class="of-select"><option value="selection">선택 영역</option><option value="canvas">전체 캔버스</option></select></label></div><div class="of-grid2" style="margin-top:7px"><button id="ofDownload" class="of-btn primary">파일 다운로드</button><button id="ofCopyImage" class="of-btn">이미지 복사</button><button id="ofCopyUrl" class="of-btn">Data URL 복사</button><button id="ofCopyJson" class="of-btn">좌표 JSON 복사</button></div></section>
+              <section class="of-section"><div class="of-title"><span>생성 결과</span><span id="ofOutInfo" class="of-hint">아직 없음</span></div><div id="ofOutput" class="of-output"><div class="of-empty">‘선택 영역 생성’을 누르면 결과가 표시된다.</div></div></section>
+              <section class="of-section"><div class="of-title"><span>현재 데이터</span><span class="of-hint">STATE</span></div><dl class="of-data"><dt>원본 크기</dt><dd id="ofNatural">-</dd><dt>배율</dt><dd id="ofScaleData">-</dd><dt>회전</dt><dd id="ofRotationData">-</dd><dt>활성 선택</dt><dd id="ofBoxData">-</dd><dt>파일</dt><dd id="ofFileData">내장 샘플</dd></dl></section>
+              <section class="of-section"><div class="of-title"><span>이벤트 로그</span><button id="ofClearLog" class="of-btn" style="min-height:28px;padding:3px 8px">비우기</button></div><div id="ofLog" class="of-log"></div></section>
+            </div></aside>
+          </main>
+        </div>
+        <dialog id="ofDialog" class="of-dialog"><div class="of-dialogHead"><strong>모든 선택 영역 결과</strong><button id="ofCloseDialog" class="of-btn">×</button></div><div class="of-dialogBody"><div id="ofGallery" class="of-gallery"></div></div></dialog>
+        <div id="ofToast" class="of-toast"></div>
+      `;
+
+      const q = (s, r = document) => r.querySelector(s);
+      const qa = (s, r = document) => [...r.querySelectorAll(s)];
+      const canvas = q('#ofCanvas');
+      const ctx = canvas.getContext('2d');
+      const stage = q('#ofStage');
+      const dpr = () => Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+      const state = {
+        image: new Image(), imageReady: false, fileName: '가로 내장 샘플.svg', naturalW: 0, naturalH: 0,
+        scale: 1, baseScale: 1, x: 0, y: 0, rotation: 0, flipX: 1, flipY: 1,
+        brightness: 100, contrast: 100,
+        boxes: [], active: 0, ratio: NaN,
+        dragging: null, pointers: new Map(), pinch: null,
+        history: [], historyIndex: -1, restoring: false,
+        outputCanvas: null, outputBlob: null, outputUrl: null
+      };
+      const MIN_BOX = 24;
+      let cssW = 800, cssH = 520, toastTimer = null, drawQueued = false;
+
+      function toast(message, error = false) {
+        const el = q('#ofToast'); el.textContent = message; el.className = 'of-toast show' + (error ? ' error' : '');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'of-toast', 2400);
+      }
+      function log(action, detail = '') {
+        const el = q('#ofLog'); const row = document.createElement('div');
+        row.textContent = `${new Date().toLocaleTimeString('ko-KR',{hour12:false})}  ${action}${detail ? ' · ' + detail : ''}`;
+        el.prepend(row); while (el.children.length > 80) el.lastElementChild.remove();
+      }
+      function safeNumber(v, fallback = 0) { v = Number(v); return Number.isFinite(v) ? v : fallback; }
+      function clamp2(v, min, max) { return Math.min(max, Math.max(min, v)); }
+      function activeBox() { return state.boxes[state.active] || null; }
+      function imageFilter(extra = 'none') {
+        const base = `brightness(${state.brightness}%) contrast(${state.contrast}%)`;
+        return extra && extra !== 'none' ? `${base} ${extra}` : base;
+      }
+      function snapshot() {
+        return {scale:state.scale,x:state.x,y:state.y,rotation:state.rotation,flipX:state.flipX,flipY:state.flipY,brightness:state.brightness,contrast:state.contrast,boxes:state.boxes.map(b=>({...b})),active:state.active,ratio:Number.isFinite(state.ratio)?state.ratio:null};
+      }
+      function pushHistory(label) {
+        if (state.restoring) return;
+        const snap = snapshot();
+        const sig = JSON.stringify(snap); const current = state.history[state.historyIndex];
+        if (current && current.sig === sig) return;
+        state.history = state.history.slice(0,state.historyIndex+1); state.history.push({sig,snap,label});
+        if (state.history.length > 50) state.history.shift(); else state.historyIndex++;
+        if (state.historyIndex >= state.history.length) state.historyIndex = state.history.length - 1;
+        updateHistoryButtons();
+      }
+      function restoreHistory(index) {
+        if (index < 0 || index >= state.history.length) return;
+        state.restoring = true; const s = state.history[index].snap;
+        Object.assign(state,{scale:s.scale,x:s.x,y:s.y,rotation:s.rotation,flipX:s.flipX,flipY:s.flipY,brightness:s.brightness,contrast:s.contrast,boxes:s.boxes.map(b=>({...b})),active:s.active,ratio:s.ratio===null?NaN:s.ratio});
+        state.historyIndex=index; state.restoring=false; syncControls(); scheduleDraw(); updateHistoryButtons(); log('history',state.history[index].label);
+      }
+      function updateHistoryButtons(){q('#ofUndo').disabled=state.historyIndex<=0;q('#ofRedo').disabled=state.historyIndex>=state.history.length-1;}
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect(); cssW = Math.max(320, rect.width || stage.clientWidth || 800); cssH = Math.max(360, rect.height || stage.clientHeight || 520);
+        const ratio = dpr(); canvas.width = Math.round(cssW*ratio); canvas.height=Math.round(cssH*ratio); ctx.setTransform(ratio,0,0,ratio,0,0);
+        if (!state.boxes.length) resetBoxes(); else state.boxes.forEach(b=>clampBox(b)); scheduleDraw();
+      }
+      function resetBoxes() {
+        const w=cssW*.62,h=cssH*.62; state.boxes=[{x:(cssW-w)/2,y:(cssH-h)/2,w,h,ratio:state.ratio}];state.active=0;syncControls();
+      }
+      function resetImage(mode='contain') {
+        if (!state.imageReady) return;
+        const pad=.9; const contain=Math.min(cssW/state.naturalW,cssH/state.naturalH)*pad;
+        state.baseScale=contain; state.scale=contain; state.x=cssW/2;state.y=cssH/2;state.rotation=0;state.flipX=1;state.flipY=1;state.brightness=100;state.contrast=100;
+        if(mode==='cover'){const b=activeBox()||{w:cssW,h:cssH,x:0,y:0};state.scale=Math.max(b.w/state.naturalW,b.h/state.naturalH)*1.02;state.x=b.x+b.w/2;state.y=b.y+b.h/2;}
+        q('#ofZoom').value='1';q('#ofBrightness').value='100';q('#ofContrast').value='100';scheduleDraw();
+      }
+      function clampBox(b) { b.w=clamp2(b.w,MIN_BOX,cssW);b.h=clamp2(b.h,MIN_BOX,cssH);b.x=clamp2(b.x,0,cssW-b.w);b.y=clamp2(b.y,0,cssH-b.h);return b; }
+      function setAspectRatio(ratio,label) {
+        state.ratio=ratio; const b=activeBox(); if(b){b.ratio=ratio;if(Number.isFinite(ratio)){let nw=b.w,nh=nw/ratio;if(nh>cssH){nh=Math.min(cssH,b.h);nw=nh*ratio;}b.w=nw;b.h=nh;clampBox(b);}}
+        q('#ofRatioText').textContent=label;qa('#ofRatios [data-r]').forEach(btn=>btn.classList.toggle('active',btn.textContent.trim()===label || (btn.dataset.r==='free'&&label==='자유') || (btn.dataset.r==='custom'&&label.includes(':')&&!['1:1','4:3','3:2','16:9','9:16','21:9'].includes(label))));
+        syncControls();scheduleDraw();pushHistory('비율 '+label);log('ratio',label);
+      }
+
+      function applyImageTransform(targetCtx, offsetX=0, offsetY=0, scaleX=1, scaleY=1, filter='none') {
+        targetCtx.save(); targetCtx.filter=imageFilter(filter); targetCtx.imageSmoothingEnabled=true; targetCtx.imageSmoothingQuality=q('#ofSmooth')?.value||'high';
+        targetCtx.translate((state.x-offsetX)*scaleX,(state.y-offsetY)*scaleY);targetCtx.rotate(state.rotation*Math.PI/180);targetCtx.scale(state.scale*state.flipX*scaleX,state.scale*state.flipY*scaleY);targetCtx.drawImage(state.image,-state.naturalW/2,-state.naturalH/2);targetCtx.restore();
+      }
+      function drawChecker() { const s=18;for(let y=0;y<cssH;y+=s)for(let x=0;x<cssW;x+=s){ctx.fillStyle=((x/s+y/s)%2)?'#aeb4ba':'#c3c8cd';ctx.fillRect(x,y,s,s);} }
+      function handlesFor(b) { const x=b.x,y=b.y,r=b.x+b.w,bt=b.y+b.h,cx=x+b.w/2,cy=y+b.h/2;return {nw:[x,y],n:[cx,y],ne:[r,y],e:[r,cy],se:[r,bt],s:[cx,bt],sw:[x,bt],w:[x,cy]}; }
+      function drawSelections() {
+        if(!state.boxes.length)return;
+        const shade=q('#ofShade').checked; if(shade){ctx.save();ctx.fillStyle='rgba(0,0,0,.48)';ctx.fillRect(0,0,cssW,cssH);ctx.globalCompositeOperation='destination-out';state.boxes.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));ctx.restore();}
+        state.boxes.forEach((b,i)=>{const active=i===state.active;ctx.save();ctx.strokeStyle=active?'#49a6ff':'rgba(255,255,255,.78)';ctx.lineWidth=active?2.5:1.5;ctx.strokeRect(b.x+.5,b.y+.5,b.w-1,b.h-1);
+          if(q('#ofGrid').checked){ctx.strokeStyle=active?'rgba(73,166,255,.8)':'rgba(255,255,255,.55)';ctx.lineWidth=1;for(let k=1;k<3;k++){ctx.beginPath();ctx.moveTo(b.x+b.w*k/3,b.y);ctx.lineTo(b.x+b.w*k/3,b.y+b.h);ctx.moveTo(b.x,b.y+b.h*k/3);ctx.lineTo(b.x+b.w,b.y+b.h*k/3);ctx.stroke();}}
+          if(active&&q('#ofCross').checked){ctx.strokeStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.moveTo(b.x+b.w/2-12,b.y+b.h/2);ctx.lineTo(b.x+b.w/2+12,b.y+b.h/2);ctx.moveTo(b.x+b.w/2,b.y+b.h/2-12);ctx.lineTo(b.x+b.w/2,b.y+b.h/2+12);ctx.stroke();}
+          if(active&&q('#ofResizable').checked){Object.values(handlesFor(b)).forEach(([hx,hy])=>{ctx.fillStyle='#fff';ctx.strokeStyle='#146ef5';ctx.lineWidth=2;ctx.beginPath();ctx.rect(hx-5,hy-5,10,10);ctx.fill();ctx.stroke();});}
+          ctx.restore();});
+      }
+      function draw() {
+        drawQueued=false;const ratio=dpr();ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,cssW,cssH);drawChecker();if(state.imageReady)applyImageTransform(ctx);drawSelections();syncControls(false);renderPreviews();
+      }
+      function scheduleDraw(){if(drawQueued)return;drawQueued=true;requestAnimationFrame(draw);}
+
+      function renderCrop(target, box, width, height, filter='none', background=null) {
+        target.width=Math.max(1,Math.round(width));target.height=Math.max(1,Math.round(height));const c=target.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,target.width,target.height);if(background){c.fillStyle=background;c.fillRect(0,0,target.width,target.height);}const sx=target.width/box.w,sy=target.height/box.h;applyImageTransform(c,box.x,box.y,sx,sy,filter);return target;
+      }
+      function fitPreview(id, box) { const el=q(id); if(!el||!box||!state.imageReady)return;const rect=el.getBoundingClientRect();const w=Math.max(40,Math.round(rect.width*dpr())),h=Math.max(40,Math.round(rect.height*dpr()));renderCrop(el,box,w,h); }
+      function renderPreviews(){const b=activeBox();if(!b||!state.imageReady)return;fitPreview('#ofPrevMain',b);fitPreview('#ofPrevSquare',b);fitPreview('#ofPrevCircle',b);fitPreview('#ofPrevWide',b);}
+
+      function syncControls(setInputs=true) {
+        const b=activeBox();if(!b)return;
+        if(setInputs){q('#ofX').value=Math.round(b.x);q('#ofY').value=Math.round(b.y);q('#ofW').value=Math.round(b.w);q('#ofH').value=Math.round(b.h);}
+        q('#ofCX').textContent=Math.round(b.x);q('#ofCY').textContent=Math.round(b.y);q('#ofCW').textContent=Math.round(b.w);q('#ofCH').textContent=Math.round(b.h);q('#ofSelCount').textContent=`${state.boxes.length}개`;q('#ofActiveText').textContent=`선택 ${state.active+1}/${state.boxes.length}`;
+        q('#ofNatural').textContent=state.imageReady?`${state.naturalW} × ${state.naturalH}`:'-';q('#ofScaleData').textContent=`${state.scale.toFixed(3)}×`;q('#ofRotationData').textContent=`${state.rotation.toFixed(1)}°`;q('#ofBoxData').textContent=`${Math.round(b.x)}, ${Math.round(b.y)}, ${Math.round(b.w)}×${Math.round(b.h)}`;q('#ofFileData').textContent=state.fileName;
+      }
+      function clearOutput(){if(state.outputUrl)URL.revokeObjectURL(state.outputUrl);state.outputUrl=null;state.outputBlob=null;state.outputCanvas=null;q('#ofOutput').innerHTML='<div class="of-empty">‘선택 영역 생성’을 누르면 결과가 표시된다.</div>';q('#ofOutInfo').textContent='아직 없음';}
+
+      function loadImage(src,name='이미지') {
+        clearOutput();const img=new Image();if(/^https?:/i.test(src))img.crossOrigin='anonymous';img.onload=()=>{state.image=img;state.imageReady=true;state.naturalW=img.naturalWidth||img.width;state.naturalH=img.naturalHeight||img.height;state.fileName=name;q('#ofSource').textContent=name;resetBoxes();resetImage('contain');state.history=[];state.historyIndex=-1;pushHistory('이미지 불러오기');syncControls();scheduleDraw();log('load',`${name} · ${state.naturalW}×${state.naturalH}`);toast('이미지를 불러왔다.');};img.onerror=()=>toast('이미지를 불러오지 못했다. URL 이미지라면 CORS 허용 여부를 확인해 줘.',true);img.src=src;
+      }
+      function handleFile(file){if(!file)return;if(!file.type.startsWith('image/'))return toast('이미지 파일만 선택할 수 있다.',true);const url=URL.createObjectURL(file);loadImage(url,file.name);setTimeout(()=>URL.revokeObjectURL(url),60000);}
+
+      function hitTest(px,py){for(let i=state.boxes.length-1;i>=0;i--){const b=state.boxes[i];const hs=handlesFor(b);if(i===state.active&&q('#ofResizable').checked){for(const [name,[x,y]] of Object.entries(hs))if(Math.hypot(px-x,py-y)<=12)return{type:'resize',index:i,handle:name};}if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h)return{type:'moveBox',index:i};}return{type:'panImage'};}
+      function resizeFromStart(start,handle,dx,dy,ratio){let l=start.x,t=start.y,r=start.x+start.w,b=start.y+start.h;if(handle.includes('w'))l+=dx;if(handle.includes('e'))r+=dx;if(handle.includes('n'))t+=dy;if(handle.includes('s'))b+=dy;let w=Math.max(MIN_BOX,r-l),h=Math.max(MIN_BOX,b-t);if(Number.isFinite(ratio)){if(handle==='n'||handle==='s'){w=h*ratio;l=start.x+(start.w-w)/2;r=l+w;}else if(handle==='e'||handle==='w'){h=w/ratio;t=start.y+(start.h-h)/2;b=t+h;}else{const byWidth=Math.abs(w-start.w)>=Math.abs(h-start.h)*ratio;if(byWidth)h=w/ratio;else w=h*ratio;if(handle.includes('w'))l=start.x+start.w-w;else r=start.x+w;if(handle.includes('n'))t=start.y+start.h-h;else b=start.y+h;}}
+        const out={x:l,y:t,w:r-l,h:b-t,ratio};clampBox(out);return out;}
+      function canvasPoint(ev){const rect=canvas.getBoundingClientRect();return{x:(ev.clientX-rect.left)*cssW/rect.width,y:(ev.clientY-rect.top)*cssH/rect.height};}
+      canvas.addEventListener('pointerdown',ev=>{canvas.setPointerCapture(ev.pointerId);const p=canvasPoint(ev);state.pointers.set(ev.pointerId,p);if(state.pointers.size===2){const arr=[...state.pointers.values()];state.pinch={dist:Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y),scale:state.scale,center:{x:(arr[0].x+arr[1].x)/2,y:(arr[0].y+arr[1].y)/2},imageX:state.x,imageY:state.y};state.dragging=null;return;}const hit=hitTest(p.x,p.y);if(hit.index!=null)state.active=hit.index;state.dragging={...hit,start:p,startBox:activeBox()?{...activeBox()}:null,startImage:{x:state.x,y:state.y}};scheduleDraw();});
+      canvas.addEventListener('pointermove',ev=>{if(!state.pointers.has(ev.pointerId))return;const p=canvasPoint(ev);state.pointers.set(ev.pointerId,p);if(state.pointers.size===2&&state.pinch){const arr=[...state.pointers.values()];const dist=Math.hypot(arr[0].x-arr[1].x,arr[0].y-arr[1].y);const center={x:(arr[0].x+arr[1].x)/2,y:(arr[0].y+arr[1].y)/2};const factor=dist/state.pinch.dist;state.scale=clamp2(state.pinch.scale*factor,.01,20);state.x=state.pinch.imageX+(center.x-state.pinch.center.x);state.y=state.pinch.imageY+(center.y-state.pinch.center.y);scheduleDraw();return;}const d=state.dragging;if(!d)return;const dx=p.x-d.start.x,dy=p.y-d.start.y;if(d.type==='moveBox'&&q('#ofMovable').checked){const b=activeBox();b.x=d.startBox.x+dx;b.y=d.startBox.y+dy;clampBox(b);}else if(d.type==='resize'&&q('#ofResizable').checked){state.boxes[state.active]=resizeFromStart(d.startBox,d.handle,dx,dy,d.startBox.ratio);}else if(d.type==='panImage'){state.x=d.startImage.x+dx;state.y=d.startImage.y+dy;}scheduleDraw();});
+      function pointerEnd(ev){state.pointers.delete(ev.pointerId);if(state.pointers.size<2)state.pinch=null;if(state.dragging){pushHistory(state.dragging.type==='panImage'?'이미지 이동':'선택 영역 변경');log('pointer',state.dragging.type);state.dragging=null;}scheduleDraw();}
+      canvas.addEventListener('pointerup',pointerEnd);canvas.addEventListener('pointercancel',pointerEnd);
+      canvas.addEventListener('wheel',ev=>{ev.preventDefault();const step=safeNumber(q('#ofWheel').value,.1);const factor=ev.deltaY<0?1+step:1/(1+step);const p=canvasPoint(ev);const old=state.scale;state.scale=clamp2(state.scale*factor,.01,20);const k=state.scale/old;state.x=p.x-(p.x-state.x)*k;state.y=p.y-(p.y-state.y)*k;scheduleDraw();clearTimeout(canvas._wheelTimer);canvas._wheelTimer=setTimeout(()=>pushHistory('휠 확대'),180);},{passive:false});
+
+      function imageAction(action){if(!state.imageReady)return;const b=activeBox();switch(action){case'left':state.x-=10;break;case'right':state.x+=10;break;case'up':state.y-=10;break;case'down':state.y+=10;break;case'zoomIn':state.scale*=1.1;break;case'zoomOut':state.scale/=1.1;break;case'rotL':state.rotation-=15;break;case'rotR':state.rotation+=15;break;case'flipX':state.flipX*=-1;break;case'flipY':state.flipY*=-1;break;case'contain':resetImage('contain');break;case'cover':resetImage('cover');break;case'reset':resetBoxes();resetImage('contain');break;}q('#ofZoom').value=clamp2(state.scale/state.baseScale,.2,4);scheduleDraw();pushHistory('이미지 '+action);log('image',action);}
+
+      async function makeOutput(useConfigured=true,boxOverride=null){if(!state.imageReady)throw new Error('이미지가 없다.');const target=q('#ofTarget').value;const box=boxOverride||((target==='canvas')?{x:0,y:0,w:cssW,h:cssH}:activeBox());if(!box)throw new Error('선택 영역이 없다.');let w=useConfigured?safeNumber(q('#ofOutW').value,0):0,h=useConfigured?safeNumber(q('#ofOutH').value,0):0;if(!w&&!h){w=Math.max(1,Math.round(box.w));h=Math.max(1,Math.round(box.h));}else if(w&&!h)h=Math.max(1,Math.round(w*box.h/box.w));else if(!w&&h)w=Math.max(1,Math.round(h*box.w/box.h));w=clamp2(Math.round(w),1,8192);h=clamp2(Math.round(h),1,8192);const out=document.createElement('canvas');const format=q('#ofFormat').value;const bg=format==='image/jpeg'?q('#ofBg').value:null;renderCrop(out,box,w,h,q('#ofFilter').value,bg);return out;}
+      function canvasBlob(c,type,quality){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('이미지 생성 실패')),type,quality));}
+      async function generate(){try{clearOutput();const out=await makeOutput();state.outputCanvas=out;const type=q('#ofFormat').value,quality=safeNumber(q('#ofQuality').value,.92);state.outputBlob=await canvasBlob(out,type,quality);state.outputUrl=URL.createObjectURL(state.outputBlob);q('#ofOutput').innerHTML='';q('#ofOutput').appendChild(out);q('#ofOutInfo').textContent=`${out.width}×${out.height} · ${(state.outputBlob.size/1024).toFixed(1)}KB`;log('generate',q('#ofOutInfo').textContent);toast('선택 영역을 생성했다.');return out;}catch(e){toast(e.message,true);throw e;}}
+      async function ensureOutput(){return state.outputCanvas||generate();}
+      async function download(){try{await ensureOutput();const type=q('#ofFormat').value,ext=type==='image/jpeg'?'jpg':type.split('/')[1];const a=document.createElement('a');a.href=state.outputUrl;a.download=`cropped_${Date.now()}.${ext}`;a.click();log('download',a.download);}catch(e){toast(e.message,true);}}
+      async function copyImage(){try{await ensureOutput();if(!navigator.clipboard||!window.ClipboardItem)throw new Error('이 브라우저는 이미지 클립보드를 지원하지 않는다.');const png=await canvasBlob(state.outputCanvas,'image/png',1);await navigator.clipboard.write([new ClipboardItem({'image/png':png})]);toast('이미지를 클립보드에 복사했다.');}catch(e){toast(e.message,true);}}
+      async function copyUrl(){try{await ensureOutput();await navigator.clipboard.writeText(state.outputCanvas.toDataURL(q('#ofFormat').value,safeNumber(q('#ofQuality').value,.92)));toast('Data URL을 복사했다.');}catch(e){toast('복사 실패: '+e.message,true);}}
+      async function copyJson(){try{const data={engine:'offline-canvas-fallback',source:{name:state.fileName,width:state.naturalW,height:state.naturalH},image:{x:state.x,y:state.y,scale:state.scale,rotation:state.rotation,flipX:state.flipX,flipY:state.flipY},selections:state.boxes.map((b,i)=>({index:i+1,active:i===state.active,x:Math.round(b.x),y:Math.round(b.y),width:Math.round(b.w),height:Math.round(b.h),aspectRatio:Number.isFinite(b.ratio)?b.ratio:null}))};await navigator.clipboard.writeText(JSON.stringify(data,null,2));toast('좌표 JSON을 복사했다.');}catch(e){toast('복사 실패: '+e.message,true);}}
+      async function showAll(){const gallery=q('#ofGallery');gallery.innerHTML='';for(let i=0;i<state.boxes.length;i++){const out=await makeOutput(false,state.boxes[i]);const card=document.createElement('div');card.className='of-card';card.appendChild(out);const foot=document.createElement('div');foot.className='of-cardFoot';foot.innerHTML=`<b>선택 ${i+1}</b><button class="of-btn">다운로드</button>`;q('button',foot).onclick=async()=>{const type=q('#ofFormat').value,blob=await canvasBlob(out,type,safeNumber(q('#ofQuality').value,.92)),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`selection_${i+1}.${type==='image/jpeg'?'jpg':type.split('/')[1]}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};card.appendChild(foot);gallery.appendChild(card);}q('#ofDialog').showModal();log('multi-export',`${state.boxes.length}개`);}
+
+      function bind() {
+        q('#ofRetry').onclick=()=>location.reload();q('#ofTheme').onclick=()=>{document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';localStorage.setItem('cropper-demo-theme',document.documentElement.dataset.theme);};q('#ofFull').onclick=async()=>{try{document.fullscreenElement?await document.exitFullscreen():await document.documentElement.requestFullscreen();}catch{toast('전체 화면을 사용할 수 없다.',true);}};
+        q('#ofFile').onchange=e=>handleFile(e.target.files[0]);const drop=q('#ofDrop');['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('drag');}));['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('drag');}));drop.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));document.addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])].find(x=>x.type.startsWith('image/'));if(f)handleFile(f);});q('#ofUrlBtn').onclick=()=>{const u=q('#ofUrl').value.trim();if(!u)return toast('이미지 URL을 입력해 줘.',true);loadImage(u,u.split('/').pop()||'URL 이미지');};
+        q('#ofRatios').onclick=e=>{const b=e.target.closest('[data-r]');if(!b)return;const raw=b.dataset.r;q('#ofCustomRatio').style.display=raw==='custom'?'grid':'none';if(raw==='free')setAspectRatio(NaN,'자유');else if(raw==='custom'){const rw=safeNumber(q('#ofRatioW').value,5),rh=safeNumber(q('#ofRatioH').value,4);setAspectRatio(rw/rh,`${rw}:${rh}`);}else setAspectRatio(Number(raw),b.textContent.trim());};['ofRatioW','ofRatioH'].forEach(id=>q('#'+id).onchange=()=>{if(q('#ofCustomRatio').style.display!=='none'){const rw=safeNumber(q('#ofRatioW').value,5),rh=safeNumber(q('#ofRatioH').value,4);if(rw>0&&rh>0)setAspectRatio(rw/rh,`${rw}:${rh}`);}});
+        q('#ofAddSel').onclick=()=>{if(!q('#ofMulti').checked&&state.boxes.length)return toast('다중 선택 허용을 켜 줘.',true);const w=cssW*.42,h=Number.isFinite(state.ratio)?w/state.ratio:cssH*.42;state.boxes.push(clampBox({x:(cssW-w)/2+state.boxes.length*8,y:(cssH-h)/2+state.boxes.length*8,w,h,ratio:state.ratio}));state.active=state.boxes.length-1;syncControls();scheduleDraw();pushHistory('선택 추가');};q('#ofDeleteSel').onclick=()=>{if(state.boxes.length<=1){state.boxes=[];resetBoxes();toast('최소 한 개 선택 영역은 유지된다.');}else{state.boxes.splice(state.active,1);state.active=Math.max(0,state.active-1);}syncControls();scheduleDraw();pushHistory('선택 삭제');};q('#ofPrevSel').onclick=()=>{state.active=(state.active-1+state.boxes.length)%state.boxes.length;syncControls();scheduleDraw();};q('#ofNextSel').onclick=()=>{state.active=(state.active+1)%state.boxes.length;syncControls();scheduleDraw();};q('#ofCenterSel').onclick=()=>{const b=activeBox();b.x=(cssW-b.w)/2;b.y=(cssH-b.h)/2;scheduleDraw();syncControls();pushHistory('선택 가운데');};q('#ofResetSel').onclick=()=>{resetBoxes();scheduleDraw();pushHistory('선택 초기화');};q('#ofApplyBox').onclick=()=>{const b=activeBox();b.x=safeNumber(q('#ofX').value,b.x);b.y=safeNumber(q('#ofY').value,b.y);b.w=Math.max(MIN_BOX,safeNumber(q('#ofW').value,b.w));b.h=Math.max(MIN_BOX,safeNumber(q('#ofH').value,b.h));if(Number.isFinite(b.ratio))b.h=b.w/b.ratio;clampBox(b);scheduleDraw();syncControls();pushHistory('좌표 적용');};
+        q('#ofWheel').oninput=()=>q('#ofWheelLabel').textContent=Number(q('#ofWheel').value).toFixed(2);qa('[data-img]').forEach(b=>b.onclick=()=>imageAction(b.dataset.img));q('#ofUndo').onclick=()=>restoreHistory(state.historyIndex-1);q('#ofRedo').onclick=()=>restoreHistory(state.historyIndex+1);q('#ofRotateBtn').onclick=()=>{state.rotation+=safeNumber(q('#ofRotate').value,0);scheduleDraw();pushHistory('사용자 회전');};q('#ofBrightness').oninput=()=>{state.brightness=clamp2(safeNumber(q('#ofBrightness').value,100),0,300);scheduleDraw();};q('#ofContrast').oninput=()=>{state.contrast=clamp2(safeNumber(q('#ofContrast').value,100),0,300);scheduleDraw();};q('#ofBrightness').onchange=q('#ofContrast').onchange=()=>pushHistory('색상 조정');q('#ofZoom').oninput=()=>{state.scale=state.baseScale*safeNumber(q('#ofZoom').value,1);scheduleDraw();};q('#ofZoom').onchange=()=>pushHistory('확대 조정');
+        q('#ofGenerate').onclick=generate;q('#ofDownload').onclick=download;q('#ofCopyImage').onclick=copyImage;q('#ofCopyUrl').onclick=copyUrl;q('#ofCopyJson').onclick=copyJson;q('#ofAll').onclick=showAll;q('#ofCloseDialog').onclick=()=>q('#ofDialog').close();q('#ofDialog').onclick=e=>{if(e.target===q('#ofDialog'))q('#ofDialog').close();};q('#ofQuality').oninput=()=>q('#ofQualityText').textContent=Number(q('#ofQuality').value).toFixed(2);['ofFormat','ofQuality','ofOutW','ofOutH','ofFilter','ofBg','ofSmooth','ofTarget'].forEach(id=>q('#'+id).addEventListener('change',clearOutput));q('#ofClearLog').onclick=()=>q('#ofLog').innerHTML='';
+        document.addEventListener('keydown',e=>{if(!q('#ofKeyboard').checked||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;const b=activeBox(),step=e.shiftKey?10:1;let used=true;if(e.key==='ArrowLeft')b.x-=step;else if(e.key==='ArrowRight')b.x+=step;else if(e.key==='ArrowUp')b.y-=step;else if(e.key==='ArrowDown')b.y+=step;else if(e.key==='Delete'){q('#ofDeleteSel').click();return;}else used=false;if(used){e.preventDefault();clampBox(b);scheduleDraw();syncControls();clearTimeout(document._keyTimer);document._keyTimer=setTimeout(()=>pushHistory('키보드 이동'),160);}});
+        const ro=new ResizeObserver(resizeCanvas);ro.observe(stage);window.addEventListener('beforeunload',()=>{if(state.outputUrl)URL.revokeObjectURL(state.outputUrl);});
+      }
+
+      const samples = sampleImages();const sampleBox=q('#ofSamples');samples.forEach(s=>{const btn=document.createElement('button');btn.className='of-sample';btn.innerHTML=`<img alt="${s.name}"><span>${s.name}</span>`;q('img',btn).src=s.src;btn.onclick=()=>loadImage(s.src,`${s.name} 내장 샘플.svg`);sampleBox.appendChild(btn);});
+      bind();resizeCanvas();loadImage(samples[0].src,'가로 내장 샘플.svg');
+      q('#ofStatus').textContent='오프라인 호환 모드 · 실제 Cropper.js API가 아닌 내장 Canvas 엔진';
+      log('fallback','Cropper.js CDN 로드 실패');
+      if (loadError) console.warn('Cropper.js load error; fallback activated:', loadError);
+    }
+
+    async function boot() {
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem('cropper-demo-theme'); } catch {}
+      document.documentElement.dataset.theme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      renderSamples();
+      try {
+        await loadCropperLibrary();
+        await Promise.race([
+          customElements.whenDefined('cropper-canvas'),
+          sleep(2500).then(() => { throw new Error('Cropper.js 사용자 요소 등록 시간 초과'); })
+        ]);
+        bindUi();
+        await initCropper();
+      } catch (error) {
+        console.error(error);
+        launchOfflineFallback(error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', boot);
+  })();
+  </script>
+</body>
+</html>
