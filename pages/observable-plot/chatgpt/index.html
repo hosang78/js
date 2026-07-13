@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Observable Plot 종합 기능 샘플</title>
+  <meta name="description" content="Observable Plot 0.6.17의 주요 marks, transforms, scales, facets, interactions를 한 페이지에서 확인하는 종합 샘플" />
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/dist/plot.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --text: #172033;
+      --muted: #657085;
+      --line: #dce3ee;
+      --accent: #3266e3;
+      --accent-soft: #e9efff;
+      --shadow: 0 12px 32px rgba(24, 39, 75, .08);
+      --code: #101828;
+      --code-text: #e7edf8;
+      --danger: #b42318;
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0c1220;
+      --panel: #141c2b;
+      --panel-2: #101827;
+      --text: #eef3fb;
+      --muted: #9da9bd;
+      --line: #27354a;
+      --accent: #79a2ff;
+      --accent-soft: #1e315d;
+      --shadow: 0 14px 38px rgba(0, 0, 0, .28);
+      --code: #080d16;
+      --code-text: #e4ebf7;
+      --danger: #ff8d86;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .hero {
+      padding: 56px max(24px, calc((100vw - 1480px) / 2));
+      background:
+        radial-gradient(circle at 12% 15%, rgba(50,102,227,.18), transparent 32%),
+        radial-gradient(circle at 88% 8%, rgba(22,163,74,.12), transparent 28%),
+        var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .08em; font-size: .82rem; }
+    h1 { margin: 8px 0 12px; font-size: clamp(2rem, 4vw, 4.2rem); line-height: 1.05; letter-spacing: -.055em; }
+    .hero p { max-width: 850px; margin: 0; color: var(--muted); font-size: 1.04rem; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .pill { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--muted); font-size: .82rem; }
+    .toolbar-wrap { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(14px); }
+    .toolbar { max-width: 1480px; margin: auto; min-height: 66px; padding: 10px 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .search { flex: 1 1 270px; min-width: 210px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); color: var(--text); padding: 10px 13px; outline: none; }
+    .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .btn, select { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); padding: 9px 12px; }
+    .btn:hover, select:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .category-nav { max-width: 1480px; margin: 0 auto; padding: 12px 24px 0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; }
+    .category-nav button { white-space: nowrap; border: 0; background: transparent; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid transparent; }
+    .category-nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+    main { max-width: 1480px; margin: 0 auto; padding: 30px 24px 80px; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 26px; }
+    .summary > div { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+    .summary strong { display: block; font-size: 1.45rem; letter-spacing: -.03em; }
+    .summary span { color: var(--muted); font-size: .84rem; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .card { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); scroll-margin-top: 130px; }
+    .card.wide { grid-column: 1 / -1; }
+    .card.hidden { display: none; }
+    .card-head { padding: 18px 18px 10px; display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
+    .card h2 { margin: 0; font-size: 1.12rem; letter-spacing: -.02em; }
+    .desc { margin: 5px 0 0; color: var(--muted); font-size: .86rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tag { color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 8px; font-size: .72rem; font-weight: 700; }
+    .card-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+    .icon-btn { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--muted); display: grid; place-items: center; }
+    .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .chart { min-height: 310px; padding: 4px 12px 16px; overflow: hidden; color: var(--text); }
+    .chart > svg, .chart > figure { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+    .chart figure { margin: 0; }
+    .chart figcaption { color: var(--muted); font-size: .76rem; text-align: center; margin-top: 8px; }
+    .error { margin: 18px; padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--danger) 10%, var(--panel)); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line)); white-space: pre-wrap; font-size: .82rem; }
+    pre { display: none; margin: 0; padding: 16px 18px 20px; background: var(--code); color: var(--code-text); border-top: 1px solid var(--line); overflow-x: auto; font-size: .78rem; line-height: 1.55; tab-size: 2; }
+    pre.open { display: block; }
+    .footer { margin-top: 34px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--muted); font-size: .86rem; }
+    .compact .chart { min-height: 235px; }
+    .compact .desc, .compact .tags { display: none; }
+    .compact .card-head { padding-bottom: 4px; }
+    .no-results { display: none; text-align: center; padding: 80px 20px; color: var(--muted); }
+    .no-results.show { display: block; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .card.wide { grid-column: auto; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .hero { padding: 38px 18px; }
+      main, .toolbar, .category-nav { padding-left: 14px; padding-right: 14px; }
+      .summary { grid-template-columns: 1fr 1fr; }
+      .summary > div { padding: 13px; }
+      .card-head { padding: 15px 14px 8px; }
+      .chart { padding-left: 4px; padding-right: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="eyebrow">OBSERVABLE PLOT · COMPREHENSIVE LAB</div>
+    <h1>Observable Plot<br>종합 기능 샘플</h1>
+    <p>Plot의 그래픽 문법을 중심으로 mark, transform, scale, facet, projection, interaction을 한 페이지에 모았습니다. 모든 데이터는 페이지 내부에서 생성되며, 각 차트의 코드 확인과 SVG·PNG 저장이 가능합니다.</p>
+    <div class="hero-meta">
+      <span class="pill">Observable Plot 0.6.17</span>
+      <span class="pill">D3 7.9.0</span>
+      <span class="pill">단일 HTML</span>
+      <span class="pill">반응형</span>
+      <span class="pill">다크 모드</span>
+      <span class="pill">SVG / PNG 내보내기</span>
+    </div>
+  </header>
+
+  <div class="toolbar-wrap">
+    <div class="toolbar">
+      <input id="search" class="search" type="search" placeholder="예제 검색: histogram, 패싯, 지도, pointer…" aria-label="예제 검색" />
+      <label>
+        <select id="curve" title="선형 차트 곡선 방식">
+          <option value="linear">curve: linear</option>
+          <option value="catmull-rom">curve: catmull-rom</option>
+          <option value="monotone-x" selected>curve: monotone-x</option>
+          <option value="step">curve: step</option>
+          <option value="basis">curve: basis</option>
+        </select>
+      </label>
+      <button class="btn" id="reroll">데이터 재생성</button>
+      <button class="btn" id="compact">축약 보기</button>
+      <button class="btn" id="theme">다크 모드</button>
+      <button class="btn primary" id="saveHtml">HTML 저장</button>
+    </div>
+    <nav class="category-nav" id="categoryNav" aria-label="예제 분류">
+      <button class="active" data-category="all">전체</button>
+      <button data-category="basic">기본 차트</button>
+      <button data-category="transform">변환·집계</button>
+      <button data-category="stat">통계·분포</button>
+      <button data-category="interaction">상호작용</button>
+      <button data-category="special">특수 시각화</button>
+    </nav>
+  </div>
+
+  <main>
+    <section class="summary">
+      <div><strong>22</strong><span>독립 실행 예제</span></div>
+      <div><strong>30+</strong><span>marks·transforms</span></div>
+      <div><strong>6</strong><span>scale·projection 유형</span></div>
+      <div><strong>100%</strong><span>내부 생성 샘플 데이터</span></div>
+    </section>
+
+    <section class="grid" id="grid">
+      <article class="card" id="bar-label" data-category="basic transform" data-keywords="bar barX sort text label rule 막대 순위 정렬 라벨">
+        <div class="card-head"><div><h2>01. 정렬 막대 + 직접 라벨</h2><p class="desc">barX, sort, text, rule을 이용한 순위형 막대 차트</p><div class="tags"><span class="tag">barX</span><span class="tag">sort</span><span class="tag">text</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({
+  x: {grid: true},
+  y: {domain: d3.sort(data, d =&gt; -d.value).map(d =&gt; d.name)},
+  marks: [
+    Plot.barX(data, {x: "value", y: "name", fill: "name", tip: true}),
+    Plot.text(data, {x: "value", y: "name", text: d =&gt; d.value, dx: 5, textAnchor: "start"}),
+    Plot.ruleX([0])
+  ]
+})</code></pre>
+      </article>
+
+      <article class="card" id="stacked-group" data-category="basic transform" data-keywords="stack group groupX stacked bar 집계 누적 막대">
+        <div class="card-head"><div><h2>02. 그룹 집계 + 누적 막대</h2><p class="desc">groupX의 sum reducer와 암시적 stackY 결합</p><div class="tags"><span class="tag">groupX</span><span class="tag">stackY</span><span class="tag">legend</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.barY(rows,
+  Plot.groupX({y: "sum"}, {x: "quarter", y: "amount", fill: "channel", tip: true})
+)</code></pre>
+      </article>
+
+      <article class="card wide" id="line-area" data-category="basic interaction" data-keywords="line area curve marker selectLast tip 시계열 선 영역 곡선">
+        <div class="card-head"><div><h2>03. 다중 시계열 + 영역 + 끝점 라벨</h2><p class="desc">curve 선택, marker, selectLast, tip을 조합한 시계열</p><div class="tags"><span class="tag">lineY</span><span class="tag">areaY</span><span class="tag">selectLast</span><span class="tag">tip</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({
+  marks: [
+    Plot.areaY(total, {x: "date", y: "value", fillOpacity: .12, curve}),
+    Plot.lineY(series, {x: "date", y: "value", stroke: "product", curve, marker: "circle", tip: true}),
+    Plot.text(series, Plot.selectLast({x: "date", y: "value", text: "product", fill: "product", dx: 7}))
+  ]
+})</code></pre>
+      </article>
+
+      <article class="card" id="scatter-regression" data-category="stat interaction" data-keywords="scatter dot regression confidence crosshair pointer tip 산점도 회귀 교차선">
+        <div class="card-head"><div><h2>04. 산점도 + 선형회귀 + Crosshair</h2><p class="desc">색상·반지름 채널과 회귀 신뢰구간, 포인터 교차선</p><div class="tags"><span class="tag">dot</span><span class="tag">linearRegressionY</span><span class="tag">crosshair</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({marks: [
+  Plot.dot(data, {x: "x", y: "y", fill: "group", r: "size", tip: true}),
+  Plot.linearRegressionY(data, {x: "x", y: "y"}),
+  Plot.crosshair(data, {x: "x", y: "y"})
+]})</code></pre>
+      </article>
+
+      <article class="card" id="bubble-scale" data-category="basic stat" data-keywords="bubble radius log scale opacity symbol 버블 로그 스케일">
+        <div class="card-head"><div><h2>05. 버블 차트 + 로그·반지름 스케일</h2><p class="desc">x 로그 스케일, r sqrt 스케일, fill·opacity 다중 채널</p><div class="tags"><span class="tag">log scale</span><span class="tag">r scale</span><span class="tag">opacity</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.dot(data, {
+  x: "income", y: "score", r: "population",
+  fill: "region", fillOpacity: "confidence", tip: true
+})</code></pre>
+      </article>
+
+      <article class="card" id="histogram" data-category="stat transform" data-keywords="histogram bin binX rectY threshold distribution 히스토그램 구간화 분포">
+        <div class="card-head"><div><h2>06. 히스토그램 + Bin transform</h2><p class="desc">연속형 값을 구간화하고 빈도·평균을 동시에 표현</p><div class="tags"><span class="tag">binX</span><span class="tag">rectY</span><span class="tag">mean</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.rectY(data,
+  Plot.binX({y: "count", fill: "mean"}, {x: "value", fill: "score", thresholds: 24, tip: true})
+)</code></pre>
+      </article>
+
+      <article class="card" id="boxplot" data-category="stat" data-keywords="box boxY quartile median outlier 상자수염 사분위 중앙값 이상치">
+        <div class="card-head"><div><h2>07. 상자수염 + 원자료</h2><p class="desc">boxY의 분위수 요약과 jitter 원자료를 중첩</p><div class="tags"><span class="tag">boxY</span><span class="tag">dot</span><span class="tag">quantile</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({marks: [
+  Plot.dot(data, {x: "team", y: "value", opacity: .18, r: 2}),
+  Plot.boxY(data, {x: "team", y: "value", fill: "team", tip: true})
+]})</code></pre>
+      </article>
+
+      <article class="card" id="density" data-category="stat" data-keywords="density contour 2d kernel 등고선 밀도 KDE">
+        <div class="card-head"><div><h2>08. 2차원 밀도 등고선</h2><p class="desc">원자료 점 위에 density mark의 등밀도선을 중첩</p><div class="tags"><span class="tag">density</span><span class="tag">contour</span><span class="tag">thresholds</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({marks: [
+  Plot.dot(data, {x: "x", y: "y", opacity: .12}),
+  Plot.density(data, {x: "x", y: "y", stroke: "density", thresholds: 12})
+]})</code></pre>
+      </article>
+
+      <article class="card" id="heatmap" data-category="basic transform" data-keywords="heatmap cell ordinal color scale calendar 히트맵 셀 색상">
+        <div class="card-head"><div><h2>09. 범주형 히트맵</h2><p class="desc">두 개의 band scale과 연속형 색상 채널</p><div class="tags"><span class="tag">cell</span><span class="tag">band scale</span><span class="tag">color legend</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.cell(data, {x: "day", y: "hour", fill: "value", inset: .8, tip: true})</code></pre>
+      </article>
+
+      <article class="card wide" id="facets" data-category="transform stat" data-keywords="facet fx small multiples 패싯 스몰멀티플 그룹 비교">
+        <div class="card-head"><div><h2>10. Facet 스몰 멀티플</h2><p class="desc">fx 채널로 데이터를 분할해 동일 척도에서 비교</p><div class="tags"><span class="tag">fx</span><span class="tag">facet</span><span class="tag">small multiples</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({
+  fx: {label: null},
+  marks: [Plot.dot(data, {fx: "group", x: "x", y: "y", fill: "group", tip: true})]
+})</code></pre>
+      </article>
+
+      <article class="card" id="difference" data-category="basic transform" data-keywords="difference differenceY positive negative anomaly 차이 양수 음수 편차">
+        <div class="card-head"><div><h2>11. Difference 양·음 영역</h2><p class="desc">기준선 대비 양수·음수 구간을 서로 다른 색으로 구분</p><div class="tags"><span class="tag">differenceY</span><span class="tag">positiveFill</span><span class="tag">negativeFill</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.differenceY(data, {
+  x: "date", y: "anomaly",
+  positiveFill: "#d9485f", negativeFill: "#3b82c4", tip: true
+})</code></pre>
+      </article>
+
+      <article class="card" id="normalized-stack" data-category="transform basic" data-keywords="normalized stack offset proportion percentage 100% 누적 정규화 비율">
+        <div class="card-head"><div><h2>12. 100% 정규화 스택</h2><p class="desc">stackY의 normalize offset으로 구성비 변화 표현</p><div class="tags"><span class="tag">stackY</span><span class="tag">offset: normalize</span><span class="tag">percent</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.areaY(data,
+  Plot.stackY({offset: "normalize"}, {x: "year", y: "value", fill: "segment", tip: true})
+)</code></pre>
+      </article>
+
+      <article class="card wide" id="window-bollinger" data-category="stat transform interaction" data-keywords="window moving average bollinger select pointer 시계열 이동평균 볼린저 밴드">
+        <div class="card-head"><div><h2>13. 이동평균 + Bollinger band</h2><p class="desc">window transform, bollingerY 복합 mark, pointerX tip</p><div class="tags"><span class="tag">windowY</span><span class="tag">bollingerY</span><span class="tag">pointerX</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({marks: [
+  Plot.bollingerY(data, {x: "date", y: "close", n: 14, k: 2}),
+  Plot.lineY(data, Plot.windowY(7, {x: "date", y: "close"})),
+  Plot.tip(data, Plot.pointerX({x: "date", y: "close"}))
+]})</code></pre>
+      </article>
+
+      <article class="card" id="beeswarm" data-category="stat transform interaction" data-keywords="dodge beeswarm dot distribution packed 비스웜 도지 분포">
+        <div class="card-head"><div><h2>14. Dodge Beeswarm</h2><p class="desc">개별 관측치를 겹침 없이 밀집 배치하는 1차원 분포</p><div class="tags"><span class="tag">dodgeY</span><span class="tag">dot</span><span class="tag">tip</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.dot(data,
+  Plot.dodgeY({x: "value", fill: "group", r: 4, padding: 1.5, tip: true})
+)</code></pre>
+      </article>
+
+      <article class="card" id="voronoi" data-category="special interaction" data-keywords="voronoi delaunay mesh pointer geometry 보로노이 들로네 메쉬">
+        <div class="card-head"><div><h2>15. Delaunay · Voronoi</h2><p class="desc">점 집합의 삼각분할과 최근접 영역을 동시에 표시</p><div class="tags"><span class="tag">delaunayMesh</span><span class="tag">voronoi</span><span class="tag">pointer</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({marks: [
+  Plot.delaunayMesh(data, {x: "x", y: "y", strokeOpacity: .35}),
+  Plot.voronoi(data, {x: "x", y: "y", fillOpacity: 0, tip: true}),
+  Plot.dot(data, {x: "x", y: "y"})
+]})</code></pre>
+      </article>
+
+      <article class="card" id="vector" data-category="special" data-keywords="vector field arrow direction magnitude 벡터장 방향 크기 화살표">
+        <div class="card-head"><div><h2>16. Vector field</h2><p class="desc">회전각·길이·색상에 벡터의 방향과 크기를 인코딩</p><div class="tags"><span class="tag">vector</span><span class="tag">rotate</span><span class="tag">length</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.vector(data, {
+  x: "x", y: "y",
+  rotate: d =&gt; Math.atan2(d.u, d.v) * 180 / Math.PI,
+  length: d =&gt; Math.hypot(d.u, d.v),
+  stroke: d =&gt; Math.hypot(d.u, d.v)
+})</code></pre>
+      </article>
+
+      <article class="card" id="arrow-flow" data-category="special" data-keywords="arrow link flow marker curve 연결 흐름 화살표 링크">
+        <div class="card-head"><div><h2>17. Arrow 흐름 변화</h2><p class="desc">두 시점의 좌표를 곡선 화살표로 연결</p><div class="tags"><span class="tag">arrow</span><span class="tag">bend</span><span class="tag">marker</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.arrow(data, {
+  x1: "x1", y1: "y1", x2: "x2", y2: "y2",
+  stroke: "group", bend: true, headLength: 8, tip: true
+})</code></pre>
+      </article>
+
+      <article class="card wide" id="geo" data-category="special interaction" data-keywords="geo geojson projection mercator map centroid 지도 지리 투영">
+        <div class="card-head"><div><h2>18. GeoJSON + 지도 투영</h2><p class="desc">인라인 GeoJSON 도형, Mercator projection, centroid 라벨</p><div class="tags"><span class="tag">geo</span><span class="tag">projection</span><span class="tag">centroid</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({
+  projection: {type: "mercator", domain: geojson},
+  marks: [
+    Plot.geo(geojson, {fill: d =&gt; d.properties.value, tip: true}),
+    Plot.text(geojson.features, Plot.centroid({text: d =&gt; d.properties.name}))
+  ]
+})</code></pre>
+      </article>
+
+      <article class="card" id="tree" data-category="special transform" data-keywords="tree hierarchy cluster path 계층 트리 조직도 경로">
+        <div class="card-head"><div><h2>19. 계층형 Tree</h2><p class="desc">슬래시 구분 경로를 계층 구조로 변환해 배치</p><div class="tags"><span class="tag">tree</span><span class="tag">tree transform</span><span class="tag">hierarchy</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({
+  axis: null,
+  marks: [Plot.tree(paths, {textStroke: "var(--panel)", curve: "bump-x"})]
+})</code></pre>
+      </article>
+
+      <article class="card" id="waffle" data-category="special transform" data-keywords="waffle count unit icon proportion 와플 수량 셀">
+        <div class="card-head"><div><h2>20. Waffle 수량 비교</h2><p class="desc">정확한 개수 판독에 유리한 셀 패턴 기반 mark</p><div class="tags"><span class="tag">waffleY</span><span class="tag">unit</span><span class="tag">pattern</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.waffleY(data, {x: "category", y: "value", fill: "category", unit: 2, tip: true})</code></pre>
+      </article>
+
+      <article class="card" id="auto" data-category="basic" data-keywords="auto automatic exploratory 자동 추천 탐색">
+        <div class="card-head"><div><h2>21. Auto mark</h2><p class="desc">차원 유형에 따라 적절한 mark를 자동 선택하는 탐색 기능</p><div class="tags"><span class="tag">auto</span><span class="tag">autoSpec</span><span class="tag">EDA</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.auto(data, {x: "x", y: "y", color: "group"}).plot({grid: true})</code></pre>
+      </article>
+
+      <article class="card" id="custom-axis" data-category="basic special" data-keywords="axis grid frame tick format custom annotation 축 격자 프레임 주석">
+        <div class="card-head"><div><h2>22. 축·격자·프레임·주석</h2><p class="desc">기본 축을 숨기고 axis/grid/frame/text mark로 직접 구성</p><div class="tags"><span class="tag">axisX</span><span class="tag">gridY</span><span class="tag">frame</span><span class="tag">text</span></div></div><div class="card-actions"></div></div>
+        <div class="chart"></div><pre><code>Plot.plot({axis: null, marks: [
+  Plot.gridY({strokeOpacity: .15}), Plot.axisY({anchor: "left"}),
+  Plot.axisX({anchor: "bottom", tickFormat: "%b"}), Plot.frame(),
+  Plot.lineY(data, {x: "date", y: "value"}),
+  Plot.text([{date, value, note}], {x: "date", y: "value", text: "note"})
+]})</code></pre>
+      </article>
+    </section>
+
+    <div class="no-results" id="noResults">조건에 맞는 예제가 없습니다.</div>
+    <aside class="footer">
+      <strong>실행 조건</strong><br>
+      이 파일은 차트 라이브러리를 jsDelivr CDN에서 불러옵니다. 인터넷이 차단된 환경에서는 D3와 Observable Plot 스크립트를 내려받아 같은 폴더에 두고 상단의 script 경로를 로컬 파일로 변경해야 합니다. 페이지의 샘플 데이터는 외부 API를 호출하지 않습니다.
+    </aside>
+  </main>
+
+<script>
+(() => {
+  "use strict";
+
+  const state = { seed: 20260713, category: "all", query: "", compact: false };
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  const fmt = new Intl.NumberFormat("ko-KR");
+  const palette = ["#3266e3", "#13a071", "#e57b25", "#a45bd4", "#d64e63", "#138aa7"];
+
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  let random = mulberry32(state.seed);
+  function rand(min = 0, max = 1) { return min + (max - min) * random(); }
+  function normal(mean = 0, sd = 1) {
+    const u = Math.max(random(), 1e-9), v = Math.max(random(), 1e-9);
+    return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function dateAdd(date, months = 0, days = 0) {
+    const d = new Date(date); d.setMonth(d.getMonth() + months); d.setDate(d.getDate() + days); return d;
+  }
+
+  let D = {};
+  function generateData() {
+    random = mulberry32(state.seed);
+
+    D.rank = ["회원지원", "디지털", "유통", "안전", "양식", "금융", "연구", "홍보"].map((name, i) => ({name, value: Math.round(rand(42, 96) - i * 1.7)}));
+
+    D.stacked = [];
+    ["1분기", "2분기", "3분기", "4분기"].forEach((quarter, qi) => {
+      ["온라인", "오프라인", "제휴"].forEach((channel, ci) => {
+        for (let j = 0; j < 5; j++) D.stacked.push({quarter, channel, amount: Math.round(15 + qi * 5 + ci * 4 + rand(0, 18))});
+      });
+    });
+
+    D.series = [];
+    const products = ["정책보험", "상호금융", "수산물"], base = [84, 68, 51];
+    for (let m = 0; m < 24; m++) {
+      products.forEach((product, pi) => {
+        const value = base[pi] + m * (1.1 + pi * .25) + 9 * Math.sin((m + pi * 2) / 2.6) + normal(0, 3.2);
+        D.series.push({date: dateAdd("2024-01-01", m), product, value: Math.round(value * 10) / 10});
+      });
+    }
+    D.totalSeries = d3.rollups(D.series, v => d3.sum(v, d => d.value), d => +d.date).map(([t, value]) => ({date: new Date(t), value}));
+
+    D.scatter = Array.from({length: 155}, (_, i) => {
+      const group = ["A", "B", "C"][i % 3];
+      const x = rand(10, 100);
+      return {id: `관측 ${i + 1}`, group, x, y: 16 + x * .68 + (group === "B" ? 12 : group === "C" ? -8 : 0) + normal(0, 11), size: rand(2, 16)};
+    });
+
+    D.bubble = ["수도권", "충청권", "호남권", "영남권"].flatMap((region, ri) => Array.from({length: 7}, (_, i) => ({
+      name: `${region}-${i + 1}`, region, income: Math.round(Math.exp(rand(9.4, 12.1))), score: rand(48, 96), population: rand(2, 120), confidence: rand(.35, 1)
+    })));
+
+    D.hist = Array.from({length: 650}, (_, i) => ({value: i % 4 === 0 ? normal(68, 8) : normal(52, 11), score: rand(0, 100)}));
+
+    D.box = ["기획", "개발", "운영", "현장"].flatMap((team, ti) => Array.from({length: 42}, (_, i) => ({team, value: normal(55 + ti * 6, 8 + ti * 1.3) + (i === 3 ? 24 : 0)})));
+
+    D.density = Array.from({length: 460}, (_, i) => {
+      const k = i % 3;
+      return {x: normal([28, 58, 72][k], [9, 11, 7][k]), y: normal([68, 38, 72][k], [11, 9, 8][k])};
+    });
+
+    const days = ["월", "화", "수", "목", "금", "토", "일"], hours = ["06", "09", "12", "15", "18", "21"];
+    D.heat = days.flatMap((day, di) => hours.map((hour, hi) => ({day, hour: `${hour}시`, value: Math.max(0, Math.round(35 + 32 * Math.sin((di + 1) * .8) + 22 * Math.cos(hi * .9) + rand(-18, 18)))})));
+
+    D.facets = ["완만한 증가", "강한 증가", "감소", "비선형"].flatMap((group, gi) => Array.from({length: 46}, (_, i) => {
+      const x = rand(0, 100);
+      const slopes = [.25, .75, -.35, .25];
+      const nonlinear = gi === 3 ? .008 * (x - 50) ** 2 : 0;
+      return {group, x, y: 25 + slopes[gi] * x + nonlinear + normal(0, 9)};
+    }));
+
+    D.diff = Array.from({length: 48}, (_, i) => ({date: dateAdd("2022-01-01", i), anomaly: .45 * Math.sin(i / 3.3) + .018 * i - .35 + normal(0, .16)}));
+
+    D.share = [];
+    const segments = ["오프라인", "웹", "모바일", "AI 채널"];
+    for (let y = 2021; y <= 2026; y++) segments.forEach((segment, si) => D.share.push({year: y, segment, value: Math.max(2, [62, 20, 14, 4][si] + (y - 2021) * [-7, 1.5, 3.2, 2.3][si] + rand(-2, 2))}));
+
+    let close = 100;
+    D.stock = Array.from({length: 125}, (_, i) => {
+      close = Math.max(45, close + normal(.18, 2.6) + Math.sin(i / 12) * .25);
+      return {date: dateAdd("2026-01-01", 0, i), close: Math.round(close * 100) / 100, volume: Math.round(rand(25, 110))};
+    });
+
+    D.beeswarm = Array.from({length: 130}, (_, i) => ({id: `표본 ${i + 1}`, group: ["일반", "우수", "주의"][i % 3], value: normal(i % 3 === 0 ? 72 : i % 3 === 1 ? 82 : 61, 8)}));
+    D.voronoi = Array.from({length: 34}, (_, i) => ({name: `지점 ${i + 1}`, x: rand(5, 95), y: rand(5, 95), group: ["동부", "서부", "남부"][i % 3]}));
+
+    D.vector = [];
+    for (let x = -4; x <= 4; x++) for (let y = -4; y <= 4; y++) {
+      const u = -y * .75 + Math.sin(x), v = x * .75 + Math.cos(y);
+      D.vector.push({x, y, u, v});
+    }
+
+    D.arrows = Array.from({length: 18}, (_, i) => {
+      const x1 = rand(10, 75), y1 = rand(10, 85), group = ["상승", "유지", "하락"][i % 3];
+      return {name: `대상 ${i + 1}`, group, x1, y1, x2: x1 + rand(6, 22), y2: y1 + (group === "상승" ? rand(8, 24) : group === "하락" ? rand(-24, -8) : rand(-5, 5))};
+    });
+
+    D.geo = {type: "FeatureCollection", features: [
+      {type:"Feature", properties:{name:"서해권", value:72}, geometry:{type:"Polygon", coordinates:[[[125.0,34.0],[126.2,34.0],[126.2,37.3],[125.0,37.3],[125.0,34.0]]]}},
+      {type:"Feature", properties:{name:"남해권", value:88}, geometry:{type:"Polygon", coordinates:[[[126.2,33.0],[129.1,33.0],[129.1,35.0],[126.2,35.0],[126.2,33.0]]]}},
+      {type:"Feature", properties:{name:"동해권", value:61}, geometry:{type:"Polygon", coordinates:[[[129.1,34.7],[130.5,34.7],[130.5,38.3],[129.1,38.3],[129.1,34.7]]]}},
+      {type:"Feature", properties:{name:"제주권", value:94}, geometry:{type:"Polygon", coordinates:[[[125.8,32.7],[127.4,32.7],[127.4,33.7],[125.8,33.7],[125.8,32.7]]]}}
+    ]};
+
+    D.tree = [
+      "수협/지원부문/회원지원", "수협/지원부문/어업양식", "수협/지원부문/어선안전",
+      "수협/경제부문/유통", "수협/경제부문/판매", "수협/경제부문/무역",
+      "수협/금융부문/상호금융", "수협/금융부문/공제보험", "수협/금융부문/정책보험",
+      "수협/전략부문/기획", "수협/전략부문/ICT", "수협/전략부문/연구"
+    ];
+    D.waffle = [
+      {category:"완료", value:74}, {category:"진행", value:43}, {category:"대기", value:27}, {category:"보류", value:12}
+    ];
+    D.auto = Array.from({length: 90}, (_, i) => ({x: rand(0, 100), y: rand(0, 35) + i * .42, group: ["A", "B", "C"][i % 3]}));
+    D.custom = Array.from({length: 16}, (_, i) => ({date: dateAdd("2025-01-01", i), value: 42 + 3.2 * i + 12 * Math.sin(i / 2.2) + normal(0, 2)}));
+  }
+
+  function plotWidth(card) {
+    const w = card.querySelector(".chart").clientWidth || card.clientWidth || 600;
+    return Math.max(300, Math.floor(w - 16));
+  }
+  function common(width, height = 310) {
+    return { width, height, marginLeft: 52, marginRight: 30, style: {fontSize: "12px", background: "transparent"} };
+  }
+  function renderInto(id, factory) {
+    const card = document.getElementById(id), host = card.querySelector(".chart");
+    host.replaceChildren();
+    try {
+      const node = factory(plotWidth(card));
+      host.append(node);
+      node.setAttribute?.("aria-label", card.querySelector("h2").textContent);
+    } catch (error) {
+      const pre = document.createElement("div");
+      pre.className = "error";
+      pre.textContent = `이 예제를 렌더링하지 못했습니다.\n${error?.message || error}`;
+      host.append(pre);
+      console.error(id, error);
+    }
+  }
+
+  const chartRenderers = {
+    "bar-label": width => Plot.plot({
+      ...common(width, 330),
+      marginLeft: 78,
+      x: {grid: true, label: "지수"}, y: {label: null, domain: d3.sort(D.rank, d => -d.value).map(d => d.name)},
+      color: {scheme: "blues"},
+      marks: [
+        Plot.barX(D.rank, {x: "value", y: "name", fill: "value", sort: {y: "-x"}, tip: true}),
+        Plot.text(D.rank, {x: "value", y: "name", text: d => fmt.format(d.value), dx: 5, textAnchor: "start", fontWeight: 700}),
+        Plot.ruleX([0])
+      ]
+    }),
+
+    "stacked-group": width => Plot.plot({
+      ...common(width, 330),
+      x: {label: null}, y: {grid: true, label: "합계"}, color: {legend: true, scheme: "tableau10"},
+      marks: [
+        Plot.barY(D.stacked, Plot.groupX({y: "sum"}, {x: "quarter", y: "amount", fill: "channel", tip: true})),
+        Plot.ruleY([0])
+      ]
+    }),
+
+    "line-area": width => {
+      const curve = $("#curve").value;
+      return Plot.plot({
+        ...common(width, 390), marginRight: 92,
+        x: {type: "utc", grid: true, label: null, tickFormat: "%Y-%m"}, y: {grid: true, label: "지수"},
+        color: {legend: true, domain: ["정책보험", "상호금융", "수산물"], range: palette.slice(0, 3)},
+        marks: [
+          Plot.areaY(D.totalSeries, {x: "date", y: "value", curve, fill: palette[0], fillOpacity: .08, line: true, strokeOpacity: .25}),
+          Plot.lineY(D.series, {x: "date", y: "value", stroke: "product", curve, marker: "circle", tip: {format: {x: "%Y-%m", y: ".1f"}}}),
+          Plot.text(D.series, Plot.selectLast({x: "date", y: "value", text: "product", fill: "product", dx: 8, textAnchor: "start", fontWeight: 700})),
+          Plot.ruleY([0])
+        ]
+      });
+    },
+
+    "scatter-regression": width => Plot.plot({
+      ...common(width, 350),
+      grid: true, x: {label: "설명변수 X"}, y: {label: "결과변수 Y"},
+      r: {range: [2, 9]}, color: {legend: true, range: palette.slice(0,3)},
+      marks: [
+        Plot.dot(D.scatter, {x: "x", y: "y", fill: "group", r: "size", fillOpacity: .58, stroke: "white", strokeWidth: .5, channels: {id: "id"}, tip: true}),
+        Plot.linearRegressionY(D.scatter, {x: "x", y: "y", stroke: "currentColor", strokeOpacity: .75}),
+        Plot.crosshair(D.scatter, {x: "x", y: "y", stroke: "currentColor"})
+      ]
+    }),
+
+    "bubble-scale": width => Plot.plot({
+      ...common(width, 350),
+      x: {type: "log", grid: true, label: "소득 규모(로그)"}, y: {grid: true, label: "성과 점수"},
+      r: {type: "sqrt", range: [3, 18]},
+      opacity: {range: [.22, .9]}, color: {legend: true, range: palette.slice(0,4)},
+      marks: [Plot.dot(D.bubble, {x: "income", y: "score", r: "population", fill: "region", fillOpacity: "confidence", stroke: "white", channels: {name: "name"}, tip: true})]
+    }),
+
+    "histogram": width => Plot.plot({
+      ...common(width, 330),
+      x: {grid: true, label: "측정값"}, y: {grid: true, label: "빈도"}, color: {scheme: "viridis", legend: true, label: "평균 점수"},
+      marks: [
+        Plot.rectY(D.hist, Plot.binX({y: "count", fill: "mean"}, {x: "value", fill: "score", thresholds: 24, tip: true})),
+        Plot.ruleY([0])
+      ]
+    }),
+
+    "boxplot": width => Plot.plot({
+      ...common(width, 330),
+      x: {label: null}, y: {grid: true, label: "분포"}, color: {legend: false, range: palette.slice(0,4)},
+      marks: [
+        Plot.dot(D.box, {x: "team", y: "value", fill: "team", r: 2, opacity: .14}),
+        Plot.boxY(D.box, {x: "team", y: "value", fill: "team", fillOpacity: .45, stroke: "team", tip: true})
+      ]
+    }),
+
+    "density": width => Plot.plot({
+      ...common(width, 350),
+      x: {grid: true}, y: {grid: true}, color: {scheme: "turbo", legend: true, label: "밀도"},
+      marks: [
+        Plot.dot(D.density, {x: "x", y: "y", r: 1.5, opacity: .12}),
+        Plot.density(D.density, {x: "x", y: "y", stroke: "density", strokeWidth: 1.5, thresholds: 12})
+      ]
+    }),
+
+    "heatmap": width => Plot.plot({
+      ...common(width, 330), marginLeft: 48,
+      x: {label: null}, y: {label: "시간대", domain: ["21시","18시","15시","12시","09시","06시"]},
+      color: {scheme: "YlGnBu", legend: true, label: "활동량"},
+      marks: [Plot.cell(D.heat, {x: "day", y: "hour", fill: "value", inset: .8, channels: {활동량: "value"}, tip: true}), Plot.text(D.heat.filter(d => d.value > 76), {x:"day", y:"hour", text:d=>d.value, fill:"white", fontWeight:700})]
+    }),
+
+    "facets": width => Plot.plot({
+      ...common(width, 390), marginLeft: 46,
+      fx: {label: null, padding: .08}, x: {grid: true, label: "X"}, y: {grid: true, label: "Y"},
+      color: {legend: false, range: palette.slice(0,4)},
+      marks: [
+        Plot.frame(),
+        Plot.dot(D.facets, {fx: "group", x: "x", y: "y", fill: "group", opacity: .6, tip: true}),
+        Plot.linearRegressionY(D.facets.filter(d=>d.group!=="비선형"), {fx:"group", x:"x", y:"y", stroke:"group"})
+      ]
+    }),
+
+    "difference": width => Plot.plot({
+      ...common(width, 330),
+      x: {type: "utc", label: null, tickFormat: "%Y"}, y: {grid: true, label: "기준 대비 편차"},
+      marks: [
+        Plot.ruleY([0], {strokeOpacity: .55}),
+        Plot.differenceY(D.diff, {x: "date", y: "anomaly", positiveFill: "#d9485f", negativeFill: "#3b82c4", positiveFillOpacity: .7, negativeFillOpacity: .7, tip: {format:{x:"%Y-%m", y:"+.2f"}}}),
+        Plot.lineY(D.diff, Plot.windowY(3, {x:"date", y:"anomaly", stroke:"currentColor", strokeWidth:1.4}))
+      ]
+    }),
+
+    "normalized-stack": width => Plot.plot({
+      ...common(width, 330),
+      x: {label: null, tickFormat: "d"}, y: {label: "구성비", percent: true, grid: true},
+      color: {legend: true, range: palette.slice(0,4)},
+      marks: [
+        Plot.areaY(D.share, Plot.stackY({offset: "normalize", order: ["오프라인", "웹", "모바일", "AI 채널"]}, {x: "year", y: "value", fill: "segment", curve: "monotone-x", tip: true})),
+        Plot.ruleY([0, 1])
+      ]
+    }),
+
+    "window-bollinger": width => Plot.plot({
+      ...common(width, 390), marginRight: 36,
+      x: {type:"utc", grid:true, label:null, tickFormat:"%m-%d"}, y:{grid:true, label:"가격"},
+      marks: [
+        Plot.bollingerY(D.stock, {x:"date", y:"close", n:14, k:2, fill:palette[0], fillOpacity:.12, stroke:palette[0], strokeOpacity:.25}),
+        Plot.lineY(D.stock, {x:"date", y:"close", stroke:"currentColor", strokeOpacity:.35}),
+        Plot.lineY(D.stock, Plot.windowY(7, {x:"date", y:"close", stroke:palette[4], strokeWidth:2.2})),
+        Plot.tip(D.stock, Plot.pointerX({x:"date", y:"close", channels:{거래량:"volume"}, format:{x:"%Y-%m-%d", y:".2f"}}))
+      ]
+    }),
+
+    "beeswarm": width => Plot.plot({
+      ...common(width, 300), height: 300, marginLeft: 24,
+      x: {grid:true, label:"평가 점수"}, y: {axis:null}, color:{legend:true, range:palette.slice(0,3)},
+      marks: [
+        Plot.ruleY([0]),
+        Plot.dot(D.beeswarm, Plot.dodgeY({x:"value", fill:"group", r:4, padding:1.5, channels:{id:"id"}, tip:true}))
+      ]
+    }),
+
+    "voronoi": width => Plot.plot({
+      ...common(width, 350), aspectRatio: 1, inset: 12, x:{axis:null}, y:{axis:null}, color:{legend:true, range:palette.slice(0,3)},
+      marks: [
+        Plot.frame(),
+        Plot.delaunayMesh(D.voronoi, {x:"x", y:"y", stroke:"currentColor", strokeOpacity:.22}),
+        Plot.voronoi(D.voronoi, {x:"x", y:"y", fillOpacity:0, strokeOpacity:.08, channels:{name:"name", group:"group"}, tip:true}),
+        Plot.dot(D.voronoi, {x:"x", y:"y", fill:"group", r:4, stroke:"white"})
+      ]
+    }),
+
+    "vector": width => Plot.plot({
+      ...common(width, 350), inset: 15, aspectRatio: 1, grid:true,
+      length:{range:[4,20]}, color:{scheme:"turbo", legend:true, label:"세기"},
+      marks: [Plot.vector(D.vector, {x:"x", y:"y", rotate:d=>Math.atan2(d.u,d.v)*180/Math.PI, length:d=>Math.hypot(d.u,d.v), stroke:d=>Math.hypot(d.u,d.v), strokeWidth:1.4})]
+    }),
+
+    "arrow-flow": width => Plot.plot({
+      ...common(width, 350), inset:18, x:{grid:true, label:"규모"}, y:{grid:true, label:"성과"}, color:{legend:true, domain:["상승","유지","하락"], range:[palette[1], palette[2], palette[4]]},
+      marks: [
+        Plot.arrow(D.arrows, {x1:"x1", y1:"y1", x2:"x2", y2:"y2", stroke:"group", bend:true, headLength:8, channels:{name:"name"}, tip:true}),
+        Plot.dot(D.arrows, {x:"x1", y:"y1", fill:"group", r:2.5})
+      ]
+    }),
+
+    "geo": width => Plot.plot({
+      ...common(width, 390), margin:12,
+      projection:{type:"mercator", domain:D.geo}, color:{scheme:"teal", legend:true, label:"활성 지수"},
+      marks: [
+        Plot.geo(D.geo, {fill:d=>d.properties.value, stroke:"white", strokeWidth:2, channels:{권역:d=>d.properties.name, 지수:d=>d.properties.value}, tip:true}),
+        Plot.text(D.geo.features, Plot.centroid({text:d=>d.properties.name, fill:"white", fontWeight:800, textStroke:"rgba(0,0,0,.35)", textStrokeWidth:3})),
+        Plot.sphere({stroke:"currentColor", strokeOpacity:.25})
+      ]
+    }),
+
+    "tree": width => Plot.plot({
+      ...common(width, 430), axis:null, margin:12, marginLeft:30, marginRight:105,
+      marks: [Plot.tree(D.tree, {textStroke: getComputedStyle(document.documentElement).getPropertyValue("--panel").trim(), textStrokeWidth:4, dot:true, stroke:palette[0], fill:palette[0], curve:"bump-x"})]
+    }),
+
+    "waffle": width => Plot.plot({
+      ...common(width, 360), height:360, x:{label:null}, y:{label:"수량", grid:true}, color:{legend:true, range:palette.slice(0,4)},
+      marks: [Plot.waffleY(D.waffle, {x:"category", y:"value", fill:"category", unit:2, inset:.5, tip:true}), Plot.ruleY([0])]
+    }),
+
+    "auto": width => Plot.auto(D.auto, {x:"x", y:"y", color:"group"}).plot({...common(width, 340), grid:true, color:{legend:true, range:palette.slice(0,3)}}),
+
+    "custom-axis": width => {
+      const maxPoint = d3.greatest(D.custom, d=>d.value);
+      return Plot.plot({
+        ...common(width, 340), axis:null,
+        x:{type:"utc"}, y:{nice:true},
+        marks:[
+          Plot.gridY({strokeOpacity:.16}), Plot.axisY({anchor:"left", label:"월별 지수"}),
+          Plot.axisX({anchor:"bottom", tickFormat:"%Y-%m", tickRotate:-35}), Plot.frame({strokeOpacity:.45}),
+          Plot.areaY(D.custom, {x:"date", y:"value", fill:palette[0], fillOpacity:.1, curve:"monotone-x"}),
+          Plot.lineY(D.custom, {x:"date", y:"value", stroke:palette[0], strokeWidth:2.2, marker:"circle", tip:true}),
+          Plot.ruleX([maxPoint.date], {stroke:palette[4], strokeDasharray:"4,4"}),
+          Plot.text([{...maxPoint, note:"최고점"}], {x:"date", y:"value", text:"note", dy:-12, fill:palette[4], fontWeight:800})
+        ]
+      });
+    }
+  };
+
+  function renderAll() {
+    Object.entries(chartRenderers).forEach(([id, factory]) => renderInto(id, factory));
+  }
+
+  function addCardActions() {
+    $$(".card").forEach(card => {
+      const actions = $(".card-actions", card);
+      actions.innerHTML = `
+        <button class="icon-btn" data-action="code" title="코드 보기" aria-label="코드 보기">&lt;/&gt;</button>
+        <button class="icon-btn" data-action="svg" title="SVG 저장" aria-label="SVG 저장">SVG</button>
+        <button class="icon-btn" data-action="png" title="PNG 저장" aria-label="PNG 저장">PNG</button>`;
+    });
+  }
+
+  function svgBlob(svg) {
+    const clone = svg.cloneNode(true);
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim();
+    const text = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
+    clone.style.background = bg; clone.style.color = text;
+    const xml = new XMLSerializer().serializeToString(clone);
+    return new Blob([xml], {type:"image/svg+xml;charset=utf-8"});
+  }
+  function downloadBlob(blob, filename) {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  }
+  function saveSvg(card) {
+    const svg = $("svg", card); if (!svg) return alert("저장할 SVG가 없습니다.");
+    downloadBlob(svgBlob(svg), `${card.id}.svg`);
+  }
+  function savePng(card) {
+    const svg = $("svg", card); if (!svg) return alert("저장할 SVG가 없습니다.");
+    const blob = svgBlob(svg), url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => {
+      const scale = 2, canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, img.width * scale); canvas.height = Math.max(1, img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim(); ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(png => downloadBlob(png, `${card.id}.png`), "image/png"); URL.revokeObjectURL(url);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert("PNG 변환에 실패했습니다."); };
+    img.src = url;
+  }
+
+  function applyFilter() {
+    let visible = 0;
+    $$(".card").forEach(card => {
+      const categoryOk = state.category === "all" || card.dataset.category.split(" ").includes(state.category);
+      const hay = `${card.textContent} ${card.dataset.keywords}`.toLowerCase();
+      const queryOk = !state.query || hay.includes(state.query.toLowerCase());
+      card.classList.toggle("hidden", !(categoryOk && queryOk));
+      if (categoryOk && queryOk) visible++;
+    });
+    $("#noResults").classList.toggle("show", visible === 0);
+  }
+
+  document.addEventListener("click", e => {
+    const action = e.target.closest("[data-action]");
+    if (action) {
+      const card = action.closest(".card"), type = action.dataset.action;
+      if (type === "code") $("pre", card).classList.toggle("open");
+      if (type === "svg") saveSvg(card);
+      if (type === "png") savePng(card);
+    }
+    const cat = e.target.closest("#categoryNav [data-category]");
+    if (cat) {
+      state.category = cat.dataset.category;
+      $$("#categoryNav button").forEach(b => b.classList.toggle("active", b === cat));
+      applyFilter();
+    }
+  });
+
+  $("#search").addEventListener("input", e => { state.query = e.target.value.trim(); applyFilter(); });
+  $("#curve").addEventListener("change", () => renderInto("line-area", chartRenderers["line-area"]));
+  $("#reroll").addEventListener("click", () => { state.seed += 97; generateData(); renderAll(); });
+  $("#compact").addEventListener("click", e => {
+    state.compact = !state.compact; document.body.classList.toggle("compact", state.compact);
+    e.target.textContent = state.compact ? "상세 보기" : "축약 보기";
+    setTimeout(renderAll, 30);
+  });
+  $("#theme").addEventListener("click", e => {
+    const dark = document.documentElement.dataset.theme !== "dark";
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    e.target.textContent = dark ? "라이트 모드" : "다크 모드";
+    setTimeout(renderAll, 30);
+  });
+  $("#saveHtml").addEventListener("click", () => {
+    const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+    downloadBlob(new Blob([html], {type:"text/html;charset=utf-8"}), "observable_plot_comprehensive_sample.html");
+  });
+
+  let resizeTimer;
+  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 180); });
+
+  addCardActions();
+  generateData();
+  if (!window.Plot || !window.d3) {
+    $$(".chart").forEach(host => host.innerHTML = '<div class="error">라이브러리를 불러오지 못했습니다. 인터넷 연결 또는 CDN 차단 여부를 확인하세요.</div>');
+  } else {
+    renderAll();
+  }
+})();
+</script>
+</body>
+</html>
