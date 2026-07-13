@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Lodash 주요 API를 카테고리별로 실행해 보는 대화형 샘플 페이지" />
+  <title>Lodash 기능 실험실 | Interactive Playground</title>
+<script>
+(function installLodashDemoFallback(){
+  if (typeof window._ === 'function') return;
+  const root = window;
+  let uid = 0;
+  const isObj = v => v !== null && typeof v === 'object';
+  const toArr = c => c == null ? [] : Array.isArray(c) ? c : typeof c === 'string' ? Array.from(c) : Object.values(c);
+  const ownKeys = o => Object.keys(Object(o));
+  function toPath(path){
+    if (Array.isArray(path)) return path.map(String);
+    return String(path).replace(/\[(\w+)\]/g, '.$1').replace(/^\./,'').split('.').filter(Boolean);
+  }
+  function get(obj,path,def){
+    let cur = obj;
+    for(const p of toPath(path)){ if(cur == null || !(p in Object(cur))) return def; cur = cur[p]; }
+    return cur === undefined ? def : cur;
+  }
+  function set(obj,path,val){
+    const ps = toPath(path); let cur = obj;
+    ps.forEach((p,i)=>{ if(i===ps.length-1) cur[p]=val; else { if(!isObj(cur[p])) cur[p] = /^\d+$/.test(ps[i+1]) ? [] : {}; cur = cur[p]; } });
+    return obj;
+  }
+  function baseClone(v, deep){
+    if(!isObj(v)) return v;
+    if(v instanceof Date) return new Date(v);
+    if(Array.isArray(v)) return deep ? v.map(x=>baseClone(x,true)) : v.slice();
+    const out = Object.create(Object.getPrototypeOf(v) || Object.prototype);
+    for(const k of Object.keys(v)) out[k] = deep ? baseClone(v[k],true) : v[k];
+    return out;
+  }
+  function isEqual(a,b){
+    if(Object.is(a,b) || (Number.isNaN(a) && Number.isNaN(b))) return true;
+    if(!isObj(a) || !isObj(b)) return false;
+    if(Array.isArray(a)!==Array.isArray(b)) return false;
+    const ak=Object.keys(a), bk=Object.keys(b); if(ak.length!==bk.length) return false;
+    return ak.every(k=>Object.prototype.hasOwnProperty.call(b,k) && isEqual(a[k],b[k]));
+  }
+  function isMatch(obj, src){ return Object.keys(src||{}).every(k => isEqual(get(obj,k), src[k])); }
+  function iter(fn){
+    if(fn == null) return v=>v;
+    if(typeof fn === 'function') return fn;
+    if(typeof fn === 'string' || Array.isArray(fn)) return v => get(v, fn);
+    if(isObj(fn)) return v => isMatch(v, fn);
+    return v=>v;
+  }
+  const keyOf = (v, fn) => { const x = iter(fn)(v); return isObj(x) ? JSON.stringify(x) : String(x); };
+  function map(collection, fn){ const f=iter(fn); return Array.isArray(collection)||typeof collection==='string' ? toArr(collection).map((v,i)=>f(v,i,collection)) : Object.keys(Object(collection||{})).map(k=>f(collection[k],k,collection)); }
+  function filter(collection, fn){ const f=iter(fn); return toArr(collection).filter((v,i)=>f(v,i,collection)); }
+  function reduce(collection, fn, acc){ const arr = Array.isArray(collection) ? collection : Object.values(Object(collection||{})); let i=0; if(arguments.length<3){ acc=arr[0]; i=1; } for(; i<arr.length; i++) acc=fn(acc,arr[i],i,collection); return acc; }
+  function Wrapper(value, actions){ this.__value__ = value; this.__actions__ = actions || []; }
+  Wrapper.prototype._wrap = function(action){ return new Wrapper(this.__value__, this.__actions__.concat(action)); };
+  Wrapper.prototype.value = function(){ return this.__actions__.reduce((v,a)=>a(v), this.__value__); };
+  Wrapper.prototype.plant = function(value){ return new Wrapper(value, this.__actions__.slice()); };
+  ['map','filter','uniq','sort','reverse','sum','tap','thru'].forEach(name=>{
+    Wrapper.prototype[name] = function(...args){
+      const _ = root._;
+      if(name==='sort') return this._wrap(v => toArr(v).slice().sort(...args));
+      if(name==='tap') return this._wrap(v => { args[0](v); return v; });
+      if(name==='thru') return this._wrap(v => args[0](v));
+      return this._wrap(v => _[name](v, ...args));
+    };
+  });
+  function _(value){ return new Wrapper(value, []); }
+  _.VERSION = '4.17.21-demo-fallback';
+  _.__fallback = true;
+  _.toPath = toPath; _.get = get; _.set = set;
+  _.has = (obj,path) => { let cur=obj; for(const p of toPath(path)){ if(cur==null || !(p in Object(cur))) return false; cur=cur[p]; } return true; };
+  _.unset = (obj,path) => { const ps=toPath(path), last=ps.pop(); const parent=get(obj,ps); if(parent && last in parent) return delete parent[last]; return false; };
+  _.update = (obj,path,fn) => set(obj,path,fn(get(obj,path)));
+  _.result = (obj,path,def) => { const v=get(obj,path,def); return typeof v==='function' ? v.call(obj) : v; };
+  _.at = (obj,paths) => paths.map(p=>get(obj,p));
+  _.property = path => obj => get(obj,path);
+  _.propertyOf = obj => path => get(obj,path);
+  _.identity = v => v; _.noop = () => undefined; _.constant = v => () => v;
+  _.stubArray = () => []; _.stubFalse = () => false; _.stubObject = () => ({}); _.stubString = () => ''; _.stubTrue = () => true;
+  _.keys = o => Object.keys(Object(o)); _.values = o => Object.values(Object(o)); _.toPairs = o => Object.entries(Object(o));
+  _.assign = Object.assign;
+  _.defaults = (obj,...srcs) => { srcs.forEach(s=>Object.keys(s||{}).forEach(k=>{ if(obj[k]===undefined) obj[k]=s[k]; })); return obj; };
+  _.create = (proto, props) => Object.assign(Object.create(proto), props || {});
+  _.clone = v => baseClone(v,false); _.cloneDeep = v => baseClone(v,true);
+  _.merge = (target,...srcs) => { srcs.forEach(src=>{ Object.keys(src||{}).forEach(k=>{ if(isObj(src[k]) && isObj(target[k]) && !Array.isArray(src[k])) _.merge(target[k],src[k]); else target[k]=baseClone(src[k],true); }); }); return target; };
+  _.invert = o => Object.fromEntries(Object.entries(o).map(([k,v])=>[String(v),k]));
+  _.mapKeys = (o,fn) => { const f=iter(fn), r={}; Object.keys(o||{}).forEach(k=>{ r[f(o[k],k,o)] = o[k]; }); return r; };
+  _.mapValues = (o,fn) => { const f=iter(fn), r={}; Object.keys(o||{}).forEach(k=>{ r[k]=f(o[k],k,o); }); return r; };
+  _.pick = (o,keys) => { const r={}; keys.forEach(k=>{ if(k in Object(o)) r[k]=o[k]; }); return r; };
+  _.omit = (o,keys) => { const r=Object.assign({},o); keys.forEach(k=>delete r[k]); return r; };
+  _.pickBy = (o,fn) => { const f=iter(fn), r={}; Object.keys(o||{}).forEach(k=>{ if(f(o[k],k)) r[k]=o[k]; }); return r; };
+  _.omitBy = (o,fn) => { const f=iter(fn), r={}; Object.keys(o||{}).forEach(k=>{ if(!f(o[k],k)) r[k]=o[k]; }); return r; };
+  _.findKey = (o,fn) => { const f=iter(fn); for(const k of Object.keys(o||{})) if(f(o[k],k,o)) return k; };
+  _.forIn = (o,fn) => { for(const k in o) fn(o[k],k,o); return o; };
+  _.transform = (o,fn,acc) => { const r = acc === undefined ? (Array.isArray(o)?[]:{}) : acc; for(const k in o){ if(fn(r,o[k],k,o)===false) break; } return r; };
+
+  _.chunk = (a,n=1) => { const r=[]; for(let i=0;i<a.length;i+=n) r.push(a.slice(i,i+n)); return r; };
+  _.compact = a => a.filter(Boolean);
+  _.concat = (a,...v) => a.concat(...v);
+  _.difference = (a,...vals) => { const excl=vals.flat(); return a.filter(x=>!excl.some(y=>_.eq(x,y))); };
+  _.differenceBy = (a, vals, fn) => { const keys = new Set(vals.map(v=>keyOf(v,fn))); return a.filter(v=>!keys.has(keyOf(v,fn))); };
+  _.drop = (a,n=1)=>a.slice(n); _.dropRight=(a,n=1)=> n? a.slice(0,-n):a.slice();
+  _.fill = (a,v,s=0,e=a.length)=>{ a.fill(v,s,e); return a; };
+  _.findIndex = (a,fn) => a.findIndex(iter(fn));
+  _.flatten = a => a.flat(); _.flattenDeep = a => a.flat(Infinity);
+  _.fromPairs = pairs => Object.fromEntries(pairs);
+  _.head = a => a && a[0]; _.last = a => a && a[a.length-1]; _.nth = (a,n=0)=> a[n<0?a.length+n:n];
+  _.initial = a => a.slice(0,-1); _.tail = a => a.slice(1);
+  _.intersection = (...arrs) => arrs[0].filter(x=>arrs.slice(1).every(a=>a.some(y=>_.eq(x,y))));
+  _.union = (...arrs) => _.uniq(arrs.flat());
+  _.xor = (...arrs) => { const all=arrs.flat(); return _.uniq(all.filter(x=>all.filter(y=>_.eq(x,y)).length===1)); };
+  _.join = (a,sep=',') => a.join(sep);
+  _.pull = (a,...vals) => { for(let i=a.length-1;i>=0;i--) if(vals.some(v=>_.eq(a[i],v))) a.splice(i,1); return a; };
+  _.without = (a,...vals) => a.filter(x=>!vals.some(v=>_.eq(x,v)));
+  _.reverse = a => a.reverse();
+  _.slice = (a,s,e)=>a.slice(s,e); _.take=(a,n=1)=>a.slice(0,n); _.takeRight=(a,n=1)=> n? a.slice(-n):[];
+  _.sortedIndexBy = (a,v,fn) => { const vv=iter(fn)(v); let i=0; while(i<a.length && iter(fn)(a[i]) < vv) i++; return i; };
+  _.uniq = a => { const r=[]; a.forEach(x=>{ if(!r.some(y=>_.eq(x,y))) r.push(x); }); return r; };
+  _.uniqBy = (a,fn) => { const seen=new Set(), r=[]; a.forEach(x=>{ const k=keyOf(x,fn); if(!seen.has(k)){ seen.add(k); r.push(x); } }); return r; };
+  _.zip = (...arrs) => Array.from({length: Math.max(...arrs.map(a=>a.length))}, (_,i)=>arrs.map(a=>a[i]));
+  _.unzip = a => _.zip(...a);
+  _.zipObject = (keys, vals) => Object.fromEntries(keys.map((k,i)=>[k,vals[i]]));
+
+  _.map = map; _.filter = filter; _.reject = (c,fn)=>filter(c,(v,i)=>!iter(fn)(v,i,c));
+  _.countBy = (c,fn) => { const r={}; toArr(c).forEach(v=>{ const k=keyOf(v,fn); r[k]=(r[k]||0)+1; }); return r; };
+  _.every = (c,fn)=>toArr(c).every(iter(fn)); _.some=(c,fn)=>toArr(c).some(iter(fn));
+  _.find = (c,fn)=>toArr(c).find(iter(fn)); _.findLast=(c,fn)=>toArr(c).slice().reverse().find(iter(fn));
+  _.flatMap = (c,fn)=>map(c,fn).flat();
+  _.forEachRight = (c,fn)=>{ toArr(c).slice().reverse().forEach(fn); return c; };
+  _.groupBy = (c,fn)=>{ const r={}; toArr(c).forEach(v=>{ const k=keyOf(v,fn); (r[k]||(r[k]=[])).push(v); }); return r; };
+  _.includes = (c,v)=> typeof c==='string' ? c.includes(v) : toArr(c).some(x=>_.eq(x,v));
+  _.invokeMap = (c,path,...args)=>toArr(c).map(v=>{ const m=get(v,path); return typeof m==='function'?m.apply(v,args):undefined; });
+  _.keyBy = (c,fn)=>{ const r={}; toArr(c).forEach(v=>{ r[keyOf(v,fn)] = v; }); return r; };
+  _.orderBy = (c,props,orders=[]) => toArr(c).slice().sort((a,b)=>{ for(let i=0;i<props.length;i++){ const av=get(a,props[i]), bv=get(b,props[i]); if(av<bv) return orders[i]==='desc'?1:-1; if(av>bv) return orders[i]==='desc'?-1:1; } return 0; });
+  _.sortBy = (c,fn)=>toArr(c).slice().sort((a,b)=>{ const av=iter(fn)(a), bv=iter(fn)(b); return av<bv?-1:av>bv?1:0; });
+  _.partition = (c,fn)=>{ const f=iter(fn), yes=[], no=[]; toArr(c).forEach((v,i)=> (f(v,i,c)?yes:no).push(v)); return [yes,no]; };
+  _.reduce = reduce;
+  _.sample = c => { const a=toArr(c); return a[Math.floor(Math.random()*a.length)]; };
+  _.shuffle = c => { const a=toArr(c).slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  _.sampleSize = (c,n=1)=>_.shuffle(c).slice(0,n);
+  _.size = c => c==null?0:(typeof c==='string'?[...c].length:Array.isArray(c)?c.length:Object.keys(c).length);
+
+  const words = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[A-Za-z0-9가-힣]+/g) || [];
+  const lowerWords = s => words(s).map(w=>w.toLowerCase());
+  _.camelCase = s => lowerWords(s).map((w,i)=>i?w[0].toUpperCase()+w.slice(1):w).join('');
+  _.kebabCase = s => lowerWords(s).join('-'); _.snakeCase = s => lowerWords(s).join('_');
+  _.startCase = s => lowerWords(s).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
+  _.capitalize = s => { s=String(s).toLowerCase(); return s.charAt(0).toUpperCase()+s.slice(1); };
+  _.upperFirst = s => String(s).charAt(0).toUpperCase()+String(s).slice(1);
+  _.lowerFirst = s => String(s).charAt(0).toLowerCase()+String(s).slice(1);
+  _.deburr = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  _.startsWith = (s,t,pos=0)=>String(s).startsWith(t,pos); _.endsWith=(s,t,pos)=>String(s).slice(0,pos===undefined?undefined:pos).endsWith(t);
+  const escMap = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+  _.escape = s => String(s).replace(/[&<>"']/g, ch=>escMap[ch]);
+  _.unescape = s => String(s).replace(/&(amp|lt|gt|quot|#39);/g, m=>({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&#39;':"'"}[m]));
+  _.escapeRegExp = s => String(s).replace(/[\\^$.*+?()[\]{}|]/g,'\\$&');
+  function createPadding(len, chars=' '){ let out=''; chars=String(chars||' '); while(out.length<len) out+=chars; return out.slice(0,len); }
+  _.padStart=(s,len,chars=' ')=>{ s=String(s); return s.length>=len?s:createPadding(len-s.length,chars)+s; };
+  _.padEnd=(s,len,chars=' ')=>{ s=String(s); return s.length>=len?s:s+createPadding(len-s.length,chars); };
+  _.pad=(s,len,chars=' ')=>{ s=String(s); const total=len-s.length; if(total<=0)return s; const left=Math.floor(total/2), right=total-left; return createPadding(left,chars)+s+createPadding(right,chars); };
+  _.parseInt=(s,r)=>parseInt(s,r); _.repeat=(s,n)=>String(s).repeat(n);
+  _.replace=(s,p,r)=>String(s).replace(p,r); _.split=(s,sep,lim)=>String(s).split(sep,lim);
+  const trimChars = (s, chars, side) => { s=String(s); if(chars==null) return side==='start'?s.trimStart():side==='end'?s.trimEnd():s.trim(); const re='['+_.escapeRegExp(chars)+']'; if(side==='start') return s.replace(new RegExp('^'+re+'+'),''); if(side==='end') return s.replace(new RegExp(re+'+$'),''); return s.replace(new RegExp('^'+re+'+|'+re+'+$','g'),''); };
+  _.trim=(s,c)=>trimChars(s,c); _.trimStart=(s,c)=>trimChars(s,c,'start'); _.trimEnd=(s,c)=>trimChars(s,c,'end');
+  _.truncate=(s,opt={})=>{ s=String(s); const length=opt.length||30, omission=opt.omission||'...'; return s.length>length ? s.slice(0, Math.max(0,length-omission.length))+omission : s; };
+  _.words = words;
+  _.template = str => data => String(str).replace(/<%-\s*([\w.]+)\s*%>/g,(__,p)=>_.escape(get(data,p,''))).replace(/<%=\s*([\w.]+)\s*%>/g,(__,p)=>get(data,p,''));
+
+  _.add=(a,b)=>a+b; _.subtract=(a,b)=>a-b; _.multiply=(a,b)=>a*b; _.divide=(a,b)=>a/b;
+  const dec = (fn,n,p=0) => { const f=Math.pow(10,p); return fn(n*f)/f; };
+  _.ceil=(n,p)=>dec(Math.ceil,n,p); _.floor=(n,p)=>dec(Math.floor,n,p); _.round=(n,p)=>dec(Math.round,n,p);
+  _.clamp=(n,lo,hi)=>Math.min(Math.max(n,lo),hi);
+  _.inRange=(n,start,end)=>{ if(end===undefined){ end=start; start=0; } if(start>end) [start,end]=[end,start]; return n>=start && n<end; };
+  _.max=a=>Math.max(...a); _.min=a=>Math.min(...a); _.mean=a=>_.sum(a)/a.length; _.sum=a=>a.reduce((s,v)=>s+v,0);
+  _.maxBy=(a,fn)=>a.reduce((best,v)=> best==null || iter(fn)(v)>iter(fn)(best)?v:best, null);
+  _.minBy=(a,fn)=>a.reduce((best,v)=> best==null || iter(fn)(v)<iter(fn)(best)?v:best, null);
+  _.sumBy=(a,fn)=>a.reduce((s,v)=>s+Number(iter(fn)(v)||0),0); _.meanBy=(a,fn)=>_.sumBy(a,fn)/a.length;
+  _.random=(lo=0,hi=1,floating=false)=>{ if(hi===true){floating=true;hi=lo;lo=0;} if(floating) return Math.random()*(hi-lo)+lo; return Math.floor(Math.random()*(hi-lo+1))+lo; };
+
+  _.after=(n,fn)=>function(...a){ if(--n<1) return fn.apply(this,a); };
+  _.before=(n,fn)=>{ let res; return function(...a){ if(--n>0) res=fn.apply(this,a); return res; }; };
+  _.once=fn=>_.before(2,fn);
+  _.ary=(fn,n=fn.length)=>function(...a){ return fn.apply(this,a.slice(0,n)); }; _.unary=fn=>_.ary(fn,1);
+  _.curry=function(fn, arity=fn.length){ const curried=(...a)=> a.length>=arity ? fn(...a) : (...b)=>curried(...a,...b); return curried; };
+  _.debounce=(fn,wait=0)=>{ let t; return function(...a){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),wait); }; };
+  _.defer=(fn,...a)=>setTimeout(fn,1,...a); _.delay=(fn,wait,...a)=>setTimeout(fn,wait,...a);
+  _.flip=fn=>function(...a){ return fn.apply(this,a.reverse()); };
+  _.memoize=fn=>{ const cache=new Map(); const m=function(x,...rest){ const k=x; if(cache.has(k)) return cache.get(k); const v=fn.call(this,x,...rest); cache.set(k,v); return v; }; m.cache=cache; return m; };
+  _.negate=fn=>function(...a){ return !fn.apply(this,a); };
+  _.partial=(fn,...preset)=>function(...a){ return fn.apply(this,[...preset,...a]); };
+  _.partialRight=(fn,...preset)=>function(...a){ return fn.apply(this,[...a,...preset]); };
+  _.rearg=(fn,indexes)=>function(...a){ return fn.apply(this,indexes.map(i=>a[i])); };
+  _.overArgs=(fn,trans)=>function(...a){ return fn.apply(this,a.map((v,i)=>trans[i]?trans[i](v):v)); };
+  _.spread=fn=>arr=>fn.apply(this,arr); _.rest=fn=>function(first,...rest){ return fn.call(this,first,rest); };
+  _.throttle=(fn,wait=0)=>{ let last=0, timer=null, saved; return function(...a){ const now=Date.now(), remain=wait-(now-last); saved=a; if(remain<=0){ last=now; fn.apply(this,a); } else if(!timer){ timer=setTimeout(()=>{ last=Date.now(); timer=null; fn.apply(this,saved); },remain); } }; };
+  _.wrap=(value,wrapper)=>function(...a){ return wrapper(value,...a); };
+  _.flow=(...fns)=>v=>fns.reduce((x,f)=>f(x),v); _.flowRight=(...fns)=>v=>fns.reduceRight((x,f)=>f(x),v);
+
+  _.castArray=v=>Array.isArray(v)?v:[v]; _.eq=(a,b)=>Object.is(a,b)||(Number.isNaN(a)&&Number.isNaN(b)); _.isEqual=isEqual;
+  _.gt=(a,b)=>a>b; _.gte=(a,b)=>a>=b; _.lt=(a,b)=>a<b; _.lte=(a,b)=>a<=b;
+  _.isArray=Array.isArray; _.isDate=v=>v instanceof Date; _.isMap=v=>v instanceof Map; _.isPlainObject=v=>Object.prototype.toString.call(v)==='[object Object]';
+  _.isEmpty=v=> v==null || (Array.isArray(v)||typeof v==='string'?v.length===0:Object.keys(v).length===0);
+  _.isNil=v=>v==null; _.isFinite=Number.isFinite; _.isInteger=Number.isInteger; _.isNaN=Number.isNaN; _.isMatch=isMatch;
+  _.toArray=toArr; _.toNumber=Number; _.toString=v=> Object.is(v,-0)?'-0':String(v==null?'':v);
+  _.chain = value => new Wrapper(value, []);
+  _.attempt=(fn,...a)=>{ try{return fn(...a);}catch(e){return e;} }; _.isError=e=>e instanceof Error;
+  _.cond=pairs=>function(...a){ const p=pairs.find(([pred])=>pred.apply(this,a)); return p ? p[1].apply(this,a) : undefined; };
+  _.defaultTo=(v,d)=> v==null || Number.isNaN(v) ? d : v;
+  _.matches=src=>obj=>isMatch(obj,src); _.matchesProperty=(path,val)=>obj=>isEqual(get(obj,path),val);
+  _.method=(path,...bound)=>obj=>{ const m=get(obj,path); return typeof m==='function'?m.apply(obj,bound):undefined; };
+  _.methodOf=(obj,...bound)=>path=>{ const m=get(obj,path); return typeof m==='function'?m.apply(obj,bound):undefined; };
+  _.nthArg=n=>function(...a){ return a[n<0?a.length+n:n]; };
+  _.over=fns=>function(...a){ return fns.map(f=>f.apply(this,a)); }; _.overEvery=fns=>function(...a){ return fns.every(f=>f.apply(this,a)); }; _.overSome=fns=>function(...a){ return fns.some(f=>f.apply(this,a)); };
+  _.range=(start,end,step)=>{ if(end===undefined){end=start;start=0;} step=step===undefined?(start<end?1:-1):step; const r=[]; if(step>0){ for(let i=start;i<end;i+=step) r.push(i); } else { for(let i=start;i>end;i+=step) r.push(i); } return r; };
+  _.rangeRight=(...a)=>_.range(...a).reverse(); _.times=(n,fn)=>Array.from({length:n},(_,i)=>fn(i)); _.uniqueId=prefix=>String(prefix||'')+(++uid); _.now=Date.now;
+  root._ = _;
+})();
+</script>
+
+
+  <style>
+    :root{--bg:#0a1020;--panel:#111a30;--panel2:#16213b;--line:#263554;--text:#edf3ff;--muted:#9fb0cb;--brand:#67e8f9;--brand2:#8b5cf6;--green:#5eead4;--yellow:#fcd34d;--red:#fb7185;--shadow:0 22px 55px rgba(0,0,0,.28)}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 15% -5%,#1c315c 0,transparent 31%),radial-gradient(circle at 90% 2%,#2b1c58 0,transparent 27%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;min-height:100vh}
+    button,input,select{font:inherit} button{cursor:pointer}.topbar{position:sticky;top:0;z-index:20;backdrop-filter:blur(16px);background:rgba(10,16,32,.80);border-bottom:1px solid rgba(159,176,203,.15)}
+    .topinner{max-width:1480px;margin:auto;padding:16px 24px;display:flex;align-items:center;gap:18px}.logo{display:flex;align-items:center;gap:12px;white-space:nowrap}.mark{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#08101e;font-weight:900;font-size:19px;box-shadow:0 7px 24px rgba(103,232,249,.24)}.logo strong{font-size:16px;letter-spacing:-.02em}.logo span{display:block;color:var(--muted);font-size:11px;margin-top:2px}.topactions{margin-left:auto;display:flex;gap:8px;align-items:center}.chip{display:inline-flex;gap:6px;align-items:center;padding:7px 10px;border:1px solid var(--line);background:rgba(22,33,59,.72);border-radius:99px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;background:var(--yellow);border-radius:50%}.dot.ready{background:var(--green);box-shadow:0 0 14px var(--green)}
+    .btn{border:1px solid var(--line);color:var(--text);background:#182440;border-radius:9px;padding:9px 12px;font-weight:700;font-size:13px;transition:.18s transform,.18s background,.18s border}.btn:hover{transform:translateY(-1px);background:#223154;border-color:#47618e}.btn.primary{background:linear-gradient(135deg,#0e7490,#5b21b6);border-color:transparent}.btn.ghost{background:transparent}.layout{max-width:1480px;margin:0 auto;padding:28px 24px 40px;display:grid;grid-template-columns:255px minmax(0,1fr) 330px;gap:20px}
+    .hero{grid-column:1/-1;padding:34px 36px;border:1px solid rgba(103,232,249,.16);background:linear-gradient(110deg,rgba(17,26,48,.90),rgba(25,24,61,.80));border-radius:24px;box-shadow:var(--shadow);position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:340px;height:340px;border-radius:50%;right:-90px;top:-190px;border:1px solid rgba(103,232,249,.22);box-shadow:0 0 0 38px rgba(103,232,249,.045),0 0 0 76px rgba(139,92,246,.035)}.eyebrow{color:var(--brand);font-weight:800;font-size:12px;letter-spacing:.13em;text-transform:uppercase}.hero h1{font-size:clamp(27px,4vw,43px);letter-spacing:-.055em;margin:9px 0 10px;max-width:800px;line-height:1.1}.hero p{margin:0;color:var(--muted);line-height:1.7;max-width:900px;font-size:15px}.heroMetrics{display:flex;flex-wrap:wrap;gap:9px;margin-top:21px}.metric{padding:9px 12px;border:1px solid rgba(159,176,203,.16);border-radius:11px;background:rgba(6,12,27,.28);color:var(--muted);font-size:12px}.metric b{color:var(--text);font-size:15px;margin-right:5px}.side,.console{background:rgba(16,25,46,.88);border:1px solid rgba(159,176,203,.14);border-radius:18px;box-shadow:var(--shadow)}.side{padding:15px;height:max-content;position:sticky;top:84px}.sectionTitle{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin:4px 8px 10px}.nav{display:grid;gap:5px}.nav button{border:none;background:transparent;color:var(--muted);padding:10px 11px;border-radius:9px;text-align:left;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center}.nav button:hover{background:#1a2847;color:var(--text)}.nav button.active{background:linear-gradient(90deg,rgba(14,116,144,.34),rgba(91,33,182,.25));color:var(--text);border-left:2px solid var(--brand)}.count{font-size:10px;color:var(--muted);padding:2px 7px;border-radius:99px;background:rgba(159,176,203,.1)}.note{font-size:11px;color:var(--muted);line-height:1.6;padding:12px 8px 2px;border-top:1px solid rgba(159,176,203,.12);margin-top:12px}
+    .main{min-width:0}.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px}.search{flex:1;min-width:130px;position:relative}.search input{width:100%;background:#111b32;border:1px solid var(--line);border-radius:11px;padding:11px 13px 11px 36px;color:var(--text);outline:none}.search input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(103,232,249,.1)}.search:before{content:"⌕";position:absolute;left:12px;top:7px;color:var(--muted);font-size:21px}.select{background:#111b32;color:var(--text);border:1px solid var(--line);border-radius:11px;padding:10px;outline:none}.summary{color:var(--muted);font-size:12px;margin:0 0 12px 2px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{border:1px solid rgba(159,176,203,.15);background:linear-gradient(145deg,rgba(21,33,59,.98),rgba(15,24,44,.98));border-radius:16px;padding:15px;min-width:0;transition:.18s transform,.18s border,.18s box-shadow}.card:hover{transform:translateY(-2px);border-color:rgba(103,232,249,.48);box-shadow:0 14px 30px rgba(0,0,0,.18)}.cardhead{display:flex;gap:10px;align-items:flex-start}.method{font-family:"SFMono-Regular",Consolas,monospace;font-size:14px;font-weight:800;color:#d9faff;letter-spacing:-.03em}.tag{font-size:10px;color:#b9c8e5;padding:3px 7px;border:1px solid rgba(159,176,203,.22);border-radius:99px;margin-left:auto;white-space:nowrap}.desc{font-size:12px;color:var(--muted);line-height:1.5;margin:8px 0 11px;min-height:37px}.code{margin:0;background:#091121;border:1px solid rgba(159,176,203,.12);border-radius:10px;padding:10px;overflow:auto;color:#bcd7ff;font:11px/1.55 "SFMono-Regular",Consolas,monospace;white-space:pre}.result{margin-top:10px;border-radius:10px;background:rgba(7,13,27,.70);border:1px dashed rgba(159,176,203,.21);padding:10px;min-height:45px;color:#cfdbef;font:11px/1.5 "SFMono-Regular",Consolas,monospace;white-space:pre-wrap;overflow:auto;max-height:170px}.result.empty{font-family:inherit;color:#7283a0;font-size:12px;display:flex;align-items:center}.cardactions{display:flex;gap:8px;margin-top:11px}.smallbtn{padding:7px 10px;border-radius:8px;font-size:11px}.run{background:rgba(14,116,144,.27);border-color:rgba(103,232,249,.35)}.run:hover{background:rgba(14,116,144,.45)}.copy{background:transparent}.console{padding:15px;position:sticky;top:84px;height:calc(100vh - 105px);min-height:460px;display:flex;flex-direction:column}.consoleHeader{display:flex;align-items:center;gap:7px;margin-bottom:11px}.consoleHeader strong{font-size:14px}.consoleHeader span{margin-left:auto;color:var(--muted);font-size:11px}.log{background:#080e1c;border:1px solid rgba(159,176,203,.12);border-radius:11px;padding:10px;overflow:auto;flex:1;font:11px/1.55 "SFMono-Regular",Consolas,monospace;color:#c5d4ed}.line{padding:7px 0;border-bottom:1px solid rgba(159,176,203,.08)}.line:last-child{border:none}.time{color:#788baa;margin-right:5px}.okay{color:var(--green)}.fail{color:var(--red)}.info{color:var(--brand)}.guide{font-size:11px;color:var(--muted);line-height:1.55;padding:10px 2px 0}.footer{max-width:1480px;margin:0 auto;padding:0 24px 28px;color:#7b8aa5;font-size:11px;line-height:1.65}.toast{position:fixed;right:18px;bottom:18px;background:#eaf9ff;color:#092235;border-radius:11px;padding:12px 14px;font-size:12px;font-weight:800;box-shadow:var(--shadow);transform:translateY(90px);opacity:0;transition:.2s;z-index:30}.toast.show{transform:translateY(0);opacity:1}.hidden{display:none!important}
+    @media(max-width:1200px){.layout{grid-template-columns:220px minmax(0,1fr)}.console{grid-column:1/-1;position:static;height:340px}.side{top:74px}.hero{padding:29px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:790px){.topinner{padding:12px 14px}.topactions .chip{display:none}.layout{padding:18px 14px 32px;grid-template-columns:1fr;gap:14px}.hero{padding:24px 21px;border-radius:18px}.side{position:static}.nav{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar{flex-wrap:wrap}.toolbar .btn{flex:1}.grid{grid-template-columns:1fr}.console{height:320px}.footer{padding:0 14px 22px}.heroMetrics{gap:6px}.metric{padding:7px 9px}.topactions .btn.ghost{display:none}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="topinner">
+    <div class="logo"><div class="mark">_</div><div><strong>Lodash 기능 실험실</strong><span>Interactive utility library playground</span></div></div>
+    <div class="topactions"><div class="chip"><span class="dot" id="statusDot"></span><span id="statusText">Lodash 로딩 확인 중</span></div><button class="btn ghost" id="clearLogBtn">로그 지우기</button><button class="btn primary" id="runVisibleBtn">현재 항목 모두 실행</button></div>
+  </div></header>
+  <main class="layout">
+    <section class="hero">
+      <div class="eyebrow">Lodash 4.17.21 · API Playground</div>
+      <h1>자주 쓰는 Lodash API를<br/>직접 실행하며 한 번에 확인</h1>
+      <p>배열·컬렉션·객체·문자열·숫자·함수·언어판별·유틸리티·체이닝 기능을 수산 업무형 샘플 데이터로 구성했다. 각 카드를 실행하면 실제 반환값이 표시되고 우측 콘솔에 기록된다.</p>
+      <div class="heroMetrics"><div class="metric"><b id="methodCount">0</b>개 실행 예제</div><div class="metric"><b>10</b>개 API 영역</div><div class="metric"><b>0 npm</b> 단일 HTML</div><div class="metric"><b>로컬</b> 파일 우선 로드</div></div>
+    </section>
+    <aside class="side"><div class="sectionTitle">API 영역</div><nav class="nav" id="categoryNav"></nav><div class="note">오프라인 실행: 내장 시연 레이어로 즉시 작동한다. 실제 Lodash를 쓰려면 같은 폴더에 <code>lodash.min.js</code>를 두고 상단 로더 주석을 해제하면 된다.</div></aside>
+    <section class="main"><div class="toolbar"><label class="search"><input id="searchInput" type="search" placeholder="메서드명·설명 검색  예) merge, debounce" /></label><select class="select" id="sortSelect"><option value="category">카테고리 순서</option><option value="method">메서드명 A–Z</option></select><button class="btn" id="resetBtn">초기화</button></div><p class="summary" id="summary"></p><div class="grid" id="demoGrid"></div></section>
+    <aside class="console"><div class="consoleHeader"><strong>실행 콘솔</strong><span id="logCount">0건</span></div><div class="log" id="log"><div class="line"><span class="info">INFO</span> Lodash가 로드되면 예제를 실행할 수 있습니다.</div></div><div class="guide">팁: <b>현재 항목 모두 실행</b>은 검색·카테고리로 좁힌 카드만 순차 실행한다. debounce·throttle·delay 예제는 비동기 결과가 표시된다.</div></aside>
+  </main>
+  <footer class="footer">이 샘플은 학습·검증 목적의 예제입니다. <code>_.template</code>은 신뢰할 수 없는 사용자 입력을 직접 컴파일하지 않도록 주의하세요. Lodash 공식 문서의 API 설명을 함께 확인하는 것을 권장합니다.</footer>
+  <div class="toast" id="toast"></div>
+<script>
+(() => {
+  'use strict';
+  const $ = (s, root=document) => root.querySelector(s);
+  const esc = (v) => String(v).replace(/[&<>'"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[m]));
+  const data = {
+    catches:[{id:'C-101',port:'노량진',fish:'고등어',kg:320,price:5400,grade:'A',seller:'해풍호',tags:['선어','국산']},{id:'C-102',port:'부산',fish:'갈치',kg:145,price:12800,grade:'B',seller:'푸른바다',tags:['선어','제주']},{id:'C-103',port:'노량진',fish:'오징어',kg:270,price:7900,grade:'A',seller:'새벽호',tags:['냉장','국산']},{id:'C-104',port:'목포',fish:'조기',kg:86,price:15200,grade:'A',seller:'바다별',tags:['선어','참조기']},{id:'C-105',port:'부산',fish:'고등어',kg:410,price:5100,grade:'C',seller:'해풍호',tags:['선어','국산']}],
+    ports:{noryangjin:{name:'노량진',region:'서울',coldStorage:true},busan:{name:'부산공동어시장',region:'부산',coldStorage:true},mokpo:{name:'목포',region:'전남',coldStorage:false}},
+    nested:{report:{weather:{wave:{height:1.8,unit:'m'},wind:'NE'},vessel:{name:'해풍호',crew:7}}},
+    nums:[1,0,false,2,'',3,null,4,2,3],
+    words:'  suhyup fisheries  AI-workflow, 2026!  '
+  };
+  const categories = [
+    ['array','배열'],['collection','컬렉션'],['object','객체'],['string','문자열'],['number','숫자'],['function','함수'],['lang','언어·검증'],['seq','체이닝'],['util','유틸리티'],['date','날짜']
+  ];
+  const demos = [];
+  function add(cat, method, desc, code, run){ demos.push({cat,method,desc,code,run}); }
+  const cloneCatches = () => _.cloneDeep(data.catches);
+
+  // Array
+  add('array','_.chunk','배열을 지정한 크기의 묶음으로 분할','_.chunk([1,2,3,4,5], 2)',()=>_.chunk([1,2,3,4,5],2));
+  add('array','_.compact','거짓으로 평가되는 값을 제거','_.compact([0, 1, false, 2, "", 3])',()=>_.compact(data.nums));
+  add('array','_.concat','값·배열을 이어 새 배열 생성','_.concat(["선어"], "냉동", ["활어"])',()=>_.concat(['선어'],'냉동',['활어']));
+  add('array','_.difference','기준 배열에 없는 값만 추출','_.difference(["고등어","갈치","조기"], ["갈치"])',()=>_.difference(['고등어','갈치','조기'],['갈치']));
+  add('array','_.differenceBy','속성 기준으로 차집합 계산','_.differenceBy(catches, [{ fish:"고등어" }], "fish")',()=>_.differenceBy(data.catches,[{fish:'고등어'}],'fish').map(v=>v.id));
+  add('array','_.drop / _.dropRight','앞 또는 뒤에서 N개 제거','_.drop([1,2,3,4], 2) / _.dropRight([1,2,3,4], 2)',()=>({drop:_.drop([1,2,3,4],2),dropRight:_.dropRight([1,2,3,4],2)}));
+  add('array','_.fill','배열의 특정 구간을 값으로 채움','_.fill([1,2,3,4], "점검", 1, 3)',()=>_.fill([1,2,3,4],'점검',1,3));
+  add('array','_.findIndex','조건을 만족하는 첫 요소의 인덱스','_.findIndex(catches, { grade:"A" })',()=>_.findIndex(data.catches,{grade:'A'}));
+  add('array','_.flatten / _.flattenDeep','중첩 배열을 1단계 또는 전체 평탄화','_.flatten([1,[2,[3,[4]]]])',()=>({flat:_.flatten([1,[2,[3,[4]]]]),deep:_.flattenDeep([1,[2,[3,[4]]]])}));
+  add('array','_.fromPairs','키-값 쌍 배열을 객체로 변환','_.fromPairs([["port","부산"],["open",true]])',()=>_.fromPairs([['port','부산'],['open',true]]));
+  add('array','_.head / _.last / _.nth','첫·마지막·N번째 요소 선택','_.head(["A","B","C"])',()=>({head:_.head(['A','B','C']),last:_.last(['A','B','C']),nthNeg:_.nth(['A','B','C'],-2)}));
+  add('array','_.initial / _.tail','마지막 또는 첫 요소를 뺀 배열','_.initial([1,2,3]) / _.tail([1,2,3])',()=>({initial:_.initial([1,2,3]),tail:_.tail([1,2,3])}));
+  add('array','_.intersection / _.union / _.xor','교집합·합집합·대칭차','_.intersection(["A","B"],["B","C"])',()=>({intersection:_.intersection(['A','B'],['B','C']),union:_.union(['A','B'],['B','C']),xor:_.xor(['A','B'],['B','C'])}));
+  add('array','_.join','배열 요소를 구분자로 연결','_.join(["노량진","부산","목포"], " → ")',()=>_.join(['노량진','부산','목포'],' → '));
+  add('array','_.pull / _.without','값을 제거: 원본 변경 vs 새 배열','_.pull(arr, "B") / _.without(arr, "B")',()=>{const arr=['A','B','C','B'];const ret=_.pull(arr,'B');return {pullReturn:ret,mutatedOriginal:arr,without:_.without(['A','B','C','B'],'B')};});
+  add('array','_.reverse','배열을 뒤집음 — 원본 변경','_.reverse(["입항","경매","출하"])',()=>{const a=['입항','경매','출하'];_.reverse(a);return a;});
+  add('array','_.slice / _.take','일부 구간 복사 또는 앞 N개 선택','_.slice([1,2,3,4,5], 1, 4)',()=>({slice:_.slice([1,2,3,4,5],1,4),take:_.take([1,2,3,4,5],3),takeRight:_.takeRight([1,2,3,4,5],2)}));
+  add('array','_.sortedIndexBy','정렬 배열에 들어갈 위치 계산','_.sortedIndexBy([{kg:80},{kg:160}], {kg:120}, "kg")',()=>_.sortedIndexBy([{kg:80},{kg:160}],{kg:120},'kg'));
+  add('array','_.uniq / _.uniqBy','중복 제거 및 속성 기준 고유화','_.uniq(["고등어","갈치","고등어"])',()=>({uniq:_.uniq(['고등어','갈치','고등어']),uniqBy:_.uniqBy(data.catches,'fish').map(v=>v.fish)}));
+  add('array','_.zip / _.unzip / _.zipObject','여러 배열을 묶거나 객체 생성','_.zip(["A","B"], [10,20])',()=>({zip:_.zip(['A','B'],[10,20]),unzip:_.unzip([['A',10],['B',20]]),zipObject:_.zipObject(['port','open'],['부산',true])}));
+
+  // Collection
+  add('collection','_.countBy','조건 또는 속성별 개수 집계','_.countBy(catches, "grade")',()=>_.countBy(data.catches,'grade'));
+  add('collection','_.every / _.some','모든 항목 또는 하나 이상 조건 확인','_.every(catches, c => c.kg > 50)',()=>({every:_.every(data.catches,c=>c.kg>50),some:_.some(data.catches,c=>c.price>14000)}));
+  add('collection','_.filter / _.reject','조건 통과 또는 실패 항목 필터링','_.filter(catches, { port:"부산" })',()=>({filter:_.filter(data.catches,{port:'부산'}).map(v=>v.id),reject:_.reject(data.catches,c=>c.grade==='A').map(v=>v.id)}));
+  add('collection','_.find / _.findLast','앞 또는 뒤에서 첫 조건 일치 값 검색','_.find(catches, c => c.kg > 300)',()=>({find:_.find(data.catches,c=>c.kg>300),findLast:_.findLast(data.catches,c=>c.grade==='A')}));
+  add('collection','_.flatMap','map 결과를 1단계 평탄화','_.flatMap(catches, c => c.tags)',()=>_.flatMap(data.catches,c=>c.tags));
+  add('collection','_.forEachRight','오른쪽에서 왼쪽 순서로 반복','_.forEachRight(["입항","경매","출하"], ...)',()=>{const order=[];_.forEachRight(['입항','경매','출하'],v=>order.push(v));return order;});
+  add('collection','_.groupBy','속성별로 객체 그룹화','_.groupBy(catches, "port")',()=>_.mapValues(_.groupBy(data.catches,'port'),list=>list.map(v=>v.fish)));
+  add('collection','_.includes','컬렉션에 값 포함 여부 확인','_.includes(["A","B"], "B")',()=>({array:_.includes(['A','B'],'B'),string:_.includes('suhyup-ai','ai')}));
+  add('collection','_.invokeMap','각 값의 동일한 메서드를 실행','_.invokeMap([[3,1],[2,4]], "sort")',()=>_.invokeMap([[3,1],[2,4]],'sort'));
+  add('collection','_.keyBy','속성값을 키로 하는 객체 생성','_.keyBy(catches, "id")',()=>_.mapValues(_.keyBy(data.catches,'id'),v=>({fish:v.fish,port:v.port})));
+  add('collection','_.map','배열 또는 객체를 변환해 새 배열 생성','_.map(catches, c => `${c.fish}:${c.kg}kg`)',()=>_.map(data.catches,c=>`${c.fish}:${c.kg}kg`));
+  add('collection','_.orderBy / _.sortBy','여러 정렬 기준 또는 오름차순 정렬','_.orderBy(catches, ["grade","price"], ["asc","desc"])',()=>({orderBy:_.orderBy(data.catches,['grade','price'],['asc','desc']).map(v=>`${v.grade}-${v.fish}`),sortBy:_.sortBy(data.catches,'kg').map(v=>v.kg)}));
+  add('collection','_.partition','조건 기준으로 [통과, 실패] 2개 그룹','_.partition(catches, c => c.grade === "A")',()=>_.partition(data.catches,c=>c.grade==='A').map(g=>g.map(v=>v.id)));
+  add('collection','_.reduce','누적 연산으로 하나의 결과 생성','_.reduce(catches, (sum,c) => sum + c.kg, 0)',()=>_.reduce(data.catches,(sum,c)=>sum+c.kg,0));
+  add('collection','_.sample / _.sampleSize / _.shuffle','무작위 하나·여러 개·전체 섞기','_.sampleSize(catches, 2)',()=>({sample:_.sample(data.catches)?.fish,sampleSize:_.sampleSize(data.catches,2).map(v=>v.fish),shuffle:_.shuffle(['A','B','C','D'])}));
+  add('collection','_.size','배열·객체·문자열의 길이','_.size({a:1,b:2,c:3})',()=>({array:_.size(data.catches),object:_.size(data.ports),string:_.size('수협')}));
+
+  // Object
+  add('object','_.assign / _.defaults','속성 병합 또는 기본값 채우기','_.assign({port:"부산"}, {open:true})',()=>({assign:_.assign({port:'부산'},{open:true}),defaults:_.defaults({port:'목포'},{port:'부산',open:false,staff:5})}));
+  add('object','_.at','경로 배열로 여러 중첩값 동시 조회','_.at(nested, ["report.weather.wind", "report.vessel.crew"])',()=>_.at(data.nested,['report.weather.wind','report.vessel.crew']));
+  add('object','_.create','프로토타입을 지정해 객체 생성','_.create({type:"vessel"}, {name:"해풍호"})',()=>{const v=_.create({type:'vessel'},{name:'해풍호'});return {name:v.name,inheritedType:v.type,ownKeys:_.keys(v)};});
+  add('object','_.findKey','조건을 만족하는 첫 키 검색','_.findKey(ports, p => p.region === "부산")',()=>_.findKey(data.ports,p=>p.region==='부산'));
+  add('object','_.forIn','상속 속성 포함 순회','_.forIn(object, callback)',()=>{const p={inherited:'prototype'};const o=Object.create(p);o.own='own';const result=[];_.forIn(o,(v,k)=>result.push(`${k}:${v}`));return result;});
+  add('object','_.get / _.has / _.result','안전한 경로 조회·존재 확인·함수 결과 조회','_.get(nested, "report.weather.wave.height", 0)',()=>({get:_.get(data.nested,'report.weather.wave.height',0),missing:_.get(data.nested,'report.weather.rain',0),has:_.has(data.nested,'report.vessel.crew'),result:_.result({a:{b:()=>42}},'a.b')}));
+  add('object','_.invert','값과 키를 뒤집은 객체 생성','_.invert({A:"우수", B:"보통"})',()=>_.invert({A:'우수',B:'보통'}));
+  add('object','_.keys / _.values / _.toPairs','객체의 키·값·키값쌍 변환','_.toPairs({port:"목포", open:true})',()=>{const obj={port:'목포',open:true};return {keys:_.keys(obj),values:_.values(obj),toPairs:_.toPairs(obj)};});
+  add('object','_.mapKeys / _.mapValues','객체 키 또는 값 변환','_.mapValues({A:120,B:90}, v => v * 1000)',()=>({mapKeys:_.mapKeys({A:120,B:90},(_,k)=>`grade_${k}`),mapValues:_.mapValues({A:120,B:90},v=>v*1000)}));
+  add('object','_.merge','중첩 객체를 재귀적으로 병합','_.merge({weather:{wind:"N"}}, {weather:{wave:1.5}})',()=>_.merge({weather:{wind:'N'}},{weather:{wave:1.5}}));
+  add('object','_.omit / _.pick','제외 또는 선택한 속성만 추출','_.pick(catch, ["fish","kg","price"])',()=>{const c=data.catches[0];return {pick:_.pick(c,['fish','kg','price']),omit:_.omit(c,['tags','seller'])};});
+  add('object','_.omitBy / _.pickBy','조건으로 속성 제외 또는 선택','_.pickBy({a:1,b:null,c:0}, _.identity)',()=>({pickBy:_.pickBy({a:1,b:null,c:0},_.identity),omitBy:_.omitBy({a:1,b:null,c:0},_.isNil)}));
+  add('object','_.set / _.unset / _.update','중첩 경로 설정·삭제·갱신','_.set(obj, "report.weather.wave.height", 2.1)',()=>{const obj=_.cloneDeep(data.nested);_.set(obj,'report.weather.wave.height',2.1);_.update(obj,'report.vessel.crew',n=>n+1);_.unset(obj,'report.weather.wind');return obj;});
+  add('object','_.transform','누적 객체·배열 변환을 조기 종료 가능','_.transform(catches, (r,c) => { if(c.kg>300) r.push(c.fish); }, [])',()=>_.transform(data.catches,(r,c)=>{if(c.kg>300)r.push(c.fish);},[]));
+
+  // String
+  add('string','_.camelCase / _.kebabCase','식별자용 카멜·케밥 케이스 변환','_.camelCase("Fisheries Data Report")',()=>({camel:_.camelCase('Fisheries Data Report'),kebab:_.kebabCase('Fisheries Data Report'),snake:_.snakeCase('Fisheries Data Report'),start:_.startCase('fisheries_data_report')}));
+  add('string','_.capitalize / _.upperFirst','첫 글자 대문자화 방식 비교','_.capitalize("sUHYUP")',()=>({capitalize:_.capitalize('sUHYUP'),upperFirst:_.upperFirst('sUHYUP'),lowerFirst:_.lowerFirst('SUHYUP')}));
+  add('string','_.deburr','악센트 기호를 기본 문자로 변환','_.deburr("déjà vu à la carte")',()=>_.deburr('déjà vu à la carte'));
+  add('string','_.endsWith / _.startsWith','문자열 접두·접미 여부 확인','_.startsWith("수협-어업지원", "수협")',()=>({startsWith:_.startsWith('수협-어업지원','수협'),endsWith:_.endsWith('report.xlsx','.xlsx')}));
+  add('string','_.escape / _.unescape','HTML 특수문자 이스케이프·복원','_.escape("<b>경매</b> & \"입찰\"")',()=>{const s='<b>경매</b> & "입찰"';return {escaped:_.escape(s),unescaped:_.unescape(_.escape(s))};});
+  add('string','_.escapeRegExp','정규식 특수문자를 안전하게 이스케이프','_.escapeRegExp("[수협](AI)+?")',()=>_.escapeRegExp('[수협](AI)+?'));
+  add('string','_.pad / _.padStart / _.padEnd','문자열 양쪽·앞·뒤 채우기','_.pad("A", 7, "-=")',()=>({pad:_.pad('A',7,'-='),start:_.padStart('82',6,'0'),end:_.padEnd('kg',6,'.')}));
+  add('string','_.parseInt / _.repeat','문자열 숫자 파싱·반복','_.parseInt("08", 10) / _.repeat("⚓", 4)',()=>({parseInt:_.parseInt('08',10),repeat:_.repeat('⚓',4)}));
+  add('string','_.replace / _.split','문자열 치환 및 분할','_.replace("부산/목포/노량진", /\//g, " · ")',()=>({replace:_.replace('부산/목포/노량진',/\//g,' · '),split:_.split('A,B,C',',',2)}));
+  add('string','_.trim / _.trimStart / _.trimEnd','특정 문자 또는 공백 제거','_.trim("--점검완료--", "-")',()=>({trim:_.trim('--점검완료--','-'),start:_.trimStart('   수협'),end:_.trimEnd('수협   ')}));
+  add('string','_.truncate','길이 제한 및 생략 문자 표시','_.truncate("어업인 안전정보 통합 지원 서비스", {length:16})',()=>_.truncate('어업인 안전정보 통합 지원 서비스',{length:16}));
+  add('string','_.words','문자열을 단어 단위로 분리','_.words("Suhyup AI-workflow 2026")',()=>_.words('Suhyup AI-workflow 2026'));
+  add('string','_.template','템플릿 문자열을 데이터로 렌더링 — 신뢰된 템플릿만 사용','_.template("<%= fish %> · <%- label %>")(data)',()=>{const render=_.template('<%= fish %> · <%- label %>');return render({fish:'갈치',label:'<A등급>'});});
+
+  // Number
+  add('number','_.add / _.subtract / _.multiply / _.divide','기본 산술 연산','_.multiply(5400, 320)',()=>({add:_.add(5400,320),subtract:_.subtract(5400,320),multiply:_.multiply(5400,320),divide:_.divide(5400,320)}));
+  add('number','_.ceil / _.floor / _.round','자릿수 기준 올림·내림·반올림','_.round(12.3456, 2)',()=>({ceil:_.ceil(12.341,2),floor:_.floor(12.349,2),round:_.round(12.3456,2)}));
+  add('number','_.clamp','값을 최소~최대 범위로 제한','_.clamp(132, 0, 100)',()=>({low:_.clamp(-5,0,100),normal:_.clamp(40,0,100),high:_.clamp(132,0,100)}));
+  add('number','_.inRange','범위 안에 값이 들어가는지 확인','_.inRange(18, 10, 20)',()=>({inRange:_.inRange(18,10,20),singleEnd:_.inRange(3,5)}));
+  add('number','_.max / _.min / _.mean','숫자 배열의 최대·최소·평균','_.mean([5400,12800,7900])',()=>({max:_.max([5400,12800,7900]),min:_.min([5400,12800,7900]),mean:_.mean([5400,12800,7900])}));
+  add('number','_.maxBy / _.sumBy','객체 속성 기준 최대·합계','_.maxBy(catches, "price")',()=>({maxBy:_.pick(_.maxBy(data.catches,'price'),['fish','price']),sumByKg:_.sumBy(data.catches,'kg'),meanByPrice:_.meanBy(data.catches,'price')}));
+  add('number','_.random','범위 내 난수 생성','_.random(100, 999)',()=>({integer:_.random(100,999),floating:_.random(1.5,2.5,true)}));
+
+  // Function
+  add('function','_.after','N회 호출 이후에만 함수 실행','const ready = _.after(3, fn)',()=>{let hits=0;const fn=_.after(3,()=>++hits);fn();fn();const before=hits;fn();fn();return {beforeThird:before,afterCalls:hits};});
+  add('function','_.before / _.once','지정 횟수 이전 또는 딱 한 번 실행','_.once(fn)()',()=>{let before=0,once=0;const a=_.before(3,()=>++before);a();a();a();a();const b=_.once(()=>++once);b();b();return {before,once};});
+  add('function','_.ary / _.unary','함수 인수 개수를 제한','_.ary(parseInt, 1)',()=>({ary:_.map(['6','8','10'],_.ary(parseInt,1)),unary:_.map(['6','8','10'],_.unary(parseInt))}));
+  add('function','_.curry','여러 인수의 부분 적용 함수 생성','_.curry((a,b,c) => a+b+c)(1)(2)(3)',()=>{const add3=_.curry((a,b,c)=>a+b+c);return {oneByOne:add3(1)(2)(3),mixed:add3(1,2)(3)};});
+  add('function','_.debounce','짧은 연속 호출을 마지막 1회로 묶음','_.debounce(fn, 60)  // 5회 빠른 호출',()=>new Promise(resolve=>{let hits=0;const d=_.debounce(()=>++hits,60);for(let i=0;i<5;i++)d();setTimeout(()=>resolve({rapidCalls:5,actualExecutions:hits}),100);}));
+  add('function','_.defer / _.delay','현재 호출스택 이후·지정 시간 후 실행','_.delay(fn, 40, "완료")',()=>new Promise(resolve=>{const order=[];_.defer(()=>order.push('defer'));_.delay(()=>{order.push('delay');resolve(order);},40);order.push('sync');}));
+  add('function','_.flip','함수의 인수 순서 뒤집기','_.flip((a,b,c) => [a,b,c])("A","B","C")',()=>_.flip((a,b,c)=>[a,b,c])('A','B','C'));
+  add('function','_.memoize','입력값별 결과를 캐시','const f = _.memoize(n => { count++; return n*n })',()=>{let count=0;const square=_.memoize(n=>{count++;return n*n;});return {first:square(8),second:square(8),other:square(9),actualComputations:count};});
+  add('function','_.negate','판별 함수 결과를 반대로 변환','_.filter(catches, _.negate(c => c.grade === "A"))',()=>_.filter(data.catches,_.negate(c=>c.grade==='A')).map(v=>v.id));
+  add('function','_.partial / _.partialRight','앞 또는 뒤 인수를 미리 고정','_.partial(format, "부산")',()=>{const format=(port,fish,kg)=>`${port}:${fish} ${kg}kg`;return {partial:_.partial(format,'부산')('갈치',120),partialRight:_.partialRight(format,120)('목포','조기')};});
+  add('function','_.rearg / _.overArgs','인수 순서 재배치·인수 변환','_.rearg((a,b,c)=>[a,b,c], [2,0,1])',()=>({rearg:_.rearg((a,b,c)=>[a,b,c],[2,0,1])('A','B','C'),overArgs:_.overArgs((x,y)=>x+y,[Math.sqrt,n=>n*2])(9,4)}));
+  add('function','_.spread / _.rest','배열 인수 펼치기·나머지 인수 수집','_.spread((a,b) => a+b)([4,5])',()=>({spread:_.spread((a,b)=>a+b)([4,5]),rest:_.rest((prefix,values)=>`${prefix}:${_.sum(values)}`)('kg',10,20,30)}));
+  add('function','_.throttle','일정 간격 안에서 호출 빈도 제한','_.throttle(fn, 50)  // 5회 빠른 호출',()=>new Promise(resolve=>{let hits=0;const t=_.throttle(()=>++hits,50);for(let i=0;i<5;i++)t();setTimeout(()=>resolve({rapidCalls:5,actualExecutions:hits}),120);}));
+  add('function','_.wrap','값을 감싸 전처리·후처리 함수 구성','_.wrap("수협", (v, suffix) => `${v} ${suffix}`)',()=>_.wrap('수협',(v,suffix)=>`${v} ${suffix}`)('AI'));
+  add('function','_.flow / _.flowRight','함수 파이프라인을 좌→우 또는 우→좌 합성','_.flow(trim, upper)("  ai  ")',()=>{const trim=s=>s.trim(),upper=s=>s.toUpperCase();return {flow:_.flow(trim,upper)('  ai  '),flowRight:_.flowRight(upper,trim)('  ai  ')};});
+
+  // Lang
+  add('lang','_.castArray','단일 값도 배열 형태로 보장','_.castArray("부산")',()=>({single:_.castArray('부산'),array:_.castArray(['부산','목포'])}));
+  add('lang','_.clone / _.cloneDeep','얕은 복사와 깊은 복사 비교','_.cloneDeep({a:{b:1}})',()=>{const original={a:{b:1}};const shallow=_.clone(original),deep=_.cloneDeep(original);shallow.a.b=9;return {originalAfterShallowChange:original,deepIndependent:deep};});
+  add('lang','_.eq / _.isEqual','SameValueZero 또는 깊은 동등성 비교','_.isEqual({a:[1]}, {a:[1]})',()=>({eqNaN:_.eq(NaN,NaN),sameReference:_.eq({a:1},{a:1}),deepEqual:_.isEqual({a:[1]},{a:[1]})}));
+  add('lang','_.gt / _.gte / _.lt / _.lte','값 크기 비교','_.gte(kg, 300)',()=>({gt:_.gt(410,320),gte:_.gte(320,320),lt:_.lt(86,145),lte:_.lte(86,86)}));
+  add('lang','_.isArray / _.isDate / _.isMap','값 타입 판별','_.isArray([])',()=>({array:_.isArray([]),date:_.isDate(new Date()),map:_.isMap(new Map()),plainObject:_.isPlainObject({a:1})}));
+  add('lang','_.isEmpty / _.isNil','비어 있음·null 또는 undefined 확인','_.isEmpty({}) / _.isNil(null)',()=>({emptyArray:_.isEmpty([]),emptyObject:_.isEmpty({}),nilNull:_.isNil(null),nilZero:_.isNil(0)}));
+  add('lang','_.isFinite / _.isInteger / _.isNaN','숫자 상태 판별','_.isInteger(12)',()=>({finite:_.isFinite(12),integer:_.isInteger(12),notInteger:_.isInteger(12.3),nan:_.isNaN(NaN)}));
+  add('lang','_.isMatch','객체가 부분 조건에 일치하는지 확인','_.isMatch(catch, {port:"부산", grade:"B"})',()=>_.isMatch(data.catches[1],{port:'부산',grade:'B'}));
+  add('lang','_.toArray / _.toNumber / _.toString','여러 값을 표준 형태로 변환','_.toArray("수협")',()=>({toArray:_.toArray('수협'),toNumber:_.toNumber('12.5'),toString:_.toString(-0)}));
+
+  // Seq
+  add('seq','_.chain + map/filter/value','여러 단계를 명시적 체인으로 연결','_.chain(catches).filter(...).map(...).value()',()=>_.chain(data.catches).filter(c=>c.grade==='A').map(c=>`${c.fish} ${c.kg}kg`).value());
+  add('seq','암시적 체이닝','래퍼를 통해 연속 호출','_(catches).map("fish").uniq().sort().value()',()=>_(data.catches).map('fish').uniq().sort().value());
+  add('seq','_.tap','체인 중간값을 관찰·기록하고 흐름 유지','_.chain([3,1,2]).sort().tap(...).value()',()=>{let snapshot;const result=_.chain([3,1,2]).sort().tap(v=>snapshot=_.clone(v)).reverse().value();return {snapshotAfterSort:snapshot,final:result};});
+  add('seq','_.thru','체인 중간값을 원하는 함수로 교체','_.chain(catches).thru(list => list.slice(0,2)).value()',()=>_.chain(data.catches).thru(list=>list.slice(0,2)).map('fish').value());
+  add('seq','_.plant','동일한 체인 로직에 새 입력을 주입','chain.plant([10,20,30]).value()',()=>{const wrapped=_.chain([1,2,3]).map(n=>n*10).sum();return {original:wrapped.value(),newInput:wrapped.plant([10,20,30]).value()};});
+  add('seq','_.reverse 체인','래퍼의 배열 결과를 뒤집기','_([1,2,3]).reverse().value()',()=>_([1,2,3]).reverse().value());
+
+  // Util
+  add('util','_.attempt','예외 발생 가능 작업을 값 또는 Error로 반환','_.attempt(JSON.parse, "{bad json}")',()=>{const r=_.attempt(JSON.parse,'{bad json}');return {isError:_.isError(r),message:r.message};});
+  add('util','_.cond','조건-처리기 쌍으로 분기 함수 구성','_.cond([[pred, fn], ...])(value)',()=>{const grade=_.cond([[n=>n>=90,()=> '우수'],[n=>n>=70,()=> '양호'],[_.stubTrue,()=> '관리필요']]);return {95:grade(95),78:grade(78),55:grade(55)};});
+  add('util','_.constant / _.identity / _.noop','상수 반환·입력 그대로·무동작 함수','_.constant("OK")()',()=>({constant:_.constant('OK')(),identity:_.identity('수협'),noop:_.noop()}));
+  add('util','_.defaultTo','null·undefined·NaN이면 기본값 사용','_.defaultTo(value, "미입력")',()=>({null:_.defaultTo(null,'미입력'),nan:_.defaultTo(NaN,'미입력'),zero:_.defaultTo(0,'미입력')}));
+  add('util','_.matches / _.matchesProperty','객체 조건 판별함수 생성','_.filter(catches, _.matches({grade:"A"}))',()=>({matches:_.filter(data.catches,_.matches({grade:'A'})).map(v=>v.id),matchesProperty:_.filter(data.catches,_.matchesProperty('port','부산')).map(v=>v.id)}));
+  add('util','_.method / _.methodOf','객체 메서드 호출 함수를 생성','_.method("toUpperCase")("ai")',()=>({method:_.method('toUpperCase')('ai'),methodOf:_.methodOf({format:(a,b)=>`${a}/${b}`})('format','부산','갈치')}));
+  add('util','_.nthArg','N번째 인수만 반환하는 함수','_.nthArg(1)("A", "B", "C")',()=>({second:_.nthArg(1)('A','B','C'),last:_.nthArg(-1)('A','B','C')}));
+  add('util','_.over / _.overEvery / _.overSome','여러 판별·계산 함수를 조합','_.over([Math.max, Math.min])(1,8,3)',()=>({over:_.over([Math.max,Math.min])(1,8,3),overEvery:_.overEvery([n=>n>10,n=>n<20])(15),overSome:_.overSome([n=>n<0,n=>n%2===0])(7)}));
+  add('util','_.property / _.propertyOf','속성 경로 조회 함수를 생성','_.property("weather.wave.height")(obj)',()=>({property:_.property('report.weather.wave.height')(data.nested),propertyOf:_.propertyOf({port:'목포'})('port')}));
+  add('util','_.range / _.rangeRight','범위 숫자 배열 생성','_.range(2, 10, 2)',()=>({range:_.range(2,10,2),rangeRight:_.rangeRight(2,10,2)}));
+  add('util','_.stub*','테스트용 고정 반환 함수 생성','_.stubArray() / _.stubTrue()',()=>({array:_.stubArray(),false:_.stubFalse(),object:_.stubObject(),string:_.stubString(),true:_.stubTrue()}));
+  add('util','_.times','지정 횟수만큼 함수 실행 후 결과 배열 생성','_.times(5, i => `T-${i+1}`)',()=>_.times(5,i=>`T-${i+1}`));
+  add('util','_.toPath','경로 문자열을 배열 경로로 변환','_.toPath("report.weather[0].height")',()=>_.toPath('report.weather[0].height'));
+  add('util','_.uniqueId','접두사를 가진 고유 식별자 생성','_.uniqueId("auction_")',()=>[_.uniqueId('auction_'),_.uniqueId('auction_'),_.uniqueId('auction_')]);
+
+  // Date
+  add('date','_.now','현재 시각을 Unix epoch 밀리초로 반환','_.now()',()=>({epochMs:_.now(),iso:new Date(_.now()).toISOString()}));
+
+  const catName = Object.fromEntries(categories);
+  let selected = 'all', query = '', sortMode = 'category', logs = 0;
+  const statusDot = $('#statusDot'), statusText = $('#statusText'), grid = $('#demoGrid'), logEl = $('#log');
+  function pretty(value){
+    if(value === undefined) return 'undefined';
+    if(value instanceof Error) return `${value.name}: ${value.message}`;
+    try { return JSON.stringify(value, (k,v)=> typeof v==='function' ? `[Function ${v.name||'anonymous'}]` : v, 2); }
+    catch(e){ return String(value); }
+  }
+  function now(){ return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+  function addLog(type,message){ logs++; $('#logCount').textContent=`${logs}건`; const cls=type==='OK'?'okay':type==='ERR'?'fail':'info'; const row=document.createElement('div'); row.className='line'; row.innerHTML=`<span class="time">${now()}</span><span class="${cls}">${type}</span> ${esc(message)}`; logEl.prepend(row); }
+  function toast(message){const t=$('#toast');t.textContent=message;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),1500)}
+  function filtered(){ let items=demos.filter(d=>(selected==='all'||d.cat===selected)&&(`${d.method} ${d.desc} ${catName[d.cat]}`).toLowerCase().includes(query.toLowerCase())); if(sortMode==='method') items=[...items].sort((a,b)=>a.method.localeCompare(b.method)); return items; }
+  function renderNav(){ const counts=_.countBy(demos,'cat'); $('#categoryNav').innerHTML=[`<button class="${selected==='all'?'active':''}" data-cat="all"><span>전체 예제</span><span class="count">${demos.length}</span></button>`,...categories.map(([id,name])=>`<button class="${selected===id?'active':''}" data-cat="${id}"><span>${name}</span><span class="count">${counts[id]||0}</span></button>`)].join(''); $('#categoryNav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{selected=b.dataset.cat;renderNav();renderGrid()})); }
+  function renderGrid(){ const items=filtered(); $('#summary').innerHTML=`<b>${selected==='all'?'전체':catName[selected]}</b> · <b>${items.length}</b>개 예제 표시 중${query?` · <span style="color:var(--brand)">“${esc(query)}” 검색</span>`:''}`; grid.innerHTML=items.map((d,i)=>`<article class="card" data-key="${demos.indexOf(d)}"><div class="cardhead"><div class="method">${esc(d.method)}</div><div class="tag">${esc(catName[d.cat])}</div></div><p class="desc">${esc(d.desc)}</p><pre class="code">${esc(d.code)}</pre><div class="result empty" id="result-${demos.indexOf(d)}">실행 결과가 여기에 표시됩니다.</div><div class="cardactions"><button class="btn smallbtn run" data-run="${demos.indexOf(d)}">▶ 실행</button><button class="btn smallbtn copy" data-copy="${demos.indexOf(d)}">코드 복사</button></div></article>`).join(''); grid.querySelectorAll('[data-run]').forEach(b=>b.addEventListener('click',()=>runOne(+b.dataset.run)));grid.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>copyCode(+b.dataset.copy))); }
+  async function runOne(idx){ const d=demos[idx], el=$(`#result-${idx}`); if(!el)return; el.className='result';el.textContent='실행 중…'; const started=performance.now(); try{const out=await d.run(); const elapsed=(performance.now()-started).toFixed(1);el.textContent=pretty(out);addLog('OK',`${d.method} 실행 완료 · ${elapsed}ms`);}catch(e){el.textContent=`Error: ${e.message}`;addLog('ERR',`${d.method} 실패 · ${e.message}`);} }
+  async function runVisible(){ const items=filtered(); if(!items.length){toast('실행할 예제가 없습니다.');return;} $('#runVisibleBtn').disabled=true; $('#runVisibleBtn').textContent='실행 중…'; for(const d of items){await runOne(demos.indexOf(d));} $('#runVisibleBtn').disabled=false; $('#runVisibleBtn').textContent='현재 항목 모두 실행';toast(`${items.length}개 예제를 실행했습니다.`); }
+  async function copyCode(idx){ try{await navigator.clipboard.writeText(demos[idx].code);toast('코드를 복사했습니다.');}catch{toast('브라우저 권한으로 복사하지 못했습니다.');} }
+  function init(){ $('#methodCount').textContent=demos.length; if(typeof window._ === 'function'){statusDot.classList.add('ready'); if(_.__fallback){statusText.textContent='오프라인 호환 레이어 준비됨'; addLog('INFO',`실제 lodash 파일을 불러오지 못해 내장 호환 레이어로 ${demos.length}개 예제를 준비했습니다.`);}else{statusText.textContent=`Lodash ${_.VERSION} 준비됨`;addLog('INFO',`Lodash ${_.VERSION} 로드 성공. ${demos.length}개 예제를 준비했습니다.`);}}else{statusText.textContent='Lodash 로드 실패';addLog('ERR','lodash.min.js 또는 CDN을 불러오지 못했습니다.'); $('#runVisibleBtn').disabled=true;} renderNav();renderGrid(); $('#searchInput').addEventListener('input',e=>{query=e.target.value;renderGrid()});$('#sortSelect').addEventListener('change',e=>{sortMode=e.target.value;renderGrid()});$('#resetBtn').addEventListener('click',()=>{selected='all';query='';sortMode='category';$('#searchInput').value='';$('#sortSelect').value='category';renderNav();renderGrid();});$('#runVisibleBtn').addEventListener('click',runVisible);$('#clearLogBtn').addEventListener('click',()=>{logEl.innerHTML='';logs=0;$('#logCount').textContent='0건';toast('실행 로그를 지웠습니다.');}); }
+  window.addEventListener('load',init);
+})();
+</script>
+</body>
+</html>
