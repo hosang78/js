@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMask 종합 기능 샘플</title>
+  <meta name="description" content="IMask 7.6.1의 Pattern, Number, Date, Dynamic, Range, Enum, Pipe, Model API 등을 한 페이지에서 실험하는 종합 샘플" />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #eef3f9;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dce3ed;
+      --primary: #4f46e5;
+      --primary-2: #7c3aed;
+      --primary-soft: #eef2ff;
+      --success: #07875b;
+      --success-soft: #e8f8f1;
+      --warning: #b54708;
+      --warning-soft: #fff4e6;
+      --danger: #c4320a;
+      --danger-soft: #fff0eb;
+      --shadow: 0 18px 50px rgba(35, 48, 73, 0.08);
+      --shadow-sm: 0 6px 18px rgba(35, 48, 73, 0.07);
+      --radius: 20px;
+      --radius-sm: 12px;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0e1420;
+      --surface: #151d2b;
+      --surface-2: #1b2535;
+      --surface-3: #243146;
+      --text: #edf2f7;
+      --muted: #aeb9ca;
+      --line: #303d51;
+      --primary: #8b83ff;
+      --primary-2: #b77bff;
+      --primary-soft: #28264a;
+      --success: #5bd4a6;
+      --success-soft: #15372d;
+      --warning: #ffbf69;
+      --warning-soft: #40301b;
+      --danger: #ff8d76;
+      --danger-soft: #42231e;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+      --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 12% -5%, rgba(79, 70, 229, .16), transparent 31rem),
+        radial-gradient(circle at 95% 8%, rgba(124, 58, 237, .13), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      transition: background-color .2s ease, color .2s ease;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--surface) 82%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+    }
+
+    .topbar-inner {
+      width: min(1500px, calc(100% - 28px));
+      min-height: 68px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 14px;
+      display: grid; place-items: center;
+      color: white; font-weight: 900; letter-spacing: -.05em;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      box-shadow: 0 10px 22px rgba(79, 70, 229, .28);
+    }
+    .brand strong { display: block; font-size: 17px; line-height: 1.2; }
+    .brand small { display: block; color: var(--muted); margin-top: 2px; }
+
+    .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      min-height: 40px;
+      padding: 9px 14px;
+      border-radius: 11px;
+      font-weight: 750;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    }
+    .btn:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--primary) 50%, var(--line)); }
+    .btn:active { transform: translateY(0); }
+    .btn.primary { border-color: transparent; background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; }
+    .btn.soft { background: var(--primary-soft); color: var(--primary); border-color: transparent; }
+    .btn.small { min-height: 34px; padding: 6px 10px; font-size: 13px; }
+    .btn.danger { background: var(--danger-soft); color: var(--danger); border-color: transparent; }
+
+    .container { width: min(1500px, calc(100% - 28px)); margin: 0 auto; }
+    .hero { padding: 56px 0 28px; }
+    .hero-grid { display: grid; grid-template-columns: 1.35fr .65fr; gap: 24px; align-items: stretch; }
+    .hero-main, .hero-side {
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+    }
+    .hero-main { padding: clamp(28px, 4vw, 54px); position: relative; overflow: hidden; }
+    .hero-main::after {
+      content: ""; position: absolute; width: 300px; height: 300px; border-radius: 50%;
+      right: -130px; bottom: -180px; background: linear-gradient(135deg, rgba(79,70,229,.3), rgba(124,58,237,.05));
+    }
+    .eyebrow { display: inline-flex; gap: 8px; align-items: center; padding: 7px 11px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 13px; font-weight: 850; }
+    h1 { margin: 18px 0 14px; font-size: clamp(34px, 5vw, 66px); letter-spacing: -.055em; line-height: 1.03; }
+    .hero p { max-width: 850px; margin: 0; color: var(--muted); font-size: clamp(16px, 2vw, 19px); }
+    .hero-notes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .note-pill { padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 750; }
+
+    .hero-side { padding: 22px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; align-content: center; }
+    .stat { padding: 18px; border-radius: 17px; background: var(--surface-2); border: 1px solid var(--line); }
+    .stat strong { display: block; font-size: 28px; line-height: 1; letter-spacing: -.04em; }
+    .stat span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
+
+    .load-alert { display: none; margin-top: 20px; padding: 16px 18px; border-radius: 14px; background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); font-weight: 700; }
+
+    .toolbar {
+      position: sticky; top: 68px; z-index: 20;
+      padding: 12px 0;
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      backdrop-filter: blur(15px);
+    }
+    .toolbar-panel {
+      display: flex; gap: 10px; align-items: center; justify-content: space-between;
+      padding: 11px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); box-shadow: var(--shadow-sm);
+    }
+    .search-wrap { flex: 1; min-width: 180px; position: relative; }
+    .search-wrap input { padding-left: 40px; }
+    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .filters { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; }
+    .filter-btn { white-space: nowrap; border: 0; background: transparent; color: var(--muted); padding: 9px 12px; border-radius: 10px; font-weight: 800; }
+    .filter-btn.active { background: var(--primary-soft); color: var(--primary); }
+
+    .summary-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin: 20px 2px 14px; }
+    .summary-row h2 { margin: 0; font-size: 21px; letter-spacing: -.025em; }
+    .result-count { color: var(--muted); font-size: 14px; }
+
+    .demo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding-bottom: 46px; }
+    .card {
+      display: flex; flex-direction: column;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--primary) 24%, var(--line)); }
+    .card.hidden { display: none; }
+    .card-head { padding: 20px 20px 12px; }
+    .card-kicker { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 11px; font-weight: 900; letter-spacing: .02em; }
+    .card-index { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .card h3 { margin: 11px 0 6px; font-size: 19px; letter-spacing: -.025em; }
+    .card-desc { color: var(--muted); font-size: 13px; min-height: 41px; margin: 0; }
+    .card-body { padding: 8px 20px 18px; display: flex; flex-direction: column; flex: 1; gap: 12px; }
+
+    .label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 850; }
+    .input, .select, .editable {
+      width: 100%; min-height: 46px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface-2); color: var(--text); padding: 11px 13px; outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    .input:focus, .select:focus, .editable:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 15%, transparent); background: var(--surface); }
+    .input::placeholder { color: color-mix(in srgb, var(--muted) 76%, transparent); }
+    .editable { min-height: 76px; }
+    .editable:empty::before { content: attr(data-placeholder); color: var(--muted); }
+
+    .row { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+    .row.three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .control-box { padding: 12px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); }
+    .control-line { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+    .control-line + .control-line { margin-top: 9px; }
+    .check { display: inline-flex; gap: 7px; align-items: center; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .check input { accent-color: var(--primary); width: 17px; height: 17px; }
+
+    .state {
+      display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px;
+      padding: 8px; border-radius: 13px; border: 1px solid var(--line); background: var(--surface-2);
+    }
+    .state.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .state-cell { min-width: 0; padding: 7px 8px; border-radius: 9px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--line) 78%, transparent); }
+    .state-cell span { display: block; color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; letter-spacing: .03em; }
+    .state-cell code { display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); font-size: 11px; }
+
+    .button-row { display: flex; flex-wrap: wrap; gap: 7px; }
+    .hint { margin: 0; padding: 9px 10px; border-radius: 10px; background: var(--warning-soft); color: var(--warning); font-size: 11px; font-weight: 700; }
+    .output { min-height: 44px; padding: 11px 12px; border-radius: 11px; background: var(--success-soft); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 20%, transparent); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; }
+    .event-log { height: 100px; overflow: auto; padding: 10px; border-radius: 11px; background: #101828; color: #d0d5dd; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .event-log div + div { margin-top: 3px; }
+    .event-log .complete { color: #6ce9a6; }
+
+    details.code { margin-top: auto; border-top: 1px solid var(--line); }
+    details.code summary { list-style: none; cursor: pointer; padding: 12px 20px; color: var(--muted); font-size: 12px; font-weight: 850; user-select: none; }
+    details.code summary::-webkit-details-marker { display: none; }
+    details.code summary::after { content: "+"; float: right; color: var(--primary); font-size: 17px; line-height: 1; }
+    details.code[open] summary::after { content: "−"; }
+    details.code pre { margin: 0; padding: 0 20px 18px; overflow: auto; color: #d0d5dd; }
+    details.code code { display: block; min-width: max-content; padding: 13px; border-radius: 11px; background: #101828; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .full-span { grid-column: 1 / -1; }
+    .footer { padding: 26px 0 45px; color: var(--muted); font-size: 13px; text-align: center; border-top: 1px solid var(--line); }
+    .toast {
+      position: fixed; right: 20px; bottom: 20px; z-index: 60;
+      max-width: min(420px, calc(100% - 40px)); padding: 13px 15px; border-radius: 12px;
+      background: #101828; color: white; box-shadow: 0 18px 55px rgba(0,0,0,.28);
+      transform: translateY(20px); opacity: 0; pointer-events: none; transition: .22s ease;
+      font-size: 13px; font-weight: 750;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .no-results { display: none; padding: 50px; text-align: center; border: 1px dashed var(--line); border-radius: 20px; color: var(--muted); background: var(--surface); margin-bottom: 40px; }
+
+    @media (max-width: 1180px) { .demo-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-side { grid-template-columns: repeat(4, 1fr); }
+      .toolbar-panel { align-items: stretch; flex-direction: column; }
+    }
+    @media (max-width: 680px) {
+      .topbar-inner { align-items: flex-start; padding: 10px 0; }
+      .brand small { display: none; }
+      .actions .label-hide { display: none; }
+      .hero { padding-top: 28px; }
+      .hero-side { grid-template-columns: repeat(2, 1fr); }
+      .demo-grid { grid-template-columns: 1fr; }
+      .toolbar { top: 62px; }
+      .state { grid-template-columns: 1fr; }
+      .row, .row.three { grid-template-columns: 1fr; }
+      .full-span { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">IM</div>
+        <div><strong>IMask 기능 실험실</strong><small>입력값 형식화·검증·변환 종합 샘플</small></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="themeBtn" type="button" title="화면 테마 변경">◐ <span class="label-hide">테마</span></button>
+        <button class="btn" id="resetBtn" type="button">초기화</button>
+        <button class="btn primary" id="sampleBtn" type="button">샘플값 채우기</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div class="hero-grid">
+        <div class="hero-main">
+          <span class="eyebrow">IMask 7.6.1 · Vanilla JavaScript</span>
+          <h1>입력 마스크의<br />거의 모든 기능을 한 화면에서</h1>
+          <p>Pattern, RegExp, Function, Number, Date, Range, Enum, Dynamic, 반복 블록, 보안 입력, 이벤트, Pipe, Model API까지 직접 입력하고 값을 비교할 수 있는 단일 HTML 데모다.</p>
+          <div class="hero-notes">
+            <span class="note-pill">모든 입력은 type="text"</span>
+            <span class="note-pill">마스킹값·원본값·타입값 동시 표시</span>
+            <span class="note-pill">검색·분류·다크모드</span>
+            <span class="note-pill">공식 CDN + 대체 CDN</span>
+          </div>
+          <div class="load-alert" id="loadAlert">IMask 라이브러리를 불러오지 못했다. 인터넷 연결 또는 CDN 접근 허용 여부를 확인해줘.</div>
+        </div>
+        <div class="hero-side">
+          <div class="stat"><strong>26</strong><span>상호작용 데모</span></div>
+          <div class="stat"><strong>9+</strong><span>마스크 유형</span></div>
+          <div class="stat"><strong>3</strong><span>값 표현 방식</span></div>
+          <div class="stat"><strong>0</strong><span>추가 프레임워크</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="container toolbar-panel">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input class="input" id="searchInput" type="search" placeholder="예: 날짜, 동적, pipe, 숫자" aria-label="데모 검색" />
+        </div>
+        <div class="filters" aria-label="카테고리 필터">
+          <button class="filter-btn active" type="button" data-filter="all">전체</button>
+          <button class="filter-btn" type="button" data-filter="pattern">Pattern</button>
+          <button class="filter-btn" type="button" data-filter="number">Number</button>
+          <button class="filter-btn" type="button" data-filter="date">Date·Range</button>
+          <button class="filter-btn" type="button" data-filter="dynamic">Dynamic</button>
+          <button class="filter-btn" type="button" data-filter="behavior">동작 옵션</button>
+          <button class="filter-btn" type="button" data-filter="api">API</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="summary-row">
+        <h2>기능별 데모</h2>
+        <div class="result-count" id="resultCount">26개 표시</div>
+      </div>
+
+      <div class="demo-grid" id="demoGrid">
+        <!-- 01 -->
+        <article class="card" data-category="pattern" data-search="기본 패턴 한국 휴대전화 전화번호 pattern phone">
+          <div class="card-head"><div class="card-kicker"><span class="badge">PATTERN</span><span class="card-index">01</span></div><h3>한국 휴대전화</h3><p class="card-desc">고정 자릿수 패턴과 구분 기호 자동 삽입의 기본 예제</p></div>
+          <div class="card-body">
+            <div><label class="label" for="phoneBasic">전화번호</label><input class="input" id="phoneBasic" type="text" inputmode="numeric" placeholder="010-1234-5678" /></div>
+            <div class="state" data-for="phoneBasic"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: '000-0000-0000'
+});</code></pre></details>
+        </article>
+
+        <!-- 02 -->
+        <article class="card" data-category="pattern" data-search="선택 입력 optional 확장번호 내선 pattern brackets">
+          <div class="card-head"><div class="card-kicker"><span class="badge">OPTIONAL</span><span class="card-index">02</span></div><h3>선택 영역과 고정 문자</h3><p class="card-desc">대괄호 영역은 선택 입력, 중괄호 고정부는 원본값에도 포함</p></div>
+          <div class="card-body">
+            <div><label class="label" for="optionalMask">대표번호 + 선택 내선</label><input class="input" id="optionalMask" type="text" inputmode="numeric" placeholder="02-1234-5678 [내선 123]" /></div>
+            <div class="state" data-for="optionalMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: '00-0000-0000[ {내선 }000]'
+});</code></pre></details>
+        </article>
+
+        <!-- 03 -->
+        <article class="card" data-category="pattern" data-search="사용자 정의 정의 custom definitions 대문자 prepareChar 제품코드">
+          <div class="card-head"><div class="card-kicker"><span class="badge">DEFINITION</span><span class="card-index">03</span></div><h3>사용자 정의 문자 + 대문자화</h3><p class="card-desc">사용자 정의 토큰과 prepareChar 전처리 콜백 적용</p></div>
+          <div class="card-body">
+            <div><label class="label" for="productCode">제품 코드</label><input class="input" id="productCode" type="text" placeholder="AB-123456" /></div>
+            <div class="state" data-for="productCode"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: 'LL-000000',
+  definitions: { L: /[A-Z]/ },
+  prepareChar: ch => ch.toUpperCase()
+});</code></pre></details>
+        </article>
+
+        <!-- 04 -->
+        <article class="card" data-category="pattern behavior" data-search="보안 입력 secure displayChar pin 비밀번호 shift">
+          <div class="card-head"><div class="card-kicker"><span class="badge">SECURE</span><span class="card-index">04</span></div><h3>보안 코드 표시</h3><p class="card-desc">실제 값은 유지하면서 화면에는 대체 문자를 표시</p></div>
+          <div class="card-body">
+            <div><label class="label" for="securePin">6자리 PIN</label><input class="input" id="securePin" type="text" inputmode="numeric" autocomplete="off" /></div>
+            <div class="state" data-for="securePin"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: '000000',
+  displayChar: '●',
+  lazy: false,
+  overwrite: 'shift'
+});</code></pre></details>
+        </article>
+
+        <!-- 05 -->
+        <article class="card" data-category="pattern" data-search="정규식 regexp hex 색상 컬러">
+          <div class="card-head"><div class="card-kicker"><span class="badge">REGEXP</span><span class="card-index">05</span></div><h3>정규식 마스크</h3><p class="card-desc">중간 입력 상태를 허용하는 HEX 색상 정규식</p></div>
+          <div class="card-body">
+            <div><label class="label" for="regexHex">HEX 색상</label><input class="input" id="regexHex" type="text" placeholder="#4F46E5" /></div>
+            <div class="state" data-for="regexHex"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: /^#[0-9a-f]{0,6}$/i,
+  prepareChar: ch => ch.toUpperCase()
+});</code></pre></details>
+        </article>
+
+        <!-- 06 -->
+        <article class="card" data-category="pattern" data-search="함수 function 증가 수열 검증 validator">
+          <div class="card-head"><div class="card-kicker"><span class="badge">FUNCTION</span><span class="card-index">06</span></div><h3>함수형 검증 마스크</h3><p class="card-desc">각 숫자가 이전 숫자보다 커지는 입력만 허용</p></div>
+          <div class="card-body">
+            <div><label class="label" for="functionMask">증가 숫자열</label><input class="input" id="functionMask" type="text" inputmode="numeric" placeholder="013579" /></div>
+            <p class="hint">예: 013579 가능 · 12321 불가</p>
+            <div class="state" data-for="functionMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask: value => /^\d*$/.test(value) &&
+  value.split('').every((ch, i) =>
+    !value[i - 1] || value[i - 1] &lt; ch
+  )</code></pre></details>
+        </article>
+
+        <!-- 07 -->
+        <article class="card" data-category="number" data-search="숫자 number 소수 천단위 구분 radix scale min max autofix">
+          <div class="card-head"><div class="card-kicker"><span class="badge">NUMBER</span><span class="card-index">07</span></div><h3>고급 숫자 옵션</h3><p class="card-desc">소수점, 천 단위, 범위, 0 보정 옵션을 즉시 변경</p></div>
+          <div class="card-body">
+            <div><label class="label" for="numberAdvanced">금액</label><input class="input" id="numberAdvanced" type="text" inputmode="decimal" placeholder="1,234,567.89" /></div>
+            <div class="row three">
+              <div><label class="label" for="numScale">소수 자리</label><select class="select" id="numScale"><option>0</option><option selected>2</option><option>3</option><option>4</option></select></div>
+              <div><label class="label" for="numSep">천 단위</label><select class="select" id="numSep"><option value=",">쉼표</option><option value=" ">공백</option><option value="">없음</option></select></div>
+              <div><label class="label" for="numRadix">소수 기호</label><select class="select" id="numRadix"><option value=".">점</option><option value=",">쉼표</option></select></div>
+            </div>
+            <div class="control-box">
+              <div class="control-line"><label class="check"><input id="numPad" type="checkbox" />소수부 0 채움</label><label class="check"><input id="numNormalize" type="checkbox" checked />0 정규화</label></div>
+              <div class="control-line"><label class="check"><input id="numAutofix" type="checkbox" checked />범위 자동 보정</label><button class="btn small soft" id="applyNumOptions" type="button">옵션 적용</button></div>
+            </div>
+            <div class="state" data-for="numberAdvanced"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: Number,
+  scale: 2,
+  thousandsSeparator: ',',
+  radix: '.',
+  min: -100000000,
+  max: 100000000,
+  autofix: true
+});</code></pre></details>
+        </article>
+
+        <!-- 08 -->
+        <article class="card" data-category="number pattern" data-search="통화 currency nested blocks expose 원화 금액">
+          <div class="card-head"><div class="card-kicker"><span class="badge">NESTED BLOCK</span><span class="card-index">08</span></div><h3>중첩 통화 블록</h3><p class="card-desc">Pattern 내부에 Number 마스크를 넣고 typedValue를 노출</p></div>
+          <div class="card-body">
+            <div><label class="label" for="currencyMask">원화 금액</label><input class="input" id="currencyMask" type="text" inputmode="numeric" placeholder="₩1,250,000" /></div>
+            <div class="state" data-for="currencyMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: '₩num',
+  blocks: {
+    num: {
+      mask: Number,
+      thousandsSeparator: ',',
+      expose: true
+    }
+  }
+});</code></pre></details>
+        </article>
+
+        <!-- 09 -->
+        <article class="card" data-category="number date" data-search="퍼센트 percentage range 노출 block 0 100">
+          <div class="card-head"><div class="card-kicker"><span class="badge">NUMBER RANGE</span><span class="card-index">09</span></div><h3>0~100% 제한</h3><p class="card-desc">숫자 범위를 제한하고 접미사를 자동 표시</p></div>
+          <div class="card-body">
+            <div><label class="label" for="percentMask">진행률</label><input class="input" id="percentMask" type="text" inputmode="decimal" placeholder="75.5 %" /></div>
+            <div class="state" data-for="percentMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask: 'num %',
+blocks: {
+  num: {
+    mask: Number, min: 0, max: 100,
+    scale: 1, autofix: true, expose: true
+  }
+}</code></pre></details>
+        </article>
+
+        <!-- 10 -->
+        <article class="card" data-category="date" data-search="날짜 date yyyy mm dd typedValue min max autofix">
+          <div class="card-head"><div class="card-kicker"><span class="badge">DATE</span><span class="card-index">10</span></div><h3>날짜와 Date 객체</h3><p class="card-desc">사용자 정의 YYYY-MM-DD 형식과 실제 Date typedValue</p></div>
+          <div class="card-body">
+            <div><label class="label" for="dateMask">날짜</label><input class="input" id="dateMask" type="text" inputmode="numeric" /></div>
+            <p class="hint">허용 범위: 2000-01-01 ~ 2035-12-31</p>
+            <div class="state" data-for="dateMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: Date,
+  pattern: 'Y-`m-`d',
+  format: date => 'YYYY-MM-DD',
+  parse: str => new Date(...),
+  min: new Date(2000, 0, 1),
+  max: new Date(2035, 11, 31),
+  autofix: true,
+  lazy: false
+});</code></pre></details>
+        </article>
+
+        <!-- 11 -->
+        <article class="card" data-category="date pattern" data-search="시간 time hour minute range block 24시 hh mm">
+          <div class="card-head"><div class="card-kicker"><span class="badge">RANGE BLOCK</span><span class="card-index">11</span></div><h3>24시간 시각</h3><p class="card-desc">시·분을 각각 Range 블록으로 제한한 패턴</p></div>
+          <div class="card-body">
+            <div><label class="label" for="timeMask">시각</label><input class="input" id="timeMask" type="text" inputmode="numeric" /></div>
+            <div class="state" data-for="timeMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask: 'HH:MM',
+blocks: {
+  HH: { mask: IMask.MaskedRange, from: 0, to: 23 },
+  MM: { mask: IMask.MaskedRange, from: 0, to: 59 }
+}</code></pre></details>
+        </article>
+
+        <!-- 12 -->
+        <article class="card" data-category="date" data-search="범위 range integer autofix pad 0 255">
+          <div class="card-head"><div class="card-kicker"><span class="badge">MASKED RANGE</span><span class="card-index">12</span></div><h3>고정 길이 정수 범위</h3><p class="card-desc">0~255 범위, 3자리 고정, autofix 모드 전환</p></div>
+          <div class="card-body">
+            <div><label class="label" for="rangeMask">RGB 채널</label><input class="input" id="rangeMask" type="text" inputmode="numeric" /></div>
+            <div><label class="label" for="rangeAutofix">autofix</label><select class="select" id="rangeAutofix"><option value="false">false</option><option value="true" selected>true</option><option value="pad">pad</option></select></div>
+            <div class="state" data-for="rangeMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: IMask.MaskedRange,
+  from: 0,
+  to: 255,
+  maxLength: 3,
+  autofix: true,
+  lazy: false
+});</code></pre></details>
+        </article>
+
+        <!-- 13 -->
+        <article class="card" data-category="date pattern" data-search="열거 enum 부서 자동완성 목록 matchValue">
+          <div class="card-head"><div class="card-kicker"><span class="badge">ENUM</span><span class="card-index">13</span></div><h3>열거형 입력</h3><p class="card-desc">정해진 부서명 목록 중 일치하는 값만 입력</p></div>
+          <div class="card-body">
+            <div><label class="label" for="enumMask">부서명</label><input class="input" id="enumMask" type="text" placeholder="회원지원부" /></div>
+            <p class="hint">기획조정실 · ICT전략실 · 회원지원부 · 홍보부 · 정책보험부</p>
+            <div class="state" data-for="enumMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: IMask.MaskedEnum,
+  enum: ['기획조정실', 'ICT전략실', ...]
+});</code></pre></details>
+        </article>
+
+        <!-- 14 -->
+        <article class="card" data-category="dynamic" data-search="동적 dynamic dispatch 한국 전화번호 서울 휴대폰 대표번호">
+          <div class="card-head"><div class="card-kicker"><span class="badge">DYNAMIC DISPATCH</span><span class="card-index">14</span></div><h3>번호에 따른 마스크 선택</h3><p class="card-desc">입력 접두어를 보고 휴대전화·서울·일반 전화 형식 선택</p></div>
+          <div class="card-body">
+            <div><label class="label" for="dynamicPhone">전화번호</label><input class="input" id="dynamicPhone" type="text" inputmode="numeric" placeholder="010 또는 02로 시작" /></div>
+            <div class="state" data-for="dynamicPhone"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>active</span><code data-kind="active">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask: [mobileMask, seoulMask, localMask],
+dispatch: (appended, dynamicMasked) => {
+  const number = (dynamicMasked.value + appended)
+    .replace(/\D/g, '');
+  return dynamicMasked.compiledMasks.find(...);
+}</code></pre></details>
+        </article>
+
+        <!-- 15 -->
+        <article class="card" data-category="dynamic" data-search="동적 dynamic rgb hex color 자동 선택">
+          <div class="card-head"><div class="card-kicker"><span class="badge">DYNAMIC AUTO</span><span class="card-index">15</span></div><h3>RGB 또는 HEX 자동 판별</h3><p class="card-desc">입력에 가장 잘 맞는 마스크를 배열에서 자동 선택</p></div>
+          <div class="card-body">
+            <div><label class="label" for="dynamicColor">색상</label><input class="input" id="dynamicColor" type="text" placeholder="#4F46E5 또는 79,70,229" /></div>
+            <div class="state" data-for="dynamicColor"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>active</span><code data-kind="active">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask: [
+  { mask: 'RGB,RGB,RGB', blocks: {...} },
+  { mask: /^#[0-9a-f]{0,6}$/i }
+]</code></pre></details>
+        </article>
+
+        <!-- 16 -->
+        <article class="card" data-category="pattern behavior" data-search="반복 repeat block 최소 최대 길이">
+          <div class="card-head"><div class="card-kicker"><span class="badge">REPEAT BLOCK</span><span class="card-index">16</span></div><h3>반복 블록</h3><p class="card-desc">동일 패턴을 최소 2회, 최대 8회까지 반복</p></div>
+          <div class="card-body">
+            <div><label class="label" for="repeatMask">2~8자리 숫자</label><input class="input" id="repeatMask" type="text" inputmode="numeric" /></div>
+            <div class="state" data-for="repeatMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask: 'r',
+blocks: {
+  r: { mask: '0', repeat: [2, 8] }
+}</code></pre></details>
+        </article>
+
+        <!-- 17 -->
+        <article class="card" data-category="behavior pattern" data-search="lazy eager placeholder 자동 고정 문자 append remove">
+          <div class="card-head"><div class="card-kicker"><span class="badge">LAZY · EAGER</span><span class="card-index">17</span></div><h3>자리표시자와 고정 문자</h3><p class="card-desc">placeholder 노출과 구분 문자 삽입 시점을 실시간 비교</p></div>
+          <div class="card-body">
+            <div><label class="label" for="lazyEagerMask">날짜형 숫자</label><input class="input" id="lazyEagerMask" type="text" inputmode="numeric" /></div>
+            <div class="row"><div><label class="label" for="lazySelect">lazy</label><select class="select" id="lazySelect"><option value="true">true</option><option value="false" selected>false</option></select></div><div><label class="label" for="eagerSelect">eager</label><select class="select" id="eagerSelect"><option value="false">false</option><option value="true">true</option><option value="append" selected>append</option><option value="remove">remove</option></select></div></div>
+            <div class="state" data-for="lazyEagerMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: '0000-00-00',
+  lazy: false,
+  eager: 'append',
+  placeholderChar: '·'
+});</code></pre></details>
+        </article>
+
+        <!-- 18 -->
+        <article class="card" data-category="behavior pattern" data-search="overwrite 덮어쓰기 shift replace insert">
+          <div class="card-head"><div class="card-kicker"><span class="badge">OVERWRITE</span><span class="card-index">18</span></div><h3>덮어쓰기 모드</h3><p class="card-desc">커서 중간에서 입력할 때 삽입·교체·shift 방식 비교</p></div>
+          <div class="card-body">
+            <div><label class="label" for="overwriteMask">6자리 코드</label><input class="input" id="overwriteMask" type="text" inputmode="numeric" /></div>
+            <div><label class="label" for="overwriteSelect">overwrite</label><select class="select" id="overwriteSelect"><option value="false">false — 삽입</option><option value="true">true — 교체</option><option value="shift" selected>shift — 밀기</option></select></div>
+            <div class="state" data-for="overwriteMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask.updateOptions({
+  overwrite: false | true | 'shift'
+});</code></pre></details>
+        </article>
+
+        <!-- 19 -->
+        <article class="card" data-category="behavior pattern" data-search="skipInvalid 잘못된 문자 건너뛰기 invalid paste">
+          <div class="card-head"><div class="card-kicker"><span class="badge">SKIP INVALID</span><span class="card-index">19</span></div><h3>잘못된 문자 건너뛰기</h3><p class="card-desc">혼합 문자열 붙여넣기 시 유효하지 않은 문자의 처리 방식</p></div>
+          <div class="card-body">
+            <div><label class="label" for="skipInvalidMask">숫자 6자리</label><input class="input" id="skipInvalidMask" type="text" placeholder="0a1.2 3 붙여넣기" /></div>
+            <div class="control-box"><div class="control-line"><label class="check"><input id="skipInvalidCheck" type="checkbox" checked />skipInvalid 활성화</label><button class="btn small soft" id="pasteInvalidBtn" type="button">혼합값 넣기</button></div></div>
+            <div class="state" data-for="skipInvalidMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(input, {
+  mask: '000000',
+  skipInvalid: true
+});</code></pre></details>
+        </article>
+
+        <!-- 20 -->
+        <article class="card" data-category="behavior api" data-search="이벤트 event accept complete on off 로그">
+          <div class="card-head"><div class="card-kicker"><span class="badge">EVENTS</span><span class="card-index">20</span></div><h3>accept / complete 이벤트</h3><p class="card-desc">값 변경과 패턴 완성 시점의 이벤트를 실시간 기록</p></div>
+          <div class="card-body">
+            <div><label class="label" for="eventMask">예약번호</label><input class="input" id="eventMask" type="text" placeholder="AB-1234" /></div>
+            <div class="event-log" id="eventLog" aria-live="polite"><div>이벤트 대기 중...</div></div>
+            <div class="button-row"><button class="btn small" id="clearEventLog" type="button">로그 비우기</button><button class="btn small soft" id="eventOffBtn" type="button">이벤트 해제</button></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask.on('accept', handler);
+mask.on('complete', completeHandler);
+mask.off('accept', handler);</code></pre></details>
+        </article>
+
+        <!-- 21 -->
+        <article class="card" data-category="api number" data-search="값 API value unmaskedValue typedValue set get programmatic">
+          <div class="card-head"><div class="card-kicker"><span class="badge">VALUE API</span><span class="card-index">21</span></div><h3>세 가지 값 API</h3><p class="card-desc">value, unmaskedValue, typedValue를 코드에서 직접 설정</p></div>
+          <div class="card-body">
+            <div><label class="label" for="valueApiMask">숫자</label><input class="input" id="valueApiMask" type="text" inputmode="decimal" /></div>
+            <div class="button-row"><button class="btn small" id="setValueBtn" type="button">value 설정</button><button class="btn small" id="setUnmaskedBtn" type="button">unmasked 설정</button><button class="btn small soft" id="setTypedBtn" type="button">typed 설정</button></div>
+            <div class="state" data-for="valueApiMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask.value = '12,345.60';
+mask.unmaskedValue = '9876.5';
+mask.typedValue = 13579.25;</code></pre></details>
+        </article>
+
+        <!-- 22 -->
+        <article class="card" data-category="api behavior number" data-search="updateOptions 런타임 옵션 변경 숫자 최소 최대 scale">
+          <div class="card-head"><div class="card-kicker"><span class="badge">UPDATE OPTIONS</span><span class="card-index">22</span></div><h3>런타임 옵션 변경</h3><p class="card-desc">마스크 인스턴스를 유지한 채 숫자 범위와 소수 자릿수 변경</p></div>
+          <div class="card-body">
+            <div><label class="label" for="runtimeMask">조정 대상</label><input class="input" id="runtimeMask" type="text" inputmode="decimal" /></div>
+            <div class="row three"><div><label class="label" for="runtimeMin">최솟값</label><input class="input" id="runtimeMin" type="text" value="0" /></div><div><label class="label" for="runtimeMax">최댓값</label><input class="input" id="runtimeMax" type="text" value="100" /></div><div><label class="label" for="runtimeScale">소수</label><select class="select" id="runtimeScale"><option>0</option><option selected>1</option><option>2</option></select></div></div>
+            <button class="btn small soft" id="runtimeApply" type="button">updateOptions 실행</button>
+            <div class="state" data-for="runtimeMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>typed</span><code data-kind="typed">-</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask.updateOptions({
+  mask: Number,
+  min: 0,
+  max: 100,
+  scale: 1
+});</code></pre></details>
+        </article>
+
+        <!-- 23 -->
+        <article class="card" data-category="api number" data-search="pipe createPipe 형식 변환 formatter 마스킹 없는 input">
+          <div class="card-head"><div class="card-kicker"><span class="badge">PIPE</span><span class="card-index">23</span></div><h3>입력 요소 없는 포맷 변환</h3><p class="card-desc">IMask.pipe와 createPipe로 일반 문자열을 금액 형식으로 변환</p></div>
+          <div class="card-body">
+            <div><label class="label" for="pipeSource">원본 문자열</label><input class="input" id="pipeSource" type="text" value="1234567.8" /></div>
+            <div class="button-row"><button class="btn small primary" id="runPipeBtn" type="button">IMask.pipe</button><button class="btn small soft" id="runCreatePipeBtn" type="button">createPipe 재사용</button></div>
+            <div class="output" id="pipeOutput">결과가 여기에 표시된다.</div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask.pipe(value, {
+  mask: Number,
+  scale: 2,
+  thousandsSeparator: ',',
+  padFractionalZeros: true
+});</code></pre></details>
+        </article>
+
+        <!-- 24 -->
+        <article class="card" data-category="api pattern" data-search="model createMask resolve UI 없는 모델 layer">
+          <div class="card-head"><div class="card-kicker"><span class="badge">MODEL ONLY</span><span class="card-index">24</span></div><h3>UI 없는 마스크 모델</h3><p class="card-desc">DOM 입력 요소 없이 createMask와 resolve만 사용</p></div>
+          <div class="card-body">
+            <div><label class="label" for="modelSource">원본 주민 형식 예시</label><input class="input" id="modelSource" type="text" value="9001011234567" /></div>
+            <button class="btn small primary" id="runModelBtn" type="button">모델에서 변환</button>
+            <div class="output" id="modelOutput">결과가 여기에 표시된다.</div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>const masked = IMask.createMask({
+  mask: '000000-0000000'
+});
+masked.resolve('9001011234567');
+console.log(masked.value);</code></pre></details>
+        </article>
+
+        <!-- 25 -->
+        <article class="card" data-category="api pattern" data-search="contenteditable div 웹 컴포넌트 editable rich text">
+          <div class="card-head"><div class="card-kicker"><span class="badge">CONTENTEDITABLE</span><span class="card-index">25</span></div><h3>contenteditable 지원</h3><p class="card-desc">일반 input이 아닌 편집 가능한 요소에도 마스크 연결</p></div>
+          <div class="card-body">
+            <div><span class="label">편집 영역</span><div class="editable" id="editableMask" contenteditable="true" role="textbox" aria-label="contenteditable 전화번호" data-placeholder="010-1234-5678"></div></div>
+            <div class="state" data-for="editableMask"><div class="state-cell"><span>value</span><code data-kind="value">-</code></div><div class="state-cell"><span>unmasked</span><code data-kind="unmasked">-</code></div><div class="state-cell"><span>complete</span><code data-kind="complete">false</code></div></div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>IMask(
+  document.querySelector('[contenteditable]'),
+  { mask: '000-0000-0000' }
+);</code></pre></details>
+        </article>
+
+        <!-- 26 -->
+        <article class="card" data-category="api behavior" data-search="destroy recreate 생명주기 lifecycle clean 재생성">
+          <div class="card-head"><div class="card-kicker"><span class="badge">LIFECYCLE</span><span class="card-index">26</span></div><h3>destroy와 재생성</h3><p class="card-desc">이벤트·마스크 연결을 제거한 뒤 같은 요소에 다시 연결</p></div>
+          <div class="card-body">
+            <div><label class="label" for="lifecycleMask">사업자번호 형식</label><input class="input" id="lifecycleMask" type="text" inputmode="numeric" placeholder="123-45-67890" /></div>
+            <div class="button-row"><button class="btn small danger" id="destroyMaskBtn" type="button">destroy</button><button class="btn small soft" id="recreateMaskBtn" type="button">재생성</button></div>
+            <div class="output" id="lifecycleStatus">마스크 연결됨</div>
+          </div>
+          <details class="code"><summary>코드 보기</summary><pre><code>mask.destroy();
+mask = IMask(input, {
+  mask: '000-00-00000'
+});</code></pre></details>
+        </article>
+      </div>
+
+      <div class="no-results" id="noResults">검색 조건에 맞는 데모가 없다.</div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">IMask 7.6.1 종합 기능 샘플 · 외부 프레임워크 없이 동작 · 라이브러리 MIT License</div>
+  </footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/imask@7.6.1/dist/imask.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/imask@7.6.1/dist/imask.min.js';"></script>
+  <script>
+    window.addEventListener('load', () => {
+      if (!window.IMask) {
+        document.getElementById('loadAlert').style.display = 'block';
+        return;
+      }
+
+      const registry = new Map();
+      const samples = new Map();
+      let activeFilter = 'all';
+      let eventHandlersOn = true;
+      let lifecycleMask = null;
+      let toastTimer = null;
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const pad2 = number => String(number).padStart(2, '0');
+
+      function stringifyTyped(value) {
+        if (value == null || value === '') return '-';
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
+        }
+        if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-';
+        if (typeof value === 'object') {
+          try { return JSON.stringify(value); } catch (_) { return String(value); }
+        }
+        return String(value);
+      }
+
+      function showToast(message) {
+        const toast = $('#toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      function syncState(id) {
+        const record = registry.get(id);
+        const state = document.querySelector(`.state[data-for="${id}"]`);
+        if (!record || !state) return;
+        const { mask } = record;
+        const values = {
+          value: mask.value || '-',
+          unmasked: mask.unmaskedValue || '-',
+          typed: stringifyTyped(mask.typedValue),
+          complete: String(Boolean(mask.masked && mask.masked.isComplete)),
+          active: mask.masked && mask.masked.currentMask
+            ? (mask.masked.currentMask.label || mask.masked.currentMask.name || mask.masked.currentMask.constructor.name)
+            : '-'
+        };
+        Object.entries(values).forEach(([kind, value]) => {
+          const target = state.querySelector(`[data-kind="${kind}"]`);
+          if (target) {
+            target.textContent = value;
+            target.title = value;
+          }
+        });
+      }
+
+      function register(id, options, sample) {
+        const element = document.getElementById(id);
+        const mask = IMask(element, options);
+        registry.set(id, { element, mask, options });
+        samples.set(id, sample || { value: '' });
+        mask.on('accept', () => syncState(id));
+        mask.on('complete', () => syncState(id));
+        syncState(id);
+        return mask;
+      }
+
+      function applySample(id, sample) {
+        const record = registry.get(id);
+        if (!record || !sample) return;
+        try {
+          if (Object.prototype.hasOwnProperty.call(sample, 'typed')) record.mask.typedValue = sample.typed;
+          else if (Object.prototype.hasOwnProperty.call(sample, 'unmasked')) record.mask.unmaskedValue = String(sample.unmasked);
+          else record.mask.value = String(sample.value ?? '');
+          syncState(id);
+        } catch (error) {
+          console.warn(`샘플 적용 실패: ${id}`, error);
+        }
+      }
+
+      function parseOption(value) {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        return value;
+      }
+
+      // Pattern / RegExp / Function
+      register('phoneBasic', { mask: '000-0000-0000' }, { unmasked: '01012345678' });
+      register('optionalMask', { mask: '00-0000-0000[ {내선 }000]' }, { unmasked: '0212345678123' });
+      register('productCode', {
+        mask: 'LL-000000',
+        definitions: { L: /[A-Z]/ },
+        prepareChar: char => char.toUpperCase(),
+        lazy: false
+      }, { value: 'ab-123456' });
+      register('securePin', { mask: '000000', displayChar: '●', lazy: false, overwrite: 'shift' }, { unmasked: '482913' });
+      register('regexHex', { mask: /^#[0-9a-f]{0,6}$/i, prepareChar: char => char.toUpperCase() }, { value: '#4f46e5' });
+      register('functionMask', {
+        mask: value => /^\d*$/.test(value) && value.split('').every((char, index) => !value[index - 1] || value[index - 1] < char)
+      }, { value: '013579' });
+
+      // Number
+      const advancedNumber = register('numberAdvanced', {
+        mask: Number,
+        scale: 2,
+        signed: true,
+        thousandsSeparator: ',',
+        padFractionalZeros: false,
+        normalizeZeros: true,
+        radix: '.',
+        mapToRadix: [','],
+        min: -100000000,
+        max: 100000000,
+        autofix: true
+      }, { typed: 1234567.89 });
+
+      $('#applyNumOptions').addEventListener('click', () => {
+        const radix = $('#numRadix').value;
+        let separator = $('#numSep').value;
+        if (separator === radix) separator = radix === '.' ? ',' : ' ';
+        advancedNumber.updateOptions({
+          mask: Number,
+          scale: Number($('#numScale').value),
+          thousandsSeparator: separator,
+          radix,
+          mapToRadix: radix === '.' ? [','] : ['.'],
+          padFractionalZeros: $('#numPad').checked,
+          normalizeZeros: $('#numNormalize').checked,
+          autofix: $('#numAutofix').checked,
+          min: -100000000,
+          max: 100000000
+        });
+        syncState('numberAdvanced');
+        showToast('숫자 옵션을 적용했다.');
+      });
+
+      register('currencyMask', {
+        mask: '₩num',
+        blocks: {
+          num: { mask: Number, scale: 0, thousandsSeparator: ',', min: 0, max: 999999999999, expose: true }
+        }
+      }, { typed: 1250000 });
+
+      register('percentMask', {
+        mask: 'num %',
+        blocks: {
+          num: { mask: Number, scale: 1, radix: '.', min: 0, max: 100, autofix: true, expose: true }
+        }
+      }, { typed: 75.5 });
+
+      // Date / Range / Enum
+      const dateOptions = {
+        mask: Date,
+        pattern: 'Y-`m-`d',
+        lazy: false,
+        autofix: true,
+        overwrite: true,
+        min: new Date(2000, 0, 1),
+        max: new Date(2035, 11, 31),
+        blocks: {
+          Y: { mask: IMask.MaskedRange, from: 2000, to: 2035 },
+          m: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2 },
+          d: { mask: IMask.MaskedRange, from: 1, to: 31, maxLength: 2 }
+        },
+        format: date => `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`,
+        parse: value => {
+          const [year, month, day] = value.split('-').map(Number);
+          return new Date(year, month - 1, day);
+        }
+      };
+      register('dateMask', dateOptions, { typed: new Date(2026, 6, 13) });
+
+      register('timeMask', {
+        mask: 'HH:MM',
+        lazy: false,
+        overwrite: true,
+        blocks: {
+          HH: { mask: IMask.MaskedRange, from: 0, to: 23, maxLength: 2, autofix: true },
+          MM: { mask: IMask.MaskedRange, from: 0, to: 59, maxLength: 2, autofix: true }
+        }
+      }, { value: '08:30' });
+
+      const rangeMask = register('rangeMask', {
+        mask: IMask.MaskedRange,
+        from: 0,
+        to: 255,
+        maxLength: 3,
+        autofix: true,
+        lazy: false
+      }, { value: '128' });
+      $('#rangeAutofix').addEventListener('change', event => {
+        rangeMask.updateOptions({ autofix: parseOption(event.target.value) });
+        syncState('rangeMask');
+      });
+
+      register('enumMask', {
+        mask: IMask.MaskedEnum,
+        enum: ['기획조정실', 'ICT전략실', '회원지원부', '홍보부', '정책보험부'],
+        lazy: false
+      }, { value: '회원지원부' });
+
+      // Dynamic
+      register('dynamicPhone', {
+        mask: [
+          { mask: '000-0000-0000', startsWith: '010', label: '휴대전화' },
+          { mask: '00-0000-0000', startsWith: '02', label: '서울전화' },
+          { mask: '000-0000-0000', startsWith: '', label: '일반전화' }
+        ],
+        dispatch: (appended, dynamicMasked) => {
+          const number = (dynamicMasked.value + appended).replace(/\D/g, '');
+          return dynamicMasked.compiledMasks.find(mask => mask.startsWith && number.startsWith(mask.startsWith))
+            || dynamicMasked.compiledMasks[2];
+        }
+      }, { unmasked: '01087654321' });
+
+      register('dynamicColor', {
+        mask: [
+          {
+            mask: 'RGB,RGB,RGB',
+            label: 'RGB',
+            blocks: { RGB: { mask: IMask.MaskedRange, from: 0, to: 255, maxLength: 3, autofix: true } }
+          },
+          { mask: /^#[0-9a-f]{0,6}$/i, label: 'HEX', prepareChar: char => char.toUpperCase() }
+        ]
+      }, { value: '#4F46E5' });
+
+      // Behavior
+      register('repeatMask', {
+        mask: 'r',
+        blocks: { r: { mask: '0', repeat: [2, 8] } }
+      }, { value: '123456' });
+
+      const lazyEagerMask = register('lazyEagerMask', {
+        mask: '0000-00-00', lazy: false, eager: 'append', placeholderChar: '·'
+      }, { unmasked: '20260713' });
+      function updateLazyEager() {
+        lazyEagerMask.updateOptions({ lazy: parseOption($('#lazySelect').value), eager: parseOption($('#eagerSelect').value) });
+        syncState('lazyEagerMask');
+      }
+      $('#lazySelect').addEventListener('change', updateLazyEager);
+      $('#eagerSelect').addEventListener('change', updateLazyEager);
+
+      const overwriteMask = register('overwriteMask', { mask: '000000', lazy: false, overwrite: 'shift' }, { value: '123456' });
+      $('#overwriteSelect').addEventListener('change', event => {
+        overwriteMask.updateOptions({ overwrite: parseOption(event.target.value) });
+        syncState('overwriteMask');
+      });
+
+      const skipInvalidMask = register('skipInvalidMask', { mask: '000000', skipInvalid: true }, { value: '0123' });
+      $('#skipInvalidCheck').addEventListener('change', event => skipInvalidMask.updateOptions({ skipInvalid: event.target.checked }));
+      $('#pasteInvalidBtn').addEventListener('click', () => {
+        skipInvalidMask.value = '';
+        skipInvalidMask.value = '0a1.2 3';
+        syncState('skipInvalidMask');
+      });
+
+      // Events
+      const eventMask = register('eventMask', {
+        mask: 'LL-0000', definitions: { L: /[A-Z]/ }, prepareChar: char => char.toUpperCase(), lazy: false
+      }, { value: 'SH-2026' });
+      const eventLog = $('#eventLog');
+      const acceptHandler = () => {
+        if (eventLog.textContent.includes('이벤트 대기 중')) eventLog.innerHTML = '';
+        const row = document.createElement('div');
+        row.textContent = `[accept] value=${eventMask.value} / raw=${eventMask.unmaskedValue}`;
+        eventLog.prepend(row);
+      };
+      const completeHandler = () => {
+        const row = document.createElement('div');
+        row.className = 'complete';
+        row.textContent = `[complete] ${eventMask.value}`;
+        eventLog.prepend(row);
+      };
+      eventMask.on('accept', acceptHandler);
+      eventMask.on('complete', completeHandler);
+      $('#clearEventLog').addEventListener('click', () => { eventLog.innerHTML = '<div>로그를 비웠다.</div>'; });
+      $('#eventOffBtn').addEventListener('click', event => {
+        if (eventHandlersOn) {
+          eventMask.off('accept', acceptHandler);
+          eventMask.off('complete', completeHandler);
+          eventHandlersOn = false;
+        } else {
+          eventMask.on('accept', acceptHandler);
+          eventMask.on('complete', completeHandler);
+          eventHandlersOn = true;
+        }
+        event.target.textContent = eventHandlersOn ? '이벤트 해제' : '이벤트 재연결';
+        event.target.classList.toggle('danger', !eventHandlersOn);
+        showToast(eventHandlersOn ? '이벤트 핸들러를 재연결했다.' : '이벤트 핸들러를 해제했다.');
+      });
+
+      // Value API
+      const valueApiMask = register('valueApiMask', {
+        mask: Number, scale: 2, thousandsSeparator: ',', radix: '.', padFractionalZeros: true
+      }, { typed: 12345.6 });
+      $('#setValueBtn').addEventListener('click', () => { valueApiMask.value = '12,345.60'; syncState('valueApiMask'); });
+      $('#setUnmaskedBtn').addEventListener('click', () => { valueApiMask.unmaskedValue = '9876.5'; syncState('valueApiMask'); });
+      $('#setTypedBtn').addEventListener('click', () => { valueApiMask.typedValue = 13579.25; syncState('valueApiMask'); });
+
+      // updateOptions
+      const runtimeMask = register('runtimeMask', {
+        mask: Number, scale: 1, min: 0, max: 100, radix: '.', autofix: true
+      }, { typed: 72.5 });
+      $('#runtimeApply').addEventListener('click', () => {
+        const min = Number($('#runtimeMin').value);
+        const max = Number($('#runtimeMax').value);
+        if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) {
+          showToast('최솟값은 최댓값보다 작아야 한다.');
+          return;
+        }
+        runtimeMask.updateOptions({ mask: Number, min, max, scale: Number($('#runtimeScale').value), autofix: true });
+        syncState('runtimeMask');
+        showToast('런타임 옵션을 변경했다.');
+      });
+
+      // Pipe
+      const reusablePipe = IMask.createPipe({
+        mask: Number,
+        scale: 2,
+        thousandsSeparator: ',',
+        radix: '.',
+        normalizeZeros: true,
+        padFractionalZeros: true
+      });
+      function runPipe(reusable) {
+        const value = $('#pipeSource').value;
+        try {
+          const result = reusable
+            ? reusablePipe(value)
+            : IMask.pipe(value, { mask: Number, scale: 2, thousandsSeparator: ',', radix: '.', normalizeZeros: true, padFractionalZeros: true });
+          $('#pipeOutput').textContent = `${reusable ? 'createPipe' : 'IMask.pipe'} 결과: ${result}`;
+        } catch (error) {
+          $('#pipeOutput').textContent = `변환 오류: ${error.message}`;
+        }
+      }
+      $('#runPipeBtn').addEventListener('click', () => runPipe(false));
+      $('#runCreatePipeBtn').addEventListener('click', () => runPipe(true));
+
+      // Model only
+      $('#runModelBtn').addEventListener('click', () => {
+        const model = IMask.createMask({ mask: '000000-0000000' });
+        model.resolve($('#modelSource').value.replace(/\D/g, ''));
+        $('#modelOutput').textContent = `value: ${model.value} · unmaskedValue: ${model.unmaskedValue}`;
+      });
+
+      // contenteditable
+      register('editableMask', { mask: '000-0000-0000' }, { unmasked: '01024681357' });
+
+      // Lifecycle
+      function createLifecycleMask() {
+        if (lifecycleMask) lifecycleMask.destroy();
+        lifecycleMask = IMask($('#lifecycleMask'), { mask: '000-00-00000' });
+        $('#lifecycleStatus').textContent = '마스크 연결됨 · 입력 시 000-00-00000 형식 적용';
+      }
+      createLifecycleMask();
+      $('#destroyMaskBtn').addEventListener('click', () => {
+        if (!lifecycleMask) { showToast('이미 마스크가 제거된 상태다.'); return; }
+        lifecycleMask.destroy();
+        lifecycleMask = null;
+        $('#lifecycleStatus').textContent = '마스크 제거됨 · 현재는 자유 입력 가능';
+      });
+      $('#recreateMaskBtn').addEventListener('click', () => { createLifecycleMask(); showToast('마스크를 재생성했다.'); });
+
+      // Search and filtering
+      function updateCards() {
+        const keyword = $('#searchInput').value.trim().toLowerCase();
+        let visible = 0;
+        $$('.card').forEach(card => {
+          const categories = card.dataset.category.split(' ');
+          const categoryMatch = activeFilter === 'all' || categories.includes(activeFilter);
+          const textMatch = !keyword || `${card.dataset.search} ${card.textContent}`.toLowerCase().includes(keyword);
+          const show = categoryMatch && textMatch;
+          card.classList.toggle('hidden', !show);
+          if (show) visible += 1;
+        });
+        $('#resultCount').textContent = `${visible}개 표시`;
+        $('#noResults').style.display = visible ? 'none' : 'block';
+      }
+      $('#searchInput').addEventListener('input', updateCards);
+      $$('.filter-btn').forEach(button => button.addEventListener('click', () => {
+        $$('.filter-btn').forEach(item => item.classList.remove('active'));
+        button.classList.add('active');
+        activeFilter = button.dataset.filter;
+        updateCards();
+      }));
+
+      // Global actions
+      $('#sampleBtn').addEventListener('click', () => {
+        samples.forEach((sample, id) => applySample(id, sample));
+        $('#pipeSource').value = '1234567.8';
+        runPipe(false);
+        $('#modelSource').value = '9001011234567';
+        $('#runModelBtn').click();
+        if (lifecycleMask) lifecycleMask.unmaskedValue = '1234567890';
+        showToast('모든 데모에 샘플값을 채웠다.');
+      });
+
+      $('#resetBtn').addEventListener('click', () => {
+        registry.forEach((record, id) => {
+          try { record.mask.value = ''; syncState(id); } catch (_) {}
+        });
+        $('#pipeOutput').textContent = '결과가 여기에 표시된다.';
+        $('#modelOutput').textContent = '결과가 여기에 표시된다.';
+        $('#eventLog').innerHTML = '<div>이벤트 대기 중...</div>';
+        $('#lifecycleMask').value = '';
+        $('#searchInput').value = '';
+        activeFilter = 'all';
+        $$('.filter-btn').forEach(button => button.classList.toggle('active', button.dataset.filter === 'all'));
+        updateCards();
+        showToast('입력값과 검색 조건을 초기화했다.');
+      });
+
+      const savedTheme = localStorage.getItem('imask-demo-theme');
+      if (savedTheme === 'dark') document.documentElement.dataset.theme = 'dark';
+      $('#themeBtn').addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('imask-demo-theme', next);
+      });
+
+      // Initial state
+      $('#sampleBtn').click();
+      updateCards();
+    });
+  </script>
+</body>
+</html>
