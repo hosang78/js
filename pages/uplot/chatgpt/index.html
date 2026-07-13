@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>uPlot 종합 기능 샘플</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --text: #172033;
+      --muted: #657086;
+      --border: #dce3ee;
+      --grid: rgba(100,116,139,.20);
+      --primary: #2563eb;
+      --primary-soft: rgba(37,99,235,.11);
+      --cyan: #0891b2;
+      --green: #059669;
+      --orange: #d97706;
+      --red: #dc2626;
+      --purple: #7c3aed;
+      --shadow: 0 12px 32px rgba(15,23,42,.08);
+      --radius: 16px;
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0b1020;
+      --surface: #121a2e;
+      --surface-2: #182238;
+      --text: #e8edf7;
+      --muted: #9eabc0;
+      --border: #2a3650;
+      --grid: rgba(148,163,184,.18);
+      --primary: #60a5fa;
+      --primary-soft: rgba(96,165,250,.13);
+      --cyan: #22d3ee;
+      --green: #34d399;
+      --orange: #fbbf24;
+      --red: #fb7185;
+      --purple: #a78bfa;
+      --shadow: 0 16px 38px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    button, select, input { font: inherit; }
+    a { color: inherit; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      min-height: 68px; padding: 10px clamp(16px, 3vw, 40px);
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(14px);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px;
+      background: linear-gradient(135deg, var(--primary), var(--cyan)); color: white;
+      font-size: 22px; font-weight: 900; box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 28%, transparent);
+    }
+    .brand h1 { margin: 0; font-size: clamp(17px, 2vw, 22px); line-height: 1.2; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .top-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+    .btn, .seg button {
+      border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+      color: var(--text); padding: 8px 11px; cursor: pointer; transition: .16s ease;
+      font-weight: 700; font-size: 13px;
+    }
+    .btn:hover, .seg button:hover { border-color: var(--primary); transform: translateY(-1px); }
+    .btn.primary { background: var(--primary); color: white; border-color: transparent; }
+    .btn.danger { color: var(--red); }
+    .btn:disabled { cursor: not-allowed; opacity: .5; transform: none; }
+
+    .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: calc(100vh - 68px); }
+    .sidebar {
+      position: sticky; top: 68px; align-self: start; height: calc(100vh - 68px); overflow: auto;
+      padding: 22px 14px; border-right: 1px solid var(--border); background: var(--surface);
+    }
+    .sidebar .label { padding: 0 10px 8px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+    .nav { display: grid; gap: 4px; }
+    .nav a { text-decoration: none; padding: 9px 10px; border-radius: 9px; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .nav a:hover { background: var(--primary-soft); color: var(--primary); }
+    .side-note { margin-top: 20px; padding: 12px; border-radius: 12px; background: var(--surface-2); color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    main { min-width: 0; padding: clamp(18px, 3vw, 38px); }
+    .hero {
+      display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, .55fr); gap: 18px;
+      margin-bottom: 22px;
+    }
+    .hero-main, .hero-side, .card {
+      border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow);
+    }
+    .hero-main { padding: clamp(22px, 4vw, 38px); overflow: hidden; position: relative; }
+    .hero-main::after {
+      content: "μ"; position: absolute; right: 24px; bottom: -48px; color: var(--primary-soft);
+      font-size: 200px; font-weight: 900; line-height: 1; pointer-events: none;
+    }
+    .eyebrow { color: var(--primary); font-size: 12px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+    .hero h2 { margin: 10px 0 12px; font-size: clamp(28px, 4vw, 48px); letter-spacing: -.035em; line-height: 1.08; }
+    .hero p { position: relative; z-index: 1; max-width: 760px; margin: 0; color: var(--muted); line-height: 1.7; }
+    .chips { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+    .chip { padding: 6px 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); font-size: 11px; font-weight: 800; }
+    .hero-side { padding: 20px; display: grid; align-content: start; gap: 12px; }
+    .status-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .status-line:last-child { border-bottom: 0; padding-bottom: 0; }
+    .status-label { color: var(--muted); font-size: 12px; }
+    .status-value { font-weight: 900; font-size: 13px; text-align: right; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--orange); }
+    .status-dot.ok { background: var(--green); box-shadow: 0 0 0 5px color-mix(in srgb, var(--green) 13%, transparent); }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .kpi { padding: 17px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+    .kpi-label { color: var(--muted); font-size: 11px; font-weight: 800; }
+    .kpi-value { margin-top: 7px; font-size: clamp(20px, 3vw, 29px); font-weight: 900; letter-spacing: -.03em; }
+    .kpi-meta { margin-top: 4px; color: var(--muted); font-size: 11px; }
+
+    section { scroll-margin-top: 88px; margin-bottom: 22px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 11px; }
+    .section-head h3 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+    .section-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .section-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+    .card { padding: 16px; min-width: 0; }
+    .card + .card { margin-top: 12px; }
+    .chart-host { min-width: 0; width: 100%; min-height: 260px; position: relative; }
+    .chart-host.tall { min-height: 390px; }
+    .chart-host.small { min-height: 220px; }
+    .chart-host.spark { min-height: 145px; }
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .card-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .card-title strong { font-size: 14px; }
+    .hint { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .inline-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .seg { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); }
+    .seg button { padding: 5px 9px; border: 0; background: transparent; color: var(--muted); }
+    .seg button.active { background: var(--surface); color: var(--primary); box-shadow: 0 2px 8px rgba(15,23,42,.08); }
+    select { border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); padding: 7px 9px; font-weight: 700; font-size: 12px; }
+
+    .tooltip {
+      position: absolute; z-index: 200; min-width: 175px; max-width: 250px; display: none;
+      padding: 10px 11px; border: 1px solid var(--border); border-radius: 10px;
+      background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text);
+      box-shadow: 0 10px 28px rgba(15,23,42,.2); pointer-events: none; font-size: 11px; line-height: 1.5;
+      backdrop-filter: blur(10px);
+    }
+    .tooltip .tt-date { margin-bottom: 6px; color: var(--muted); font-weight: 800; }
+    .tooltip .tt-row { display: flex; justify-content: space-between; gap: 14px; white-space: nowrap; }
+    .tooltip .tt-key { display: flex; align-items: center; gap: 6px; }
+    .tooltip .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+    .tooltip b { font-variant-numeric: tabular-nums; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .feature-item { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+    .feature-item strong { display: block; font-size: 12px; }
+    .feature-item span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .metrics-row { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 10px; }
+    .metric-pill { padding: 7px 9px; border-radius: 9px; background: var(--surface-2); color: var(--muted); font-size: 11px; }
+    .metric-pill b { color: var(--text); }
+
+    .log-panel {
+      height: 210px; overflow: auto; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+      background: #0b1220; color: #cbd5e1; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .log-entry { border-bottom: 1px dashed rgba(148,163,184,.17); padding: 3px 0; }
+    .log-time { color: #60a5fa; }
+
+    .load-error {
+      display: none; margin: 0 0 20px; padding: 16px; border: 1px solid color-mix(in srgb, var(--red) 40%, var(--border));
+      border-radius: 13px; background: color-mix(in srgb, var(--red) 8%, var(--surface)); color: var(--text); line-height: 1.6;
+    }
+    .load-error code { background: var(--surface-2); padding: 2px 5px; border-radius: 5px; }
+
+    footer { padding: 18px 0 8px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+    /* uPlot 필수 CSS를 내장하여 CSS CDN 없이도 표시 */
+    .uplot, .uplot *, .uplot *::before, .uplot *::after { box-sizing: border-box; }
+    .uplot { font-family: inherit; line-height: 1.5; width: min-content; color: var(--text); }
+    .u-title { text-align: center; font-size: 14px; font-weight: 800; }
+    .u-wrap { position: relative; user-select: none; }
+    .u-over, .u-under { position: absolute; }
+    .u-under { overflow: hidden; }
+    .uplot canvas { display: block; position: absolute; width: 100%; height: 100%; }
+    .u-axis { position: absolute; }
+    .u-legend { font-size: 11px; margin: auto; text-align: center; color: var(--text); }
+    .u-inline { display: block; }
+    .u-inline * { display: inline-block; }
+    .u-inline tr { margin-right: 12px; }
+    .u-legend th { font-weight: 700; }
+    .u-legend th > * { vertical-align: middle; display: inline-block; }
+    .u-legend .u-marker { width: .9em; height: .9em; margin-right: 4px; background-clip: padding-box !important; }
+    .u-over { overflow: hidden; }
+    .u-select { background: color-mix(in srgb, var(--primary) 14%, transparent); position: absolute; pointer-events: none; }
+    .u-cursor-x, .u-cursor-y { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; z-index: 100; }
+    .u-hz .u-cursor-x, .u-vt .u-cursor-y { height: 100%; border-right: 1px dashed var(--muted); }
+    .u-hz .u-cursor-y, .u-vt .u-cursor-x { width: 100%; border-bottom: 1px dashed var(--muted); }
+    .u-cursor-pt { position: absolute; top: 0; left: 0; border-radius: 50%; pointer-events: none; will-change: transform; z-index: 100; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .hero { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .three-col { grid-template-columns: 1fr; }
+      .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .topbar { align-items: flex-start; }
+      .brand p { display: none; }
+      .top-actions .hide-mobile { display: none; }
+      main { padding: 14px; }
+      .two-col, .kpis, .feature-grid { grid-template-columns: 1fr; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+      .section-actions { justify-content: flex-start; }
+      .card { padding: 12px; }
+      .hero-main { padding: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">μ</div>
+      <div>
+        <h1>uPlot 종합 기능 샘플</h1>
+        <p>고성능 시계열 · Canvas 2D · 플러그인/훅 기반 확장</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn primary" id="streamToggle">실시간 일시정지</button>
+      <button class="btn hide-mobile" id="randomizeBtn">데이터 재생성</button>
+      <button class="btn hide-mobile" id="resetAllBtn">전체 줌 초기화</button>
+      <button class="btn" id="csvBtn">CSV</button>
+      <button class="btn" id="pngBtn">PNG</button>
+      <button class="btn" id="themeBtn" aria-label="테마 전환">다크 모드</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="label">DEMO INDEX</div>
+      <nav class="nav">
+        <a href="#overview">01. 종합 시계열</a>
+        <a href="#paths">02. 렌더링 방식</a>
+        <a href="#sync">03. 커서·줌 동기화</a>
+        <a href="#scales">04. 특수 스케일</a>
+        <a href="#gaps">05. 결측치·밴드</a>
+        <a href="#ohlc">06. OHLC 플러그인</a>
+        <a href="#stream">07. 실시간 스트리밍</a>
+        <a href="#performance">08. 대용량 성능</a>
+        <a href="#api">09. API 플레이그라운드</a>
+        <a href="#coverage">10. 기능 매핑</a>
+      </nav>
+      <div class="side-note">
+        <b>조작법</b><br>
+        드래그: 구간 확대<br>
+        휠: 커서 중심 확대/축소<br>
+        Shift+휠: 좌우 이동<br>
+        더블클릭: 범위 초기화<br>
+        범례 클릭: 계열 표시 전환
+      </div>
+    </aside>
+
+    <main>
+      <div id="loadError" class="load-error">
+        <b>uPlot 스크립트를 불러오지 못했다.</b><br>
+        인터넷 연결이 없는 환경에서는 uPlot 1.6.32의 <code>uPlot.iife.min.js</code>를 이 HTML 파일과 같은 폴더에 두고 다시 열면 된다.
+      </div>
+
+      <div class="hero">
+        <div class="hero-main">
+          <div class="eyebrow">uPlot 1.6.32 · Feature Showcase</div>
+          <h2>작고 빠른 시계열 차트를<br>한 페이지에서 종합 검증</h2>
+          <p>다중 축, 선·영역·바·스플라인·계단형 렌더러, 결측치, 고저 밴드, 로그/asinh 스케일, 동기화 커서, 플러그인 기반 OHLC, 실시간 갱신, 대용량 데이터 처리와 주요 런타임 API를 수산 운영 데이터 예시로 구성했다.</p>
+          <div class="chips">
+            <span class="chip">Multiple Scales</span><span class="chip">Bands</span><span class="chip">Missing Data</span>
+            <span class="chip">Spline / Steps / Bars</span><span class="chip">Cursor Sync</span><span class="chip">Hooks</span>
+            <span class="chip">Plugins</span><span class="chip">Streaming</span><span class="chip">100K+ Points</span>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="status-line"><span class="status-label">라이브러리</span><span class="status-value" id="libStatus"><span class="status-dot"></span>불러오는 중</span></div>
+          <div class="status-line"><span class="status-label">로드 경로</span><span class="status-value" id="loadSource">확인 중</span></div>
+          <div class="status-line"><span class="status-label">차트 인스턴스</span><span class="status-value" id="chartCount">0</span></div>
+          <div class="status-line"><span class="status-label">실시간 갱신</span><span class="status-value" id="streamStatus">2 Hz</span></div>
+          <div class="status-line"><span class="status-label">시간대</span><span class="status-value">Asia/Seoul</span></div>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-label">최근 어획량</div><div class="kpi-value" id="kpiCatch">-</div><div class="kpi-meta">5분 간격 시뮬레이션</div></div>
+        <div class="kpi"><div class="kpi-label">평균 위판가</div><div class="kpi-value" id="kpiPrice">-</div><div class="kpi-meta">원/kg</div></div>
+        <div class="kpi"><div class="kpi-label">표층 수온</div><div class="kpi-value" id="kpiTemp">-</div><div class="kpi-meta">결측 구간 포함</div></div>
+        <div class="kpi"><div class="kpi-label">대용량 렌더</div><div class="kpi-value" id="kpiRender">-</div><div class="kpi-meta" id="kpiRenderMeta">100,000 points</div></div>
+      </div>
+
+      <section id="overview">
+        <div class="section-head">
+          <div><h3>01. 종합 시계열 대시보드</h3><p>다중 Y축, 영역 채움, 허용 밴드, 결측치, 사용자 툴팁, 임계선, 이벤트 주석, 줌·팬</p></div>
+          <div class="section-actions">
+            <div class="seg" id="rangeSeg">
+              <button data-hours="1">1H</button><button data-hours="6">6H</button><button data-hours="12">12H</button><button data-hours="24" class="active">ALL</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="metrics-row">
+            <span class="metric-pill">X축: <b>시간</b></span>
+            <span class="metric-pill">Y축: <b>kg · 원/kg · ℃</b></span>
+            <span class="metric-pill">드래그: <b>선택 확대</b></span>
+            <span class="metric-pill">휠: <b>확대/이동</b></span>
+          </div>
+          <div id="overviewChart" class="chart-host tall"></div>
+        </div>
+      </section>
+
+      <section id="paths">
+        <div class="section-head"><div><h3>02. 렌더링 방식 비교</h3><p>동일한 정렬 데이터에 선형·스플라인·계단형·막대·포인트 렌더러 적용</p></div></div>
+        <div class="card">
+          <div id="pathsChart" class="chart-host"></div>
+        </div>
+      </section>
+
+      <section id="sync">
+        <div class="section-head"><div><h3>03. 커서·범위 동기화</h3><p>서로 다른 차트의 커서, 범례 초점, X축 범위를 동일 sync key로 연결</p></div></div>
+        <div class="card"><div id="syncCpu" class="chart-host spark"></div></div>
+        <div class="card"><div id="syncRam" class="chart-host spark"></div></div>
+        <div class="card"><div id="syncNet" class="chart-host spark"></div></div>
+      </section>
+
+      <section id="scales">
+        <div class="section-head"><div><h3>04. 특수 스케일</h3><p>로그 분포와 음수·0·양수를 함께 표현하는 inverse hyperbolic sine 분포</p></div></div>
+        <div class="two-col">
+          <div class="card"><div class="card-title"><strong>Log10 scale</strong><span class="hint">1 → 1,000,000</span></div><div id="logChart" class="chart-host small"></div></div>
+          <div class="card"><div class="card-title"><strong>Asinh scale</strong><span class="hint">음수·0·양수</span></div><div id="asinhChart" class="chart-host small"></div></div>
+        </div>
+      </section>
+
+      <section id="gaps">
+        <div class="section-head"><div><h3>05. 결측치·고저 밴드·이동평균</h3><p>null 구간 단절/연결 비교, 예측 상·하한 밴드, 외부 전처리 이동평균</p></div></div>
+        <div class="card"><div id="gapChart" class="chart-host"></div></div>
+      </section>
+
+      <section id="ohlc">
+        <div class="section-head"><div><h3>06. OHLC 캔들 플러그인</h3><p>draw 훅과 Canvas API로 캔들·심지 구현, 거래량은 bars path renderer로 중첩</p></div></div>
+        <div class="card"><div id="ohlcChart" class="chart-host tall"></div></div>
+      </section>
+
+      <section id="stream">
+        <div class="section-head">
+          <div><h3>07. 실시간 스트리밍</h3><p>setData 기반 2Hz 업데이트, 고정 lookback, pxAlign 해제, 이동평균 동시 갱신</p></div>
+          <div class="section-actions"><button class="btn" id="streamBurstBtn">10회 즉시 갱신</button></div>
+        </div>
+        <div class="card">
+          <div class="metrics-row">
+            <span class="metric-pill">갱신 횟수: <b id="streamUpdates">0</b></span>
+            <span class="metric-pill">최근 값: <b id="streamLatest">-</b></span>
+            <span class="metric-pill">Lookback: <b>180 points</b></span>
+          </div>
+          <div id="streamChart" class="chart-host"></div>
+        </div>
+      </section>
+
+      <section id="performance">
+        <div class="section-head">
+          <div><h3>08. 대용량 데이터 성능</h3><p>TypedArray 기반 숫자 X축, 포인트 비표시, 생성·setData·렌더 소요시간 측정</p></div>
+          <div class="section-actions">
+            <select id="pointCount"><option value="10000">10,000 points</option><option value="100000" selected>100,000 points</option><option value="250000">250,000 points</option></select>
+            <button class="btn primary" id="perfRunBtn">성능 테스트</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="metrics-row">
+            <span class="metric-pill">데이터 생성: <b id="perfGen">-</b></span>
+            <span class="metric-pill">차트 생성/setData: <b id="perfRender">-</b></span>
+            <span class="metric-pill">메모리 추정: <b id="perfMemory">-</b></span>
+          </div>
+          <div id="perfChart" class="chart-host"></div>
+        </div>
+      </section>
+
+      <section id="api">
+        <div class="section-head"><div><h3>09. 런타임 API 플레이그라운드</h3><p>addSeries, delSeries, setData, setScale, setSelect, setCursor, setSeries, batch와 hooks 로그</p></div></div>
+        <div class="two-col">
+          <div class="card">
+            <div class="inline-controls" style="margin-bottom:10px">
+              <button class="btn" id="apiAdd">계열 추가</button>
+              <button class="btn danger" id="apiDel">마지막 계열 삭제</button>
+              <button class="btn" id="apiToggle">1번 계열 토글</button>
+              <button class="btn" id="apiSelect">선택 영역 표시</button>
+              <button class="btn" id="apiCursor">커서 이동</button>
+              <button class="btn" id="apiBatch">batch 확대</button>
+              <button class="btn" id="apiReset">초기화</button>
+            </div>
+            <div id="apiChart" class="chart-host"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><strong>Hook 이벤트 로그</strong><button class="btn" id="clearLog">지우기</button></div>
+            <div id="hookLog" class="log-panel" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="coverage">
+        <div class="section-head"><div><h3>10. 구현 기능 매핑</h3><p>이 샘플에서 확인 가능한 uPlot 핵심 기능과 위치</p></div></div>
+        <div class="card">
+          <div class="feature-grid">
+            <div class="feature-item"><strong>정렬형 열 데이터</strong><span>[x[], y1[], y2[]] 구조와 TypedArray</span></div>
+            <div class="feature-item"><strong>다중 계열·범례</strong><span>범례 클릭 토글, 현재 커서 값 표시</span></div>
+            <div class="feature-item"><strong>다중 스케일·축</strong><span>kg, 원/kg, ℃ 및 독립 우측 축</span></div>
+            <div class="feature-item"><strong>렌더러</strong><span>linear, spline, stepped, bars, points</span></div>
+            <div class="feature-item"><strong>밴드</strong><span>series 간 high/low 범위 채움</span></div>
+            <div class="feature-item"><strong>결측치</strong><span>null 단절과 spanGaps 연결 비교</span></div>
+            <div class="feature-item"><strong>특수 분포</strong><span>linear, log10, asinh</span></div>
+            <div class="feature-item"><strong>커서 동기화</strong><span>여러 차트의 위치·X범위 공유</span></div>
+            <div class="feature-item"><strong>줌·팬</strong><span>기본 drag zoom + wheel plugin</span></div>
+            <div class="feature-item"><strong>사용자 툴팁</strong><span>setCursor hook과 외부 DOM</span></div>
+            <div class="feature-item"><strong>Canvas 주석</strong><span>draw hook 임계선·이벤트 표시</span></div>
+            <div class="feature-item"><strong>OHLC 플러그인</strong><span>커스텀 캔들 렌더링</span></div>
+            <div class="feature-item"><strong>스트리밍</strong><span>setData로 고정 길이 실시간 갱신</span></div>
+            <div class="feature-item"><strong>반응형</strong><span>ResizeObserver + setSize</span></div>
+            <div class="feature-item"><strong>런타임 API</strong><span>계열·스케일·선택·커서 동적 제어</span></div>
+            <div class="feature-item"><strong>내보내기</strong><span>주요 데이터 CSV 및 Canvas PNG</span></div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        uPlot는 MIT 라이선스의 Canvas 2D 기반 시계열 차트 라이브러리다. 이 파일은 먼저 같은 폴더의 <b>uPlot.iife.min.js</b>를 찾고, 없으면 고정 버전 CDN을 순차적으로 시도한다. uPlot 자체는 데이터 파싱·집계·애니메이션을 내장하지 않으므로 이동평균 등은 샘플 코드에서 사전 계산한다.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const LIB_VERSION = "1.6.32";
+    const scriptCandidates = [
+      {src: "./uPlot.iife.min.js", label: "동일 폴더 로컬 파일"},
+      {src: `https://cdn.jsdelivr.net/npm/uplot@${LIB_VERSION}/dist/uPlot.iife.min.js`, label: "jsDelivr CDN"},
+      {src: `https://unpkg.com/uplot@${LIB_VERSION}/dist/uPlot.iife.min.js`, label: "unpkg CDN"},
+    ];
+
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+    const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const round = (v, d = 1) => Number(v.toFixed(d));
+    const fmt = new Intl.NumberFormat("ko-KR");
+    const fmt1 = new Intl.NumberFormat("ko-KR", {maximumFractionDigits: 1});
+    const formatTime = ts => new Intl.DateTimeFormat("ko-KR", {timeZone:"Asia/Seoul", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false}).format(new Date(ts * 1000));
+    const compact = v => new Intl.NumberFormat("ko-KR", {notation:"compact", maximumFractionDigits:1}).format(v);
+
+    const state = {
+      charts: [],
+      chartMeta: [],
+      mainData: null,
+      mainPlot: null,
+      streamPlot: null,
+      streamData: null,
+      streamTimer: null,
+      streamRunning: true,
+      streamUpdates: 0,
+      perfPlot: null,
+      apiPlot: null,
+      apiData: null,
+      apiInitialX: null,
+      loadSource: "",
+      seed: 20260713,
+    };
+
+    function loadScript({src, label}) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        const timeoutMs = src.startsWith(".") ? 1800 : 7000;
+        let settled = false;
+        const finish = (ok, error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (!ok) s.remove();
+          ok ? resolve(label) : reject(error);
+        };
+        const timer = setTimeout(() => finish(false, new Error(`로드 시간 초과: ${src}`)), timeoutMs);
+        s.src = src;
+        s.async = true;
+        s.onload = () => finish(Boolean(window.uPlot), new Error("uPlot global 없음"));
+        s.onerror = () => finish(false, new Error(src));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function loadUPlot() {
+      if (window.uPlot) return "기존 전역 객체";
+      for (const item of scriptCandidates) {
+        try { return await loadScript(item); }
+        catch (err) { /* 다음 후보 */ }
+      }
+      throw new Error("모든 uPlot 로드 경로 실패");
+    }
+
+    function seeded(seed) {
+      let s = seed >>> 0;
+      return () => {
+        s += 0x6D2B79F5;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function noise(rand, amplitude = 1) { return (rand() - .5) * 2 * amplitude; }
+    function movingAverage(values, windowSize = 8) {
+      const out = new Array(values.length).fill(null);
+      let sum = 0, count = 0;
+      const q = [];
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
+        q.push(v);
+        if (v != null) { sum += v; count++; }
+        if (q.length > windowSize) {
+          const old = q.shift();
+          if (old != null) { sum -= old; count--; }
+        }
+        out[i] = count ? sum / count : null;
+      }
+      return out;
+    }
+
+    function axisBase(extra = {}) {
+      return Object.assign({
+        stroke: () => css("--muted"),
+        font: "11px Inter, system-ui, sans-serif",
+        grid: {show: true, stroke: () => css("--grid"), width: 1},
+        ticks: {show: true, stroke: () => css("--grid"), width: 1, size: 5},
+        gap: 7,
+      }, extra);
+    }
+
+    function tooltipPlugin({date = true, skip = [], titleFormatter = null} = {}) {
+      let tip;
+      function init(u) {
+        tip = document.createElement("div");
+        tip.className = "tooltip";
+        u.over.appendChild(tip);
+      }
+      function update(u) {
+        const idx = u.cursor.idx;
+        if (idx == null || idx < 0) { if (tip) tip.style.display = "none"; return; }
+        const x = u.data[0][idx];
+        let html = `<div class="tt-date">${titleFormatter ? titleFormatter(x, idx, u) : (date ? formatTime(x) : `X = ${fmt1.format(x)}`)}</div>`;
+        for (let i = 1; i < u.series.length; i++) {
+          if (skip.includes(i) || !u.series[i].show) continue;
+          const val = u.data[i]?.[idx];
+          const label = u.series[i].label || `Series ${i}`;
+          const stroke = typeof u.series[i].stroke === "function" ? u.series[i].stroke(u, i) : u.series[i].stroke;
+          const shown = val == null ? "결측" : (typeof u.series[i].value === "function" ? u.series[i].value(u, val, i, idx) : fmt1.format(val));
+          html += `<div class="tt-row"><span class="tt-key"><i class="dot" style="background:${stroke || css('--primary')}"></i>${label}</span><b>${shown}</b></div>`;
+        }
+        tip.innerHTML = html;
+        tip.style.display = "block";
+        const left = clamp((u.cursor.left ?? 0) + 14, 6, Math.max(6, u.over.clientWidth - tip.offsetWidth - 6));
+        const top = clamp((u.cursor.top ?? 0) + 14, 6, Math.max(6, u.over.clientHeight - tip.offsetHeight - 6));
+        tip.style.transform = `translate(${left}px, ${top}px)`;
+      }
+      return { hooks: { init: [init], setCursor: [update], setSeries: [update] } };
+    }
+
+    function wheelZoomPlugin({factor = .82} = {}) {
+      let over, wheel, dbl;
+      function ready(u) {
+        over = u.over;
+        wheel = e => {
+          e.preventDefault();
+          const min = u.scales.x.min, max = u.scales.x.max;
+          if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+          const range = max - min;
+          if (e.shiftKey) {
+            const shift = range * (e.deltaY > 0 ? .11 : -.11);
+            const fullMin = u.data[0][0], fullMax = u.data[0][u.data[0].length - 1];
+            let nextMin = min + shift, nextMax = max + shift;
+            if (nextMin < fullMin) { nextMax += fullMin - nextMin; nextMin = fullMin; }
+            if (nextMax > fullMax) { nextMin -= nextMax - fullMax; nextMax = fullMax; }
+            u.setScale("x", {min: nextMin, max: nextMax});
+          } else {
+            const rect = u.over.getBoundingClientRect();
+            const cursorVal = u.posToVal(e.clientX - rect.left, "x");
+            const scale = e.deltaY < 0 ? factor : 1 / factor;
+            const nextRange = clamp(range * scale, (u.data[0][1] - u.data[0][0]) * 5, (u.data[0][u.data[0].length - 1] - u.data[0][0]));
+            const pct = (cursorVal - min) / range;
+            let nextMin = cursorVal - nextRange * pct;
+            let nextMax = nextMin + nextRange;
+            const fullMin = u.data[0][0], fullMax = u.data[0][u.data[0].length - 1];
+            if (nextMin < fullMin) { nextMax += fullMin - nextMin; nextMin = fullMin; }
+            if (nextMax > fullMax) { nextMin -= nextMax - fullMax; nextMax = fullMax; }
+            u.setScale("x", {min: nextMin, max: nextMax});
+          }
+        };
+        dbl = () => resetPlotX(u);
+        over.addEventListener("wheel", wheel, {passive:false});
+        over.addEventListener("dblclick", dbl);
+      }
+      function destroy() {
+        over?.removeEventListener("wheel", wheel);
+        over?.removeEventListener("dblclick", dbl);
+      }
+      return { hooks: { ready: [ready], destroy: [destroy] } };
+    }
+
+    function annotationPlugin({lines = [], events = []} = {}) {
+      function draw(u) {
+        const {ctx, bbox} = u;
+        const ratio = window.devicePixelRatio || 1;
+        ctx.save();
+        ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height);
+        ctx.clip();
+        ctx.font = `${10 * ratio}px Inter, system-ui, sans-serif`;
+        ctx.textBaseline = "bottom";
+
+        for (const line of lines) {
+          const y = Math.round(u.valToPos(line.value, line.scale, true));
+          if (y < bbox.top || y > bbox.top + bbox.height) continue;
+          ctx.beginPath();
+          ctx.setLineDash((line.dash || [5,4]).map(v => v * ratio));
+          ctx.strokeStyle = line.color;
+          ctx.lineWidth = 1 * ratio;
+          ctx.moveTo(bbox.left, y);
+          ctx.lineTo(bbox.left + bbox.width, y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = line.color;
+          ctx.fillText(line.label, bbox.left + 7 * ratio, y - 3 * ratio);
+        }
+
+        for (const ev of events) {
+          const x = Math.round(u.valToPos(ev.x, "x", true));
+          if (x < bbox.left || x > bbox.left + bbox.width) continue;
+          ctx.beginPath();
+          ctx.setLineDash([3 * ratio, 4 * ratio]);
+          ctx.strokeStyle = ev.color || css("--purple");
+          ctx.lineWidth = 1 * ratio;
+          ctx.moveTo(x, bbox.top);
+          ctx.lineTo(x, bbox.top + bbox.height);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.save();
+          ctx.translate(x + 4 * ratio, bbox.top + 8 * ratio);
+          ctx.rotate(Math.PI / 2);
+          ctx.fillStyle = ev.color || css("--purple");
+          ctx.textBaseline = "top";
+          ctx.fillText(ev.label, 0, 0);
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+      return {hooks: {draw: [draw]}};
+    }
+
+    function ohlcPlugin({openIdx=1, highIdx=2, lowIdx=3, closeIdx=4} = {}) {
+      function draw(u) {
+        const {ctx, bbox} = u;
+        const xs = u.data[0], open = u.data[openIdx], high = u.data[highIdx], low = u.data[lowIdx], close = u.data[closeIdx];
+        const ratio = window.devicePixelRatio || 1;
+        const i0 = Math.max(0, u.valToIdx(u.scales.x.min));
+        const i1 = Math.min(xs.length - 1, u.valToIdx(u.scales.x.max) + 1);
+        const spacing = xs.length > 1 ? Math.abs(u.valToPos(xs[Math.min(i0 + 1, xs.length - 1)], "x", true) - u.valToPos(xs[i0], "x", true)) : 10 * ratio;
+        const bodyW = Math.max(2 * ratio, Math.min(12 * ratio, spacing * .62));
+
+        ctx.save();
+        ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height);
+        ctx.clip();
+        for (let i = i0; i <= i1; i++) {
+          const o = open[i], h = high[i], l = low[i], c = close[i];
+          if ([o,h,l,c].some(v => v == null)) continue;
+          const x = Math.round(u.valToPos(xs[i], "x", true));
+          const yo = Math.round(u.valToPos(o, "price", true));
+          const yh = Math.round(u.valToPos(h, "price", true));
+          const yl = Math.round(u.valToPos(l, "price", true));
+          const yc = Math.round(u.valToPos(c, "price", true));
+          const up = c >= o;
+          const color = up ? css("--green") : css("--red");
+          ctx.strokeStyle = color;
+          ctx.fillStyle = up ? color + "55" : color;
+          ctx.lineWidth = 1 * ratio;
+          ctx.beginPath(); ctx.moveTo(x, yh); ctx.lineTo(x, yl); ctx.stroke();
+          const top = Math.min(yo, yc), height = Math.max(1.2 * ratio, Math.abs(yc - yo));
+          ctx.fillRect(x - bodyW / 2, top, bodyW, height);
+          ctx.strokeRect(x - bodyW / 2, top, bodyW, height);
+        }
+        ctx.restore();
+      }
+      return {hooks: {draw: [draw]}};
+    }
+
+    function hookLoggerPlugin() {
+      let lastCursor = 0;
+      return {hooks: {
+        ready: [u => logHook("ready", `size=${u.width}×${u.height}`)],
+        setScale: [(u, key) => logHook("setScale", `${key}: ${fmt1.format(u.scales[key].min)} ~ ${fmt1.format(u.scales[key].max)}`)],
+        setData: [u => logHook("setData", `${u.data[0].length} points, ${u.series.length - 1} series`)],
+        setSeries: [(u, idx) => logHook("setSeries", `#${idx} show=${u.series[idx]?.show}`)],
+        setSelect: [u => logHook("setSelect", `left=${round(u.select.left,0)}, width=${round(u.select.width,0)}`)],
+        setCursor: [u => { const now = performance.now(); if (now - lastCursor > 450) { lastCursor = now; logHook("setCursor", `idx=${u.cursor.idx}`); } }],
+        destroy: [() => logHook("destroy", "instance removed")],
+      }};
+    }
+
+    function registerPlot(plot, host, height) {
+      state.charts.push(plot);
+      const ro = new ResizeObserver(() => {
+        const width = Math.floor(host.clientWidth);
+        if (width > 120 && Math.abs(plot.width - width) > 2) plot.setSize({width, height});
+      });
+      ro.observe(host);
+      state.chartMeta.push({plot, host, height, ro});
+      $("#chartCount").textContent = fmt.format(state.charts.length);
+      return plot;
+    }
+
+    function createPlot(hostId, opts, data, height = 300) {
+      const host = typeof hostId === "string" ? document.getElementById(hostId) : hostId;
+      host.innerHTML = "";
+      const width = Math.max(320, Math.floor(host.clientWidth || 800));
+      const plot = new uPlot({...opts, width, height}, data, host);
+      return registerPlot(plot, host, height);
+    }
+
+    function resetPlotX(u) {
+      const x = u.data[0];
+      if (x?.length > 1) u.setScale("x", {min: x[0], max: x[x.length - 1]});
+    }
+
+    function makeMainData(seed = state.seed) {
+      const rand = seeded(seed);
+      const n = 289;
+      const step = 300;
+      const now = Math.floor(Date.now() / 1000 / step) * step;
+      const start = now - (n - 1) * step;
+      const x=[], low=[], high=[], catchKg=[], price=[], temp=[];
+      let catchBase = 165, priceBase = 9800, tempBase = 16.3;
+      for (let i=0; i<n; i++) {
+        const t = start + i * step;
+        catchBase += noise(rand, 4.3) + Math.sin(i/13) * .4;
+        catchBase = clamp(catchBase, 90, 255);
+        priceBase += noise(rand, 90) - (catchBase - 170) * .6;
+        priceBase = clamp(priceBase, 7200, 12800);
+        tempBase += noise(rand, .055) + Math.sin(i/38) * .008;
+        tempBase = clamp(tempBase, 14.2, 19.5);
+        const c = catchBase + Math.sin(i/7) * 8;
+        x.push(t);
+        catchKg.push(round(c,1));
+        low.push(round(c - 18 - rand()*7,1));
+        high.push(round(c + 20 + rand()*8,1));
+        price.push(round(priceBase,0));
+        temp.push(i >= 126 && i <= 138 ? null : round(tempBase,2));
+      }
+      return [x, low, high, catchKg, price, temp];
+    }
+
+    function buildOverview() {
+      state.mainData = makeMainData(state.seed);
+      const x = state.mainData[0];
+      const events = [
+        {x:x[72], label:"기상특보", color:css("--purple")},
+        {x:x[178], label:"양륙 시작", color:css("--cyan")},
+        {x:x[238], label:"가격 급등", color:css("--orange")},
+      ];
+      const opts = {
+        title: "어획·위판·해양환경 통합 모니터링",
+        tzDate: ts => uPlot.tzDate(new Date(ts * 1000), "Asia/Seoul"),
+        padding: [8, 8, 0, 0],
+        scales: {
+          x: {time:true},
+          kg: {auto:true, range:(u,min,max)=>uPlot.rangeNum(min,max,{min:{pad:.12,soft:70,mode:3},max:{pad:.12,soft:280,mode:3}})},
+          price: {auto:true},
+          temp: {auto:true, range:[13.5,20.5]},
+        },
+        axes: [
+          axisBase({space:70, values:(u, vals)=>vals.map(v=>new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(v*1000)))}),
+          axisBase({scale:"kg", label:"어획량 (kg)", size:64, values:(u,v)=>v.map(n=>fmt.format(Math.round(n)))}),
+          axisBase({scale:"price", side:1, label:"원/kg", size:76, stroke:()=>css("--orange"), grid:{show:false}, ticks:{stroke:()=>css("--orange")}, values:(u,v)=>v.map(n=>compact(n))}),
+          axisBase({scale:"temp", side:1, label:"수온 ℃", size:60, stroke:()=>css("--cyan"), grid:{show:false}, ticks:{stroke:()=>css("--cyan")}, values:(u,v)=>v.map(n=>n.toFixed(1))}),
+        ],
+        series: [
+          {label:"시간", value:(u,v)=>formatTime(v)},
+          {label:"허용 하한", scale:"kg", stroke:()=>"rgba(37,99,235,.25)", width:1, dash:[3,4], points:{show:false}, value:(u,v)=>`${fmt1.format(v)} kg`},
+          {label:"허용 상한", scale:"kg", stroke:()=>"rgba(37,99,235,.25)", width:1, dash:[3,4], points:{show:false}, value:(u,v)=>`${fmt1.format(v)} kg`},
+          {label:"어획량", scale:"kg", stroke:()=>css("--primary"), fill:()=>css("--primary-soft"), width:2, points:{show:false}, value:(u,v)=>`${fmt1.format(v)} kg`},
+          {label:"평균가", scale:"price", stroke:()=>css("--orange"), width:2, points:{show:false}, value:(u,v)=>`${fmt.format(Math.round(v))} 원/kg`},
+          {label:"수온", scale:"temp", stroke:()=>css("--cyan"), width:2, dash:[7,4], spanGaps:false, points:{show:true,size:5,space:14,fill:()=>css("--surface")}, value:(u,v)=>`${fmt1.format(v)} ℃`},
+        ],
+        bands: [{series:[2,1], fill:()=>"rgba(37,99,235,.09)"}],
+        cursor: {drag:{x:true,y:false,setScale:true}, focus:{prox:22}, points:{size:7}},
+        focus: {alpha:.22},
+        plugins: [
+          tooltipPlugin({skip:[1,2]}),
+          wheelZoomPlugin(),
+          annotationPlugin({
+            lines:[{scale:"temp",value:18.5,label:"고수온 주의 18.5℃",color:css("--red")},{scale:"price",value:11500,label:"고가 기준 11,500원",color:css("--orange")}],
+            events,
+          }),
+        ],
+      };
+      state.mainPlot = createPlot("overviewChart", opts, state.mainData, 390);
+      updateKpis();
+    }
+
+    function buildPaths() {
+      const x = Array.from({length:34}, (_,i)=>i+1);
+      const rand = seeded(440);
+      const linear=x.map((_,i)=>45+Math.sin(i/3.2)*14+noise(rand,4));
+      const spline=x.map((_,i)=>68+Math.cos(i/4.4)*10+noise(rand,3));
+      const stepped=x.map((_,i)=>25+Math.floor(i/5)*5+noise(rand,2));
+      const bars=x.map((_,i)=>10+rand()*18);
+      const points=x.map((_,i)=>55+Math.sin(i/2.1)*22+noise(rand,5));
+      createPlot("pathsChart", {
+        title:"Path renderer comparison",
+        scales:{x:{time:false},y:{range:[0,100]}},
+        axes:[axisBase({label:"샘플 번호"}),axisBase({label:"값"})],
+        series:[
+          {label:"X"},
+          {label:"Linear",stroke:()=>css("--primary"),width:2,paths:uPlot.paths.linear(),points:{show:false}},
+          {label:"Spline",stroke:()=>css("--purple"),width:2,paths:uPlot.paths.spline(),points:{show:false}},
+          {label:"Stepped",stroke:()=>css("--cyan"),width:2,paths:uPlot.paths.stepped({align:1}),points:{show:false}},
+          {label:"Bars",stroke:()=>css("--orange"),fill:()=>"rgba(217,119,6,.30)",paths:uPlot.paths.bars({size:[.62,32],radius:.18}),points:{show:false}},
+          {label:"Points",stroke:()=>css("--green"),paths:()=>null,points:{show:true,size:7,space:0,fill:()=>css("--surface"),width:2}},
+        ],
+        cursor:{focus:{prox:18},drag:{x:true,y:false}}, focus:{alpha:.18}, plugins:[tooltipPlugin({date:false}),wheelZoomPlugin()],
+      }, [x,linear,spline,stepped,bars,points], 300);
+    }
+
+    function buildSync() {
+      const rand = seeded(990);
+      const n=150, step=30, now=Math.floor(Date.now()/1000/step)*step, start=now-(n-1)*step;
+      const x=[],cpu=[],ram=[],net=[];
+      for(let i=0;i<n;i++){
+        x.push(start+i*step);
+        cpu.push(clamp(44+Math.sin(i/8)*20+noise(rand,8)+(i>98&&i<112?24:0),2,99));
+        ram.push(clamp(58+Math.sin(i/19)*8+noise(rand,2),20,92));
+        net.push(Math.max(0,18+Math.sin(i/5)*13+rand()*18+(i%41===0?58:0)));
+      }
+      const common = (title,color,scaleRange,showX,bar=false) => ({
+        title,
+        scales:{x:{time:true},y:{range:scaleRange}},
+        axes:[axisBase({show:showX,space:80}),axisBase({size:52,values:(u,v)=>v.map(n=>Math.round(n))})],
+        series:[{label:"시간"},{label:title,stroke:()=>color(),fill:()=>bar?color()+"44":color()+"18",width:2,paths:bar?uPlot.paths.bars({size:[.72,18],radius:.15}):uPlot.paths.linear(),points:{show:false}}],
+        legend:{show:true},
+        cursor:{sync:{key:"ops-sync",setSeries:true,scales:["x",null]},drag:{x:true,y:false},focus:{prox:30}},
+        focus:{alpha:.25}, plugins:[wheelZoomPlugin()],
+      });
+      createPlot("syncCpu",common("CPU %",()=>css("--red"),[0,100],false),[x,cpu],145);
+      createPlot("syncRam",common("Memory %",()=>css("--purple"),[0,100],false),[x,ram],145);
+      createPlot("syncNet",common("Network MB/s",()=>css("--cyan"),[0,100],true,true),[x,net],165);
+    }
+
+    function buildScales() {
+      const x=Array.from({length:25},(_,i)=>i+1);
+      const log=x.map((_,i)=>Math.pow(10,i/4));
+      createPlot("logChart",{
+        scales:{x:{time:false},y:{distr:3,log:10,range:(u,min,max)=>uPlot.rangeLog(min,max,10,false)}},
+        axes:[axisBase(),axisBase({values:(u,v)=>v.map(compact),size:58})],
+        series:[{label:"X"},{label:"지수값",stroke:()=>css("--primary"),fill:()=>css("--primary-soft"),width:2,points:{show:true,size:5,space:0}}],
+        cursor:{drag:{x:true,y:false}},plugins:[tooltipPlugin({date:false}),wheelZoomPlugin()],
+      },[x,log],240);
+
+      const x2=Array.from({length:81},(_,i)=>i-40);
+      const signed=x2.map(v=>Math.sign(v)*Math.pow(Math.abs(v),2.25));
+      createPlot("asinhChart",{
+        scales:{x:{time:false},y:{distr:4,asinh:10}},
+        axes:[axisBase(),axisBase({values:(u,v)=>v.map(n=>compact(n)),size:62})],
+        series:[{label:"X"},{label:"Signed",stroke:()=>css("--purple"),fill:()=>"rgba(124,58,237,.10)",width:2,points:{show:false}}],
+        cursor:{drag:{x:true,y:false}},plugins:[tooltipPlugin({date:false}),wheelZoomPlugin(),annotationPlugin({lines:[{scale:"y",value:0,label:"zero",color:css("--muted")}]})],
+      },[x2,signed],240);
+    }
+
+    function buildGaps() {
+      const rand=seeded(321),n=120,step=600,now=Math.floor(Date.now()/1000/step)*step,start=now-(n-1)*step;
+      const x=[],raw=[],span=[],avg=[],lo=[],hi=[];
+      let base=50;
+      for(let i=0;i<n;i++){
+        x.push(start+i*step); base+=noise(rand,2.2); const v=base+Math.sin(i/9)*12;
+        const gap=(i>=28&&i<=36)||(i>=74&&i<=80);
+        raw.push(gap?null:v); span.push(gap?null:v+5); lo.push(v-9-rand()*3); hi.push(v+10+rand()*3);
+      }
+      avg.push(...movingAverage(raw,10));
+      createPlot("gapChart",{
+        scales:{x:{time:true},y:{range:[15,95]}},axes:[axisBase({space:80}),axisBase({label:"관측값"})],
+        series:[
+          {label:"시간"},
+          {label:"예측 하한",stroke:()=>"rgba(37,99,235,.22)",dash:[3,3],points:{show:false}},
+          {label:"예측 상한",stroke:()=>"rgba(37,99,235,.22)",dash:[3,3],points:{show:false}},
+          {label:"결측 단절",stroke:()=>css("--red"),width:2,spanGaps:false,points:{show:true,size:5,space:10}},
+          {label:"결측 연결",stroke:()=>css("--cyan"),width:2,spanGaps:true,dash:[7,4],points:{show:false}},
+          {label:"10구간 이동평균",stroke:()=>css("--green"),width:3,points:{show:false}},
+        ],
+        bands:[{series:[2,1],fill:()=>"rgba(37,99,235,.10)"}],
+        cursor:{drag:{x:true,y:false},focus:{prox:20}},focus:{alpha:.2},plugins:[tooltipPlugin({skip:[1,2]}),wheelZoomPlugin()],
+      },[x,lo,hi,raw,span,avg],300);
+    }
+
+    function buildOHLC() {
+      const rand=seeded(744),n=78,step=3600,now=Math.floor(Date.now()/1000/step)*step,start=now-(n-1)*step;
+      const x=[],open=[],high=[],low=[],close=[],volume=[];
+      let prev=10400;
+      for(let i=0;i<n;i++){
+        const o=prev+noise(rand,120), c=o+noise(rand,330), h=Math.max(o,c)+rand()*260, l=Math.min(o,c)-rand()*260;
+        x.push(start+i*step); open.push(o);high.push(h);low.push(l);close.push(c);volume.push(30+rand()*80+Math.abs(c-o)/8);prev=c;
+      }
+      createPlot("ohlcChart",{
+        title:"모의 수산물 시간대별 OHLC · 거래량",
+        drawOrder:["axes","series"],
+        scales:{x:{time:true},price:{auto:true},vol:{range:(u,min,max)=>[0,max*4.5]}},
+        axes:[axisBase({space:85}),axisBase({scale:"price",label:"가격 (원/kg)",size:74,values:(u,v)=>v.map(n=>fmt.format(Math.round(n)))}),axisBase({scale:"vol",side:1,label:"거래량",size:58,grid:{show:false},values:(u,v)=>v.map(n=>Math.round(n))})],
+        series:[
+          {label:"시간"},
+          {label:"시가",scale:"price",stroke:()=>"transparent",paths:()=>null,points:{show:false},value:(u,v)=>`${fmt.format(Math.round(v))}원`},
+          {label:"고가",scale:"price",stroke:()=>"transparent",paths:()=>null,points:{show:false},value:(u,v)=>`${fmt.format(Math.round(v))}원`},
+          {label:"저가",scale:"price",stroke:()=>"transparent",paths:()=>null,points:{show:false},value:(u,v)=>`${fmt.format(Math.round(v))}원`},
+          {label:"종가",scale:"price",stroke:()=>"transparent",paths:()=>null,points:{show:false},value:(u,v)=>`${fmt.format(Math.round(v))}원`},
+          {label:"거래량",scale:"vol",stroke:()=>css("--muted"),fill:()=>"rgba(100,116,139,.24)",paths:uPlot.paths.bars({size:[.68,14],radius:.08}),points:{show:false},value:(u,v)=>fmt.format(Math.round(v))},
+        ],
+        cursor:{drag:{x:true,y:false}},plugins:[tooltipPlugin(),wheelZoomPlugin(),ohlcPlugin()],
+      },[x,open,high,low,close,volume],390);
+    }
+
+    function makeStreamData() {
+      const rand=seeded(838),n=180,step=.5,now=Date.now()/1000,start=now-(n-1)*step;
+      const x=[],signal=[];
+      for(let i=0;i<n;i++){x.push(start+i*step);signal.push(50+Math.sin(i/9)*14+noise(rand,5));}
+      return [x,signal,movingAverage(signal,12)];
+    }
+
+    function buildStream() {
+      state.streamData=makeStreamData();
+      state.streamPlot=createPlot("streamChart",{
+        scales:{x:{time:true},y:{range:[20,82]}},pxAlign:false,
+        axes:[axisBase({space:90,values:(u,v)=>v.map(n=>new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",minute:"2-digit",second:"2-digit"}).format(new Date(n*1000)))}),axisBase({label:"센서 값"})],
+        series:[{label:"시간"},{label:"실시간 신호",stroke:()=>css("--cyan"),width:1.7,points:{show:false}},{label:"이동평균",stroke:()=>css("--orange"),width:2.5,points:{show:false}}],
+        cursor:{drag:{x:true,y:false}},plugins:[tooltipPlugin(),wheelZoomPlugin()],
+      },state.streamData,290);
+      startStream();
+    }
+
+    function streamTick() {
+      if (!state.streamPlot || !state.streamData) return;
+      const [x,y]=state.streamData;
+      const last=y[y.length-1];
+      const next=clamp(last+(Math.random()-.5)*9+Math.sin(state.streamUpdates/8)*1.5,25,78);
+      x.push(Date.now()/1000); y.push(next); x.shift(); y.shift();
+      state.streamData=[x,y,movingAverage(y,12)];
+      state.streamPlot.setData(state.streamData,true);
+      state.streamUpdates++;
+      $("#streamUpdates").textContent=fmt.format(state.streamUpdates);
+      $("#streamLatest").textContent=fmt1.format(next);
+    }
+    function startStream(){clearInterval(state.streamTimer);state.streamTimer=setInterval(()=>{if(state.streamRunning)streamTick();},500);}
+    function setStreamRunning(running){
+      state.streamRunning=running;
+      $("#streamToggle").textContent=running?"실시간 일시정지":"실시간 재개";
+      $("#streamStatus").textContent=running?"2 Hz":"일시정지";
+    }
+
+    function makePerfData(n) {
+      const t0=performance.now();
+      const x=new Float64Array(n),a=new Float64Array(n),b=new Float64Array(n);
+      let v=0;
+      for(let i=0;i<n;i++){
+        x[i]=i; v+=(Math.random()-.5)*.6; a[i]=Math.sin(i*.006)*12+Math.sin(i*.0007)*28+v; b[i]=Math.cos(i*.004)*18+Math.sin(i*.0013)*15;
+      }
+      return {data:[x,a,b],ms:performance.now()-t0};
+    }
+
+    function runPerf(n=100000, initial=false) {
+      const made=makePerfData(n);
+      $("#perfGen").textContent=`${made.ms.toFixed(1)} ms`;
+      $("#perfMemory").textContent=`약 ${((n*3*8)/1024/1024).toFixed(1)} MB`;
+      let elapsed;
+      if (!state.perfPlot || initial) {
+        const t=performance.now();
+        state.perfPlot=createPlot("perfChart",{
+          scales:{x:{time:false}},axes:[axisBase({label:"index",values:(u,v)=>v.map(compact)}),axisBase({label:"value"})],
+          series:[{label:"X"},{label:"Signal A",stroke:()=>css("--primary"),width:1,points:{show:false}},{label:"Signal B",stroke:()=>css("--orange"),width:1,points:{show:false}}],
+          cursor:{drag:{x:true,y:false}},plugins:[wheelZoomPlugin()],
+        },made.data,300);
+        elapsed=performance.now()-t;
+      } else {
+        const t=performance.now(); state.perfPlot.setData(made.data,true); elapsed=performance.now()-t;
+      }
+      $("#perfRender").textContent=`${elapsed.toFixed(1)} ms`;
+      $("#kpiRender").textContent=`${elapsed.toFixed(1)} ms`;
+      $("#kpiRenderMeta").textContent=`${fmt.format(n)} points`;
+    }
+
+    function makeApiData() {
+      const x=Array.from({length:80},(_,i)=>i);
+      const y=x.map(i=>Math.sin(i/7)*20+50);
+      return [x,y];
+    }
+
+    function buildApi() {
+      state.apiData=makeApiData(); state.apiInitialX=[state.apiData[0][0],state.apiData[0].at(-1)];
+      state.apiPlot=createPlot("apiChart",{
+        scales:{x:{time:false},y:{range:[0,100]}},axes:[axisBase(),axisBase()],
+        series:[{label:"X"},{label:"기본 계열",stroke:()=>css("--primary"),width:2,points:{show:false}}],
+        cursor:{drag:{x:true,y:false}},plugins:[tooltipPlugin({date:false}),wheelZoomPlugin(),hookLoggerPlugin()],
+      },state.apiData,300);
+      logHook("info","버튼으로 런타임 API를 호출해 보세요.");
+    }
+
+    function logHook(type,msg) {
+      const el=$("#hookLog"); if(!el)return;
+      const now=new Date().toLocaleTimeString("ko-KR",{hour12:false});
+      const row=document.createElement("div");row.className="log-entry";
+      row.innerHTML=`<span class="log-time">${now}</span> <b>${type}</b> ${msg}`;
+      el.prepend(row); while(el.children.length>80)el.lastElementChild.remove();
+    }
+
+    function bindControls() {
+      $("#themeBtn").addEventListener("click",()=>{
+        const dark=document.documentElement.dataset.theme==="dark";
+        document.documentElement.dataset.theme=dark?"light":"dark";
+        $("#themeBtn").textContent=dark?"다크 모드":"라이트 모드";
+        state.charts.forEach(p=>p.redraw(true,true));
+      });
+      $("#streamToggle").addEventListener("click",()=>setStreamRunning(!state.streamRunning));
+      $("#streamBurstBtn").addEventListener("click",()=>{for(let i=0;i<10;i++)streamTick();});
+      $("#resetAllBtn").addEventListener("click",()=>state.charts.forEach(resetPlotX));
+      $("#randomizeBtn").addEventListener("click",()=>{
+        state.seed++;
+        state.mainData=makeMainData(state.seed);
+        state.mainPlot.setData(state.mainData,true);
+        updateKpis();
+      });
+      $("#rangeSeg").addEventListener("click",e=>{
+        const btn=e.target.closest("button");if(!btn)return;
+        $$("button",e.currentTarget).forEach(b=>b.classList.toggle("active",b===btn));
+        const hours=Number(btn.dataset.hours),x=state.mainData[0],max=x.at(-1),min=Math.max(x[0],max-hours*3600);
+        state.mainPlot.setScale("x",{min,max});
+      });
+      $("#perfRunBtn").addEventListener("click",()=>runPerf(Number($("#pointCount").value)));
+      $("#csvBtn").addEventListener("click",exportMainCsv);
+      $("#pngBtn").addEventListener("click",()=>exportPlotPng(state.mainPlot,"uplot_overview.png"));
+      $("#clearLog").addEventListener("click",()=>$("#hookLog").innerHTML="");
+
+      $("#apiAdd").addEventListener("click",()=>{
+        const idx=state.apiPlot.series.length;
+        const x=state.apiData[0];
+        const y=x.map(i=>50+Math.sin(i/(3+idx))*16+Math.cos(i/(7+idx))*8+(Math.random()-.5)*4);
+        const colors=["--orange","--cyan","--purple","--green","--red"];
+        state.apiPlot.addSeries({label:`동적 계열 ${idx}`,stroke:()=>css(colors[(idx-2)%colors.length]),width:2,points:{show:false}});
+        state.apiData.push(y); state.apiPlot.setData(state.apiData,true);
+      });
+      $("#apiDel").addEventListener("click",()=>{
+        if(state.apiPlot.series.length<=2){logHook("warning","기본 계열은 삭제하지 않음");return;}
+        state.apiPlot.delSeries(state.apiPlot.series.length-1);state.apiData.pop();state.apiPlot.setData(state.apiData,true);
+      });
+      $("#apiToggle").addEventListener("click",()=>state.apiPlot.setSeries(1,{show:!state.apiPlot.series[1].show}));
+      $("#apiSelect").addEventListener("click",()=>state.apiPlot.setSelect({left:state.apiPlot.bbox.width*.2,top:0,width:state.apiPlot.bbox.width*.35,height:state.apiPlot.bbox.height}));
+      $("#apiCursor").addEventListener("click",()=>state.apiPlot.setCursor({left:state.apiPlot.bbox.width*.7,top:state.apiPlot.bbox.height*.38}));
+      $("#apiBatch").addEventListener("click",()=>state.apiPlot.batch(()=>{state.apiPlot.setScale("x",{min:20,max:55});state.apiPlot.setScale("y",{min:20,max:80});}));
+      $("#apiReset").addEventListener("click",()=>state.apiPlot.batch(()=>{state.apiPlot.setScale("x",{min:state.apiInitialX[0],max:state.apiInitialX[1]});state.apiPlot.setScale("y",{min:0,max:100});state.apiPlot.setSelect({left:0,top:0,width:0,height:0});}));
+    }
+
+    function updateKpis() {
+      if(!state.mainData)return;
+      const catchV=state.mainData[3].at(-1),price=state.mainData[4].at(-1);
+      let t=state.mainData[5].at(-1);if(t==null)t=[...state.mainData[5]].reverse().find(v=>v!=null);
+      $("#kpiCatch").textContent=`${fmt1.format(catchV)} kg`;
+      $("#kpiPrice").textContent=`${fmt.format(Math.round(price))} 원`;
+      $("#kpiTemp").textContent=`${fmt1.format(t)} ℃`;
+    }
+
+    function exportMainCsv() {
+      if(!state.mainData)return;
+      const [x,lo,hi,c,p,t]=state.mainData;
+      const rows=[["timestamp","datetime_kst","low_kg","high_kg","catch_kg","price_krw_per_kg","temp_c"]];
+      for(let i=0;i<x.length;i++)rows.push([x[i],formatTime(x[i]),lo[i],hi[i],c[i],p[i],t[i]??""]);
+      const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\r\n");
+      downloadBlob(new Blob([csv],{type:"text/csv;charset=utf-8"}),"uplot_overview_data.csv");
+    }
+
+    function exportPlotPng(plot,filename) {
+      if(!plot)return;
+      const src=plot.ctx.canvas, out=document.createElement("canvas");out.width=src.width;out.height=src.height;
+      const ctx=out.getContext("2d");ctx.fillStyle=css("--surface");ctx.fillRect(0,0,out.width,out.height);ctx.drawImage(src,0,0);
+      out.toBlob(blob=>blob&&downloadBlob(blob,filename),"image/png");
+    }
+    function downloadBlob(blob,filename){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+
+    function buildAll() {
+      buildOverview();
+      buildPaths();
+      buildSync();
+      buildScales();
+      buildGaps();
+      buildOHLC();
+      buildStream();
+      runPerf(100000,true);
+      buildApi();
+      bindControls();
+    }
+
+    window.addEventListener("error",e=>{
+      const box=$("#loadError");
+      if(box&&window.uPlot){box.style.display="block";box.innerHTML=`<b>실행 중 오류</b><br><code>${String(e.message)}</code><br>개발자 도구 콘솔에서 상세 위치를 확인할 수 있다.`;}
+    });
+
+    loadUPlot().then(source=>{
+      state.loadSource=source;
+      $("#loadSource").textContent=source;
+      $("#libStatus").innerHTML=`<span class="status-dot ok"></span>v${LIB_VERSION} 준비 완료`;
+      buildAll();
+    }).catch(()=>{
+      $("#loadError").style.display="block";
+      $("#libStatus").innerHTML=`<span class="status-dot"></span>로드 실패`;
+      $("#loadSource").textContent="사용 불가";
+    });
+  })();
+  </script>
+</body>
+</html>
