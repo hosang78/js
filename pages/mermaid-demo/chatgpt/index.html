@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Mermaid.js 기능을 직접 확인하고 편집할 수 있는 대화형 샘플 페이지" />
+  <title>Mermaid.js Feature Lab · Diagram Playground</title>
+  <style>
+    :root {
+      --navy: #12233f;
+      --navy-2: #1e3a62;
+      --ink: #152238;
+      --muted: #6f7e91;
+      --line: #dfe7f1;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --blue: #1769e0;
+      --blue-soft: #eaf2ff;
+      --teal: #0f8b8d;
+      --orange: #e97720;
+      --red: #d63b3b;
+      --green: #188052;
+      --shadow: 0 12px 36px rgba(27, 54, 91, .10);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    button, select, textarea, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: 68px;
+      padding: 12px 26px;
+      color: #fff;
+      background: linear-gradient(120deg, var(--navy), var(--navy-2));
+      box-shadow: 0 2px 16px rgba(15, 35, 67, .24);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 260px; }
+    .brand-mark {
+      display: grid; place-items: center; width: 37px; height: 37px;
+      border: 1px solid rgba(255,255,255,.27); border-radius: 11px;
+      color: #dcecff; font-weight: 900; font-size: 18px;
+      background: rgba(255,255,255,.10);
+    }
+    .brand strong { display: block; font-size: 16px; letter-spacing: -.25px; }
+    .brand small { display: block; margin-top: 1px; color: #b9cbe6; font-size: 11px; }
+    .top-meta { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 28px;
+      padding: 4px 10px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px;
+      background: rgba(255,255,255,.10); color: #ecf5ff; font-size: 12px; white-space: nowrap;
+    }
+    .pill b { color: #fff; }
+    .top-link { color: #fff; font-size: 12px; text-decoration: none; opacity: .9; }
+    .top-link:hover { text-decoration: underline; opacity: 1; }
+
+    .hero {
+      max-width: 1600px; margin: 0 auto; padding: 30px 26px 21px;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 22px;
+    }
+    .eyebrow { margin: 0 0 8px; color: var(--blue); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    h1 { margin: 0; color: var(--navy); font-size: clamp(24px, 3vw, 37px); line-height: 1.18; letter-spacing: -.05em; }
+    .hero p { max-width: 800px; margin: 12px 0 0; color: #53657a; font-size: 14px; }
+    .hero-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      min-height: 36px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 9px;
+      color: #31445f; background: #fff; font-size: 12px; font-weight: 700; text-decoration: none;
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    .btn:hover { border-color: #abc8f2; box-shadow: 0 5px 16px rgba(27,84,160,.11); transform: translateY(-1px); }
+    .btn.primary { border-color: var(--blue); color: #fff; background: var(--blue); }
+    .btn.danger { color: var(--red); }
+    .btn.icon { width: 36px; padding: 0; }
+
+    .notice {
+      max-width: 1548px; margin: 0 auto 18px; padding: 0 26px;
+    }
+    .notice-inner {
+      display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px;
+      border: 1px solid #f1d19b; border-radius: 11px; color: #76531e; background: #fff9ec; font-size: 12px;
+    }
+    .notice strong { color: #684516; }
+
+    .app-shell {
+      max-width: 1600px; margin: 0 auto; padding: 0 26px 32px;
+      display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 18px;
+    }
+    .sidebar, .workspace { min-width: 0; }
+    .sidebar {
+      position: sticky; top: 86px; align-self: start; max-height: calc(100vh - 103px);
+      overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--panel); box-shadow: var(--shadow);
+    }
+    .control-label { display: block; margin: 0 0 6px; color: #53657a; font-size: 11px; font-weight: 800; }
+    .search-box { position: relative; margin-bottom: 13px; }
+    .search-box input {
+      width: 100%; height: 37px; padding: 0 10px 0 31px; border: 1px solid var(--line); border-radius: 9px;
+      outline: none; background: #fbfdff; color: var(--ink); font-size: 12px;
+    }
+    .search-box input:focus { border-color: #83b2ee; box-shadow: 0 0 0 3px #eaf3ff; }
+    .search-box span { position: absolute; left: 10px; top: 8px; color: #8391a3; font-size: 14px; }
+    .category-tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; }
+    .cat-btn {
+      border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; color: #617289;
+      background: #fff; font-size: 10px; font-weight: 800;
+    }
+    .cat-btn.active { border-color: #b3d0fb; color: var(--blue); background: var(--blue-soft); }
+    .sidebar-stat { display: flex; align-items: center; justify-content: space-between; margin: 7px 2px 9px; color: #77889c; font-size: 11px; }
+    .demo-list { display: grid; gap: 6px; }
+    .demo-card {
+      width: 100%; padding: 9px 9px 8px; border: 1px solid transparent; border-radius: 10px;
+      text-align: left; color: var(--ink); background: #fff;
+    }
+    .demo-card:hover { border-color: #d5e4f8; background: #f8fbff; }
+    .demo-card.active { border-color: #9fc5f7; background: var(--blue-soft); box-shadow: inset 3px 0 0 var(--blue); }
+    .demo-title-row { display: flex; gap: 8px; align-items: center; }
+    .demo-icon { flex: 0 0 auto; width: 23px; height: 23px; display: grid; place-items: center; border-radius: 7px; color: #1d5aab; background: #e5f0ff; font-size: 12px; }
+    .demo-card b { font-size: 12px; letter-spacing: -.02em; }
+    .demo-card small { display: block; padding-left: 31px; margin-top: 2px; color: #74859a; font-size: 10px; line-height: 1.35; }
+    .badge { margin-left: auto; padding: 2px 5px; border-radius: 4px; color: #9a5a00; background: #fff2d6; font-size: 8px; font-weight: 900; letter-spacing: .02em; }
+
+    .workspace { display: grid; gap: 18px; }
+    .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .metric { min-height: 82px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 4px 17px rgba(24,59,102,.05); }
+    .metric b { display: block; margin-bottom: 4px; color: var(--navy); font-size: 20px; letter-spacing: -.04em; }
+    .metric span { color: #75859a; font-size: 11px; font-weight: 700; }
+
+    .work-grid { display: grid; grid-template-columns: minmax(310px, .83fr) minmax(0, 1.35fr); gap: 18px; align-items: stretch; }
+    .panel { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow); }
+    .panel-head { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 10px 15px; border-bottom: 1px solid var(--line); }
+    .panel-title { min-width: 0; }
+    .panel-title h2 { margin: 0; color: var(--navy); font-size: 15px; letter-spacing: -.02em; }
+    .panel-title p { overflow: hidden; margin: 2px 0 0; color: #718196; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .panel-tools { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .editor-wrap { position: relative; background: #10223a; }
+    textarea {
+      display: block; width: 100%; min-height: 564px; resize: vertical; padding: 18px;
+      border: 0; outline: 0; color: #d7e7fb; background: #10223a;
+      font-family: "Cascadia Code", "D2Coding", Consolas, monospace; font-size: 12px; line-height: 1.65;
+      tab-size: 2;
+    }
+    .editor-foot { display: flex; justify-content: space-between; gap: 10px; padding: 9px 15px; color: #66778d; background: #f7faff; border-top: 1px solid var(--line); font-size: 10px; }
+
+    .preview-panel { display: flex; flex-direction: column; min-width: 0; }
+    .preview-stage {
+      position: relative; display: grid; place-items: center; flex: 1; min-height: 564px; overflow: auto;
+      padding: 27px; background-color: #f8fbff;
+      background-image: radial-gradient(#d5e4f7 1px, transparent 1px); background-size: 18px 18px;
+    }
+    .preview-stage svg { max-width: 100%; height: auto; }
+    .placeholder { max-width: 400px; color: #718196; text-align: center; font-size: 13px; }
+    .placeholder b { display: block; margin-bottom: 5px; color: #435978; font-size: 15px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 6px; color: #57806d; background: #edf9f2; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .status.loading { color: #81631a; background: #fff6dd; }
+    .status.error { color: #a23434; background: #fff0f0; }
+    .error-box { max-width: 710px; padding: 16px; border: 1px solid #f1b6b6; border-radius: 12px; color: #872e2e; background: #fff4f4; font-size: 12px; }
+    .error-box b { display: block; margin-bottom: 8px; }
+    .error-box pre { margin: 0; white-space: pre-wrap; font: 11px/1.5 "Cascadia Code", Consolas, monospace; }
+
+    .settings { display: grid; grid-template-columns: 1.18fr 1fr 1fr 1fr; gap: 11px; padding: 15px; }
+    .setting-card { padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: #fbfdff; }
+    .setting-card label { display: block; margin-bottom: 6px; color: #5c6e84; font-size: 10px; font-weight: 900; letter-spacing: .02em; }
+    .setting-card select { width: 100%; height: 33px; padding: 0 8px; border: 1px solid #d9e4f1; border-radius: 7px; color: #33475f; background: #fff; font-size: 11px; outline: none; }
+    .setting-card select:focus { border-color: #87b5ef; }
+    .setting-note { grid-column: 1 / -1; margin: 0; color: #75869a; font-size: 11px; }
+    .setting-note b { color: #475d78; }
+
+    .feature-guide { display: grid; grid-template-columns: 1.2fr .95fr; gap: 18px; }
+    .guide-content { padding: 17px; }
+    .guide-content h2 { margin: 0 0 10px; color: var(--navy); font-size: 16px; }
+    .guide-content p { margin: 0 0 13px; color: #607087; font-size: 12px; }
+    .mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .mini { padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fbfdff; }
+    .mini b { display: block; margin-bottom: 2px; color: #365878; font-size: 11px; }
+    .mini span { color: #75869a; font-size: 10px; }
+    .embed-code { margin: 0; overflow: auto; padding: 17px; color: #d9e8fa; background: #10223a; font: 11px/1.58 "Cascadia Code", "D2Coding", Consolas, monospace; white-space: pre-wrap; }
+
+    .gallery { display: none; }
+    .gallery.open { display: block; }
+    .gallery .panel-head { position: sticky; top: 68px; z-index: 5; background: #fff; }
+    .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; padding: 15px; }
+    .gallery-item { overflow: hidden; min-height: 260px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
+    .gallery-item-head { display: flex; align-items: center; gap: 7px; padding: 9px 11px; border-bottom: 1px solid var(--line); background: #f8fbff; }
+    .gallery-item-head b { font-size: 12px; }
+    .gallery-item-body { display: grid; place-items: center; min-height: 210px; overflow: auto; padding: 13px; background-image: radial-gradient(#e3edf9 1px, transparent 1px); background-size: 15px 15px; }
+    .gallery-item-body svg { max-width: 100%; height: auto; }
+    .gallery-error { color: #9a3a3a; font-size: 11px; text-align: center; }
+
+    .toast {
+      position: fixed; right: 22px; bottom: 21px; z-index: 80; display: none;
+      max-width: min(440px, calc(100vw - 44px)); padding: 11px 14px; border: 1px solid #b9d8c6; border-radius: 11px;
+      color: #215f3d; background: #f0fbf4; box-shadow: 0 12px 30px rgba(14,55,32,.16); font-size: 12px;
+    }
+    .toast.show { display: block; animation: toastIn .2s ease; }
+    .toast.error { border-color: #efbebe; color: #8d3030; background: #fff2f2; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .footer { max-width: 1600px; margin: 0 auto; padding: 0 26px 32px; color: #77889c; font-size: 11px; }
+    .footer a { color: #456eac; }
+
+    @media (max-width: 1120px) {
+      .app-shell { grid-template-columns: 245px minmax(0, 1fr); }
+      .dashboard { grid-template-columns: repeat(2, 1fr); }
+      .work-grid { grid-template-columns: 1fr; }
+      textarea, .preview-stage { min-height: 430px; }
+      .settings { grid-template-columns: repeat(2, 1fr); }
+      .feature-guide { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 790px) {
+      .topbar { padding: 10px 15px; }
+      .brand { min-width: 0; }
+      .brand small, .top-link { display: none; }
+      .top-meta { gap: 5px; }
+      .hero { display: block; padding: 25px 15px 18px; }
+      .hero-actions { margin-top: 14px; }
+      .notice { padding: 0 15px; }
+      .app-shell { display: block; padding: 0 15px 25px; }
+      .sidebar { position: relative; top: 0; max-height: none; margin-bottom: 14px; }
+      .demo-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .demo-card small { display: none; }
+      .demo-card { min-height: 52px; }
+      .settings { grid-template-columns: 1fr; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .footer { padding: 0 15px 24px; }
+    }
+    @media (max-width: 480px) {
+      .top-meta .pill:nth-child(2) { display: none; }
+      .dashboard { grid-template-columns: 1fr 1fr; }
+      .metric { min-height: 70px; padding: 11px; }
+      .metric b { font-size: 17px; }
+      .demo-list { grid-template-columns: 1fr; }
+      .panel-tools .btn:not(.primary) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div>
+        <strong>Mermaid.js Feature Lab</strong>
+        <small>Text-to-diagram playground · single HTML sample</small>
+      </div>
+    </div>
+    <div class="top-meta">
+      <span class="pill">라이브러리 <b id="versionPill">v11.16.0</b></span>
+      <span class="pill">샘플 <b id="sampleCount">0</b>종</span>
+      <a class="top-link" href="https://mermaid.js.org/" target="_blank" rel="noopener">공식 문서 ↗</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">INTERACTIVE DIAGRAM PLAYGROUND</p>
+      <h1>Mermaid.js의 여러 기능을<br/>한 페이지에서 직접 확인하기</h1>
+      <p>좌측에서 다이어그램 유형을 선택하고, Mermaid 문법을 고쳐 즉시 렌더링할 수 있다. 테마·보안 수준·HTML 레이블을 바꿔 보며, SVG 파일로도 내보낼 수 있다.</p>
+    </div>
+    <div class="hero-actions">
+      <button class="btn primary" id="renderAllBtn">▦ 전체 갤러리 렌더</button>
+      <button class="btn" id="downloadCodeBtn">⇩ 현재 코드 저장</button>
+      <a class="btn" href="#embedGuide">⌘ 웹페이지 삽입 방법</a>
+    </div>
+  </section>
+
+  <div class="notice">
+    <div class="notice-inner">
+      <span>⚠</span>
+      <div><strong>호환성·보안 유의:</strong> 이 페이지는 Mermaid <code>v11.16.0</code> 문법을 기준으로 구성했다. Packet·Block·Radar·Venn 등 최근 문법은 다른 버전에서 동작하지 않을 수 있다. 클릭·링크 예시 확인을 위해 기본값을 <code>securityLevel: 'loose'</code>로 두었으나, 실제 서비스에서 외부 또는 사용자가 입력한 Mermaid 코드를 렌더링할 때는 <code>strict</code>를 우선 적용하고 신뢰된 코드만 허용해야 한다.</div>
+    </div>
+  </div>
+
+  <main class="app-shell">
+    <aside class="sidebar">
+      <label class="control-label" for="searchInput">다이어그램 찾기</label>
+      <div class="search-box"><span>⌕</span><input id="searchInput" placeholder="예: 간트, 차트, 아키텍처" autocomplete="off" /></div>
+      <div class="category-tabs" id="categoryTabs"></div>
+      <div class="sidebar-stat"><span id="listCount">0개 표시</span><span>클릭하여 불러오기</span></div>
+      <div class="demo-list" id="demoList"></div>
+    </aside>
+
+    <section class="workspace">
+      <div class="dashboard">
+        <div class="metric"><b id="metricTypes">0</b><span>문법 샘플 유형</span></div>
+        <div class="metric"><b>5</b><span>기본 테마 전환</span></div>
+        <div class="metric"><b>SVG</b><span>벡터 파일 내보내기</span></div>
+        <div class="metric"><b>Live</b><span>소스 즉시 렌더링</span></div>
+      </div>
+
+      <div class="work-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><h2 id="editorTitle">문법 편집기</h2><p id="editorSubtitle">좌측에서 샘플을 선택하세요.</p></div>
+            <div class="panel-tools">
+              <button class="btn" id="copyBtn">복사</button>
+              <button class="btn" id="resetBtn">초기화</button>
+            </div>
+          </div>
+          <div class="editor-wrap"><textarea id="editor" spellcheck="false" aria-label="Mermaid 문법 편집기"></textarea></div>
+          <div class="editor-foot"><span>Ctrl / ⌘ + Enter: 렌더링</span><span id="charCount">0 chars</span></div>
+        </section>
+
+        <section class="panel preview-panel">
+          <div class="panel-head">
+            <div class="panel-title"><h2>렌더링 미리보기</h2><p id="previewSubtitle">선택한 문법을 SVG로 렌더링</p></div>
+            <div class="panel-tools">
+              <span class="status loading" id="renderStatus">● 준비 중</span>
+              <button class="btn" id="fitBtn">맞춤</button>
+              <button class="btn" id="downloadSvgBtn">SVG 저장</button>
+              <button class="btn icon" id="fullscreenBtn" title="미리보기 전체화면">⛶</button>
+              <button class="btn primary" id="renderBtn">▶ 렌더</button>
+            </div>
+          </div>
+          <div class="preview-stage" id="previewStage">
+            <div class="placeholder"><b>Mermaid 라이브러리 연결 대기 중</b>CDN에서 Mermaid.js를 불러온 뒤 샘플을 렌더링한다.</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head"><div class="panel-title"><h2>렌더링 설정</h2><p>테마·보안 수준·레이블 처리 방식을 변경하면 선택 샘플이 다시 렌더링된다.</p></div></div>
+        <div class="settings">
+          <div class="setting-card">
+            <label for="themeSelect">THEME</label>
+            <select id="themeSelect"><option value="default">Default</option><option value="neutral">Neutral</option><option value="forest">Forest</option><option value="dark">Dark</option><option value="base">Base</option></select>
+          </div>
+          <div class="setting-card">
+            <label for="securitySelect">SECURITY LEVEL</label>
+            <select id="securitySelect"><option value="loose">Loose · 상호작용 예시</option><option value="strict">Strict · 권장 기본값</option><option value="antiscript">Antiscript</option><option value="sandbox">Sandbox</option></select>
+          </div>
+          <div class="setting-card">
+            <label for="htmlLabelSelect">FLOWCHART LABELS</label>
+            <select id="htmlLabelSelect"><option value="true">HTML Labels 사용</option><option value="false">SVG Text 사용</option></select>
+          </div>
+          <div class="setting-card">
+            <label for="autoRenderSelect">AUTO RENDER</label>
+            <select id="autoRenderSelect"><option value="true">편집 후 700ms</option><option value="false">수동 렌더</option></select>
+          </div>
+          <p class="setting-note"><b>참고:</b> Mermaid 전역 설정은 <code>mermaid.initialize()</code>로 적용한다. 다이어그램 단위 설정은 YAML frontmatter의 <code>config</code>를 사용할 수 있으며, 과거 directives 방식은 v10.5.0부터 deprecated로 안내된다.</p>
+        </div>
+      </section>
+
+      <section class="panel feature-guide" id="embedGuide">
+        <div class="guide-content">
+          <h2>이 페이지에서 확인할 수 있는 기능</h2>
+          <p>업무 프로세스, 시스템·데이터 모델링, 프로젝트 관리, 데이터 시각화, 최근 추가된 구조·차트형 문법을 한 번에 살펴볼 수 있도록 구성했다.</p>
+          <div class="mini-grid">
+            <div class="mini"><b>구조·프로세스</b><span>Flowchart, Sequence, State, User Journey, Timeline</span></div>
+            <div class="mini"><b>설계·모델링</b><span>Class, ER, Requirement, C4, Architecture, Event Modeling</span></div>
+            <div class="mini"><b>계획·협업</b><span>Gantt, Kanban, GitGraph, Mindmap, TreeView</span></div>
+            <div class="mini"><b>차트·분석</b><span>Pie, Quadrant, Sankey, XY, Radar, Treemap, Venn</span></div>
+          </div>
+        </div>
+        <pre class="embed-code">&lt;!-- 최소 삽입 예시: Mermaid v11.16.0 고정 --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js"&gt;&lt;/script&gt;
+&lt;pre class="mermaid"&gt;
+flowchart LR
+  A[입력] --&gt; B[처리] --&gt; C[결과]
+&lt;/pre&gt;
+&lt;script&gt;
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+&lt;/script&gt;</pre>
+      </section>
+
+      <section class="panel gallery" id="galleryPanel">
+        <div class="panel-head">
+          <div class="panel-title"><h2>전체 기능 갤러리</h2><p>선택한 렌더링 설정으로 모든 샘플을 순차적으로 그린다. 일부 신기능은 브라우저·버전별 차이가 있을 수 있다.</p></div>
+          <div class="panel-tools"><span class="status loading" id="galleryStatus">● 대기</span><button class="btn" id="closeGalleryBtn">닫기</button></div>
+        </div>
+        <div class="gallery-grid" id="galleryGrid"></div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Mermaid.js는 Markdown 유사 텍스트 정의를 렌더링해 다이어그램과 차트를 생성하는 JavaScript 도구다. 이 샘플은 CDN 연결이 가능한 브라우저에서 동작한다. 사내망 적용 시에는 승인된 내부 정적 자산 경로로 CDN 스크립트를 대체해야 한다.
+  </footer>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      const MERMAID_VERSION = '11.16.0';
+      const $ = (id) => document.getElementById(id);
+      const state = { selected: 0, category: '전체', filter: '', renderTimer: null, lastSvg: '' };
+
+      const demos = [
+        {
+          id: 'flowchart', icon: '↗', category: '핵심', title: 'Flowchart',
+          subtitle: '분기·서브그래프·스타일·클릭 이벤트', doc: 'https://mermaid.js.org/syntax/flowchart.html',
+          code: `flowchart LR
+    A(["업무 시작"]) --> B{"자동 처리 가능?"}
+    B -- 예 --> C[["AI 자동 분류"]]
+    B -- 아니오 --> D["담당자 검토"]
+    C --> E[("업무 데이터")]
+    D --> E
+    E --> F>"완료 안내"]
+
+    subgraph CH["접수 채널"]
+      X["모바일"] --> A
+      Y["EKP"] --> A
+    end
+
+    classDef accent fill:#eaf2ff,stroke:#1769e0,stroke-width:2px,color:#123b75;
+    classDef success fill:#eaf8f1,stroke:#188052,stroke-width:2px,color:#14533b;
+    class C accent;
+    class F success;
+    linkStyle 0 stroke:#1769e0,stroke-width:2px;
+    click D call showMermaidMessage() "검토 단계 클릭 이벤트"`
+        },
+        {
+          id: 'sequence', icon: '⇄', category: '핵심', title: 'Sequence Diagram',
+          subtitle: 'actor·autonumber·alt·loop·activation', doc: 'https://mermaid.js.org/syntax/sequenceDiagram.html',
+          code: `sequenceDiagram
+    autonumber
+    actor Fisher as 어업인
+    participant App as 모바일 안내
+    participant Staff as 담당자
+    participant DB as 업무 DB
+
+    Fisher->>+App: 사고·문의 접수
+    App->>+Staff: 상담 요청
+    alt 즉시 처리 가능
+        Staff->>+DB: 대상 여부 조회
+        DB-->>-Staff: 조회 결과
+        Staff-->>App: 안내 내용 전달
+    else 추가 확인 필요
+        loop 보완 완료 시까지
+            Staff-->>App: 증빙 보완 요청
+            App-->>Staff: 보완 자료 제출
+        end
+    end
+    App-->>-Fisher: 처리 결과 안내`
+        },
+        {
+          id: 'class', icon: '▤', category: '모델링', title: 'Class Diagram',
+          subtitle: '속성·메서드·상속·관계·접근 제어', doc: 'https://mermaid.js.org/syntax/classDiagram.html',
+          code: `classDiagram
+    direction LR
+    class Member {
+      +String memberId
+      +String name
+      +submitClaim()
+    }
+    class Claim {
+      +String claimId
+      +Date receivedAt
+      +String status
+      +validate()
+      +close()
+    }
+    class Policy {
+      +String policyId
+      +String productName
+      +calculateBenefit()
+    }
+    class ClaimService {
+      +register()
+      +assign()
+      +notify()
+    }
+
+    Member "1" --> "0..*" Claim : submits
+    Claim --> Policy : applies
+    ClaimService ..> Claim : manages
+    ClaimService ..> Member : notifies`
+        },
+        {
+          id: 'state', icon: '◌', category: '핵심', title: 'State Diagram',
+          subtitle: '상태·전이·복합 상태·note', doc: 'https://mermaid.js.org/syntax/stateDiagram.html',
+          code: `stateDiagram-v2
+    [*] --> 접수
+    접수 --> 검토 : 서류 확인
+    state 검토 {
+        [*] --> 자동분류
+        자동분류 --> 담당자확인
+        담당자확인 --> [*]
+    }
+    검토 --> 보완요청 : 누락 발견
+    보완요청 --> 검토 : 자료 제출
+    검토 --> 승인 : 지급 가능
+    검토 --> 반려 : 지급 불가
+    승인 --> [*]
+    반려 --> [*]
+    note right of 검토
+      자동 분류 결과를
+      담당자가 최종 확인
+    end note`
+        },
+        {
+          id: 'er', icon: '⌘', category: '모델링', title: 'Entity Relationship',
+          subtitle: '엔터티·속성·카디널리티', doc: 'https://mermaid.js.org/syntax/entityRelationshipDiagram.html',
+          code: `erDiagram
+    MEMBER ||--o{ CLAIM : submits
+    CLAIM ||--|{ DOCUMENT : includes
+    POLICY ||--o{ CLAIM : applies_to
+    STAFF ||--o{ CLAIM : reviews
+
+    MEMBER {
+      string member_id PK
+      string name
+      string phone
+    }
+    CLAIM {
+      string claim_id PK
+      string status
+      date received_at
+      decimal requested_amount
+    }
+    DOCUMENT {
+      string document_id PK
+      string file_name
+      string file_type
+    }
+    POLICY {
+      string policy_id PK
+      string product_name
+    }
+    STAFF {
+      string staff_id PK
+      string department
+    }`
+        },
+        {
+          id: 'journey', icon: '☺', category: '핵심', title: 'User Journey',
+          subtitle: '사용자 여정·만족도·역할별 참여', doc: 'https://mermaid.js.org/syntax/userJourney.html',
+          code: `journey
+    title 어업인 정책보험 상담 여정
+    section 접수
+      안내 페이지 확인: 5: 어업인
+      상담 신청: 4: 어업인
+    section 처리
+      담당자 배정: 3: 담당자
+      필요 서류 안내: 2: 어업인, 담당자
+      보완 자료 제출: 2: 어업인
+    section 완료
+      결과 수신: 5: 어업인
+      만족도 응답: 4: 어업인`
+        },
+        {
+          id: 'gantt', icon: '▥', category: '협업', title: 'Gantt Chart',
+          subtitle: '섹션·진척 상태·의존 일정·마일스톤', doc: 'https://mermaid.js.org/syntax/gantt.html',
+          code: `gantt
+    title AI 서비스 추진 일정 예시
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m/%d
+    excludes    weekends
+
+    section 기획
+    요구사항 정리        :done, plan1, 2026-07-01, 5d
+    PoC 결과 검토        :active, plan2, after plan1, 5d
+    section 도입
+    계약·보안 검토       :crit, contract, 2026-07-15, 10d
+    사용자 교육          :training, after contract, 5d
+    section 운영
+    시범 운영            :pilot, after training, 10d
+    서비스 개시          :milestone, launch, after pilot, 0d`
+        },
+        {
+          id: 'pie', icon: '◔', category: '차트', title: 'Pie Chart',
+          subtitle: '구성비·showData·제목', doc: 'https://mermaid.js.org/syntax/pie.html',
+          code: `pie showData
+    title 문의 유형 구성비
+    "정책보험 안내" : 42
+    "대출·상호금융" : 27
+    "수산물 유통" : 18
+    "기타" : 13`
+        },
+        {
+          id: 'quadrant', icon: '⊞', category: '차트', title: 'Quadrant Chart',
+          subtitle: '2×2 우선순위·좌표 기반 배치', doc: 'https://mermaid.js.org/syntax/quadrantChart.html',
+          code: `quadrantChart
+    title AI 적용과제 우선순위
+    x-axis 낮은 도입 용이성 --> 높은 도입 용이성
+    y-axis 낮은 업무 효과 --> 높은 업무 효과
+    quadrant-1 즉시 추진
+    quadrant-2 전략 검토
+    quadrant-3 보류
+    quadrant-4 빠른 개선
+    "AI 상담 요약": [0.82, 0.84]
+    "문서 분류": [0.73, 0.67]
+    "위험 예측": [0.34, 0.86]
+    "전사 지식검색": [0.52, 0.62]
+    "단순 FAQ": [0.91, 0.34]`
+        },
+        {
+          id: 'requirement', icon: '☑', category: '모델링', title: 'Requirement Diagram',
+          subtitle: '요구사항·리스크·검증 방식·추적관계', doc: 'https://mermaid.js.org/syntax/requirementDiagram.html',
+          code: `requirementDiagram
+    direction LR
+
+    requirement 안전알림 {
+      id: RQ-01
+      text: 사고 발생 시 담당자에게 즉시 알림을 전달한다.
+      risk: high
+      verifymethod: test
+    }
+    requirement 개인정보보호 {
+      id: RQ-02
+      text: 개인정보는 승인된 환경에서만 처리한다.
+      risk: high
+      verifymethod: inspection
+    }
+    element 모바일안내 {
+      type: software
+      docref: APP-01
+    }
+    element 보안점검 {
+      type: process
+      docref: SEC-03
+    }
+
+    모바일안내 - satisfies -> 안전알림
+    보안점검 - verifies -> 개인정보보호
+    안전알림 - traces -> 개인정보보호`
+        },
+        {
+          id: 'gitgraph', icon: '⑂', category: '협업', title: 'GitGraph',
+          subtitle: '브랜치·커밋·병합·태그·커밋 유형', doc: 'https://mermaid.js.org/syntax/gitgraph.html',
+          code: `gitGraph
+    commit id: "init"
+    branch "feature-ai-search"
+    checkout "feature-ai-search"
+    commit id: "prototype"
+    commit id: "test" type: HIGHLIGHT
+    checkout main
+    commit id: "policy" tag: "v0.9"
+    merge "feature-ai-search" id: "release" tag: "v1.0"
+    commit id: "hotfix" type: REVERSE`
+        },
+        {
+          id: 'c4', icon: '▦', category: '모델링', title: 'C4 Context',
+          subtitle: '시스템 경계·사용자·외부 시스템', experimental: true, doc: 'https://mermaid.js.org/syntax/c4.html',
+          code: `C4Context
+    title 회원조합 AI 상담 시스템 컨텍스트
+
+    Person(fisher, "어업인", "상담·안내 서비스를 이용")
+    Person(staff, "상담 담당자", "업무 처리 및 결과 확인")
+    System(ai, "AI 상담 서비스", "질의 분석, 답변 초안, 상담 이력 관리")
+    System_Ext(policy, "정책보험 시스템", "가입·보장 정보 조회")
+    System_Ext(notify, "알림 서비스", "SMS·앱 푸시 전송")
+
+    Rel(fisher, ai, "질의·상담 신청")
+    Rel(staff, ai, "검토·답변 확정")
+    Rel(ai, policy, "대상·상품 정보 조회")
+    Rel(ai, notify, "알림 요청")`
+        },
+        {
+          id: 'mindmap', icon: '✦', category: '협업', title: 'Mindmap',
+          subtitle: '계층·다양한 노드 모양·브레인스토밍', doc: 'https://mermaid.js.org/syntax/mindmap.html',
+          code: `mindmap
+  root((수협 AI 활용))
+    업무 지원
+      문서 요약
+      회의록 작성
+      규정 검색
+    고객 서비스
+      상담 안내
+      민원 분류
+      맞춤 알림
+    데이터 분석
+      이상 징후
+      수요 예측
+      보고서 초안`
+        },
+        {
+          id: 'timeline', icon: '—', category: '협업', title: 'Timeline',
+          subtitle: '연도·기간·다중 이벤트 로드맵', doc: 'https://mermaid.js.org/syntax/timeline.html',
+          code: `timeline
+    title AI 서비스 추진 로드맵
+    2026 : 활용 교육 확대
+         : 부서별 업무 시연
+    2027 : 상용 서비스 계약
+         : 회원조합 확산
+    2028 : 업무 연계 고도화
+         : 성과 지표 관리
+    2029 : 지능형 업무환경 정착`
+        },
+        {
+          id: 'sankey', icon: '≋', category: '차트', title: 'Sankey Diagram',
+          subtitle: '값의 흐름·노드·연결량 CSV 문법', experimental: true, doc: 'https://mermaid.js.org/syntax/sankey.html',
+          code: `sankey
+어업인,모바일 안내,120
+모바일 안내,상담 접수,82
+모바일 안내,자가 해결,38
+상담 접수,담당자 검토,65
+상담 접수,자동 답변,17
+담당자 검토,처리 완료,58
+담당자 검토,보완 요청,7
+자동 답변,처리 완료,15
+자동 답변,추가 상담,2`
+        },
+        {
+          id: 'xy', icon: '⌁', category: '차트', title: 'XY Chart',
+          subtitle: '막대·선·축 범위·범주형 X축', doc: 'https://mermaid.js.org/syntax/xyChart.html',
+          code: `xychart
+    title "월별 AI 상담 처리 현황"
+    x-axis [1월, 2월, 3월, 4월, 5월, 6월]
+    y-axis "처리 건수" 0 --> 120
+    bar [31, 46, 58, 75, 89, 105]
+    line [25, 40, 55, 70, 83, 96]`
+        },
+        {
+          id: 'block', icon: '▣', category: '구조', title: 'Block Diagram',
+          subtitle: '명시적 배치·열·블록·연결선 · block 문법', doc: 'https://mermaid.js.org/syntax/block.html',
+          code: `block
+  columns 3
+  user["어업인"]
+  space
+  staff["담당자"]
+  user --> app["모바일 안내"]
+  app --> ai["AI 처리"]
+  ai --> staff
+  db[("업무 DB")]
+  space:2
+  app --> db
+  ai --> db`
+        },
+        {
+          id: 'packet', icon: '▯', category: '구조', title: 'Packet Diagram',
+          subtitle: '비트 단위 패킷 구조·필드 범위 · packet 문법', doc: 'https://mermaid.js.org/syntax/packet.html',
+          code: `packet
+  title "상담 요청 메시지 패킷"
+  0-7: "Version"
+  8-15: "Message Type"
+  16-31: "Request ID"
+  32-63: "Member ID"
+  64-95: "Timestamp"
+  96-127: "Payload Length"
+  128-255: "Payload"`
+        },
+        {
+          id: 'kanban', icon: '▤', category: '협업', title: 'Kanban Board',
+          subtitle: '열·작업·담당자·티켓·우선순위', doc: 'https://mermaid.js.org/syntax/kanban.html',
+          code: `kanban
+  backlog[요청 접수]
+    task1[규정 검색 개선]@{ assigned: "ICT", ticket: "AI-101", priority: "High" }
+    task2[FAQ 정비]@{ assigned: "업무", ticket: "AI-102", priority: "Low" }
+  progress[진행 중]
+    task3[상담 시나리오]@{ assigned: "보험", ticket: "AI-103", priority: "Very High" }
+  review[검토]
+    task4[보안 점검]@{ assigned: "보안", ticket: "AI-104", priority: "High" }
+  done[완료]
+    task5[요약 기능]@{ assigned: "ICT", ticket: "AI-099", priority: "Low" }`
+        },
+        {
+          id: 'architecture', icon: '⌂', category: '구조', title: 'Architecture Diagram',
+          subtitle: '서비스·그룹·아이콘·방향 연결', doc: 'https://mermaid.js.org/syntax/architecture.html',
+          code: `architecture-beta
+    group public(cloud)[대외 서비스]
+    group internal(cloud)[내부 업무망]
+
+    service app(internet)[모바일 안내] in public
+    service api(server)[API 게이트웨이] in internal
+    service ai(server)[AI 응답 엔진] in internal
+    service db(database)[업무 DB] in internal
+    service log(disk)[감사 로그] in internal
+
+    app:R --> L:api
+    api:R --> L:ai
+    ai:B --> T:db
+    ai:R --> L:log`
+        },
+        {
+          id: 'radar', icon: '✧', category: '차트', title: 'Radar Diagram',
+          subtitle: '다차원 비교·축·복수 곡선', doc: 'https://mermaid.js.org/syntax/radar.html',
+          code: `radar-beta
+    title "AI 서비스 적용 적합도"
+    axis effect["업무 효과"], feasibility["도입 용이성"], security["보안성"], data["데이터 준비"], adoption["사용자 수용"]
+    curve current["현재"]{3, 4, 4, 2, 3}
+    curve target["목표"]{5, 5, 5, 4, 5}
+    min 0
+    max 5
+    graticule polygon
+    ticks 5`
+        },
+        {
+          id: 'eventmodeling', icon: '⇥', category: '모델링', title: 'Event Modeling',
+          subtitle: 'UI·명령·이벤트·뷰의 시간 흐름', experimental: true, doc: 'https://mermaid.js.org/syntax/eventmodeling.html',
+          code: `eventmodeling
+
+    tf 01 ui ClaimUI { claimId: "C-1001" }
+    tf 02 cmd SubmitClaim { memberId: "M-204" }
+    tf 03 evt ClaimSubmitted { status: "received" }
+    tf 04 rmo ClaimView { status: "검토 대기" }
+    tf 05 cmd AssignReviewer { staffId: "S-12" }
+    tf 06 evt ReviewerAssigned { assignee: "보험팀" }
+    tf 07 rmo ClaimView { status: "담당자 배정" }`
+        },
+        {
+          id: 'treemap', icon: '▧', category: '차트', title: 'Treemap',
+          subtitle: '계층형 비중·사각형 면적 비교', experimental: true, doc: 'https://mermaid.js.org/syntax/treemap.html',
+          code: `treemap-beta
+    "AI 활용 수요"
+        "고객 서비스"
+            "상담 요약": 38
+            "맞춤 안내": 27
+        "내부 업무"
+            "문서 작성": 24
+            "규정 검색": 19
+        "데이터 분석"
+            "수요 예측": 14
+            "이상 탐지": 12`
+        },
+        {
+          id: 'venn', icon: '⊚', category: '차트', title: 'Venn Diagram',
+          subtitle: '집합·교집합·비중·텍스트', experimental: true, doc: 'https://mermaid.js.org/syntax/venn.html',
+          code: `venn-beta
+    title "AI 과제 추진 교집합"
+    set A["AI 활용"]:60
+    set B["업무 자동화"]:55
+    set C["보안 준수"]:50
+    union A,B["AI와 자동화"]:30
+    union A,C["AI와 보안"]:22
+    union B,C["자동화와 보안"]:24
+    union A,B,C["우선 추진"]:12`
+        },
+        {
+          id: 'treeview', icon: '├', category: '구조', title: 'TreeView',
+          subtitle: '폴더형 계층·주석·파일/폴더 아이콘', experimental: true, doc: 'https://mermaid.js.org/syntax/treeView.html',
+          code: `---
+config:
+  treeView:
+    showIcons: true
+---
+treeView-beta
+    ai-service/
+        docs/
+            user-guide.md ## 사용자 안내
+            security-guide.md
+        src/
+            index.html
+            app.js
+        assets/
+            logo.svg
+        README.md`
+        }
+      ];
+
+      const categories = ['전체', ...new Set(demos.map(d => d.category))];
+      const el = {
+        list: $('demoList'), tabs: $('categoryTabs'), search: $('searchInput'), editor: $('editor'),
+        title: $('editorTitle'), subtitle: $('editorSubtitle'), previewSubtitle: $('previewSubtitle'),
+        preview: $('previewStage'), status: $('renderStatus'), charCount: $('charCount'),
+        theme: $('themeSelect'), security: $('securitySelect'), htmlLabels: $('htmlLabelSelect'), auto: $('autoRenderSelect'),
+        gallery: $('galleryPanel'), galleryGrid: $('galleryGrid'), galleryStatus: $('galleryStatus'), toast: $('toast')
+      };
+
+      function toast(message, error = false) {
+        el.toast.textContent = message;
+        el.toast.className = `toast show${error ? ' error' : ''}`;
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => { el.toast.className = 'toast'; }, 3200);
+      }
+      window.showMermaidMessage = () => toast('Flowchart의 클릭 콜백이 실행되었다. 실제 업무 페이지에서는 신뢰된 코드에서만 사용하세요.');
+
+      function currentConfig() {
+        return {
+          startOnLoad: false,
+          theme: el.theme.value,
+          securityLevel: el.security.value,
+          flowchart: { htmlLabels: el.htmlLabels.value === 'true', curve: 'basis' },
+          fontFamily: 'Pretendard, Noto Sans KR, Malgun Gothic, Arial, sans-serif',
+          suppressErrorRendering: true
+        };
+      }
+      function setStatus(text, stateName = 'loading') {
+        el.status.textContent = `● ${text}`;
+        el.status.className = `status ${stateName}`;
+      }
+      function codeFor(demo) { return demo.code.trim(); }
+      function selectedDemo() { return demos[state.selected]; }
+
+      function renderTabs() {
+        el.tabs.innerHTML = categories.map(category => `<button class="cat-btn ${category === state.category ? 'active' : ''}" data-cat="${category}">${category}</button>`).join('');
+        el.tabs.querySelectorAll('.cat-btn').forEach(btn => btn.addEventListener('click', () => {
+          state.category = btn.dataset.cat; renderTabs(); renderList();
+        }));
+      }
+      function filteredDemos() {
+        const q = state.filter.trim().toLowerCase();
+        return demos.filter(d => (state.category === '전체' || d.category === state.category) && (!q || `${d.title} ${d.subtitle} ${d.category}`.toLowerCase().includes(q)));
+      }
+      function renderList() {
+        const items = filteredDemos();
+        $('listCount').textContent = `${items.length}개 표시`;
+        el.list.innerHTML = items.map(d => {
+          const index = demos.indexOf(d);
+          return `<button class="demo-card ${index === state.selected ? 'active' : ''}" data-index="${index}">
+            <span class="demo-title-row"><span class="demo-icon">${d.icon}</span><b>${d.title}</b>${d.experimental ? '<span class="badge">신기능</span>' : ''}</span>
+            <small>${d.subtitle}</small>
+          </button>`;
+        }).join('') || '<div style="padding:16px 5px;color:#789;font-size:12px">검색 결과가 없다.</div>';
+        el.list.querySelectorAll('.demo-card').forEach(card => card.addEventListener('click', () => loadDemo(Number(card.dataset.index))));
+      }
+      function loadDemo(index) {
+        state.selected = index;
+        const demo = selectedDemo();
+        el.editor.value = codeFor(demo);
+        el.title.textContent = `${demo.title} 문법 편집기`;
+        el.subtitle.textContent = demo.subtitle;
+        el.previewSubtitle.textContent = demo.experimental ? '신기능·버전 민감 문법 포함' : '선택한 문법을 SVG로 렌더링';
+        updateChars(); renderList(); renderCurrent();
+      }
+      function updateChars() { el.charCount.textContent = `${el.editor.value.length.toLocaleString()} chars`; }
+
+      async function renderCurrent() {
+        if (!window.mermaid) {
+          setStatus('CDN 연결 실패', 'error');
+          el.preview.innerHTML = '<div class="error-box"><b>Mermaid.js를 불러오지 못했다.</b><pre>인터넷 연결 또는 CDN 접근 권한을 확인하세요.\n사내 환경에서는 승인된 내부 경로에 mermaid.min.js를 배포한 뒤 script src를 변경해야 합니다.</pre></div>';
+          return;
+        }
+        const demo = selectedDemo();
+        const code = el.editor.value.trim();
+        setStatus('렌더링 중', 'loading');
+        el.preview.innerHTML = '<div class="placeholder"><b>SVG를 생성하고 있다</b>문법과 설정을 적용하는 중이다.</div>';
+        try {
+          window.mermaid.initialize(currentConfig());
+          const renderId = `mermaid_${demo.id}_${Date.now()}`;
+          const { svg, bindFunctions } = await window.mermaid.render(renderId, code);
+          state.lastSvg = svg;
+          el.preview.innerHTML = svg;
+          if (typeof bindFunctions === 'function') bindFunctions(el.preview);
+          setStatus('렌더링 완료', '');
+        } catch (error) {
+          console.error(error);
+          state.lastSvg = '';
+          const message = error && error.message ? error.message : String(error);
+          el.preview.innerHTML = `<div class="error-box"><b>Mermaid 문법 또는 지원 기능을 확인하세요.</b><pre>${escapeHtml(message)}</pre><div style="margin-top:10px;color:#7a5757">팁: 실험적 다이어그램은 Mermaid 버전·브라우저 환경에 따라 문법이 달라질 수 있다.</div></div>`;
+          setStatus('렌더링 오류', 'error');
+        }
+      }
+      function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+
+      function scheduleRender() {
+        updateChars();
+        if (el.auto.value !== 'true') return;
+        clearTimeout(state.renderTimer);
+        state.renderTimer = setTimeout(renderCurrent, 700);
+      }
+      async function copyText(text, label = '코드를 클립보드에 복사했다.') {
+        try { await navigator.clipboard.writeText(text); toast(label); }
+        catch {
+          const tmp = document.createElement('textarea'); tmp.value = text; document.body.appendChild(tmp); tmp.select(); document.execCommand('copy'); tmp.remove(); toast(label);
+        }
+      }
+      function download(filename, content, mime = 'text/plain;charset=utf-8') {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([content], { type: mime }));
+        link.download = filename; document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      }
+      function downloadSvg() {
+        if (!state.lastSvg) { toast('먼저 다이어그램을 정상 렌더링하세요.', true); return; }
+        const title = selectedDemo().id.replace(/[^a-z0-9_-]/gi, '_');
+        download(`${title}_mermaid.svg`, state.lastSvg, 'image/svg+xml;charset=utf-8');
+        toast('SVG 파일을 저장했다.');
+      }
+
+      async function renderGallery() {
+        if (!window.mermaid) { toast('Mermaid.js CDN 연결 후 다시 시도하세요.', true); return; }
+        el.gallery.classList.add('open');
+        el.gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.galleryGrid.innerHTML = demos.map(d => `<article class="gallery-item" data-gallery-id="${d.id}"><div class="gallery-item-head"><span class="demo-icon">${d.icon}</span><b>${d.title}</b>${d.experimental ? '<span class="badge">신기능</span>' : ''}</div><div class="gallery-item-body"><span style="color:#7c8da3;font-size:11px">렌더링 대기</span></div></article>`).join('');
+        let completed = 0, failed = 0;
+        for (const demo of demos) {
+          const card = el.galleryGrid.querySelector(`[data-gallery-id="${demo.id}"] .gallery-item-body`);
+          el.galleryStatus.textContent = `● ${completed + 1}/${demos.length} 렌더링`;
+          el.galleryStatus.className = 'status loading';
+          try {
+            window.mermaid.initialize(currentConfig());
+            const { svg, bindFunctions } = await window.mermaid.render(`gallery_${demo.id}_${Date.now()}_${completed}`, codeFor(demo));
+            card.innerHTML = svg;
+            if (typeof bindFunctions === 'function') bindFunctions(card);
+          } catch (error) {
+            failed += 1;
+            card.innerHTML = `<div class="gallery-error">렌더링 실패<br/><span style="font-size:9px">${escapeHtml(error.message || String(error)).slice(0, 180)}</span></div>`;
+          }
+          completed += 1;
+          await new Promise(r => setTimeout(r, 20));
+        }
+        el.galleryStatus.textContent = failed ? `● 완료 · ${failed}건 확인 필요` : '● 전체 렌더 완료';
+        el.galleryStatus.className = failed ? 'status error' : 'status';
+      }
+      async function toggleFullscreen() {
+        const target = el.preview;
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else await target.requestFullscreen();
+        } catch { toast('이 브라우저에서는 전체화면 기능을 사용할 수 없다.', true); }
+      }
+
+      $('renderBtn').addEventListener('click', renderCurrent);
+      $('copyBtn').addEventListener('click', () => copyText(el.editor.value));
+      $('resetBtn').addEventListener('click', () => { el.editor.value = codeFor(selectedDemo()); updateChars(); renderCurrent(); toast('선택 샘플의 원본 코드로 초기화했다.'); });
+      $('downloadSvgBtn').addEventListener('click', downloadSvg);
+      $('downloadCodeBtn').addEventListener('click', () => { download(`${selectedDemo().id}_mermaid.mmd`, el.editor.value); toast('현재 Mermaid 문법을 저장했다.'); });
+      $('fitBtn').addEventListener('click', () => { el.preview.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); toast('미리보기 위치를 처음으로 맞췄다.'); });
+      $('fullscreenBtn').addEventListener('click', toggleFullscreen);
+      $('renderAllBtn').addEventListener('click', renderGallery);
+      $('closeGalleryBtn').addEventListener('click', () => el.gallery.classList.remove('open'));
+      el.editor.addEventListener('input', scheduleRender);
+      el.editor.addEventListener('keydown', (event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); renderCurrent(); } });
+      el.search.addEventListener('input', () => { state.filter = el.search.value; renderList(); });
+      [el.theme, el.security, el.htmlLabels].forEach(select => select.addEventListener('change', renderCurrent));
+      el.auto.addEventListener('change', () => toast(el.auto.value === 'true' ? '자동 렌더링을 켰다.' : '자동 렌더링을 껐다.'));
+
+      $('versionPill').textContent = `v${MERMAID_VERSION}`;
+      $('sampleCount').textContent = demos.length;
+      $('metricTypes').textContent = demos.length;
+      renderTabs(); renderList(); loadDemo(0);
+    })();
+  </script>
+</body>
+</html>
