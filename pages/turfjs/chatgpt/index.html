@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Turf.js 종합 기능 실험실</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://unpkg.com" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --ink: #132238;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --primary: #0b6bcb;
+      --primary-2: #0a4f94;
+      --cyan: #0f9db8;
+      --green: #11875d;
+      --orange: #d97706;
+      --red: #c24152;
+      --purple: #7c3aed;
+      --shadow: 0 12px 30px rgba(25, 52, 84, .11);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 4px 20px rgba(28, 47, 74, .06);
+      z-index: 1001;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 275px; }
+    .logo {
+      width: 42px; height: 42px; display: grid; place-items: center;
+      border-radius: 13px; color: white; font-weight: 900; letter-spacing: -.04em;
+      background: linear-gradient(145deg, #0b6bcb, #00a6b8);
+      box-shadow: 0 8px 18px rgba(11, 107, 203, .25);
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
+    .subtitle { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .header-stats { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      border: 1px solid var(--line); background: var(--panel-2); color: #39506d;
+      border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700;
+    }
+    .badge.live { color: var(--green); border-color: #b9e4d3; background: #effaf5; }
+    .header-actions { margin-left: auto; display: flex; gap: 8px; }
+    .icon-btn, .primary-btn, .ghost-btn {
+      border-radius: 10px; border: 1px solid var(--line); background: white;
+      color: #29425f; padding: 9px 12px; font-weight: 750; font-size: 13px;
+    }
+    .icon-btn:hover, .ghost-btn:hover { background: #f4f7fb; }
+    .primary-btn { background: var(--primary); color: white; border-color: var(--primary); }
+    .primary-btn:hover { background: var(--primary-2); }
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 330px minmax(420px, 1fr) 360px;
+      gap: 10px;
+      padding: 10px;
+    }
+    .panel {
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .tool-panel { display: grid; grid-template-rows: auto auto 1fr auto; }
+    .panel-title { padding: 14px 15px 9px; font-weight: 850; letter-spacing: -.02em; }
+    .search-wrap { padding: 0 12px 10px; }
+    .search-wrap input {
+      width: 100%; border: 1px solid var(--line); outline: none;
+      border-radius: 11px; padding: 10px 12px; color: var(--ink); background: #fbfcfe;
+    }
+    .search-wrap input:focus { border-color: #7fb5e8; box-shadow: 0 0 0 3px #e4f1ff; }
+    .category-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 12px 10px; scrollbar-width: thin; }
+    .category-tabs button {
+      white-space: nowrap; border: 1px solid var(--line); color: #53657d;
+      background: white; border-radius: 999px; padding: 6px 9px; font-size: 11px; font-weight: 750;
+    }
+    .category-tabs button.active { background: #e9f3ff; color: var(--primary); border-color: #a9cff6; }
+    .tool-list { overflow: auto; padding: 0 10px 12px; scrollbar-width: thin; }
+    .tool-card {
+      width: 100%; text-align: left; border: 1px solid transparent; background: transparent;
+      border-radius: 12px; padding: 10px; margin-bottom: 6px; transition: .18s ease;
+    }
+    .tool-card:hover { background: #f6f9fd; border-color: var(--line); transform: translateY(-1px); }
+    .tool-card.active { background: #edf6ff; border-color: #a9cff6; box-shadow: inset 3px 0 0 var(--primary); }
+    .tool-name { font-size: 13px; font-weight: 850; color: #213957; }
+    .tool-desc { margin-top: 4px; font-size: 11px; line-height: 1.45; color: var(--muted); }
+    .tool-fns { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+    .fn-chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; color: #50657c; background: white; border: 1px solid #dfe6ef; padding: 2px 5px; border-radius: 5px; }
+    .tool-footer { padding: 10px 12px; border-top: 1px solid var(--line); background: #fbfcfe; font-size: 11px; color: var(--muted); }
+
+    .map-panel { position: relative; }
+    #map { width: 100%; height: 100%; min-height: 420px; background: #dce8f3; }
+    .map-toolbar {
+      position: absolute; z-index: 800; top: 12px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px; padding: 6px; border-radius: 13px;
+      background: rgba(255,255,255,.94); border: 1px solid rgba(194,207,222,.95); box-shadow: 0 8px 22px rgba(24, 55, 88, .18);
+    }
+    .map-toolbar button { border: 0; border-radius: 8px; padding: 7px 9px; background: transparent; color: #3a526f; font-size: 12px; font-weight: 800; }
+    .map-toolbar button:hover { background: #eef4fb; color: var(--primary); }
+    .map-legend {
+      position: absolute; z-index: 800; bottom: 20px; left: 12px; padding: 10px 12px;
+      background: rgba(255,255,255,.94); border: 1px solid var(--line); border-radius: 12px;
+      box-shadow: 0 8px 18px rgba(24, 55, 88, .16); font-size: 11px; line-height: 1.65;
+    }
+    .legend-row { display: flex; align-items: center; gap: 7px; }
+    .swatch { width: 18px; height: 5px; border-radius: 4px; }
+    .map-status {
+      position: absolute; z-index: 800; right: 12px; bottom: 20px; max-width: 280px;
+      padding: 9px 11px; border-radius: 10px; color: #39506d; background: rgba(255,255,255,.94);
+      border: 1px solid var(--line); box-shadow: 0 8px 18px rgba(24, 55, 88, .14); font-size: 11px;
+    }
+
+    .result-panel { display: grid; grid-template-rows: auto auto 1fr; }
+    .result-head { padding: 14px 15px 11px; border-bottom: 1px solid var(--line); }
+    .result-kicker { color: var(--primary); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+    #resultTitle { margin: 5px 0 0; font-size: 17px; letter-spacing: -.03em; }
+    #resultSummary { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .result-tabs { display: grid; grid-template-columns: repeat(3,1fr); padding: 8px; gap: 5px; background: #fbfcfe; border-bottom: 1px solid var(--line); }
+    .result-tabs button { border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 7px; color: #667991; font-size: 11px; font-weight: 800; }
+    .result-tabs button.active { background: white; color: var(--primary); border-color: var(--line); box-shadow: 0 2px 8px rgba(45,68,98,.08); }
+    .result-content { min-height: 0; overflow: auto; padding: 13px; scrollbar-width: thin; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .metric { padding: 10px; border-radius: 11px; background: #f6f9fc; border: 1px solid #e0e8f1; }
+    .metric-label { color: var(--muted); font-size: 10px; }
+    .metric-value { margin-top: 4px; font-weight: 900; font-size: 14px; word-break: break-all; }
+    .detail-card { border: 1px solid var(--line); border-radius: 12px; padding: 11px; margin-bottom: 9px; }
+    .detail-card h3 { margin: 0 0 6px; font-size: 12px; }
+    .detail-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    pre {
+      margin: 0; white-space: pre-wrap; word-break: break-word; tab-size: 2;
+      background: #102033; color: #d8e8f5; border-radius: 12px; padding: 13px;
+      font-size: 11px; line-height: 1.55; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    #jsonOutput { max-height: calc(100vh - 250px); overflow: auto; }
+    .json-actions { display: flex; gap: 6px; margin-bottom: 9px; }
+    .json-actions button { flex: 1; border: 1px solid var(--line); border-radius: 8px; background: white; padding: 7px; color: #40566f; font-size: 11px; font-weight: 800; }
+    .empty-state { padding: 24px 10px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .error-box { border: 1px solid #f2bbc4; background: #fff1f3; color: #9e2438; border-radius: 12px; padding: 11px; font-size: 12px; line-height: 1.55; }
+    .loading-cover {
+      position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+      background: linear-gradient(135deg, #eef5fb, #f8fbfd);
+    }
+    .loading-card { width: min(92vw, 440px); text-align: center; background: white; border: 1px solid var(--line); border-radius: 18px; padding: 26px; box-shadow: var(--shadow); }
+    .spinner { width: 38px; height: 38px; margin: 0 auto 14px; border: 4px solid #dceafb; border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mobile-nav { display: none; }
+    .leaflet-control-layers, .leaflet-bar { border: 1px solid var(--line) !important; box-shadow: 0 8px 20px rgba(25,52,84,.16) !important; }
+    .leaflet-popup-content-wrapper { border-radius: 12px; }
+    .leaflet-popup-content { font-size: 12px; line-height: 1.5; }
+
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 300px minmax(380px, 1fr); }
+      .result-panel { position: fixed; z-index: 1200; top: 76px; right: 10px; bottom: 10px; width: min(390px, calc(100vw - 20px)); transform: translateX(calc(100% + 20px)); transition: .22s; }
+      .result-panel.open { transform: translateX(0); }
+    }
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      .app { height: auto; min-height: 100%; }
+      header { padding: 10px 12px; position: sticky; top: 0; }
+      .brand { min-width: 0; }
+      .logo { width: 38px; height: 38px; }
+      h1 { font-size: 15px; }
+      .subtitle, .header-stats { display: none; }
+      .header-actions .hide-mobile { display: none; }
+      .workspace { display: block; padding: 8px; }
+      .tool-panel { height: calc(100vh - 78px); display: none; }
+      .tool-panel.mobile-open { display: grid; }
+      .map-panel { height: calc(100vh - 78px); }
+      .result-panel { top: 64px; }
+      .mobile-nav { display: inline-flex; }
+      .map-toolbar { top: 8px; max-width: calc(100% - 16px); overflow-x: auto; }
+      .map-legend { display: none; }
+      .map-status { bottom: 10px; right: 8px; left: 8px; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="loading-cover" id="loadingCover">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <strong>Turf.js 공간분석 엔진을 불러오는 중</strong>
+    <div style="margin-top:8px;color:#64748b;font-size:12px;line-height:1.55">CDN 연결이 필요합니다. 내부망에서는 라이브러리 파일을 로컬 경로로 바꿔 사용하세요.</div>
+  </div>
+</div>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo">T</div>
+      <div>
+        <h1>Turf.js 종합 기능 실험실</h1>
+        <div class="subtitle">GeoJSON 기반 브라우저 공간분석 · 수산·어업 업무 예시</div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <span class="badge">Turf 7.3.5</span>
+      <span class="badge">Leaflet 1.9.4</span>
+      <span class="badge live" id="engineBadge">엔진 확인 중</span>
+      <span class="badge" id="demoCount">0개 예제</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn mobile-nav" id="mobileToolsBtn">기능</button>
+      <button class="icon-btn" id="resultToggleBtn">결과</button>
+      <button class="ghost-btn hide-mobile" id="resetAllBtn">전체 초기화</button>
+      <button class="primary-btn hide-mobile" id="runFeaturedBtn">추천 시연</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="panel tool-panel" id="toolPanel">
+      <div class="panel-title">기능 탐색기</div>
+      <div>
+        <div class="search-wrap"><input id="toolSearch" type="search" placeholder="함수명 또는 기능 검색" /></div>
+        <div class="category-tabs" id="categoryTabs"></div>
+      </div>
+      <div class="tool-list" id="toolList"></div>
+      <div class="tool-footer">버튼 실행 → 지도 시각화 → 계산 결과 → 코드·GeoJSON 확인</div>
+    </section>
+
+    <section class="panel map-panel">
+      <div id="map"></div>
+      <div class="map-toolbar">
+        <button id="fitBtn">전체 보기</button>
+        <button id="clearAnalysisBtn">분석 지우기</button>
+        <button id="analyzeDrawBtn">그린 도형 분석</button>
+        <button id="exportMapBtn">GeoJSON 저장</button>
+      </div>
+      <div class="map-legend">
+        <div class="legend-row"><span class="swatch" style="background:#0b6bcb"></span>입력 데이터</div>
+        <div class="legend-row"><span class="swatch" style="background:#ef6c38"></span>분석 결과</div>
+        <div class="legend-row"><span class="swatch" style="background:#7c3aed"></span>사용자 그리기</div>
+      </div>
+      <div class="map-status" id="mapStatus">기능을 선택하면 입력과 결과 레이어가 표시됩니다.</div>
+    </section>
+
+    <aside class="panel result-panel" id="resultPanel">
+      <div class="result-head">
+        <div class="result-kicker">Analysis result</div>
+        <h2 id="resultTitle">기능을 선택하세요</h2>
+        <p id="resultSummary">왼쪽 기능 목록에서 예제를 실행하거나 지도에 직접 도형을 그려 분석할 수 있습니다.</p>
+      </div>
+      <div class="result-tabs">
+        <button class="active" data-tab="overview">요약</button>
+        <button data-tab="code">실행 코드</button>
+        <button data-tab="json">GeoJSON</button>
+      </div>
+      <div class="result-content">
+        <div class="tab-pane active" id="tab-overview"><div class="empty-state">아직 실행 결과가 없습니다.</div></div>
+        <div class="tab-pane" id="tab-code"><pre id="codeOutput">// 예제를 실행하면 핵심 코드가 표시됩니다.</pre></div>
+        <div class="tab-pane" id="tab-json">
+          <div class="json-actions"><button id="copyJsonBtn">복사</button><button id="downloadJsonBtn">다운로드</button></div>
+          <pre id="jsonOutput">{}</pre>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7.3.5/turf.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const state = {
+    currentDemo: null,
+    currentGeoJSON: { type: 'FeatureCollection', features: [] },
+    lastFitGeoJSON: null,
+    activeCategory: '전체',
+    drawnGeoJSON: { type: 'FeatureCollection', features: [] }
+  };
+
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => [...document.querySelectorAll(s)];
+  const fmt = (n, digits = 2) => Number.isFinite(Number(n)) ? Number(n).toLocaleString('ko-KR', { maximumFractionDigits: digits }) : String(n ?? '-');
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  const fc = (features) => turf.featureCollection(features.filter(Boolean));
+  const point = (coord, props = {}) => turf.point(coord, props);
+  const line = (coords, props = {}) => turf.lineString(coords, props);
+  const poly = (coords, props = {}) => turf.polygon(coords, props);
+
+  let map, inputLayer, outputLayer, labelLayer, drawnItems, layerControl;
+
+  function bootError(message) {
+    $('#loadingCover').innerHTML = `<div class="loading-card"><div style="font-size:34px;margin-bottom:10px">!</div><strong>라이브러리를 불러오지 못했습니다.</strong><div style="margin-top:10px;color:#9e2438;font-size:12px;line-height:1.6">${message}<br>인터넷 연결 또는 CDN 차단 여부를 확인하세요.</div></div>`;
+  }
+
+  function initMap() {
+    map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([37.35, 126.55], 8);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    });
+    const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+    const sea = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: 'Map data &copy; OpenSeaMap contributors'
+    });
+
+    inputLayer = L.geoJSON(null, geoJsonOptions('input')).addTo(map);
+    outputLayer = L.geoJSON(null, geoJsonOptions('output')).addTo(map);
+    labelLayer = L.layerGroup().addTo(map);
+    drawnItems = new L.FeatureGroup().addTo(map);
+
+    layerControl = L.control.layers(
+      { '밝은 지도': carto, 'OpenStreetMap': osm },
+      { '해도 표지': sea, '입력 데이터': inputLayer, '분석 결과': outputLayer, '사용자 도형': drawnItems },
+      { position: 'topright', collapsed: true }
+    ).addTo(map);
+
+    if (L.Control.Draw) {
+      const drawControl = new L.Control.Draw({
+        position: 'topleft',
+        edit: { featureGroup: drawnItems, remove: true },
+        draw: {
+          polygon: { allowIntersection: true, showArea: true, shapeOptions: { color: '#7c3aed', weight: 3 } },
+          polyline: { shapeOptions: { color: '#7c3aed', weight: 4 } },
+          rectangle: { shapeOptions: { color: '#7c3aed', weight: 3 } },
+          circle: false,
+          circlemarker: false,
+          marker: true
+        }
+      });
+      map.addControl(drawControl);
+      map.on(L.Draw.Event.CREATED, (e) => {
+        drawnItems.addLayer(e.layer);
+        syncDrawn();
+        analyzeDrawn();
+      });
+      map.on(L.Draw.Event.EDITED, () => { syncDrawn(); analyzeDrawn(); });
+      map.on(L.Draw.Event.DELETED, () => { syncDrawn(); });
+    }
+
+    map.on('mousemove', (e) => {
+      $('#mapStatus').textContent = `위도 ${e.latlng.lat.toFixed(5)} · 경도 ${e.latlng.lng.toFixed(5)} · 줌 ${map.getZoom()}`;
+    });
+  }
+
+  function geoJsonOptions(kind) {
+    const output = kind === 'output';
+    return {
+      style: (feature) => {
+        const p = feature.properties || {};
+        const cluster = Number.isFinite(p.cluster) ? p.cluster : null;
+        const palette = ['#ef6c38','#1aa37a','#7c3aed','#eab308','#db2777','#0ea5e9'];
+        return {
+          color: p.stroke || (cluster !== null ? palette[Math.abs(cluster) % palette.length] : output ? '#ef6c38' : '#0b6bcb'),
+          weight: p.weight || (output ? 3 : 2.5),
+          opacity: .92,
+          fillColor: p.fill || (cluster !== null ? palette[Math.abs(cluster) % palette.length] : output ? '#ff9f6f' : '#4ba3f2'),
+          fillOpacity: p.fillOpacity ?? (output ? .28 : .18),
+          dashArray: p.dashArray || null
+        };
+      },
+      pointToLayer: (feature, latlng) => {
+        const p = feature.properties || {};
+        const cluster = Number.isFinite(p.cluster) ? p.cluster : null;
+        const palette = ['#ef6c38','#1aa37a','#7c3aed','#eab308','#db2777','#0ea5e9'];
+        const color = p.color || (cluster !== null ? palette[Math.abs(cluster) % palette.length] : output ? '#ef6c38' : '#0b6bcb');
+        return L.circleMarker(latlng, { radius: p.radius || (output ? 7 : 6), color: '#fff', weight: 1.5, fillColor: color, fillOpacity: .95 });
+      },
+      onEachFeature: (feature, layer) => {
+        const props = feature.properties || {};
+        const entries = Object.entries(props).slice(0, 10);
+        if (entries.length) {
+          layer.bindPopup(`<strong>${props.name || props.title || feature.geometry.type}</strong><br>${entries.map(([k,v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join('<br>')}`);
+        }
+      }
+    };
+  }
+
+  function clearAnalysis() {
+    inputLayer.clearLayers();
+    outputLayer.clearLayers();
+    labelLayer.clearLayers();
+    state.currentGeoJSON = { type: 'FeatureCollection', features: [] };
+    state.lastFitGeoJSON = null;
+  }
+
+  function addAny(layer, data) {
+    if (!data) return;
+    if (Array.isArray(data)) data.forEach(d => d && layer.addData(d));
+    else layer.addData(data);
+  }
+
+  function combineGeoJSON(items) {
+    const features = [];
+    const walk = (item) => {
+      if (!item) return;
+      if (Array.isArray(item)) return item.forEach(walk);
+      if (item.type === 'FeatureCollection') features.push(...item.features);
+      else if (item.type === 'Feature') features.push(item);
+      else if (item.type && item.coordinates) features.push(turf.feature(item));
+    };
+    walk(items);
+    return turf.featureCollection(features);
+  }
+
+  function fitGeoJSON(data) {
+    try {
+      const collection = combineGeoJSON(data);
+      if (!collection.features.length) return;
+      const b = turf.bbox(collection);
+      if (b.every(Number.isFinite)) map.fitBounds([[b[1], b[0]], [b[3], b[2]]], { padding: [35, 35], maxZoom: 12 });
+    } catch (e) { console.warn('fit error', e); }
+  }
+
+  function finish({ title, summary, inputs = [], outputs = [], metrics = [], notes = [], code = '', json = null, fit = null }) {
+    clearAnalysis();
+    addAny(inputLayer, inputs);
+    addAny(outputLayer, outputs);
+    const all = json || combineGeoJSON(outputs.length ? outputs : inputs);
+    state.currentGeoJSON = all;
+    state.lastFitGeoJSON = fit || combineGeoJSON([inputs, outputs]);
+    fitGeoJSON(state.lastFitGeoJSON);
+    setResult({ title, summary, metrics, notes, code, json: all });
+    $('#mapStatus').textContent = `${title} 실행 완료 · 입력 ${combineGeoJSON(inputs).features.length}개 · 결과 ${combineGeoJSON(outputs).features.length}개`;
+  }
+
+  function setResult({ title, summary, metrics = [], notes = [], code = '', json = {} }) {
+    $('#resultTitle').textContent = title;
+    $('#resultSummary').textContent = summary;
+    const metricHtml = metrics.length ? `<div class="metric-grid">${metrics.map(m => `<div class="metric"><div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div></div>`).join('')}</div>` : '';
+    const notesHtml = notes.map(n => `<div class="detail-card"><h3>${n.title}</h3><p>${n.text}</p></div>`).join('');
+    $('#tab-overview').innerHTML = metricHtml + notesHtml || '<div class="empty-state">결과 요약이 없습니다.</div>';
+    $('#codeOutput').textContent = code || '// 표시할 코드가 없습니다.';
+    $('#jsonOutput').textContent = JSON.stringify(json, null, 2);
+    if (window.innerWidth <= 1180) $('#resultPanel').classList.add('open');
+  }
+
+  function showError(title, error) {
+    console.error(error);
+    $('#resultTitle').textContent = title;
+    $('#resultSummary').textContent = '예제 실행 중 오류가 발생했습니다.';
+    $('#tab-overview').innerHTML = `<div class="error-box"><strong>${error.name || 'Error'}</strong><br>${error.message || error}</div>`;
+    $('#codeOutput').textContent = '// 오류가 발생해 실행 코드 결과를 표시하지 못했습니다.';
+    if (window.innerWidth <= 1180) $('#resultPanel').classList.add('open');
+  }
+
+  function basePoints() {
+    return turf.featureCollection([
+      point([126.616, 37.456], { name: '인천항', value: 82, type: '항만' }),
+      point([126.800, 37.322], { name: '안산', value: 64, type: '지원거점' }),
+      point([126.832, 37.199], { name: '화성', value: 71, type: '어업거점' }),
+      point([126.444, 36.785], { name: '서산', value: 57, type: '위판거점' }),
+      point([126.302, 36.595], { name: '태안', value: 93, type: '어업거점' }),
+      point([126.389, 36.352], { name: '보령', value: 76, type: '위판거점' }),
+      point([126.701, 37.676], { name: '김포', value: 48, type: '지원거점' }),
+      point([127.015, 37.566], { name: '서울', value: 35, type: '본부' }),
+      point([126.172, 37.473], { name: '덕적도', value: 88, type: '도서거점' }),
+      point([125.980, 36.970], { name: '격렬비열도 인근', value: 96, type: '관측지점' })
+    ]);
+  }
+
+  function serviceAreas() {
+    return turf.featureCollection([
+      poly([[[126.23,37.08],[126.73,37.08],[126.77,37.54],[126.28,37.62],[126.23,37.08]]], { name:'북부권', group:'A' }),
+      poly([[[126.08,36.45],[126.69,36.45],[126.72,37.05],[126.15,37.12],[126.08,36.45]]], { name:'중부권', group:'A' }),
+      poly([[[125.84,35.98],[126.47,35.98],[126.64,36.51],[126.03,36.55],[125.84,35.98]]], { name:'남부권', group:'B' })
+    ]);
+  }
+
+  function vesselRoute() {
+    return line([
+      [126.616,37.456],[126.48,37.34],[126.31,37.15],[126.12,36.98],[125.98,36.77],[126.08,36.52],[126.30,36.35]
+    ], { name:'시험 항로' });
+  }
+
+  function hazardArea() {
+    return poly([[[126.00,36.70],[126.34,36.70],[126.43,37.02],[126.18,37.19],[125.94,36.96],[126.00,36.70]]], { name:'기상 위험 예상구역' });
+  }
+
+  function overlapPolygons() {
+    const a = poly([[[126.0,36.6],[126.7,36.6],[126.7,37.3],[126.0,37.3],[126.0,36.6]]], { name:'조업구역 A' });
+    const b = poly([[[126.35,36.35],[127.0,36.35],[127.0,37.0],[126.35,37.0],[126.35,36.35]]], { name:'관리구역 B' });
+    return [a,b];
+  }
+
+  function irregularPoints(count = 28) {
+    const coords = [];
+    for (let i=0; i<count; i++) {
+      const angle = i * 0.83;
+      const radius = 0.08 + (i % 7) * 0.018;
+      coords.push(point([
+        126.35 + Math.cos(angle) * radius + ((i % 3)-1)*0.018,
+        36.85 + Math.sin(angle) * radius * .72 + ((i % 5)-2)*0.009
+      ], { name:`관측 ${i+1}`, value: Math.round(45 + 35*Math.sin(i*.55) + (i%4)*7) }));
+    }
+    return fc(coords);
+  }
+
+  function surfaceGrid() {
+    const grid = turf.pointGrid([125.85,36.25,126.95,37.35], 12, { units:'kilometers' });
+    grid.features.forEach((f, i) => {
+      const [x,y] = f.geometry.coordinates;
+      f.properties.elevation = Math.round(50 + 34*Math.sin((x-125.8)*7) + 25*Math.cos((y-36.2)*8) + ((i%5)-2)*3);
+      f.properties.name = `관측격자 ${i+1}`;
+    });
+    return grid;
+  }
+
+  const demos = [
+    {
+      id:'helpers', category:'기초', title:'GeoJSON 생성 도우미',
+      desc:'Point·LineString·Polygon·FeatureCollection 생성', fns:['point','lineString','polygon','featureCollection'],
+      run() {
+        const p = point([126.616,37.456], { name:'인천항' });
+        const l = vesselRoute();
+        const a = hazardArea();
+        finish({ title:this.title, summary:'Turf의 모든 분석은 표준 GeoJSON Feature를 입력·출력으로 사용합니다.', inputs:[p,l,a], outputs:[], metrics:[
+          {label:'Feature 수',value:'3개'},{label:'Geometry',value:'Point·Line·Polygon'}
+        ], notes:[{title:'핵심',text:'속성(properties)을 함께 넣으면 지도 스타일, 팝업, 분석 기준값으로 활용할 수 있습니다.'}], code:`const p = turf.point([126.616, 37.456], { name: '인천항' });\nconst route = turf.lineString([[126.616,37.456], [126.31,37.15]]);\nconst area = turf.polygon([[[126.0,36.7],[126.4,36.7],[126.0,37.1],[126.0,36.7]]]);\nconst collection = turf.featureCollection([p, route, area]);`, json:fc([p,l,a]) });
+      }
+    },
+    {
+      id:'distance-bearing', category:'측정', title:'거리·방위각·중간점',
+      desc:'두 지점 사이의 거리와 방향 계산', fns:['distance','bearing','midpoint'],
+      run() {
+        const pts = basePoints(); const a=pts.features[0], b=pts.features[4];
+        const d=turf.distance(a,b,{units:'kilometers'}); const bearing=turf.bearing(a,b); const mid=turf.midpoint(a,b); mid.properties={name:'중간점'};
+        finish({ title:this.title, summary:'인천항과 태안 거점 사이의 대권거리, 초기 방위각, 중간점을 계산합니다.', inputs:[a,b,line([a.geometry.coordinates,b.geometry.coordinates],{name:'직선 연결'})], outputs:[mid], metrics:[
+          {label:'거리',value:`${fmt(d)} km`},{label:'초기 방위각',value:`${fmt(bearing)}°`},{label:'중간점 경도',value:mid.geometry.coordinates[0].toFixed(5)},{label:'중간점 위도',value:mid.geometry.coordinates[1].toFixed(5)}
+        ], notes:[{title:'적용 예',text:'거점 간 이동거리, 선박-사고지점 거리, 순찰 방향 산정에 활용할 수 있습니다.'}], code:`const km = turf.distance(start, end, { units: 'kilometers' });\nconst bearing = turf.bearing(start, end);\nconst midpoint = turf.midpoint(start, end);`, json:fc([mid]) });
+      }
+    },
+    {
+      id:'destination', category:'측정', title:'목적지점·등각선 목적지점',
+      desc:'거리와 방위각으로 새 좌표 계산', fns:['destination','rhumbDestination'],
+      run() {
+        const origin=point([126.616,37.456],{name:'출발점'});
+        const dest=turf.destination(origin,55,225,{units:'kilometers'}); dest.properties={name:'대권 목적지'};
+        const rhumb=turf.rhumbDestination(origin,55,225,{units:'kilometers'}); rhumb.properties={name:'등각선 목적지',color:'#7c3aed'};
+        finish({ title:this.title, summary:'출발점에서 남서쪽 225도로 55km 이동한 좌표를 두 방식으로 비교합니다.', inputs:[origin], outputs:[dest,rhumb,line([origin.geometry.coordinates,dest.geometry.coordinates])], metrics:[
+          {label:'이동거리',value:'55 km'},{label:'방위각',value:'225°'},{label:'대권 목적지',value:dest.geometry.coordinates.map(v=>v.toFixed(4)).join(', ')},{label:'등각선 목적지',value:rhumb.geometry.coordinates.map(v=>v.toFixed(4)).join(', ')}
+        ], notes:[{title:'차이',text:'destination은 구면상 최단경로, rhumbDestination은 일정한 나침반 방향을 유지하는 항로 계산입니다.'}], code:`const destination = turf.destination(origin, 55, 225, { units: 'kilometers' });\nconst rhumb = turf.rhumbDestination(origin, 55, 225, { units: 'kilometers' });`, json:fc([dest,rhumb]) });
+      }
+    },
+    {
+      id:'route-along', category:'측정', title:'항로 길이·구간 지점',
+      desc:'전체 길이와 특정 거리 지점 계산', fns:['length','along'],
+      run() {
+        const r=vesselRoute(); const len=turf.length(r,{units:'kilometers'}); const marks=[];
+        for(let d=20; d<len; d+=20){ const p=turf.along(r,d,{units:'kilometers'}); p.properties={name:`${d}km 지점`,distance:d}; marks.push(p); }
+        finish({ title:this.title, summary:'시험 항로의 총 길이를 계산하고 20km 간격 지점을 생성합니다.', inputs:[r], outputs:[fc(marks)], metrics:[
+          {label:'항로 길이',value:`${fmt(len)} km`},{label:'간격 지점',value:`${marks.length}개`}
+        ], notes:[{title:'적용 예',text:'항로 이정표, 예상 도착구간, 순찰·구조 자원 배치 지점 생성에 유용합니다.'}], code:`const routeKm = turf.length(route, { units: 'kilometers' });\nconst p20 = turf.along(route, 20, { units: 'kilometers' });`, json:fc(marks) });
+      }
+    },
+    {
+      id:'slice-chunk', category:'선형', title:'항로 자르기·분할',
+      desc:'거리 범위 추출과 일정 길이 분할', fns:['lineSliceAlong','lineChunk'],
+      run() {
+        const r=vesselRoute();
+        const slice=turf.lineSliceAlong(r,25,75,{units:'kilometers'}); slice.properties={name:'25~75km 구간',stroke:'#ef6c38',weight:6};
+        const chunks=turf.lineChunk(r,18,{units:'kilometers'}); chunks.features.forEach((f,i)=>f.properties={name:`18km 구간 ${i+1}`,stroke:i%2?'#7c3aed':'#ef6c38'});
+        finish({ title:this.title, summary:'항로 25~75km 구간을 추출하고 전체 항로를 약 18km 단위로 분할합니다.', inputs:[r], outputs:[slice,chunks], metrics:[
+          {label:'추출 구간',value:'50 km'},{label:'분할 수',value:`${chunks.features.length}개`}
+        ], notes:[{title:'활용',text:'정기 점검 구간 배정, 해역별 담당 분할, 구간별 위험도 산출의 전처리로 사용할 수 있습니다.'}], code:`const slice = turf.lineSliceAlong(route, 25, 75, { units: 'kilometers' });\nconst chunks = turf.lineChunk(route, 18, { units: 'kilometers' });`, json:chunks });
+      }
+    },
+    {
+      id:'area-perimeter', category:'측정', title:'면적·둘레 계산',
+      desc:'조업구역 면적과 외곽 길이 산출', fns:['area','polygonToLine','length'],
+      run() {
+        const a=hazardArea(); const sqm=turf.area(a); const border=turf.polygonToLine(a); border.properties={name:'구역 외곽선',stroke:'#ef6c38',weight:5}; const per=turf.length(border,{units:'kilometers'});
+        finish({ title:this.title, summary:'위험 예상구역의 면적과 외곽선 길이를 계산합니다.', inputs:[a], outputs:[border], metrics:[
+          {label:'면적',value:`${fmt(sqm/1e6)} km²`},{label:'둘레',value:`${fmt(per)} km`}
+        ], notes:[{title:'주의',text:'turf.area는 제곱미터를 반환하며, length는 지정한 단위로 선 길이를 반환합니다.'}], code:`const squareMeters = turf.area(area);\nconst border = turf.polygonToLine(area);\nconst perimeterKm = turf.length(border, { units: 'kilometers' });`, json:border });
+      }
+    },
+    {
+      id:'bbox-envelope', category:'기초', title:'경계상자·포락 폴리곤',
+      desc:'전체 데이터 범위와 사각형 생성', fns:['bbox','bboxPolygon','envelope','square'],
+      run() {
+        const pts=basePoints(); const bbox=turf.bbox(pts); const rect=turf.bboxPolygon(bbox); rect.properties={name:'최소 경계상자'};
+        const env=turf.envelope(pts); env.properties={name:'Envelope',stroke:'#7c3aed',dashArray:'6 5',fillOpacity:.05};
+        const sq=turf.bboxPolygon(turf.square(bbox)); sq.properties={name:'정사각 범위',stroke:'#11875d',fillOpacity:.03};
+        finish({ title:this.title, summary:'거점 전체를 포함하는 최소 경계상자와 정사각형 범위를 생성합니다.', inputs:[pts], outputs:[rect,env,sq], metrics:[
+          {label:'서쪽',value:bbox[0].toFixed(4)},{label:'남쪽',value:bbox[1].toFixed(4)},{label:'동쪽',value:bbox[2].toFixed(4)},{label:'북쪽',value:bbox[3].toFixed(4)}
+        ], notes:[{title:'활용',text:'지도 자동 줌, 격자 생성 범위, 외부 API 공간검색 파라미터 산정에 자주 사용됩니다.'}], code:`const bbox = turf.bbox(points);\nconst rectangle = turf.bboxPolygon(bbox);\nconst envelope = turf.envelope(points);\nconst squareBbox = turf.square(bbox);`, json:fc([rect,env,sq]) });
+      }
+    },
+    {
+      id:'centers', category:'측정', title:'중심점 비교',
+      desc:'경계·평균·무게중심 방식 비교', fns:['center','centroid','centerMean','centerOfMass'],
+      run() {
+        const pts=basePoints();
+        const center=turf.center(pts); center.properties={name:'center',color:'#0b6bcb'};
+        const centroid=turf.centroid(pts); centroid.properties={name:'centroid',color:'#11875d'};
+        const mean=turf.centerMean(pts,{weight:'value'}); mean.properties={name:'가중 centerMean',color:'#7c3aed'};
+        const hull=turf.convex(pts); const mass=turf.centerOfMass(hull); mass.properties={name:'centerOfMass',color:'#ef6c38'};
+        finish({ title:this.title, summary:'같은 데이터도 중심의 정의에 따라 결과 위치가 달라지는 것을 비교합니다.', inputs:[pts,hull], outputs:[center,centroid,mean,mass], metrics:[
+          {label:'center',value:center.geometry.coordinates.map(v=>v.toFixed(3)).join(',')},{label:'centroid',value:centroid.geometry.coordinates.map(v=>v.toFixed(3)).join(',')},{label:'가중 평균중심',value:mean.geometry.coordinates.map(v=>v.toFixed(3)).join(',')},{label:'질량중심',value:mass.geometry.coordinates.map(v=>v.toFixed(3)).join(',')}
+        ], notes:[{title:'선택 기준',text:'단순 표시 중심은 center, 꼭짓점 평균은 centroid, 속성 가중 중심은 centerMean, 면적 질량중심은 centerOfMass가 적합합니다.'}], code:`turf.center(features);\nturf.centroid(features);\nturf.centerMean(points, { weight: 'value' });\nturf.centerOfMass(polygon);`, json:fc([center,centroid,mean,mass]) });
+      }
+    },
+    {
+      id:'great-circle', category:'선형', title:'대권항로 생성',
+      desc:'지구 곡률을 반영한 장거리 최단경로', fns:['greatCircle'],
+      run() {
+        const start=point([126.616,37.456],{name:'인천'}); const end=point([139.767,35.681],{name:'도쿄'});
+        const gc=turf.greatCircle(start,end,{npoints:100}); gc.properties={name:'대권항로',stroke:'#ef6c38',weight:5};
+        finish({ title:this.title, summary:'인천과 도쿄 사이의 대권항로를 100개 좌표로 생성합니다.', inputs:[start,end], outputs:[gc], metrics:[
+          {label:'대권거리',value:`${fmt(turf.length(gc,{units:'kilometers'}))} km`},{label:'좌표 수',value:`${gc.geometry.coordinates.length}개`}
+        ], notes:[{title:'활용',text:'국제 항로, 원거리 이동 시각화처럼 지도 투영에서 직선과 실제 최단경로가 다른 경우에 적합합니다.'}], code:`const route = turf.greatCircle(start, end, { npoints: 100 });`, json:gc, fit:fc([start,end,gc]) });
+      }
+    },
+    {
+      id:'shapes', category:'생성', title:'원·타원·부채꼴 생성',
+      desc:'중심점과 거리 조건으로 영역 생성', fns:['circle','ellipse','sector'],
+      run() {
+        const c=point([126.32,36.85],{name:'관측 중심'});
+        const circle=turf.circle(c,25,{steps:64,units:'kilometers'}); circle.properties={name:'25km 원',fill:'#4ba3f2'};
+        const ellipse=turf.ellipse(c,45,18,{angle:35,steps:64,units:'kilometers'}); ellipse.properties={name:'45×18km 타원',fill:'#7c3aed'};
+        const sector=turf.sector(c,55,300,45,{steps:64,units:'kilometers'}); sector.properties={name:'북쪽 감시 부채꼴',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'관측 중심을 기준으로 원형 서비스권역, 방향성 타원, 감시 부채꼴을 생성합니다.', inputs:[c], outputs:[circle,ellipse,sector], metrics:[
+          {label:'원 반경',value:'25 km'},{label:'타원 반축',value:'45 × 18 km'},{label:'타원 회전',value:'35°'},{label:'부채꼴',value:'300° → 45°'}
+        ], notes:[{title:'활용',text:'거점 서비스권역, 오염 확산 방향, 레이더·관측 범위 표현에 사용할 수 있습니다.'}], code:`turf.circle(center, 25, { units: 'kilometers' });\nturf.ellipse(center, 45, 18, { angle: 35, units: 'kilometers' });\nturf.sector(center, 55, 300, 45, { units: 'kilometers' });`, json:fc([circle,ellipse,sector]) });
+      }
+    },
+    {
+      id:'buffer', category:'변환', title:'버퍼 영역',
+      desc:'점·선·면 주변의 영향권 생성', fns:['buffer'],
+      run() {
+        const p=point([126.616,37.456],{name:'항만'}); const r=vesselRoute(); const h=hazardArea();
+        const pb=turf.buffer(p,15,{units:'kilometers'}); pb.properties={name:'항만 15km권'};
+        const rb=turf.buffer(r,8,{units:'kilometers'}); rb.properties={name:'항로 8km 안전대',fill:'#7c3aed'};
+        const hb=turf.buffer(h,-5,{units:'kilometers'}); hb.properties={name:'위험구역 내부 5km 축소',fill:'#11875d'};
+        finish({ title:this.title, summary:'양수 버퍼는 확장, 음수 버퍼는 폴리곤 내부 축소에 사용합니다.', inputs:[p,r,h], outputs:[pb,rb,hb], metrics:[
+          {label:'점 버퍼',value:'15 km'},{label:'선 버퍼',value:'8 km'},{label:'면 버퍼',value:'-5 km'}
+        ], notes:[{title:'업무 예시',text:'항만 접근권역, 항로 안전대, 규제구역 경계 여유폭, 사고지점 수색반경 설정에 적합합니다.'}], code:`const pointZone = turf.buffer(port, 15, { units: 'kilometers' });\nconst routeZone = turf.buffer(route, 8, { units: 'kilometers' });\nconst innerZone = turf.buffer(area, -5, { units: 'kilometers' });`, json:fc([pb,rb,hb]) });
+      }
+    },
+    {
+      id:'simplify', category:'변환', title:'도형 단순화',
+      desc:'형상을 유지하면서 좌표 수 축소', fns:['simplify'],
+      run() {
+        const dense=turf.circle([126.32,36.85],55,{steps:256,units:'kilometers',properties:{name:'원본 256점'}});
+        dense.geometry.coordinates[0].forEach((c,i)=>{ if(i<dense.geometry.coordinates[0].length-1){ c[0]+=Math.sin(i*.8)*.006; c[1]+=Math.cos(i*.55)*.004; }});
+        const simple=turf.simplify(dense,{tolerance:.015,highQuality:true,mutate:false}); simple.properties={name:'단순화 결과',stroke:'#ef6c38',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'복잡한 경계를 단순화해 렌더링과 전송 용량을 줄입니다.', inputs:[dense], outputs:[simple], metrics:[
+          {label:'원본 좌표',value:`${dense.geometry.coordinates[0].length}개`},{label:'결과 좌표',value:`${simple.geometry.coordinates[0].length}개`},{label:'감소율',value:`${fmt((1-simple.geometry.coordinates[0].length/dense.geometry.coordinates[0].length)*100,1)}%`}
+        ], notes:[{title:'주의',text:'tolerance가 크면 경계 정확도가 낮아질 수 있으므로 지도 축척과 업무 허용오차에 맞춰 조정해야 합니다.'}], code:`const simplified = turf.simplify(polygon, {\n  tolerance: 0.015,\n  highQuality: true,\n  mutate: false\n});`, json:simple });
+      }
+    },
+    {
+      id:'bezier', category:'선형', title:'곡선 항로 보간',
+      desc:'꺾인 선을 부드러운 베지어 곡선으로 변환', fns:['bezierSpline'],
+      run() {
+        const raw=line([[126.0,36.4],[126.2,36.95],[126.48,36.58],[126.75,37.12],[127.02,36.72]],{name:'원본 항로',dashArray:'6 5'});
+        const smooth=turf.bezierSpline(raw,{resolution:10000,sharpness:.82}); smooth.properties={name:'부드러운 항로',stroke:'#ef6c38',weight:5};
+        finish({ title:this.title, summary:'경유점을 잇는 꺾은선을 시각적으로 부드러운 곡선으로 보간합니다.', inputs:[raw], outputs:[smooth], metrics:[
+          {label:'원본 좌표',value:`${raw.geometry.coordinates.length}개`},{label:'곡선 좌표',value:`${smooth.geometry.coordinates.length}개`}
+        ], notes:[{title:'주의',text:'시각적 보간 결과이며 실제 항해 가능 수역이나 장애물을 자동으로 고려하지는 않습니다.'}], code:`const smoothRoute = turf.bezierSpline(route, {\n  resolution: 10000,\n  sharpness: 0.82\n});`, json:smooth });
+      }
+    },
+    {
+      id:'line-offset', category:'선형', title:'평행선 생성',
+      desc:'항로 좌우에 일정 거리의 평행선 생성', fns:['lineOffset'],
+      run() {
+        const r=vesselRoute(); const left=turf.lineOffset(r,6,{units:'kilometers'}); left.properties={name:'좌측 6km',stroke:'#7c3aed'};
+        const right=turf.lineOffset(r,-6,{units:'kilometers'}); right.properties={name:'우측 6km',stroke:'#ef6c38'};
+        finish({ title:this.title, summary:'기준 항로의 양쪽에 6km 간격의 평행선을 생성합니다.', inputs:[r], outputs:[left,right], metrics:[
+          {label:'좌측 오프셋',value:'+6 km'},{label:'우측 오프셋',value:'-6 km'}
+        ], notes:[{title:'활용',text:'항로 폭, 조사 측선, 순찰 평행 경로, 안전 통항 회랑 표현에 사용할 수 있습니다.'}], code:`const left = turf.lineOffset(route, 6, { units: 'kilometers' });\nconst right = turf.lineOffset(route, -6, { units: 'kilometers' });`, json:fc([left,right]) });
+      }
+    },
+    {
+      id:'transform', category:'변환', title:'회전·확대·이동',
+      desc:'기준점을 중심으로 도형 기하변환', fns:['transformRotate','transformScale','transformTranslate'],
+      run() {
+        const a=hazardArea();
+        const rot=turf.transformRotate(a,35,{pivot:[126.2,36.9],mutate:false}); rot.properties={name:'35° 회전',fill:'#7c3aed'};
+        const scaled=turf.transformScale(a,1.35,{origin:'centroid',mutate:false}); scaled.properties={name:'135% 확대',stroke:'#11875d',fillOpacity:.08};
+        const moved=turf.transformTranslate(a,35,110,{units:'kilometers',mutate:false}); moved.properties={name:'110° 방향 35km 이동',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'원본 위험구역을 회전, 확대, 평행이동해 각 변환 결과를 비교합니다.', inputs:[a], outputs:[rot,scaled,moved], metrics:[
+          {label:'회전',value:'35°'},{label:'크기',value:'1.35배'},{label:'이동',value:'35km / 110°'}
+        ], notes:[{title:'좌표계 주의',text:'경위도 좌표에서 큰 범위의 변환은 투영 왜곡이 발생할 수 있으므로 정밀 분석에는 적합한 투영좌표계 검토가 필요합니다.'}], code:`turf.transformRotate(area, 35, { pivot, mutate: false });\nturf.transformScale(area, 1.35, { origin: 'centroid', mutate: false });\nturf.transformTranslate(area, 35, 110, { units: 'kilometers' });`, json:fc([rot,scaled,moved]) });
+      }
+    },
+    {
+      id:'bbox-clip', category:'변환', title:'경계상자 자르기',
+      desc:'지정 범위 안의 선·면만 추출', fns:['bboxClip'],
+      run() {
+        const r=vesselRoute(); const box=[126.0,36.55,126.55,37.18]; const rect=turf.bboxPolygon(box); rect.properties={name:'클립 범위',dashArray:'6 5',fillOpacity:.03};
+        const clipped=turf.bboxClip(r,box); clipped.properties={name:'범위 내부 항로',stroke:'#ef6c38',weight:6};
+        finish({ title:this.title, summary:'사각형 범위 밖의 항로를 제거하고 내부 구간만 남깁니다.', inputs:[r,rect], outputs:[clipped], metrics:[
+          {label:'원본 길이',value:`${fmt(turf.length(r,{units:'kilometers'}))} km`},{label:'클립 길이',value:`${fmt(turf.length(clipped,{units:'kilometers'}))} km`}
+        ], notes:[{title:'활용',text:'화면 영역 데이터 추출, 타일 단위 처리, 행정·관리 범위별 데이터 분할에 사용합니다.'}], code:`const clipped = turf.bboxClip(route, [126.0, 36.55, 126.55, 37.18]);`, json:clipped });
+      }
+    },
+    {
+      id:'coordinate-cleanup', category:'변환', title:'좌표 정리·정밀도 제한',
+      desc:'중복좌표 제거, 자릿수 제한, 링 방향 정리', fns:['cleanCoords','truncate','rewind'],
+      run() {
+        const messy=poly([[[126.1234567,36.5123456],[126.1234567,36.5123456],[126.7654321,36.5123456],[126.7654321,37.1123456],[126.1234567,37.1123456],[126.1234567,36.5123456]]],{name:'정리 전'});
+        const cleaned=turf.cleanCoords(messy); const truncated=turf.truncate(cleaned,{precision:3,coordinates:2,mutate:false}); const rewound=turf.rewind(truncated,{reverse:false,mutate:false});
+        rewound.properties={name:'정리 결과',stroke:'#ef6c38',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'불필요한 중복 좌표를 제거하고 소수점 3자리로 제한한 뒤 링 방향을 정리합니다.', inputs:[messy], outputs:[rewound], metrics:[
+          {label:'원본 좌표',value:`${messy.geometry.coordinates[0].length}개`},{label:'정리 좌표',value:`${rewound.geometry.coordinates[0].length}개`},{label:'정밀도',value:'소수점 3자리'}
+        ], notes:[{title:'효과',text:'GeoJSON 용량 축소, 유효성 개선, 시스템 간 좌표 표현 일관성 확보에 도움이 됩니다.'}], code:`const clean = turf.cleanCoords(feature);\nconst short = turf.truncate(clean, { precision: 3, coordinates: 2 });\nconst ordered = turf.rewind(short, { reverse: false });`, json:rewound });
+      }
+    },
+    {
+      id:'line-polygon-convert', category:'변환', title:'선·면 상호 변환',
+      desc:'Polygon 외곽선을 LineString으로, 폐합선을 Polygon으로', fns:['polygonToLine','lineToPolygon'],
+      run() {
+        const a=hazardArea(); const border=turf.polygonToLine(a); border.properties={name:'면→선',stroke:'#ef6c38',weight:5};
+        const p2=turf.lineToPolygon(border); p2.properties={name:'선→면',fill:'#7c3aed',stroke:'#7c3aed'};
+        finish({ title:this.title, summary:'폴리곤의 외곽선을 추출하고 다시 폴리곤으로 복원합니다.', inputs:[a], outputs:[border,p2], metrics:[
+          {label:'입력',value:'Polygon'},{label:'중간',value:border.geometry.type},{label:'복원',value:p2.geometry.type}
+        ], notes:[{title:'활용',text:'경계 길이 분석, 선 기반 교차검사, 폐합선으로부터 면 생성 시 사용합니다.'}], code:`const boundary = turf.polygonToLine(area);\nconst polygonAgain = turf.lineToPolygon(boundary);`, json:fc([border,p2]) });
+      }
+    },
+    {
+      id:'explode-flatten-combine', category:'변환', title:'분해·평탄화·결합',
+      desc:'복합 Geometry와 꼭짓점 데이터 구조 변환', fns:['explode','flatten','combine'],
+      run() {
+        const multi=turf.multiPolygon([
+          [[[126.0,36.5],[126.25,36.5],[126.25,36.75],[126.0,36.75],[126.0,36.5]]],
+          [[[126.45,36.8],[126.72,36.8],[126.72,37.05],[126.45,37.05],[126.45,36.8]]]
+        ],{name:'MultiPolygon'});
+        const flat=turf.flatten(multi); flat.features.forEach((f,i)=>f.properties={name:`평탄 폴리곤 ${i+1}`,fill:i?'#7c3aed':'#ef6c38'});
+        const vertices=turf.explode(multi); vertices.features.forEach((f,i)=>f.properties={name:`꼭짓점 ${i+1}`,radius:4});
+        const combined=turf.combine(flat); combined.features.forEach(f=>f.properties={name:'다시 결합'});
+        finish({ title:this.title, summary:'MultiPolygon을 개별 Polygon으로 나누고 꼭짓점을 Point로 분해한 뒤 다시 결합합니다.', inputs:[multi], outputs:[flat,vertices], metrics:[
+          {label:'Flatten 결과',value:`${flat.features.length}개`},{label:'꼭짓점',value:`${vertices.features.length}개`},{label:'Combine 타입',value:combined.features[0].geometry.type}
+        ], notes:[{title:'활용',text:'복합도형 반복 처리, 꼭짓점 검사, 단일·복합 Geometry 변환에 유용합니다.'}], code:`const polygons = turf.flatten(multiPolygon);\nconst vertices = turf.explode(multiPolygon);\nconst combined = turf.combine(polygons);`, json:fc([...flat.features,...vertices.features]) });
+      }
+    },
+    {
+      id:'point-in-polygon', category:'공간판정', title:'점의 구역 포함 여부',
+      desc:'사고·선박 위치가 관리구역 내부인지 판정', fns:['booleanPointInPolygon'],
+      run() {
+        const area=hazardArea(); const pts=basePoints(); let inside=0;
+        pts.features.forEach(f=>{ const yes=turf.booleanPointInPolygon(f,area,{ignoreBoundary:false}); f.properties.inside=yes; f.properties.color=yes?'#c24152':'#0b6bcb'; if(yes)inside++; });
+        finish({ title:this.title, summary:'각 거점이 위험 예상구역 안에 포함되는지 판정해 색상으로 구분합니다.', inputs:[area], outputs:[pts], metrics:[
+          {label:'전체 지점',value:`${pts.features.length}개`},{label:'구역 내부',value:`${inside}개`},{label:'구역 외부',value:`${pts.features.length-inside}개`}
+        ], notes:[{title:'활용',text:'선박의 통제구역 진입 경보, 조업구역 소속 판단, 행정구역 코드 자동 부여에 사용할 수 있습니다.'}], code:`const inside = turf.booleanPointInPolygon(vesselPoint, controlArea, {\n  ignoreBoundary: false\n});`, json:pts });
+      }
+    },
+    {
+      id:'nearest-point', category:'공간판정', title:'가장 가까운 거점',
+      desc:'대상 위치에서 최근접 후보 지점 검색', fns:['nearestPoint'],
+      run() {
+        const target=point([126.18,36.83],{name:'사고 신고 위치',color:'#c24152',radius:9}); const pts=basePoints(); const nearest=turf.nearestPoint(target,pts); nearest.properties={...nearest.properties,name:`최근접: ${nearest.properties.name}`,color:'#ef6c38',radius:10};
+        const connector=line([target.geometry.coordinates,nearest.geometry.coordinates],{name:'최단 연결',stroke:'#ef6c38',dashArray:'6 5'});
+        const d=turf.distance(target,nearest,{units:'kilometers'});
+        finish({ title:this.title, summary:'사고 신고 위치와 가장 가까운 지원 거점을 찾습니다.', inputs:[target,pts], outputs:[nearest,connector], metrics:[
+          {label:'최근접 거점',value:nearest.properties.name.replace('최근접: ','')},{label:'직선거리',value:`${fmt(d)} km`}
+        ], notes:[{title:'활용',text:'구조대·지점·위판장·병원 등 후보군에서 최단거리 시설을 빠르게 선택할 수 있습니다.'}], code:`const nearest = turf.nearestPoint(targetPoint, candidatePoints);`, json:fc([nearest,connector]) });
+      }
+    },
+    {
+      id:'nearest-on-line', category:'공간판정', title:'항로 위 최근접 지점',
+      desc:'임의 위치를 항로에 투영하고 거리·구간 확인', fns:['nearestPointOnLine'],
+      run() {
+        const r=vesselRoute(); const target=point([126.40,36.92],{name:'관측 위치',color:'#c24152',radius:9}); const snap=turf.nearestPointOnLine(r,target,{units:'kilometers'}); snap.properties={...snap.properties,name:'항로 최근접점',color:'#ef6c38',radius:9};
+        const connector=line([target.geometry.coordinates,snap.geometry.coordinates],{name:'수직 연결',stroke:'#ef6c38',dashArray:'5 5'});
+        finish({ title:this.title, summary:'관측 위치에서 항로까지 가장 가까운 지점을 계산합니다.', inputs:[r,target], outputs:[snap,connector], metrics:[
+          {label:'항로까지 거리',value:`${fmt(snap.properties.dist)} km`},{label:'항로 누적 위치',value:`${fmt(snap.properties.location)} km`},{label:'선분 인덱스',value:snap.properties.index ?? snap.properties.multiFeatureIndex ?? '-'}
+        ], notes:[{title:'활용',text:'항로 이탈거리, 선형 시설 접근거리, 사고지점의 항로상 대응 지점 산정에 적합합니다.'}], code:`const snapped = turf.nearestPointOnLine(route, target, {\n  units: 'kilometers'\n});`, json:fc([snap,connector]) });
+      }
+    },
+    {
+      id:'point-distances', category:'측정', title:'점-선·점-면 거리',
+      desc:'대상 위치에서 항로와 구역 경계까지의 최단거리', fns:['pointToLineDistance','pointToPolygonDistance'],
+      run() {
+        const p=point([126.52,36.88],{name:'대상 위치',color:'#c24152',radius:9}); const r=vesselRoute(); const a=hazardArea();
+        const dl=turf.pointToLineDistance(p,r,{units:'kilometers'}); const dp=turf.pointToPolygonDistance(p,a,{units:'kilometers'});
+        finish({ title:this.title, summary:'대상 위치에서 선형 항로와 폴리곤 경계까지의 최단거리를 계산합니다.', inputs:[p,r,a], outputs:[], metrics:[
+          {label:'항로 거리',value:`${fmt(dl)} km`},{label:'구역 경계 거리',value:`${fmt(dp)} km`}
+        ], notes:[{title:'해석',text:'pointToPolygonDistance는 폴리곤 내부이면 음수, 경계면 0, 외부이면 양수로 반환될 수 있어 위치 관계를 함께 판단할 수 있습니다.'}], code:`const lineKm = turf.pointToLineDistance(point, route, { units: 'kilometers' });\nconst polygonKm = turf.pointToPolygonDistance(point, area, { units: 'kilometers' });`, json:fc([p]) });
+      }
+    },
+    {
+      id:'points-within', category:'공간판정', title:'구역 내부 지점 추출',
+      desc:'여러 점 중 폴리곤 내부에 있는 것만 필터링', fns:['pointsWithinPolygon'],
+      run() {
+        const pts=basePoints(); const areas=serviceAreas(); const inside=turf.pointsWithinPolygon(pts,areas); inside.features.forEach(f=>f.properties={...f.properties,color:'#ef6c38',radius:9});
+        finish({ title:this.title, summary:'서비스권역 중 하나에 포함되는 거점만 추출합니다.', inputs:[pts,areas], outputs:[inside], metrics:[
+          {label:'입력 지점',value:`${pts.features.length}개`},{label:'추출 지점',value:`${inside.features.length}개`}
+        ], notes:[{title:'활용',text:'다중 관리구역 안의 시설·선박·민원 위치를 일괄 필터링할 때 사용합니다.'}], code:`const selected = turf.pointsWithinPolygon(points, serviceAreas);`, json:inside });
+      }
+    },
+    {
+      id:'line-intersect', category:'공간판정', title:'선 교차점 탐지',
+      desc:'항로와 경계·다른 항로의 교차 위치 계산', fns:['lineIntersect'],
+      run() {
+        const a=vesselRoute(); const b=line([[125.92,36.62],[126.82,37.20]],{name:'조사선',stroke:'#7c3aed'}); const c=turf.polygonToLine(hazardArea()); c.properties={name:'위험구역 경계'};
+        const routes=turf.multiLineString([a.geometry.coordinates,b.geometry.coordinates],{name:'복수 선형'}); const hits=turf.lineIntersect(routes,c); hits.features.forEach((f,i)=>f.properties={name:`교차점 ${i+1}`,color:'#ef6c38',radius:9});
+        finish({ title:this.title, summary:'복수 선형 데이터와 위험구역 경계가 만나는 좌표를 찾습니다.', inputs:[a,b,c], outputs:[hits], metrics:[
+          {label:'교차점',value:`${hits.features.length}개`},{label:'대상 선',value:'2개'}
+        ], notes:[{title:'활용',text:'항로의 통제구역 진입·이탈점, 선형 시설 충돌, 경계 통과 이벤트 탐지에 사용합니다.'}], code:`const intersections = turf.lineIntersect(routes, boundaryLine);`, json:hits });
+      }
+    },
+    {
+      id:'line-split', category:'선형', title:'선 교차 분할',
+      desc:'경계선과 만나는 지점에서 항로를 여러 조각으로 분리', fns:['lineSplit'],
+      run() {
+        const r=vesselRoute(); const splitter=line([[125.92,36.72],[126.83,37.15]],{name:'분할선',stroke:'#7c3aed'}); const parts=turf.lineSplit(r,splitter); parts.features.forEach((f,i)=>f.properties={name:`분할 조각 ${i+1}`,stroke:i%2?'#7c3aed':'#ef6c38',weight:5});
+        finish({ title:this.title, summary:'교차하는 선을 기준으로 항로를 개별 LineString 조각으로 나눕니다.', inputs:[r,splitter], outputs:[parts], metrics:[
+          {label:'분할 결과',value:`${parts.features.length}개`},{label:'원본 길이',value:`${fmt(turf.length(r,{units:'kilometers'}))} km`}
+        ], notes:[{title:'활용',text:'관리구역 경계 기준 항로 분할, 구간별 속성 부여, 교차 이후 경로 처리에 활용합니다.'}], code:`const parts = turf.lineSplit(route, splitterLine);`, json:parts });
+      }
+    },
+    {
+      id:'boolean-relations', category:'공간판정', title:'공간관계 종합 판정',
+      desc:'교차·분리·포함·중첩·횡단 여부 확인', fns:['booleanIntersects','booleanDisjoint','booleanWithin','booleanContains','booleanOverlap','booleanCrosses'],
+      run() {
+        const [a,b]=overlapPolygons(); const inner=turf.circle([126.28,36.92],12,{units:'kilometers',properties:{name:'내부 원'}}); const l1=line([[126.0,36.4],[126.9,37.2]],{name:'선 1'}); const l2=line([[126.1,37.2],[126.8,36.45]],{name:'선 2',stroke:'#7c3aed'});
+        const values={
+          intersects:turf.booleanIntersects(a,b), disjoint:turf.booleanDisjoint(a,b), overlap:turf.booleanOverlap(a,b),
+          within:turf.booleanWithin(inner,a), contains:turf.booleanContains(a,inner), crosses:turf.booleanCrosses(l1,l2)
+        };
+        finish({ title:this.title, summary:'OGC 공간관계에 대응하는 여러 Boolean 판정을 한 번에 비교합니다.', inputs:[a,b,inner,l1,l2], outputs:[], metrics:Object.entries(values).map(([k,v])=>({label:k,value:String(v)})), notes:[{title:'활용',text:'규칙 기반 공간 검증, 중복구역 탐지, 시설-구역 소속 검사, 선형 교차 여부 판단의 기초입니다.'}], code:`turf.booleanIntersects(a, b);\nturf.booleanDisjoint(a, b);\nturf.booleanOverlap(a, b);\nturf.booleanWithin(inner, a);\nturf.booleanContains(a, inner);\nturf.booleanCrosses(line1, line2);`, json:{ type:'FeatureCollection', features:[a,b,inner,l1,l2], properties:values } });
+      }
+    },
+    {
+      id:'union', category:'면연산', title:'폴리곤 합집합',
+      desc:'중첩 영역을 하나의 통합 구역으로 결합', fns:['union'],
+      run() {
+        const [a,b]=overlapPolygons(); const merged=turf.union(fc([a,b])); merged.properties={name:'통합 관리구역',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'두 관리구역의 전체 범위를 겹침 없이 하나의 폴리곤으로 합칩니다.', inputs:[a,b], outputs:[merged], metrics:[
+          {label:'A 면적',value:`${fmt(turf.area(a)/1e6)} km²`},{label:'B 면적',value:`${fmt(turf.area(b)/1e6)} km²`},{label:'합집합',value:`${fmt(turf.area(merged)/1e6)} km²`}
+        ], notes:[{title:'활용',text:'지점별 서비스권역 통합, 다수 조업구역 전체 범위 생성, 중복 없는 관리면적 산정에 사용합니다.'}], code:`const merged = turf.union(turf.featureCollection([areaA, areaB]));`, json:merged });
+      }
+    },
+    {
+      id:'intersect', category:'면연산', title:'폴리곤 교집합',
+      desc:'두 구역이 동시에 겹치는 부분만 추출', fns:['intersect'],
+      run() {
+        const [a,b]=overlapPolygons(); const result=turf.intersect(fc([a,b])); if(result) result.properties={name:'중첩 구역',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'조업구역 A와 관리구역 B의 중첩 부분을 추출합니다.', inputs:[a,b], outputs:[result], metrics:[
+          {label:'교집합 존재',value:result?'예':'아니오'},{label:'중첩 면적',value:result?`${fmt(turf.area(result)/1e6)} km²`:'0 km²'}
+        ], notes:[{title:'활용',text:'규제 중첩, 지원사업 대상 중복, 해역 권한 충돌 범위 분석에 사용할 수 있습니다.'}], code:`const overlap = turf.intersect(turf.featureCollection([areaA, areaB]));`, json:result || fc([]) });
+      }
+    },
+    {
+      id:'difference', category:'면연산', title:'폴리곤 차집합',
+      desc:'기준 구역에서 제외 구역을 제거', fns:['difference'],
+      run() {
+        const [a,b]=overlapPolygons(); const result=turf.difference(fc([a,b])); if(result) result.properties={name:'A에서 B 제외',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'조업구역 A에서 관리구역 B와 겹치는 부분을 제거합니다.', inputs:[a,b], outputs:[result], metrics:[
+          {label:'기준 면적',value:`${fmt(turf.area(a)/1e6)} km²`},{label:'잔여 면적',value:result?`${fmt(turf.area(result)/1e6)} km²`:'0 km²'}
+        ], notes:[{title:'활용',text:'금지구역 제외, 이미 배정된 영역 차감, 서비스 사각지대 산정에 유용합니다.'}], code:`const remainder = turf.difference(turf.featureCollection([baseArea, excludedArea]));`, json:result || fc([]) });
+      }
+    },
+    {
+      id:'dissolve', category:'면연산', title:'속성 기준 경계 통합',
+      desc:'같은 그룹 폴리곤 사이의 내부 경계 제거', fns:['dissolve'],
+      run() {
+        const areas=serviceAreas(); const dissolved=turf.dissolve(areas,{propertyName:'group'}); dissolved.features.forEach((f,i)=>f.properties={...f.properties,name:`통합 그룹 ${f.properties.group||i+1}`,fill:i?'#7c3aed':'#ef6c38'});
+        finish({ title:this.title, summary:'같은 group 속성을 가진 인접·중첩 폴리곤을 통합합니다.', inputs:[areas], outputs:[dissolved], metrics:[
+          {label:'입력 폴리곤',value:`${areas.features.length}개`},{label:'통합 결과',value:`${dissolved.features.length}개`}
+        ], notes:[{title:'활용',text:'세부 행정구역을 권역 단위로 통합하거나 부서·조합별 서비스권역을 재구성할 때 사용합니다.'}], code:`const dissolved = turf.dissolve(areas, { propertyName: 'group' });`, json:dissolved });
+      }
+    },
+    {
+      id:'hulls', category:'면연산', title:'볼록·오목 외곽선',
+      desc:'점 집합을 감싸는 Convex·Concave Hull 생성', fns:['convex','concave'],
+      run() {
+        const pts=irregularPoints(); const convex=turf.convex(pts); convex.properties={name:'Convex Hull',fill:'#4ba3f2'};
+        const concave=turf.concave(pts,{maxEdge:35,units:'kilometers'}); if(concave) concave.properties={name:'Concave Hull',fill:'#ef6c38',stroke:'#ef6c38'};
+        finish({ title:this.title, summary:'관측지점 분포를 감싸는 볼록 외곽과 더 세밀한 오목 외곽을 비교합니다.', inputs:[pts], outputs:[convex,concave], metrics:[
+          {label:'점 수',value:`${pts.features.length}개`},{label:'Convex 면적',value:`${fmt(turf.area(convex)/1e6)} km²`},{label:'Concave 생성',value:concave?'성공':'실패'},{label:'Concave 면적',value:concave?`${fmt(turf.area(concave)/1e6)} km²`:'-'}
+        ], notes:[{title:'주의',text:'concave의 maxEdge가 너무 작으면 연결 가능한 삼각망이 없어 null이 반환될 수 있습니다.'}], code:`const convexHull = turf.convex(points);\nconst concaveHull = turf.concave(points, { maxEdge: 35, units: 'kilometers' });`, json:fc([convex,concave]) });
+      }
+    },
+    {
+      id:'unkink', category:'면연산', title:'자기교차 폴리곤 분해',
+      desc:'꼬인 폴리곤을 유효한 단순 폴리곤으로 분리', fns:['unkinkPolygon'],
+      run() {
+        const bow=poly([[[126.0,36.5],[126.7,37.2],[126.0,37.2],[126.7,36.5],[126.0,36.5]]],{name:'자기교차 원본',fillOpacity:.08});
+        const fixed=turf.unkinkPolygon(bow); fixed.features.forEach((f,i)=>f.properties={name:`분해 폴리곤 ${i+1}`,fill:i?'#7c3aed':'#ef6c38'});
+        finish({ title:this.title, summary:'나비넥타이 형태로 자기교차하는 폴리곤을 단순 폴리곤들로 분해합니다.', inputs:[bow], outputs:[fixed], metrics:[
+          {label:'입력',value:'1개 자기교차 면'},{label:'분해 결과',value:`${fixed.features.length}개`}
+        ], notes:[{title:'활용',text:'사용자 그리기나 외부 데이터에서 발생한 자기교차 도형을 후속 면 연산 전에 정리할 때 유용합니다.'}], code:`const validPieces = turf.unkinkPolygon(selfIntersectingPolygon);`, json:fixed });
+      }
+    },
+    {
+      id:'polygonize', category:'면연산', title:'선망에서 폴리곤 생성',
+      desc:'폐합된 선들을 찾아 면으로 변환', fns:['polygonize'],
+      run() {
+        const lines=fc([
+          line([[126.0,36.5],[126.4,36.5],[126.4,36.9],[126.0,36.9],[126.0,36.5]],{name:'폐합선 A'}),
+          line([[126.4,36.5],[126.8,36.5],[126.8,36.9],[126.4,36.9]],{name:'폐합선 B'}),
+          line([[126.4,36.9],[126.0,36.9]],{name:'공유 경계'})
+        ]);
+        const polygons=turf.polygonize(lines); polygons.features.forEach((f,i)=>f.properties={name:`생성 면 ${i+1}`,fill:i?'#7c3aed':'#ef6c38'});
+        finish({ title:this.title, summary:'선 네트워크에서 닫힌 링을 탐색해 폴리곤으로 생성합니다.', inputs:[lines], outputs:[polygons], metrics:[
+          {label:'입력 선',value:`${lines.features.length}개`},{label:'생성 면',value:`${polygons.features.length}개`}
+        ], notes:[{title:'활용',text:'경계선 데이터로부터 구획 생성, 선형 도면의 면 객체화, 위상 기반 구역 복원에 사용합니다.'}], code:`const polygons = turf.polygonize(lineNetwork);`, json:polygons });
+      }
+    },
+    {
+      id:'tessellate', category:'면연산', title:'폴리곤 삼각분할',
+      desc:'복잡한 면을 렌더링 가능한 삼각형으로 분해', fns:['tessellate'],
+      run() {
+        const a=poly([[[126.0,36.4],[126.65,36.45],[126.82,36.9],[126.42,37.22],[126.18,36.95],[125.9,37.08],[126.0,36.4]]],{name:'복합 구역'});
+        const tris=turf.tessellate(a); tris.features.forEach((f,i)=>f.properties={name:`삼각형 ${i+1}`,fill:i%2?'#7c3aed':'#ef6c38',fillOpacity:.3});
+        finish({ title:this.title, summary:'폴리곤을 겹치지 않는 삼각형 집합으로 분할합니다.', inputs:[a], outputs:[tris], metrics:[
+          {label:'삼각형 수',value:`${tris.features.length}개`},{label:'원본 면적',value:`${fmt(turf.area(a)/1e6)} km²`}
+        ], notes:[{title:'활용',text:'WebGL 렌더링, 표면 계산, 삼각망 기반 후속 분석의 전처리로 사용할 수 있습니다.'}], code:`const triangles = turf.tessellate(polygon);`, json:tris });
+      }
+    },
+    {
+      id:'grids', category:'격자', title:'육각·사각·삼각 격자',
+      desc:'동일 범위에 서로 다른 공간격자 생성', fns:['hexGrid','squareGrid','triangleGrid'],
+      run() {
+        const bbox=[125.85,36.25,126.95,37.35]; const frame=turf.bboxPolygon(bbox); frame.properties={name:'격자 범위'};
+        const hex=turf.hexGrid(bbox,22,{units:'kilometers'}); hex.features.forEach(f=>f.properties={name:'Hex',fill:'#0b6bcb',fillOpacity:.08});
+        const square=turf.squareGrid(bbox,22,{units:'kilometers'}); square.features.forEach(f=>f.properties={name:'Square',stroke:'#11875d',fillOpacity:.02});
+        const tri=turf.triangleGrid(bbox,32,{units:'kilometers'}); tri.features.forEach(f=>f.properties={name:'Triangle',stroke:'#ef6c38',fillOpacity:.02});
+        finish({ title:this.title, summary:'같은 범위를 육각, 사각, 삼각 격자로 나눠 구조와 개수를 비교합니다.', inputs:[frame], outputs:[hex,square,tri], metrics:[
+          {label:'육각',value:`${hex.features.length}개`},{label:'사각',value:`${square.features.length}개`},{label:'삼각',value:`${tri.features.length}개`}
+        ], notes:[{title:'활용',text:'해역 통계 집계, 조사구획 배정, 밀도지도, 공간 인덱싱의 기본 단위로 사용할 수 있습니다.'}], code:`const hex = turf.hexGrid(bbox, 22, { units: 'kilometers' });\nconst square = turf.squareGrid(bbox, 22, { units: 'kilometers' });\nconst triangle = turf.triangleGrid(bbox, 32, { units: 'kilometers' });`, json:fc([...hex.features,...square.features,...tri.features]) });
+      }
+    },
+    {
+      id:'point-grid', category:'격자', title:'포인트 격자 생성',
+      desc:'일정 간격의 관측·샘플링 지점 생성', fns:['pointGrid'],
+      run() {
+        const bbox=[125.9,36.35,126.85,37.25]; const mask=hazardArea(); const grid=turf.pointGrid(bbox,12,{units:'kilometers',mask}); grid.features.forEach((f,i)=>f.properties={name:`조사지점 ${i+1}`,radius:4});
+        finish({ title:this.title, summary:'12km 간격의 점 격자를 만들고 위험구역 폴리곤을 마스크로 적용합니다.', inputs:[mask], outputs:[grid], metrics:[
+          {label:'간격',value:'12 km'},{label:'생성 지점',value:`${grid.features.length}개`}
+        ], notes:[{title:'활용',text:'수질·수온 조사점, 드론 촬영점, 표본채취 위치를 균등하게 설계할 수 있습니다.'}], code:`const grid = turf.pointGrid(bbox, 12, {\n  units: 'kilometers',\n  mask: surveyArea\n});`, json:grid });
+      }
+    },
+    {
+      id:'random', category:'생성', title:'무작위 공간데이터',
+      desc:'테스트용 점·선·면 데이터 자동 생성', fns:['randomPoint','randomLineString','randomPolygon'],
+      run() {
+        const bbox=[125.95,36.35,126.85,37.15];
+        const pts=turf.randomPoint(20,{bbox}); pts.features.forEach((f,i)=>f.properties={name:`랜덤 점 ${i+1}`});
+        let lines, polys;
+        try { lines=turf.randomLineString(3,{bbox,num_vertices:6,max_length:.12,max_rotation:Math.PI/5}); } catch(e) { lines=fc([]); }
+        try { polys=turf.randomPolygon(2,{bbox,num_vertices:7,max_radial_length:.12}); } catch(e) { polys=fc([]); }
+        lines.features.forEach((f,i)=>f.properties={name:`랜덤 선 ${i+1}`,stroke:'#7c3aed'}); polys.features.forEach((f,i)=>f.properties={name:`랜덤 면 ${i+1}`,fill:'#ef6c38'});
+        finish({ title:this.title, summary:'성능시험과 UI 개발에 활용할 수 있는 임의 GeoJSON 데이터를 생성합니다.', inputs:[], outputs:[pts,lines,polys], metrics:[
+          {label:'점',value:`${pts.features.length}개`},{label:'선',value:`${lines.features.length}개`},{label:'면',value:`${polys.features.length}개`}
+        ], notes:[{title:'주의',text:'매번 실행할 때 결과가 달라집니다. 정해진 재현성이 필요하면 별도 시드 난수 생성기를 사용해야 합니다.'}], code:`const points = turf.randomPoint(20, { bbox });\nconst lines = turf.randomLineString(3, { bbox, num_vertices: 6 });\nconst polygons = turf.randomPolygon(2, { bbox, num_vertices: 7 });`, json:fc([...pts.features,...lines.features,...polys.features]) });
+      }
+    },
+    {
+      id:'voronoi', category:'격자', title:'Voronoi 영향권',
+      desc:'각 거점에 가장 가까운 영역으로 공간 분할', fns:['voronoi'],
+      run() {
+        const pts=basePoints(); const bbox=[125.7,36.1,127.2,37.9]; const cells=turf.voronoi(pts,{bbox}); cells.features.forEach((f,i)=>f.properties={name:`거점 영향권 ${i+1}`,fill:['#0b6bcb','#11875d','#7c3aed','#ef6c38'][i%4],fillOpacity:.15});
+        finish({ title:this.title, summary:'평면의 각 위치를 가장 가까운 거점에 배정하는 Voronoi 셀을 생성합니다.', inputs:[pts], outputs:[cells], metrics:[
+          {label:'거점',value:`${pts.features.length}개`},{label:'영향권 셀',value:`${cells.features.length}개`}
+        ], notes:[{title:'활용',text:'최근접 원칙의 서비스 담당구역, 시설 영향권, 배송·지원 권역의 초기안을 만들 수 있습니다.'}], code:`const serviceCells = turf.voronoi(branchPoints, { bbox });`, json:cells });
+      }
+    },
+    {
+      id:'tin', category:'표면', title:'TIN 삼각망',
+      desc:'속성값을 가진 점으로 불규칙 삼각망 생성', fns:['tin'],
+      run() {
+        const pts=irregularPoints(22); const triangles=turf.tin(pts,'value'); triangles.features.forEach((f,i)=>{ const vals=f.geometry.coordinates[0].slice(0,3).map((_,j)=>f.properties[['a','b','c'][j]]).filter(Number.isFinite); f.properties={...f.properties,name:`TIN ${i+1}`,fill:i%3===0?'#0b6bcb':i%3===1?'#7c3aed':'#ef6c38',fillOpacity:.18}; });
+        finish({ title:this.title, summary:'불규칙 관측지점을 Delaunay 삼각망으로 연결합니다.', inputs:[pts], outputs:[triangles], metrics:[
+          {label:'관측점',value:`${pts.features.length}개`},{label:'삼각형',value:`${triangles.features.length}개`}
+        ], notes:[{title:'활용',text:'수심·수온·염분 등 불규칙 측정값의 표면 모델링과 보간 전처리에 사용합니다.'}], code:`const triangles = turf.tin(samplePoints, 'value');`, json:triangles });
+      }
+    },
+    {
+      id:'interpolate', category:'표면', title:'IDW 공간보간',
+      desc:'산재한 관측값을 연속 격자값으로 추정', fns:['interpolate'],
+      run() {
+        const pts=irregularPoints(24); const grid=turf.interpolate(pts,8,{gridType:'point',property:'value',units:'kilometers',weight:2});
+        const vals=grid.features.map(f=>f.properties.value).filter(Number.isFinite); const min=Math.min(...vals),max=Math.max(...vals);
+        grid.features.forEach(f=>{ const t=(f.properties.value-min)/(max-min||1); f.properties={...f.properties,name:`보간값 ${fmt(f.properties.value,1)}`,color:`hsl(${220-t*200} 75% 48%)`,radius:5}; });
+        finish({ title:this.title, summary:'관측점의 value 속성을 역거리 가중법으로 8km 격자에 보간합니다.', inputs:[pts], outputs:[grid], metrics:[
+          {label:'입력점',value:`${pts.features.length}개`},{label:'보간점',value:`${grid.features.length}개`},{label:'최솟값',value:fmt(min,1)},{label:'최댓값',value:fmt(max,1)}
+        ], notes:[{title:'주의',text:'보간 결과는 측정값·분포·파라미터에 민감하며 실제 관측을 대체하지 않습니다.'}], code:`const grid = turf.interpolate(points, 8, {\n  gridType: 'point', property: 'value',\n  units: 'kilometers', weight: 2\n});`, json:grid });
+      }
+    },
+    {
+      id:'isolines', category:'표면', title:'등치선 생성',
+      desc:'정규 포인트 격자에서 같은 값의 선 추출', fns:['isolines'],
+      run() {
+        const grid=surfaceGrid(); const breaks=[30,45,60,75,90,105]; const contours=turf.isolines(grid,breaks,{zProperty:'elevation'}); contours.features.forEach((f,i)=>f.properties={...f.properties,name:`등치선 ${breaks[i]??''}`,stroke:['#0ea5e9','#11875d','#eab308','#ef6c38','#c24152','#7c3aed'][i%6],weight:4});
+        finish({ title:this.title, summary:'격자 관측값에서 지정 임계값의 등치선을 생성합니다.', inputs:[grid], outputs:[contours], metrics:[
+          {label:'격자점',value:`${grid.features.length}개`},{label:'Breaks',value:breaks.join(', ')},{label:'등치선',value:`${contours.features.length}개`}
+        ], notes:[{title:'활용',text:'수온·수심·오염도·파고 등 연속 현상의 경계선을 시각화할 수 있습니다.'}], code:`const lines = turf.isolines(pointGrid, [30,45,60,75,90,105], {\n  zProperty: 'elevation'\n});`, json:contours });
+      }
+    },
+    {
+      id:'isobands', category:'표면', title:'등치면 생성',
+      desc:'값 구간별로 채워진 폴리곤 밴드 생성', fns:['isobands'],
+      run() {
+        const grid=surfaceGrid(); const breaks=[20,40,60,80,100,120]; const bands=turf.isobands(grid,breaks,{zProperty:'elevation'}); bands.features.forEach((f,i)=>f.properties={...f.properties,name:`값 구간 ${breaks[i]??''}`,fill:['#0ea5e9','#22c55e','#eab308','#f97316','#c24152'][i%5],fillOpacity:.38});
+        finish({ title:this.title, summary:'정규 격자 관측값을 값 구간별 폴리곤으로 변환합니다.', inputs:[grid], outputs:[bands], metrics:[
+          {label:'Breaks',value:breaks.join(', ')},{label:'등치면',value:`${bands.features.length}개`}
+        ], notes:[{title:'활용',text:'수온대, 오염등급, 위험도 등급, 어장 적합도 구간을 색상 면으로 표현할 수 있습니다.'}], code:`const bands = turf.isobands(pointGrid, [20,40,60,80,100,120], {\n  zProperty: 'elevation'\n});`, json:bands });
+      }
+    },
+    {
+      id:'kmeans', category:'군집·통계', title:'K-means 공간군집',
+      desc:'지점을 지정한 개수의 공간 군집으로 분류', fns:['clustersKmeans'],
+      run() {
+        const pts=irregularPoints(36); const result=turf.clustersKmeans(pts,{numberOfClusters:4,mutate:false}); result.features.forEach(f=>f.properties.name=`군집 ${f.properties.cluster}`);
+        const counts={}; result.features.forEach(f=>counts[f.properties.cluster]=(counts[f.properties.cluster]||0)+1);
+        finish({ title:this.title, summary:'36개 관측지점을 위치 기준 4개 군집으로 분류합니다.', inputs:[], outputs:[result], metrics:Object.entries(counts).map(([k,v])=>({label:`군집 ${k}`,value:`${v}개`})), notes:[{title:'특징',text:'군집 수를 사전에 지정해야 하며 초기 중심점에 따라 결과가 달라질 수 있습니다.'}], code:`const clustered = turf.clustersKmeans(points, {\n  numberOfClusters: 4, mutate: false\n});`, json:result });
+      }
+    },
+    {
+      id:'dbscan', category:'군집·통계', title:'DBSCAN 밀도군집',
+      desc:'거리·최소점 조건으로 군집과 노이즈 탐지', fns:['clustersDbscan'],
+      run() {
+        const pts=irregularPoints(44); pts.features.push(point([126.75,37.18],{name:'외딴 점 1'}),point([125.92,36.42],{name:'외딴 점 2'}));
+        const result=turf.clustersDbscan(pts,13,{units:'kilometers',minPoints:3,mutate:false}); let noise=0; const counts={};
+        result.features.forEach(f=>{ if(f.properties.dbscan==='noise'||f.properties.cluster===undefined){f.properties.color='#64748b';f.properties.name='노이즈';noise++;}else{counts[f.properties.cluster]=(counts[f.properties.cluster]||0)+1;f.properties.name=`군집 ${f.properties.cluster}`;} });
+        finish({ title:this.title, summary:'13km 이내 최소 3개 지점 조건으로 밀도군집과 외딴 점을 구분합니다.', inputs:[], outputs:[result], metrics:[
+          {label:'군집 수',value:`${Object.keys(counts).length}개`},{label:'노이즈',value:`${noise}개`},{label:'최대거리',value:'13 km'},{label:'최소점',value:'3개'}
+        ], notes:[{title:'특징',text:'군집 수를 미리 정하지 않고 밀도가 낮은 지점을 노이즈로 분리할 수 있습니다.'}], code:`const clustered = turf.clustersDbscan(points, 13, {\n  units: 'kilometers', minPoints: 3, mutate: false\n});`, json:result });
+      }
+    },
+    {
+      id:'tag-collect', category:'군집·통계', title:'공간속성 태깅·수집',
+      desc:'점에 구역속성을 붙이고 구역별 점 값을 집계', fns:['tag','collect'],
+      run() {
+        const pts=basePoints(); const areas=serviceAreas();
+        const tagged=turf.tag(pts,areas,'name','serviceZone'); tagged.features.forEach(f=>f.properties.name=`${f.properties.name} / ${f.properties.serviceZone||'미배정'}`);
+        const collected=turf.collect(areas,pts,'value','values'); collected.features.forEach((f,i)=>{ const vals=f.properties.values||[]; f.properties={...f.properties,name:`${f.properties.name} (${vals.length}개)`,count:vals.length,average:vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0,fill:i%2?'#7c3aed':'#ef6c38'}; });
+        finish({ title:this.title, summary:'각 거점에 서비스권역명을 태깅하고, 권역 폴리곤에는 내부 거점의 value 목록을 수집합니다.', inputs:[pts,areas], outputs:[tagged,collected], metrics:[
+          {label:'태깅 지점',value:`${tagged.features.filter(f=>f.properties.serviceZone).length}개`},{label:'집계 권역',value:`${collected.features.length}개`}
+        ], notes:[{title:'활용',text:'공간 조인, 구역별 실적 집계, 행정구역명 자동 부여를 간단히 구현할 수 있습니다.'}], code:`const tagged = turf.tag(points, polygons, 'name', 'serviceZone');\nconst collected = turf.collect(polygons, points, 'value', 'values');`, json:fc([...tagged.features,...collected.features]) });
+      }
+    },
+    {
+      id:'sample', category:'군집·통계', title:'무작위 표본 추출',
+      desc:'FeatureCollection에서 지정 개수의 표본 선택', fns:['sample'],
+      run() {
+        const pts=basePoints(); const selected=turf.sample(pts,4); selected.features.forEach(f=>f.properties={...f.properties,name:`표본: ${f.properties.name}`,color:'#ef6c38',radius:10});
+        finish({ title:this.title, summary:'10개 거점 중 4개를 무작위 표본으로 추출합니다.', inputs:[pts], outputs:[selected], metrics:[
+          {label:'모집단',value:`${pts.features.length}개`},{label:'표본',value:`${selected.features.length}개`}
+        ], notes:[{title:'주의',text:'단순 무작위 추출이므로 공간적 균등성이나 층화 조건은 보장하지 않습니다.'}], code:`const selected = turf.sample(featureCollection, 4);`, json:selected });
+      }
+    },
+    {
+      id:'sde', category:'군집·통계', title:'표준편차 타원',
+      desc:'점 분포의 중심·확산·방향성을 타원으로 요약', fns:['standardDeviationalEllipse'],
+      run() {
+        const pts=irregularPoints(36); const ellipse=turf.standardDeviationalEllipse(pts,{weight:'value',steps:64}); ellipse.properties={...ellipse.properties,name:'가중 표준편차 타원',fill:'#ef6c38'};
+        finish({ title:this.title, summary:'관측지점의 value를 가중치로 사용해 분포 방향과 확산 범위를 타원으로 표현합니다.', inputs:[pts], outputs:[ellipse], metrics:[
+          {label:'관측점',value:`${pts.features.length}개`},{label:'타원 면적',value:`${fmt(turf.area(ellipse)/1e6)} km²`},{label:'평균중심 X',value:fmt(ellipse.properties.meanCenterCoordinates?.[0] ?? '-',4)},{label:'평균중심 Y',value:fmt(ellipse.properties.meanCenterCoordinates?.[1] ?? '-',4)}
+        ], notes:[{title:'활용',text:'사고·민원·어획 분포의 주 방향과 확산 정도를 한눈에 요약하는 탐색적 공간통계입니다.'}], code:`const ellipse = turf.standardDeviationalEllipse(points, {\n  weight: 'value', steps: 64\n});`, json:ellipse });
+      }
+    },
+    {
+      id:'directional-mean', category:'군집·통계', title:'선형 방향 평균',
+      desc:'여러 이동선의 평균 방향과 대표선을 계산', fns:['directionalMean'],
+      run() {
+        if(typeof turf.directionalMean!=='function') throw new Error('현재 로드된 Turf 번들에 directionalMean이 없습니다. Turf 7.3.5 이상을 확인하세요.');
+        const lines=fc([
+          line([[126.0,36.4],[126.55,36.85]],{name:'이동 1'}), line([[126.1,36.55],[126.72,36.96]],{name:'이동 2'}),
+          line([[125.98,36.72],[126.62,37.08]],{name:'이동 3'}), line([[126.22,36.35],[126.82,36.78]],{name:'이동 4'})
+        ]);
+        const mean=turf.directionalMean(lines,{planar:false,segment:false}); mean.properties={...mean.properties,name:'평균 방향선',stroke:'#ef6c38',weight:6};
+        finish({ title:this.title, summary:'여러 이동·항로 선형의 평균 방향을 대표 LineString으로 계산합니다.', inputs:[lines], outputs:[mean], metrics:[
+          {label:'입력 선',value:`${lines.features.length}개`},{label:'평균각',value:`${fmt(mean.properties.averageAngle ?? mean.properties.angle ?? 0)}°`},{label:'평균길이',value:fmt(mean.properties.averageLength ?? turf.length(mean,{units:'kilometers'}))}
+        ], notes:[{title:'활용',text:'선박 이동 추세, 조류·풍향을 선형 데이터로 표현한 경우 대표 방향을 요약할 수 있습니다.'}], code:`const meanLine = turf.directionalMean(lines, {\n  planar: false, segment: false\n});`, json:mean });
+      }
+    },
+    {
+      id:'moran', category:'군집·통계', title:'Moran’s I 공간자기상관',
+      desc:'인접한 위치의 속성값이 유사하게 군집하는지 통계 분석', fns:['moranIndex'],
+      run() {
+        const pts=irregularPoints(32); const result=turf.moranIndex(pts,{inputField:'value',threshold:50000,p:2,binary:false,alpha:-1,standardization:true});
+        pts.features.forEach(f=>{ const t=Math.max(0,Math.min(1,(f.properties.value-10)/100)); f.properties.color=`hsl(${220-t*200} 75% 48%)`; });
+        finish({ title:this.title, summary:'관측값의 공간 군집·분산 경향을 Moran’s I와 z-score로 요약합니다.', inputs:[], outputs:[pts], metrics:[
+          {label:'Moran’s I',value:fmt(result.moranIndex ?? result.moranI ?? result.moran,4)},{label:'기대값',value:fmt(result.expectedMoranIndex ?? result.expectedMoranI ?? result.expected,4)},{label:'분산',value:fmt(result.stdNorm ?? result.variance ?? result.varNorm,4)},{label:'z-score',value:fmt(result.zNorm ?? result.zScore ?? result.z,4)}
+        ], notes:[{title:'해석',text:'일반적으로 양수는 유사값의 군집, 음수는 분산, 0 부근은 무작위 경향을 뜻하지만 통계적 유의성과 가중치 설정을 함께 검토해야 합니다.'}], code:`const stats = turf.moranIndex(points, {\n  inputField: 'value', threshold: 50000,\n  p: 2, binary: false, standardization: true\n});`, json:{ type:'FeatureCollection', features:pts.features, properties:{ moranResult:result } } });
+      }
+    }
+  ];
+
+  const categories = ['전체', ...new Set(demos.map(d => d.category))];
+
+  function renderCategories() {
+    $('#categoryTabs').innerHTML = categories.map(c => `<button data-category="${c}" class="${c===state.activeCategory?'active':''}">${c}</button>`).join('');
+    $$('#categoryTabs button').forEach(btn=>btn.addEventListener('click',()=>{
+      state.activeCategory=btn.dataset.category; renderCategories(); renderTools();
+    }));
+  }
+
+  function renderTools() {
+    const q=$('#toolSearch').value.trim().toLowerCase();
+    const filtered=demos.filter(d=>{
+      const cat=state.activeCategory==='전체'||d.category===state.activeCategory;
+      const text=[d.title,d.desc,d.category,...d.fns].join(' ').toLowerCase();
+      return cat && (!q||text.includes(q));
+    });
+    $('#toolList').innerHTML=filtered.map(d=>`<button class="tool-card ${state.currentDemo===d.id?'active':''}" data-id="${d.id}"><div class="tool-name">${d.title}</div><div class="tool-desc">${d.desc}</div><div class="tool-fns">${d.fns.map(f=>`<span class="fn-chip">${f}</span>`).join('')}</div></button>`).join('') || '<div class="empty-state">검색 결과가 없습니다.</div>';
+    $$('#toolList .tool-card').forEach(btn=>btn.addEventListener('click',()=>runDemo(btn.dataset.id)));
+  }
+
+  function runDemo(id) {
+    const demo=demos.find(d=>d.id===id); if(!demo)return;
+    state.currentDemo=id; renderTools();
+    try { demo.run.call(demo); } catch(e) { showError(demo.title,e); }
+    if(window.innerWidth<=760) $('#toolPanel').classList.remove('mobile-open');
+  }
+
+  function syncDrawn() {
+    const features=[];
+    drawnItems.eachLayer(layer=>{
+      const gj=layer.toGeoJSON();
+      gj.properties={...(gj.properties||{}),source:'사용자 그리기'};
+      features.push(gj);
+    });
+    state.drawnGeoJSON=fc(features);
+  }
+
+  function analyzeDrawn() {
+    syncDrawn();
+    const features=state.drawnGeoJSON.features;
+    if(!features.length){
+      setResult({title:'그린 도형 분석',summary:'지도 왼쪽 그리기 도구로 점·선·면을 추가하세요.',notes:[{title:'사용법',text:'도형을 그린 직후 면적·길이·중심·경계상자·버퍼 결과를 자동 계산합니다.'}],json:state.drawnGeoJSON}); return;
+    }
+    clearAnalysis();
+    const outputs=[]; const metrics=[];
+    features.forEach((f,i)=>{
+      const type=f.geometry.type;
+      if(type.includes('Polygon')){
+        const area=turf.area(f)/1e6; const center=turf.centerOfMass(f); center.properties={name:`도형 ${i+1} 중심`}; const buffer=turf.buffer(f,3,{units:'kilometers'}); buffer.properties={name:`도형 ${i+1} 3km 버퍼`};
+        outputs.push(center,buffer); metrics.push({label:`면 ${i+1} 면적`,value:`${fmt(area)} km²`});
+      } else if(type.includes('LineString')){
+        const len=turf.length(f,{units:'kilometers'}); const mid=turf.along(f,len/2,{units:'kilometers'}); mid.properties={name:`선 ${i+1} 중간점`}; const buffer=turf.buffer(f,2,{units:'kilometers'}); buffer.properties={name:`선 ${i+1} 2km 버퍼`};
+        outputs.push(mid,buffer); metrics.push({label:`선 ${i+1} 길이`,value:`${fmt(len)} km`});
+      } else if(type.includes('Point')){
+        const buffer=turf.buffer(f,10,{units:'kilometers'}); buffer.properties={name:`점 ${i+1} 10km 버퍼`}; outputs.push(buffer); metrics.push({label:`점 ${i+1}`,value:f.geometry.coordinates.map(v=>v.toFixed(5)).join(', ')});
+      }
+    });
+    addAny(inputLayer,state.drawnGeoJSON); addAny(outputLayer,outputs); state.currentGeoJSON=combineGeoJSON(outputs); state.lastFitGeoJSON=combineGeoJSON([state.drawnGeoJSON,outputs]); fitGeoJSON(state.lastFitGeoJSON);
+    setResult({ title:'그린 도형 자동 분석', summary:`사용자가 그린 ${features.length}개 도형의 기본 측정값과 버퍼를 계산했습니다.`, metrics, notes:[{title:'자동 처리',text:'Polygon: 면적·질량중심·3km 버퍼 / Line: 길이·중간점·2km 버퍼 / Point: 좌표·10km 버퍼'}], code:`// Leaflet 도형을 GeoJSON으로 변환\nconst feature = layer.toGeoJSON();\n\n// Geometry 유형별 처리\nconst areaKm2 = turf.area(feature) / 1e6;\nconst center = turf.centerOfMass(feature);\nconst buffer = turf.buffer(feature, 3, { units: 'kilometers' });`, json:state.currentGeoJSON });
+  }
+
+  function downloadBlob(filename, content, type='application/json') {
+    const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  function bindUI() {
+    $('#toolSearch').addEventListener('input',renderTools);
+    $$('.result-tabs button').forEach(btn=>btn.addEventListener('click',()=>{
+      $$('.result-tabs button').forEach(b=>b.classList.toggle('active',b===btn));
+      $$('.tab-pane').forEach(p=>p.classList.toggle('active',p.id===`tab-${btn.dataset.tab}`));
+    }));
+    $('#clearAnalysisBtn').addEventListener('click',()=>{ clearAnalysis(); $('#mapStatus').textContent='분석 레이어를 지웠습니다.'; });
+    $('#resetAllBtn').addEventListener('click',()=>{ clearAnalysis(); drawnItems.clearLayers(); state.currentDemo=null; renderTools(); map.setView([37.35,126.55],8); setResult({title:'전체 초기화',summary:'입력·결과·사용자 도형을 모두 제거했습니다.',json:fc([])}); });
+    $('#fitBtn').addEventListener('click',()=>state.lastFitGeoJSON?fitGeoJSON(state.lastFitGeoJSON):map.setView([37.35,126.55],8));
+    $('#analyzeDrawBtn').addEventListener('click',analyzeDrawn);
+    $('#exportMapBtn').addEventListener('click',()=>downloadBlob('turf-map-result.geojson',JSON.stringify(combineGeoJSON([state.currentGeoJSON,state.drawnGeoJSON]),null,2),'application/geo+json'));
+    $('#downloadJsonBtn').addEventListener('click',()=>downloadBlob('turf-result.geojson',JSON.stringify(state.currentGeoJSON,null,2),'application/geo+json'));
+    $('#copyJsonBtn').addEventListener('click',async()=>{ try{await navigator.clipboard.writeText(JSON.stringify(state.currentGeoJSON,null,2)); $('#copyJsonBtn').textContent='복사 완료'; setTimeout(()=>$('#copyJsonBtn').textContent='복사',1200);}catch(e){alert('클립보드 복사 권한을 확인하세요.');} });
+    $('#resultToggleBtn').addEventListener('click',()=>$('#resultPanel').classList.toggle('open'));
+    $('#mobileToolsBtn').addEventListener('click',()=>$('#toolPanel').classList.toggle('mobile-open'));
+    $('#runFeaturedBtn').addEventListener('click',()=>runDemo('buffer'));
+  }
+
+  function init() {
+    if(typeof L==='undefined') return bootError('Leaflet을 불러오지 못했습니다.');
+    if(typeof turf==='undefined') return bootError('Turf.js를 불러오지 못했습니다.');
+    initMap(); renderCategories(); renderTools(); bindUI();
+    $('#demoCount').textContent=`${demos.length}개 예제`;
+    $('#engineBadge').textContent='엔진 정상';
+    $('#engineBadge').classList.add('live');
+    $('#loadingCover').style.display='none';
+    setTimeout(()=>runDemo('helpers'),120);
+  }
+
+  window.addEventListener('load',init);
+})();
+</script>
+</body>
+</html>
