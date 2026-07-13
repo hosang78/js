@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Sigma.js</title>
+<script src="https://cdn.jsdelivr.net/npm/graphology@0.26.0/dist/graphology.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sigma@3.0.3/dist/sigma.min.js"></script>
+<style>
+  :root {
+    --series-1: #2a78d6; /* blue */
+    --series-2: #1baf7a; /* aqua */
+    --series-3: #eda100; /* yellow */
+    --series-4: #008300; /* green */
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .sigma-wrap {
+    width: 100%;
+    height: 380px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fcfcfb;
+    position: relative;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: #555;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.active { background: #205fb0; }
+  .info-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Sigma.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Sigma.js</strong>는 WebGL로 그래프(노드+엣지)를 그려주는 라이브러리로, 수천 개 단위의
+    노드도 부드럽게 렌더링할 수 있는 게 특징입니다. 그래프 데이터 구조 자체는 같은 개발팀이 만든
+    <strong>graphology</strong> 라이브러리가 담당하고, Sigma.js는 그걸 화면에 그리는 역할만 합니다.
+    <ul>
+      <li>WebGL 기반 렌더링 + 휠 확대/축소, 드래그로 캔버스 이동</li>
+      <li>연결 수(degree)에 비례한 노드 크기, 그룹별 색상 인코딩</li>
+      <li>마우스오버 시 <code>nodeReducer</code>/<code>edgeReducer</code>로 이웃만 강조하고 나머지는 흐리게</li>
+      <li>클릭으로 특정 노드와 그 연결망만 남기는 포커스 모드</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 유통 네트워크는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      유통 구조와 무관합니다. 노드 위치는 별도 레이아웃 알고리즘 패키지 없이 이 페이지에서 직접 계산한
+      원형 배치입니다. Sigma.js + graphology(둘 다 CDN) 조합만 사용하고 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 그래프 렌더링</h2>
+    <div class="desc">가상 위판장 ↔ 중도매인 네트워크입니다. 마우스 휠로 확대/축소, 드래그로 캔버스를 이동해보세요.</div>
+    <div id="sg1" class="sigma-wrap"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const graph = new graphology.Graph();
+graph.addNode("market1", { x: 0, y: 0, size: 10, label: "1번 위판장", color: "#2a78d6" });
+graph.addNode("broker1", { x: 1, y: 0.4, size: 8, label: "중도매인 A", color: "#1baf7a" });
+// ...
+graph.addEdge("market1", "broker1");
+
+const renderer = new Sigma(graph, container);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 노드 크기(연결 수) + 그룹별 색상</h2>
+    <div class="desc">연결이 많은 노드일수록 크게 표시됩니다. 그룹(역할)에 따라 색이 다릅니다.</div>
+    <div id="sg2" class="sigma-wrap"></div>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>위판장</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-2)"></span>중도매인</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>소매상</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-4)"></span>수출업체</div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>graph.forEachNode((node) => {
+  const degree = graph.degree(node);
+  graph.setNodeAttribute(node, "size", 6 + degree * 2.5); // 연결 수에 비례한 크기
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 호버 시 이웃 노드 강조</h2>
+    <div class="desc">노드 위에 마우스를 올리면 직접 연결된 이웃만 선명하게 남고 나머지는 흐려집니다.</div>
+    <div id="sg3" class="sigma-wrap"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let hoveredNode = null;
+
+const renderer = new Sigma(graph, container, {
+  nodeReducer: (node, data) => {
+    if (hoveredNode && node !== hoveredNode && !graph.areNeighbors(node, hoveredNode)) {
+      return { ...data, color: "#e1e0d9", label: "" };
+    }
+    return data;
+  },
+  edgeReducer: (edge, data) => {
+    if (hoveredNode && !graph.extremities(edge).includes(hoveredNode)) {
+      return { ...data, hidden: true };
+    }
+    return data;
+  }
+});
+
+renderer.on("enterNode", ({ node }) => { hoveredNode = node; renderer.refresh(); });
+renderer.on("leaveNode", () => { hoveredNode = null; renderer.refresh(); });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 클릭으로 포커스 모드</h2>
+    <div class="desc">노드를 클릭하면 그 노드와 직접 연결된 노드만 남고 나머지는 숨겨집니다. 다시 클릭하거나 버튼을 누르면 전체 보기로 돌아갑니다.</div>
+    <div class="controls">
+      <button id="sg4-reset">전체 보기</button>
+    </div>
+    <div id="sg4" class="sigma-wrap"></div>
+    <div class="info-box" id="info4">노드를 클릭해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let focusNode = null;
+
+renderer.on("clickNode", ({ node }) => {
+  focusNode = focusNode === node ? null : node;
+  renderer.refresh();
+});
+
+nodeReducer: (node, data) => {
+  if (focusNode && node !== focusNode && !graph.areNeighbors(node, focusNode)) {
+    return { ...data, hidden: true };
+  }
+  return data;
+}</pre>
+    </details>
+  </section>
+
+<script>
+  // ---- 공통: 원형 배치 헬퍼 ----
+  function circleLayout(nodeIds, radius = 1) {
+    const positions = {};
+    nodeIds.forEach((id, i) => {
+      const angle = (i / nodeIds.length) * 2 * Math.PI;
+      positions[id] = { x: radius * Math.cos(angle), y: radius * Math.sin(angle) };
+    });
+    return positions;
+  }
+
+  // ---- 1. 기본 그래프 렌더링 ----
+  const graph1 = new graphology.Graph();
+  const nodes1 = [
+    ["market1", "1번 위판장", "#2a78d6"],
+    ["market2", "2번 위판장", "#2a78d6"],
+    ["broker1", "중도매인 A", "#1baf7a"],
+    ["broker2", "중도매인 B", "#1baf7a"],
+    ["retail1", "소매상 1", "#eda100"],
+    ["retail2", "소매상 2", "#eda100"]
+  ];
+  const pos1 = circleLayout(nodes1.map((n) => n[0]));
+  nodes1.forEach(([id, label, color]) => {
+    graph1.addNode(id, { ...pos1[id], size: 9, label, color });
+  });
+  graph1.addEdge("market1", "broker1");
+  graph1.addEdge("market1", "broker2");
+  graph1.addEdge("market2", "broker2");
+  graph1.addEdge("broker1", "retail1");
+  graph1.addEdge("broker2", "retail1");
+  graph1.addEdge("broker2", "retail2");
+  window.renderer1 = new Sigma(graph1, document.getElementById("sg1"));
+
+  // ---- 2. 노드 크기(degree) + 그룹 색상 ----
+  const graph2 = new graphology.Graph();
+  const nodes2 = [
+    ["market1", "1번 위판장", "#2a78d6"],
+    ["market2", "2번 위판장", "#2a78d6"],
+    ["broker1", "중도매인 A", "#1baf7a"],
+    ["broker2", "중도매인 B", "#1baf7a"],
+    ["broker3", "중도매인 C", "#1baf7a"],
+    ["retail1", "소매상 1", "#eda100"],
+    ["retail2", "소매상 2", "#eda100"],
+    ["export1", "수출업체", "#008300"]
+  ];
+  const pos2 = circleLayout(nodes2.map((n) => n[0]));
+  nodes2.forEach(([id, label, color]) => {
+    graph2.addNode(id, { ...pos2[id], size: 6, label, color });
+  });
+  [
+    ["market1", "broker1"], ["market1", "broker2"], ["market2", "broker2"], ["market2", "broker3"],
+    ["broker1", "retail1"], ["broker2", "retail1"], ["broker2", "retail2"], ["broker3", "retail2"],
+    ["broker3", "export1"]
+  ].forEach(([a, b]) => graph2.addEdge(a, b));
+  graph2.forEachNode((node) => {
+    const degree = graph2.degree(node);
+    graph2.setNodeAttribute(node, "size", 6 + degree * 2.5);
+  });
+  window.renderer2 = new Sigma(graph2, document.getElementById("sg2"));
+
+  // ---- 3. 호버 시 이웃 강조 ----
+  const graph3 = new graphology.Graph();
+  const nodes3 = [
+    ["market1", "1번 위판장", "#2a78d6"],
+    ["market2", "2번 위판장", "#2a78d6"],
+    ["broker1", "중도매인 A", "#1baf7a"],
+    ["broker2", "중도매인 B", "#1baf7a"],
+    ["retail1", "소매상 1", "#eda100"],
+    ["retail2", "소매상 2", "#eda100"],
+    ["export1", "수출업체", "#008300"]
+  ];
+  const pos3 = circleLayout(nodes3.map((n) => n[0]));
+  nodes3.forEach(([id, label, color]) => {
+    graph3.addNode(id, { ...pos3[id], size: 9, label, color });
+  });
+  [["market1","broker1"],["market1","broker2"],["market2","broker2"],["broker1","retail1"],["broker2","retail2"],["broker2","export1"]]
+    .forEach(([a, b]) => graph3.addEdge(a, b));
+
+  let hoveredNode3 = null;
+  window.renderer3 = new Sigma(graph3, document.getElementById("sg3"), {
+    nodeReducer: (node, data) => {
+      if (hoveredNode3 && node !== hoveredNode3 && !graph3.areNeighbors(node, hoveredNode3)) {
+        return { ...data, color: "#e1e0d9", label: "", zIndex: 0 };
+      }
+      return data;
+    },
+    edgeReducer: (edge, data) => {
+      if (hoveredNode3 && !graph3.extremities(edge).includes(hoveredNode3)) {
+        return { ...data, hidden: true };
+      }
+      return data;
+    }
+  });
+  renderer3.on("enterNode", ({ node }) => { hoveredNode3 = node; renderer3.refresh(); });
+  renderer3.on("leaveNode", () => { hoveredNode3 = null; renderer3.refresh(); });
+
+  // ---- 4. 클릭 포커스 모드 ----
+  const graph4 = new graphology.Graph();
+  const nodes4 = [
+    ["market1", "1번 위판장", "#2a78d6"],
+    ["market2", "2번 위판장", "#2a78d6"],
+    ["broker1", "중도매인 A", "#1baf7a"],
+    ["broker2", "중도매인 B", "#1baf7a"],
+    ["retail1", "소매상 1", "#eda100"],
+    ["retail2", "소매상 2", "#eda100"],
+    ["export1", "수출업체", "#008300"]
+  ];
+  const pos4 = circleLayout(nodes4.map((n) => n[0]));
+  nodes4.forEach(([id, label, color]) => {
+    graph4.addNode(id, { ...pos4[id], size: 9, label, color });
+  });
+  [["market1","broker1"],["market1","broker2"],["market2","broker2"],["broker1","retail1"],["broker2","retail2"],["broker2","export1"]]
+    .forEach(([a, b]) => graph4.addEdge(a, b));
+
+  let focusNode4 = null;
+  const info4 = document.getElementById("info4");
+  window.renderer4 = new Sigma(graph4, document.getElementById("sg4"), {
+    nodeReducer: (node, data) => {
+      if (focusNode4 && node !== focusNode4 && !graph4.areNeighbors(node, focusNode4)) {
+        return { ...data, hidden: true };
+      }
+      return data;
+    },
+    edgeReducer: (edge, data) => {
+      if (focusNode4 && !graph4.extremities(edge).includes(focusNode4)) {
+        return { ...data, hidden: true };
+      }
+      return data;
+    }
+  });
+  renderer4.on("clickNode", ({ node }) => {
+    focusNode4 = focusNode4 === node ? null : node;
+    renderer4.refresh();
+    if (focusNode4) {
+      const label = graph4.getNodeAttribute(focusNode4, "label");
+      const neighbors = graph4.neighbors(focusNode4).map((n) => graph4.getNodeAttribute(n, "label")).join(", ");
+      info4.textContent = `"${label}" 포커스 중 — 연결된 노드: ${neighbors || "없음"}`;
+    } else {
+      info4.textContent = "노드를 클릭해보세요.";
+    }
+  });
+  document.getElementById("sg4-reset").onclick = () => {
+    focusNode4 = null;
+    renderer4.refresh();
+    info4.textContent = "노드를 클릭해보세요.";
+  };
+</script>
+
+</body>
+</html>
