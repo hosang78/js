@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="D3.js v7의 차트, 레이아웃, 지도, 상호작용, 데이터 처리 기능을 한 페이지에서 확인하는 종합 샘플" />
+  <title>D3.js 기능 종합 실험실</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --surface: rgba(255,255,255,.94);
+      --surface-2: #f7f9fc;
+      --text: #162033;
+      --muted: #667085;
+      --line: #e3e8f1;
+      --brand: #2563eb;
+      --brand-2: #0ea5e9;
+      --accent: #7c3aed;
+      --good: #059669;
+      --warn: #d97706;
+      --bad: #dc2626;
+      --shadow: 0 14px 38px rgba(30,41,59,.08);
+      --radius: 20px;
+      --chart-grid: #e8edf5;
+      --tooltip-bg: rgba(15,23,42,.94);
+    }
+    body.dark {
+      --bg: #0b1120;
+      --surface: rgba(17,24,39,.94);
+      --surface-2: #111a2c;
+      --text: #e5edf8;
+      --muted: #9aa8bc;
+      --line: #243147;
+      --brand: #60a5fa;
+      --brand-2: #38bdf8;
+      --accent: #a78bfa;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --shadow: 0 18px 45px rgba(0,0,0,.28);
+      --chart-grid: #233047;
+      --tooltip-bg: rgba(2,6,23,.96);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(37,99,235,.10), transparent 28%),
+        radial-gradient(circle at 92% 12%, rgba(124,58,237,.09), transparent 26%),
+        var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .app { display: grid; grid-template-columns: 272px minmax(0,1fr); min-height: 100vh; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; overflow: auto;
+      padding: 26px 18px; border-right: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(18px); z-index: 10;
+    }
+    .brand { display:flex; align-items:center; gap:12px; padding: 4px 8px 22px; }
+    .brand-mark {
+      width:44px; height:44px; display:grid; place-items:center; border-radius:14px;
+      color:#fff; font-weight:900; letter-spacing:-1px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      box-shadow: 0 10px 24px rgba(37,99,235,.28);
+    }
+    .brand h1 { font-size:18px; margin:0; letter-spacing:-.4px; }
+    .brand small { display:block; color:var(--muted); margin-top:2px; }
+    .nav-group-title { padding:18px 10px 7px; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .nav { display:grid; gap:4px; }
+    .nav a {
+      display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:11px;
+      color:var(--muted); text-decoration:none; font-size:13px; font-weight:650;
+    }
+    .nav a:hover, .nav a.active { color:var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
+    .nav .dot { width:8px; height:8px; border-radius:99px; background:currentColor; opacity:.55; }
+    .side-note { margin-top:20px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); font-size:12px; color:var(--muted); }
+    .main { min-width:0; padding: 24px 28px 60px; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
+    .topbar .title h2 { margin:0; font-size:29px; letter-spacing:-1px; }
+    .topbar .title p { margin:5px 0 0; color:var(--muted); font-size:14px; }
+    .actions { display:flex; align-items:center; gap:9px; flex-wrap:wrap; justify-content:flex-end; }
+    .btn {
+      border:1px solid var(--line); background:var(--surface); color:var(--text);
+      padding:9px 13px; border-radius:11px; font-weight:750; font-size:13px;
+      box-shadow: 0 4px 12px rgba(15,23,42,.04);
+    }
+    .btn:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+    .btn.primary { color:#fff; border-color:transparent; background:linear-gradient(135deg,var(--brand),var(--accent)); }
+    .status-pill { display:inline-flex; gap:7px; align-items:center; padding:7px 10px; border-radius:999px; background:color-mix(in srgb,var(--good) 12%,transparent); color:var(--good); font-size:12px; font-weight:800; }
+    .status-pill::before { content:""; width:7px; height:7px; border-radius:99px; background:currentColor; box-shadow:0 0 0 4px color-mix(in srgb,var(--good) 14%,transparent); }
+    .hero {
+      position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr); gap:22px;
+      padding:30px; border:1px solid var(--line); border-radius:26px; background:var(--surface); box-shadow:var(--shadow);
+    }
+    .hero::after { content:""; position:absolute; width:360px; height:360px; border-radius:50%; right:-180px; top:-180px; background:radial-gradient(circle,rgba(37,99,235,.20),transparent 67%); }
+    .eyebrow { display:inline-flex; align-items:center; gap:8px; color:var(--brand); font-weight:850; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+    .hero h3 { font-size:34px; letter-spacing:-1.6px; line-height:1.18; margin:12px 0 13px; max-width:720px; }
+    .hero p { color:var(--muted); margin:0; max-width:730px; }
+    .hero-tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+    .tag { padding:7px 10px; border:1px solid var(--line); border-radius:999px; font-size:12px; font-weight:750; background:var(--surface-2); }
+    .hero-visual { min-height:190px; z-index:1; }
+    .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:18px 0 26px; }
+    .metric { padding:18px; background:var(--surface); border:1px solid var(--line); border-radius:17px; box-shadow:0 8px 24px rgba(15,23,42,.04); }
+    .metric .label { color:var(--muted); font-size:12px; font-weight:700; }
+    .metric .value { margin-top:5px; font-size:25px; font-weight:900; letter-spacing:-.8px; }
+    .metric .delta { margin-top:4px; color:var(--good); font-size:12px; font-weight:750; }
+    .toolbar {
+      position:sticky; top:10px; z-index:9; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      padding:12px; margin-bottom:22px; border:1px solid var(--line); border-radius:15px;
+      background:color-mix(in srgb,var(--surface) 90%,transparent); backdrop-filter:blur(16px); box-shadow:0 10px 30px rgba(15,23,42,.07);
+    }
+    .search { flex:1; min-width:220px; position:relative; }
+    .search input { width:100%; border:1px solid var(--line); border-radius:10px; background:var(--surface-2); color:var(--text); padding:9px 12px 9px 36px; outline:none; }
+    .search::before { content:"⌕"; position:absolute; left:12px; top:6px; color:var(--muted); font-size:21px; }
+    .filter { border:1px solid var(--line); border-radius:10px; background:var(--surface-2); color:var(--text); padding:9px 10px; }
+    .section { scroll-margin-top:92px; margin-top:34px; }
+    .section-head { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:14px; }
+    .section-head h3 { margin:0; font-size:22px; letter-spacing:-.7px; }
+    .section-head p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    .section-count { color:var(--muted); font-size:12px; font-weight:800; }
+    .grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:16px; }
+    .card {
+      grid-column:span 6; min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:var(--radius);
+      background:var(--surface); box-shadow:0 10px 28px rgba(15,23,42,.055); transition:.2s ease;
+    }
+    .card:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+    .card.wide { grid-column:span 12; }
+    .card.third { grid-column:span 4; }
+    .card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:18px 19px 10px; }
+    .card-head h4 { margin:0; font-size:16px; letter-spacing:-.3px; }
+    .card-head p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+    .card-badge { white-space:nowrap; padding:5px 8px; border-radius:999px; background:color-mix(in srgb,var(--brand) 10%,transparent); color:var(--brand); font-size:10px; font-weight:850; }
+    .card-controls { display:flex; gap:7px; padding:0 19px 8px; flex-wrap:wrap; }
+    .mini-btn, .mini-select, .mini-input { border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:8px; padding:6px 8px; font-size:11px; font-weight:700; }
+    .chart { position:relative; min-height:300px; padding:0 10px 12px; }
+    .chart.compact { min-height:250px; }
+    .chart.tall { min-height:380px; }
+    svg { display:block; width:100%; height:auto; overflow:visible; }
+    .axis text { fill:var(--muted); font-size:10px; }
+    .axis path, .axis line { stroke:var(--line); }
+    .grid-line line { stroke:var(--chart-grid); stroke-dasharray:3 4; }
+    .grid-line path { display:none; }
+    .tooltip {
+      position:fixed; pointer-events:none; opacity:0; z-index:999; max-width:260px;
+      padding:9px 11px; border-radius:9px; background:var(--tooltip-bg); color:#fff;
+      font-size:12px; box-shadow:0 12px 28px rgba(0,0,0,.22); transform:translate(10px,10px);
+    }
+    .legend { display:flex; flex-wrap:wrap; gap:10px; padding:0 18px 14px; color:var(--muted); font-size:11px; }
+    .legend-item { display:flex; align-items:center; gap:6px; }
+    .legend-swatch { width:10px; height:10px; border-radius:3px; }
+    .empty { padding:50px 20px; text-align:center; color:var(--muted); }
+    .code-panel { margin:0 18px 18px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); overflow:hidden; }
+    .code-title { display:flex; justify-content:space-between; padding:9px 11px; border-bottom:1px solid var(--line); font-size:11px; font-weight:800; }
+    pre { margin:0; padding:12px; overflow:auto; color:var(--muted); font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .data-lab { display:grid; grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr); gap:14px; padding:0 18px 18px; }
+    textarea { width:100%; min-height:230px; resize:vertical; border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--surface-2); color:var(--text); font:12px/1.55 ui-monospace,monospace; outline:none; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); border-radius:12px; max-height:310px; }
+    table { border-collapse:collapse; width:100%; font-size:12px; }
+    th,td { padding:9px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+    th { position:sticky; top:0; background:var(--surface-2); z-index:1; color:var(--muted); }
+    .feature-list { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; padding:0 18px 18px; }
+    .feature { padding:12px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); }
+    .feature b { display:block; font-size:12px; margin-bottom:4px; }
+    .feature span { color:var(--muted); font-size:11px; }
+    .footer { margin-top:36px; padding:20px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; text-align:center; }
+    .hidden-card { display:none !important; }
+    .toast { position:fixed; right:22px; bottom:22px; z-index:1000; padding:11px 14px; border-radius:11px; background:var(--tooltip-bg); color:#fff; font-size:12px; opacity:0; transform:translateY(10px); transition:.22s; }
+    .toast.show { opacity:1; transform:none; }
+    .loading-overlay { position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); font-size:12px; }
+    @media (max-width:1180px) { .app{grid-template-columns:220px minmax(0,1fr)} .card.third{grid-column:span 6} .metrics{grid-template-columns:repeat(2,1fr)} .feature-list{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:840px) {
+      .app{display:block}.sidebar{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+      .nav{grid-template-columns:repeat(2,1fr)}.main{padding:18px 14px 42px}.topbar{align-items:flex-start}.hero{grid-template-columns:1fr;padding:22px}
+      .hero h3{font-size:27px}.hero-visual{min-height:140px}.card,.card.third{grid-column:span 12}.data-lab{grid-template-columns:1fr}
+    }
+    @media (max-width:540px) { .metrics{grid-template-columns:1fr}.feature-list{grid-template-columns:1fr}.topbar{display:block}.actions{justify-content:flex-start;margin-top:12px}.nav{grid-template-columns:1fr 1fr}.hero h3{font-size:24px}.card-head{padding:15px 15px 8px}.chart{min-height:260px}.toolbar{top:4px} }
+    @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+<div class="tooltip" id="tooltip"></div>
+<div class="toast" id="toast"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">D3</div><div><h1>D3.js Lab</h1><small>v7.9.0 종합 샘플</small></div></div>
+    <div class="nav-group-title">탐색</div>
+    <nav class="nav" id="nav">
+      <a href="#overview"><span class="dot"></span>개요</a>
+      <a href="#basic"><span class="dot"></span>기본 차트</a>
+      <a href="#interaction"><span class="dot"></span>상호작용</a>
+      <a href="#hierarchy"><span class="dot"></span>계층·네트워크</a>
+      <a href="#advanced"><span class="dot"></span>고급 시각화</a>
+      <a href="#geo"><span class="dot"></span>지도·공간</a>
+      <a href="#data"><span class="dot"></span>데이터 처리</a>
+      <a href="#reference"><span class="dot"></span>기능 목록</a>
+    </nav>
+    <div class="side-note">
+      <b>실행 안내</b><br>
+      CDN 방식으로 D3와 d3-sankey를 로드한다. 외부망 차단 환경에서는 두 JS 파일을 같은 폴더에 저장한 뒤 상단 script 경로만 로컬로 변경하면 된다.
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="title"><h2>D3.js 기능 종합 실험실</h2><p>데이터 기반 DOM, SVG·Canvas, 레이아웃, 지도, 애니메이션과 상호작용 데모</p></div>
+      <div class="actions">
+        <span class="status-pill" id="libStatus">라이브러리 정상</span>
+        <button class="btn" id="themeBtn">다크 모드</button>
+        <button class="btn primary" id="refreshAll">전체 데이터 갱신</button>
+      </div>
+    </header>
+
+    <section id="overview" class="hero">
+      <div>
+        <div class="eyebrow">DATA-DRIVEN DOCUMENTS</div>
+        <h3>차트 라이브러리보다 더 낮은 수준에서, 원하는 시각화를 직접 설계하는 D3</h3>
+        <p>선택·데이터 조인·스케일·축·도형·레이아웃·지리 투영·전환·사용자 입력을 조합하는 방식을 실제 동작 예제로 확인할 수 있다.</p>
+        <div class="hero-tags"><span class="tag">SVG</span><span class="tag">Canvas</span><span class="tag">Data Join</span><span class="tag">Transition</span><span class="tag">Zoom · Brush · Drag</span><span class="tag">GeoJSON</span><span class="tag">Hierarchy</span></div>
+      </div>
+      <div id="heroVisual" class="hero-visual" aria-label="D3 장식용 파티클 시각화"></div>
+    </section>
+
+    <section class="metrics" aria-label="샘플 요약">
+      <div class="metric"><div class="label">시각화 데모</div><div class="value" id="metricDemo">25</div><div class="delta">SVG + Canvas</div></div>
+      <div class="metric"><div class="label">D3 주요 모듈</div><div class="value">18+</div><div class="delta">조합형 API</div></div>
+      <div class="metric"><div class="label">상호작용 유형</div><div class="value">7</div><div class="delta">툴팁·줌·브러시·드래그</div></div>
+      <div class="metric"><div class="label">외부 데이터 의존</div><div class="value">0</div><div class="delta">샘플 데이터 내장</div></div>
+    </section>
+
+    <div class="toolbar">
+      <div class="search"><input id="searchInput" type="search" placeholder="예: 막대, 지도, force, brush, 계층" aria-label="데모 검색"></div>
+      <select class="filter" id="categoryFilter" aria-label="범주 선택"><option value="all">전체 범주</option><option value="basic">기본 차트</option><option value="interaction">상호작용</option><option value="hierarchy">계층·네트워크</option><option value="advanced">고급 시각화</option><option value="geo">지도·공간</option><option value="data">데이터 처리</option></select>
+      <button class="btn" id="pauseBtn">애니메이션 일시정지</button>
+      <button class="btn" id="resetViewBtn">화면 초기화</button>
+    </div>
+
+    <section class="section" id="basic">
+      <div class="section-head"><div><h3>기본 차트와 도형</h3><p>scale, axis, shape, transition, data join의 기본 조합</p></div><div class="section-count">8 DEMOS</div></div>
+      <div class="grid">
+        <article class="card demo-card" data-category="basic" data-keywords="bar 막대 data join transition enter update exit scaleBand">
+          <div class="card-head"><div><h4>01. 애니메이션 막대 차트</h4><p>enter · update · exit 데이터 조인과 정렬</p></div><span class="card-badge">d3-selection</span></div>
+          <div class="card-controls"><button class="mini-btn" id="barRandom">데이터 변경</button><button class="mini-btn" id="barSort">내림차순 정렬</button><select class="mini-select" id="barEase"><option value="easeCubicOut">Cubic Out</option><option value="easeBounceOut">Bounce</option><option value="easeElasticOut">Elastic</option></select></div>
+          <div class="chart" id="barChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="line area time series curve 선 영역 시계열 bisector">
+          <div class="card-head"><div><h4>02. 라인 + 영역 시계열</h4><p>시간 스케일, 곡선 보간, 포인터 탐색선</p></div><span class="card-badge">d3-shape</span></div>
+          <div class="card-controls"><select class="mini-select" id="curveSelect"><option value="curveMonotoneX">Monotone</option><option value="curveLinear">Linear</option><option value="curveStep">Step</option><option value="curveBasis">Basis</option><option value="curveCatmullRom">Catmull-Rom</option></select><button class="mini-btn" id="lineRefresh">새 시계열</button></div>
+          <div class="chart" id="lineChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="pie donut arc 파이 도넛 호 label transition">
+          <div class="card-head"><div><h4>03. 도넛 차트</h4><p>pie·arc 생성기, 패드 각도, 중앙 합계</p></div><span class="card-badge">d3-pie</span></div>
+          <div class="card-controls"><button class="mini-btn" id="donutRefresh">값 갱신</button><button class="mini-btn" id="donutToggle">도넛 ↔ 파이</button></div>
+          <div class="chart compact" id="donutChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="histogram bin distribution 히스토그램 분포 threshold">
+          <div class="card-head"><div><h4>04. 히스토그램</h4><p>d3.bin 기반 분포와 평균·중앙값 표시</p></div><span class="card-badge">d3-array</span></div>
+          <div class="card-controls"><label class="mini-btn">구간 <input id="binRange" type="range" min="5" max="30" value="14" style="width:90px;vertical-align:middle"></label><button class="mini-btn" id="histRefresh">표본 재생성</button></div>
+          <div class="chart compact" id="histChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="stacked grouped bar stack group 누적 그룹 막대 offset">
+          <div class="card-head"><div><h4>05. 누적·그룹 막대</h4><p>d3.stack과 레이아웃 전환</p></div><span class="card-badge">d3-stack</span></div>
+          <div class="card-controls"><button class="mini-btn" id="stackMode">누적 → 그룹</button><select class="mini-select" id="stackOffset"><option value="stackOffsetNone">기본</option><option value="stackOffsetExpand">100% 비율</option></select></div>
+          <div class="chart" id="stackChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="heatmap color sequential quantize heat map 히트맵 색상 scaleSequential">
+          <div class="card-head"><div><h4>06. 캘린더 히트맵</h4><p>연속 색상 스케일, 날짜 간격, 범례</p></div><span class="card-badge">d3-scale-chromatic</span></div>
+          <div class="card-controls"><select class="mini-select" id="heatColor"><option value="interpolateBlues">Blues</option><option value="interpolateViridis">Viridis</option><option value="interpolateTurbo">Turbo</option><option value="interpolateYlGnBu">YlGnBu</option></select><button class="mini-btn" id="heatRefresh">값 갱신</button></div>
+          <div class="chart compact" id="heatChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="radar polygon radial line 레이더 방사형">
+          <div class="card-head"><div><h4>07. 레이더 차트</h4><p>radialLine, 폐곡선, 다중 계열 비교</p></div><span class="card-badge">d3-line-radial</span></div>
+          <div class="card-controls"><button class="mini-btn" id="radarRefresh">점수 갱신</button></div>
+          <div class="chart compact" id="radarChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="basic" data-keywords="symbols shapes symbol circle triangle star diamond 도형 심볼">
+          <div class="card-head"><div><h4>08. 심볼·스케일 갤러리</h4><p>symbol 타입, 크기 스케일, 범주 색상</p></div><span class="card-badge">d3-symbol</span></div>
+          <div class="chart compact" id="symbolChart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="interaction">
+      <div class="section-head"><div><h3>상호작용과 애니메이션</h3><p>사용자가 데이터 공간을 직접 탐색하고 조작하는 방식</p></div><div class="section-count">5 DEMOS</div></div>
+      <div class="grid">
+        <article class="card demo-card" data-category="interaction" data-keywords="scatter zoom pan pointer 휠 줌 산점도">
+          <div class="card-head"><div><h4>09. 줌·팬 산점도</h4><p>휠 확대, 드래그 이동, 더블클릭 초기화</p></div><span class="card-badge">d3-zoom</span></div>
+          <div class="card-controls"><button class="mini-btn" id="scatterReset">줌 초기화</button><button class="mini-btn" id="scatterRefresh">점 재생성</button></div>
+          <div class="chart" id="scatterChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="interaction" data-keywords="brush focus context selection 브러시 선택 linked chart">
+          <div class="card-head"><div><h4>10. 브러시 연동 시계열</h4><p>하단 범위를 선택해 상단 차트 확대</p></div><span class="card-badge">d3-brush</span></div>
+          <div class="card-controls"><button class="mini-btn" id="brushReset">전체 범위</button></div>
+          <div class="chart tall" id="brushChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="interaction" data-keywords="drag draggable circles collision 드래그 충돌 force">
+          <div class="card-head"><div><h4>11. 드래그 가능한 버블</h4><p>forceCollide와 drag 이벤트 결합</p></div><span class="card-badge">d3-drag</span></div>
+          <div class="card-controls"><button class="mini-btn" id="bubbleRestart">재배치</button></div>
+          <div class="chart compact" id="dragBubbleChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="interaction" data-keywords="transition easing animation tween 애니메이션 이징">
+          <div class="card-head"><div><h4>12. 이징 함수 비교</h4><p>동일 이동에 적용되는 transition ease 차이</p></div><span class="card-badge">d3-transition</span></div>
+          <div class="card-controls"><button class="mini-btn" id="easePlay">애니메이션 실행</button></div>
+          <div class="chart compact" id="easeChart"></div>
+        </article>
+
+        <article class="card wide demo-card" data-category="interaction" data-keywords="canvas particles quadtree nearest performance 캔버스 파티클 성능">
+          <div class="card-head"><div><h4>13. Canvas 대량 포인트 + Quadtree</h4><p>2,000개 포인트 렌더링, 포인터 최근접 탐색</p></div><span class="card-badge">d3-quadtree</span></div>
+          <div class="card-controls"><button class="mini-btn" id="canvasRefresh">포인트 재생성</button><span class="mini-btn" id="canvasInfo">포인터를 움직여 최근접 점 확인</span></div>
+          <div class="chart compact" id="canvasChart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="hierarchy">
+      <div class="section-head"><div><h3>계층·네트워크 레이아웃</h3><p>트리 구조, 포함 관계, 네트워크 연결 관계의 자동 배치</p></div><div class="section-count">5 DEMOS</div></div>
+      <div class="grid">
+        <article class="card demo-card" data-category="hierarchy" data-keywords="tree hierarchy tidy dendrogram 조직도 트리 계층">
+          <div class="card-head"><div><h4>14. 접기·펼치기 트리</h4><p>hierarchy·tree와 노드 클릭 상태 변경</p></div><span class="card-badge">d3-hierarchy</span></div>
+          <div class="card-controls"><button class="mini-btn" id="treeExpand">전체 펼치기</button><button class="mini-btn" id="treeCollapse">2단계 접기</button></div>
+          <div class="chart tall" id="treeChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="hierarchy" data-keywords="treemap hierarchy enclosure 타일 사각형 계층">
+          <div class="card-head"><div><h4>15. 트리맵</h4><p>값에 비례한 면적과 계층별 색상</p></div><span class="card-badge">d3-treemap</span></div>
+          <div class="card-controls"><select class="mini-select" id="treemapTile"><option value="treemapSquarify">Squarify</option><option value="treemapBinary">Binary</option><option value="treemapSliceDice">Slice Dice</option></select></div>
+          <div class="chart compact" id="treemapChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="hierarchy" data-keywords="pack circle packing bubble hierarchy 원형 패킹">
+          <div class="card-head"><div><h4>16. 원형 패킹</h4><p>포함 관계를 중첩 원으로 표현</p></div><span class="card-badge">d3-pack</span></div>
+          <div class="chart compact" id="packChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="hierarchy" data-keywords="sunburst partition arc 계층 선버스트 파티션">
+          <div class="card-head"><div><h4>17. 선버스트</h4><p>partition 레이아웃과 방사형 계층</p></div><span class="card-badge">d3-partition</span></div>
+          <div class="chart compact" id="sunburstChart"></div>
+        </article>
+
+        <article class="card wide demo-card" data-category="hierarchy" data-keywords="force network graph node link drag 네트워크 노드 링크 포스">
+          <div class="card-head"><div><h4>18. Force 네트워크</h4><p>link·charge·center·collision force와 노드 드래그</p></div><span class="card-badge">d3-force</span></div>
+          <div class="card-controls"><button class="mini-btn" id="forceRestart">시뮬레이션 재가열</button><label class="mini-btn">반발력 <input id="chargeRange" type="range" min="-180" max="-20" value="-85" style="width:100px;vertical-align:middle"></label></div>
+          <div class="chart tall" id="forceChart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="advanced">
+      <div class="section-head"><div><h3>고급·특수 시각화</h3><p>흐름, 관계 행렬, 밀도, 공간 분할 등 복합 생성기</p></div><div class="section-count">5 DEMOS</div></div>
+      <div class="grid">
+        <article class="card demo-card" data-category="advanced" data-keywords="sankey flow link 흐름 생키 energy">
+          <div class="card-head"><div><h4>19. Sankey 흐름도</h4><p>업무 투입에서 결과까지의 흐름</p></div><span class="card-badge">d3-sankey 확장</span></div>
+          <div class="chart" id="sankeyChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="advanced" data-keywords="chord matrix 관계 코드 원형 리본">
+          <div class="card-head"><div><h4>20. Chord 관계도</h4><p>부서 간 교류량을 원형 리본으로 표현</p></div><span class="card-badge">d3-chord</span></div>
+          <div class="chart" id="chordChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="advanced" data-keywords="contour density kde 밀도 등고선 scatter">
+          <div class="card-head"><div><h4>21. 밀도 등고선</h4><p>contourDensity와 연속 색상 인코딩</p></div><span class="card-badge">d3-contour</span></div>
+          <div class="card-controls"><label class="mini-btn">대역폭 <input id="densityBandwidth" type="range" min="8" max="40" value="22" style="width:90px;vertical-align:middle"></label></div>
+          <div class="chart compact" id="densityChart"></div>
+        </article>
+
+        <article class="card demo-card" data-category="advanced" data-keywords="voronoi delaunay nearest tessellation 보로노이 들로네">
+          <div class="card-head"><div><h4>22. Voronoi · Delaunay</h4><p>최근접 영역 분할과 포인터 하이라이트</p></div><span class="card-badge">d3-delaunay</span></div>
+          <div class="card-controls"><button class="mini-btn" id="voronoiRefresh">점 재생성</button></div>
+          <div class="chart compact" id="voronoiChart"></div>
+        </article>
+
+        <article class="card wide demo-card" data-category="advanced" data-keywords="streamgraph stack wiggle area 스트림그래프 누적 영역">
+          <div class="card-head"><div><h4>23. 스트림그래프</h4><p>stackOffsetWiggle과 area 생성기</p></div><span class="card-badge">d3-stack</span></div>
+          <div class="card-controls"><button class="mini-btn" id="streamRefresh">데이터 갱신</button></div>
+          <div class="chart compact" id="streamChart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="geo">
+      <div class="section-head"><div><h3>지도와 지리 공간</h3><p>구면 GeoJSON, 투영법, 경위도 경로와 거리 계산</p></div><div class="section-count">1 DEMO</div></div>
+      <div class="grid">
+        <article class="card wide demo-card" data-category="geo" data-keywords="geo map projection graticule route distance 지도 투영 경로 해양">
+          <div class="card-head"><div><h4>24. 세계 투영·항로 지도</h4><p>Sphere, graticule, geoPath, geoInterpolate, geoDistance</p></div><span class="card-badge">d3-geo</span></div>
+          <div class="card-controls"><select class="mini-select" id="projectionSelect"><option value="geoNaturalEarth1">Natural Earth</option><option value="geoMercator">Mercator</option><option value="geoEqualEarth">Equal Earth</option><option value="geoOrthographic">Orthographic</option><option value="geoAzimuthalEqualArea">Azimuthal</option></select><button class="mini-btn" id="rotateGlobe">자동 회전</button><button class="mini-btn" id="geoReset">회전 초기화</button></div>
+          <div class="chart tall" id="geoChart"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="data">
+      <div class="section-head"><div><h3>데이터 변환 실험실</h3><p>CSV 파싱, 타입 변환, 그룹·집계·정렬·통계·표 렌더링</p></div><div class="section-count">INTERACTIVE LAB</div></div>
+      <div class="grid">
+        <article class="card wide demo-card" data-category="data" data-keywords="csv parse group rollup sort extent mean median sum format table 데이터 처리 집계">
+          <div class="card-head"><div><h4>25. CSV 파싱·그룹 집계</h4><p>텍스트를 수정한 뒤 파싱하면 표와 요약이 즉시 갱신</p></div><span class="card-badge">d3-dsv · d3-array</span></div>
+          <div class="card-controls"><button class="mini-btn" id="parseCsvBtn">CSV 파싱</button><button class="mini-btn" id="sampleCsvBtn">샘플 복원</button><select class="mini-select" id="groupField"><option value="부문">부문별 집계</option><option value="월">월별 집계</option></select></div>
+          <div class="data-lab"><div><textarea id="csvInput" spellcheck="false">월,부문,매출,건수
+1월,상호금융,182,38
+1월,공제보험,146,29
+1월,경제사업,128,34
+2월,상호금융,195,41
+2월,공제보험,151,31
+2월,경제사업,139,37
+3월,상호금융,207,44
+3월,공제보험,164,35
+3월,경제사업,145,39
+4월,상호금융,219,46
+4월,공제보험,171,36
+4월,경제사업,153,42</textarea></div><div><div id="csvSummary" class="feature-list" style="padding:0 0 12px"></div><div class="table-wrap"><table id="csvTable"></table></div></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="reference">
+      <div class="section-head"><div><h3>포함 기능 목록</h3><p>이 샘플에서 확인할 수 있는 D3 API 영역</p></div></div>
+      <article class="card wide">
+        <div class="card-head"><div><h4>D3 모듈 체크리스트</h4><p>각 항목은 위 데모 코드에서 실제 사용</p></div><span class="card-badge">REFERENCE</span></div>
+        <div class="feature-list">
+          <div class="feature"><b>d3-selection</b><span>select, selectAll, data, join, attr, style, on</span></div>
+          <div class="feature"><b>d3-transition</b><span>duration, delay, ease, attrTween</span></div>
+          <div class="feature"><b>d3-scale</b><span>linear, band, time, ordinal, sequential, sqrt</span></div>
+          <div class="feature"><b>d3-axis</b><span>axisBottom, axisLeft, ticks, tickFormat</span></div>
+          <div class="feature"><b>d3-shape</b><span>line, area, arc, pie, stack, symbols, curves</span></div>
+          <div class="feature"><b>d3-array</b><span>extent, max, mean, median, bin, group, rollup</span></div>
+          <div class="feature"><b>d3-format/time-format</b><span>숫자·백분율·날짜 표시 형식</span></div>
+          <div class="feature"><b>d3-zoom</b><span>scaleExtent, transform, rescaleX/Y</span></div>
+          <div class="feature"><b>d3-brush</b><span>brushX, selection, move, end 이벤트</span></div>
+          <div class="feature"><b>d3-drag</b><span>start, drag, end, subject</span></div>
+          <div class="feature"><b>d3-force</b><span>simulation, link, manyBody, collide, center</span></div>
+          <div class="feature"><b>d3-hierarchy</b><span>tree, treemap, pack, partition</span></div>
+          <div class="feature"><b>d3-geo</b><span>projection, geoPath, graticule, interpolate</span></div>
+          <div class="feature"><b>d3-contour</b><span>contourDensity 기반 밀도 추정</span></div>
+          <div class="feature"><b>d3-delaunay</b><span>Delaunay, Voronoi, find</span></div>
+          <div class="feature"><b>d3-quadtree</b><span>대량 포인트 공간 인덱싱</span></div>
+          <div class="feature"><b>d3-chord</b><span>chord, ribbon, groupTicks</span></div>
+          <div class="feature"><b>d3-dsv</b><span>csvParse, autoType, columns</span></div>
+          <div class="feature"><b>d3-color/interpolate</b><span>색상 보간, 범례, 컬러 스케일</span></div>
+          <div class="feature"><b>d3-sankey</b><span>별도 공식 확장 모듈 기반 흐름도</span></div>
+        </div>
+      </article>
+    </section>
+
+    <footer class="footer">D3.js v7.9.0 · 단일 HTML 종합 샘플 · 샘플 데이터는 설명 목적의 가상 데이터</footer>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  if (!window.d3) {
+    document.getElementById('libStatus').textContent = 'D3 로드 실패';
+    document.getElementById('libStatus').style.color = 'var(--bad)';
+    document.body.insertAdjacentHTML('afterbegin','<div style="padding:14px;background:#fee2e2;color:#991b1b;text-align:center;font-weight:800">D3.js를 불러오지 못했다. 인터넷 연결 또는 script 경로를 확인해줘.</div>');
+    return;
+  }
+
+  const tooltip = d3.select('#tooltip');
+  const fmt = d3.format(',');
+  const pct = d3.format('.1%');
+  const palette = ['#2563eb','#0ea5e9','#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#64748b'];
+  let animationsPaused = false;
+  let seedCounter = 1;
+  const seeded = () => d3.randomLcg((seedCounter++ % 997) / 997);
+  const color = d3.scaleOrdinal(palette);
+
+  const showTip = (event, html) => tooltip.html(html).style('left',event.clientX+'px').style('top',event.clientY+'px').style('opacity',1);
+  const moveTip = event => tooltip.style('left',event.clientX+'px').style('top',event.clientY+'px');
+  const hideTip = () => tooltip.style('opacity',0);
+  const toast = msg => { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1800); };
+  const duration = n => animationsPaused ? 0 : n;
+  const box = (selector, h=300, minW=320) => { const node=document.querySelector(selector); const w=Math.max(minW,node.clientWidth||minW); return {node,w,h}; };
+  const svgBase = (selector,h=300) => { const {w}=box(selector,h); d3.select(selector).selectAll('*').remove(); return {svg:d3.select(selector).append('svg').attr('viewBox',[0,0,w,h]).attr('role','img'),w,h}; };
+  const gridY = (g, scale, width, ticks=5) => g.attr('class','grid-line').call(d3.axisLeft(scale).ticks(ticks).tickSize(-width).tickFormat(''));
+
+  function renderHero(){
+    const {svg,w,h}=svgBase('#heroVisual',190,280); const rnd=seeded();
+    const nodes=d3.range(36).map((_,i)=>({id:i,r:3+rnd()*11,x:rnd()*w,y:rnd()*h}));
+    const sim=d3.forceSimulation(nodes).force('x',d3.forceX(w/2).strength(.035)).force('y',d3.forceY(h/2).strength(.035)).force('charge',d3.forceManyBody().strength(-7)).force('collide',d3.forceCollide(d=>d.r+2));
+    const lines=svg.append('g').attr('opacity',.22); const circles=svg.append('g').selectAll('circle').data(nodes).join('circle').attr('r',d=>d.r).attr('fill',(d,i)=>palette[i%palette.length]).attr('opacity',.75);
+    sim.on('tick',()=>{circles.attr('cx',d=>d.x).attr('cy',d=>d.y); const near=[]; for(let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++){const a=nodes[i],b=nodes[j],dist=Math.hypot(a.x-b.x,a.y-b.y); if(dist<58) near.push([a,b]);} lines.selectAll('line').data(near).join('line').attr('x1',d=>d[0].x).attr('y1',d=>d[0].y).attr('x2',d=>d[1].x).attr('y2',d=>d[1].y).attr('stroke','var(--brand)');});
+    window.heroSim=sim;
+  }
+
+  // 01 Bar chart
+  let barData=[]; let barDesc=false;
+  function newBarData(){const rnd=seeded(); const n=6+Math.floor(rnd()*4); barData=d3.range(n).map((_,i)=>({name:String.fromCharCode(65+i),value:18+Math.round(rnd()*82)}));}
+  function renderBar(){
+    const {svg,w,h}=svgBase('#barChart',300); const m={t:16,r:18,b:40,l:43}, iw=w-m.l-m.r, ih=h-m.t-m.b; const g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`);
+    const data=barDesc?[...barData].sort((a,b)=>d3.descending(a.value,b.value)):barData;
+    const x=d3.scaleBand(data.map(d=>d.name),[0,iw]).padding(.22); const y=d3.scaleLinear().domain([0,d3.max(data,d=>d.value)]).nice().range([ih,0]);
+    g.append('g').attr('transform',`translate(0,${ih})`).attr('class','axis').call(d3.axisBottom(x)); g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5)); gridY(g.append('g'),y,iw,5).lower();
+    const bars=g.selectAll('.bar').data(data,d=>d.name).join(enter=>enter.append('rect').attr('class','bar').attr('x',d=>x(d.name)).attr('width',x.bandwidth()).attr('y',ih).attr('height',0).attr('rx',7).attr('fill',d=>color(d.name)).call(e=>e.transition().duration(duration(700)).ease(d3[document.getElementById('barEase').value]).attr('y',d=>y(d.value)).attr('height',d=>ih-y(d.value))),update=>update.call(u=>u.transition().duration(duration(650)).attr('x',d=>x(d.name)).attr('width',x.bandwidth()).attr('y',d=>y(d.value)).attr('height',d=>ih-y(d.value))),exit=>exit.call(e=>e.transition().duration(duration(350)).attr('y',ih).attr('height',0).remove()));
+    bars.on('pointerenter',(e,d)=>showTip(e,`<b>${d.name} 항목</b><br>값 ${fmt(d.value)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+    g.selectAll('.value').data(data,d=>d.name).join('text').attr('class','value').attr('x',d=>x(d.name)+x.bandwidth()/2).attr('text-anchor','middle').attr('fill','var(--muted)').attr('font-size',10).attr('y',d=>y(d.value)-7).text(d=>d.value);
+  }
+
+  // 02 Line
+  let lineData=[];
+  function newLineData(){const rnd=seeded(); let v=80; lineData=d3.range(30).map((_,i)=>{v=Math.max(25,v+(rnd()-.47)*22); return {date:d3.timeDay.offset(new Date(2026,0,1),i),value:v};});}
+  function renderLine(){
+    const {svg,w,h}=svgBase('#lineChart',300); const m={t:18,r:20,b:38,l:48},iw=w-m.l-m.r,ih=h-m.t-m.b,g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`);
+    const x=d3.scaleTime(d3.extent(lineData,d=>d.date),[0,iw]); const y=d3.scaleLinear([0,d3.max(lineData,d=>d.value)*1.1],[ih,0]).nice(); const curve=d3[document.getElementById('curveSelect').value];
+    const area=d3.area().x(d=>x(d.date)).y0(ih).y1(d=>y(d.value)).curve(curve); const line=d3.line().x(d=>x(d.date)).y(d=>y(d.value)).curve(curve);
+    const grad=svg.append('defs').append('linearGradient').attr('id','lineGrad').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1'); grad.append('stop').attr('offset','0%').attr('stop-color','#2563eb').attr('stop-opacity',.35); grad.append('stop').attr('offset','100%').attr('stop-color','#2563eb').attr('stop-opacity',.02);
+    gridY(g.append('g'),y,iw,5); g.append('path').datum(lineData).attr('fill','url(#lineGrad)').attr('d',area); const path=g.append('path').datum(lineData).attr('fill','none').attr('stroke','#2563eb').attr('stroke-width',2.6).attr('d',line);
+    const len=path.node().getTotalLength(); path.attr('stroke-dasharray',`${len} ${len}`).attr('stroke-dashoffset',len).transition().duration(duration(900)).ease(d3.easeCubicOut).attr('stroke-dashoffset',0);
+    g.append('g').attr('class','axis').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%m/%d'))); g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5));
+    const focus=g.append('g').style('display','none'); focus.append('line').attr('y1',0).attr('y2',ih).attr('stroke','var(--muted)').attr('stroke-dasharray','3 3'); focus.append('circle').attr('r',5).attr('fill','#fff').attr('stroke','#2563eb').attr('stroke-width',2); const label=focus.append('text').attr('y',-10).attr('text-anchor','middle').attr('font-size',10).attr('font-weight',800).attr('fill','var(--text)');
+    g.append('rect').attr('width',iw).attr('height',ih).attr('fill','transparent').on('pointerenter',()=>focus.style('display',null)).on('pointerleave',()=>{focus.style('display','none');hideTip();}).on('pointermove',function(e){const [mx]=d3.pointer(e,this); const date=x.invert(mx); const i=d3.bisector(d=>d.date).center(lineData,date); const d=lineData[i]; focus.attr('transform',`translate(${x(d.date)},${y(d.value)})`); focus.select('line').attr('y1',-y(d.value)).attr('y2',ih-y(d.value)); label.text(d3.format('.1f')(d.value)); showTip(e,`<b>${d3.timeFormat('%Y-%m-%d')(d.date)}</b><br>지수 ${d3.format('.1f')(d.value)}`);});
+  }
+
+  // 03 Donut
+  let donutData=[{name:'상호금융',value:38},{name:'공제보험',value:25},{name:'경제사업',value:21},{name:'지원사업',value:16}],donutHole=true;
+  function renderDonut(){
+    const {svg,w,h}=svgBase('#donutChart',260); const r=Math.min(w,h)/2-20,g=svg.append('g').attr('transform',`translate(${w/2},${h/2})`); const pie=d3.pie().sort(null).value(d=>d.value).padAngle(.018); const arc=d3.arc().innerRadius(donutHole?r*.55:0).outerRadius(r).cornerRadius(6); const labelArc=d3.arc().innerRadius(r*.78).outerRadius(r*.78);
+    const arcs=g.selectAll('path').data(pie(donutData),d=>d.data.name).join('path').attr('fill',d=>color(d.data.name)).attr('stroke','var(--surface)').attr('stroke-width',2).each(function(d){this._current={...d,startAngle:d.endAngle};}).on('pointerenter',(e,d)=>showTip(e,`<b>${d.data.name}</b><br>${fmt(d.data.value)} · ${pct(d.data.value/d3.sum(donutData,x=>x.value))}`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+    arcs.transition().duration(duration(700)).attrTween('d',function(d){const i=d3.interpolate(this._current,d); this._current=i(1); return t=>arc(i(t));});
+    g.selectAll('.arc-label').data(pie(donutData)).join('text').attr('class','arc-label').attr('transform',d=>`translate(${labelArc.centroid(d)})`).attr('text-anchor','middle').attr('font-size',10).attr('font-weight',800).attr('fill','#fff').text(d=>d.data.value>=14?d.data.value:'');
+    if(donutHole){g.append('text').attr('text-anchor','middle').attr('y',-2).attr('fill','var(--muted)').attr('font-size',11).text('합계');g.append('text').attr('text-anchor','middle').attr('y',22).attr('fill','var(--text)').attr('font-size',22).attr('font-weight',900).text(fmt(d3.sum(donutData,d=>d.value)));}
+  }
+
+  // 04 Histogram
+  let histValues=[]; function newHist(){const rnd=seeded(),normal=d3.randomNormal.source(rnd)(67,11);histValues=d3.range(420).map(()=>Math.max(25,Math.min(105,normal())));}
+  function renderHist(){
+    const {svg,w,h}=svgBase('#histChart',260); const m={t:18,r:18,b:38,l:42},iw=w-m.l-m.r,ih=h-m.t-m.b,g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`); const x=d3.scaleLinear(d3.extent(histValues),[0,iw]).nice(); const bins=d3.bin().domain(x.domain()).thresholds(+document.getElementById('binRange').value)(histValues); const y=d3.scaleLinear([0,d3.max(bins,d=>d.length)],[ih,0]).nice(); gridY(g.append('g'),y,iw,4);
+    g.selectAll('rect').data(bins).join('rect').attr('x',d=>x(d.x0)+1).attr('width',d=>Math.max(0,x(d.x1)-x(d.x0)-2)).attr('y',ih).attr('height',0).attr('rx',3).attr('fill','#0ea5e9').attr('opacity',.82).transition().duration(duration(500)).attr('y',d=>y(d.length)).attr('height',d=>ih-y(d.length));
+    g.selectAll('rect').on('pointerenter',(e,d)=>showTip(e,`<b>${d3.format('.0f')(d.x0)}–${d3.format('.0f')(d.x1)}</b><br>${d.length}개`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+    g.append('g').attr('class','axis').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(7));g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(4));
+    const mean=d3.mean(histValues),median=d3.median(histValues); [['평균',mean,'#ef4444'],['중앙값',median,'#7c3aed']].forEach(([n,v,c],i)=>{g.append('line').attr('x1',x(v)).attr('x2',x(v)).attr('y1',0).attr('y2',ih).attr('stroke',c).attr('stroke-width',1.5).attr('stroke-dasharray','4 3');g.append('text').attr('x',x(v)+4).attr('y',12+i*14).attr('fill',c).attr('font-size',9).attr('font-weight',800).text(`${n} ${d3.format('.1f')(v)}`);});
+  }
+
+  // 05 Stack
+  const stackKeys=['수산물','금융','보험']; let stackGrouped=false; let stackData=[{month:'1월',수산물:31,금융:48,보험:24},{month:'2월',수산물:38,금융:52,보험:28},{month:'3월',수산물:43,금융:58,보험:31},{month:'4월',수산물:41,금융:63,보험:36},{month:'5월',수산물:49,금융:67,보험:35},{month:'6월',수산물:55,금융:72,보험:41}];
+  function renderStack(){
+    const {svg,w,h}=svgBase('#stackChart',300); const m={t:18,r:20,b:40,l:45},iw=w-m.l-m.r,ih=h-m.t-m.b,g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`); const offset=d3[document.getElementById('stackOffset').value]; const series=d3.stack().keys(stackKeys).offset(offset)(stackData); const x=d3.scaleBand(stackData.map(d=>d.month),[0,iw]).padding(.2); const yMax=offset===d3.stackOffsetExpand?1:d3.max(series,s=>d3.max(s,d=>d[1])); const y=d3.scaleLinear([0,yMax],[ih,0]).nice(); gridY(g.append('g'),y,iw,5);
+    if(stackGrouped){const xSub=d3.scaleBand(stackKeys,[0,x.bandwidth()]).padding(.08); g.selectAll('.series').data(series).join('g').attr('fill',d=>color(d.key)).selectAll('rect').data(d=>d.map(v=>({...v,key:d.key}))).join('rect').attr('x',d=>x(d.data.month)+xSub(d.key)).attr('width',xSub.bandwidth()).attr('y',d=>y(offset===d3.stackOffsetExpand?(d[1]-d[0]):d.data[d.key])).attr('height',d=>ih-y(offset===d3.stackOffsetExpand?(d[1]-d[0]):d.data[d.key])).attr('rx',3);} else {g.selectAll('.series').data(series).join('g').attr('class','series').attr('fill',d=>color(d.key)).selectAll('rect').data(d=>d.map(v=>({...v,key:d.key}))).join('rect').attr('x',d=>x(d.data.month)).attr('width',x.bandwidth()).attr('y',d=>y(d[1])).attr('height',d=>y(d[0])-y(d[1])).attr('rx',3);}
+    g.selectAll('rect').on('pointerenter',(e,d)=>showTip(e,`<b>${d.data.month} · ${d.key}</b><br>${fmt(d.data[d.key])}`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+    g.append('g').attr('class','axis').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x));g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5).tickFormat(offset===d3.stackOffsetExpand?d3.format('.0%'):d3.format('~s')));
+    const leg=d3.select('#stackChart').append('div').attr('class','legend'); leg.selectAll('span').data(stackKeys).join('span').attr('class','legend-item').html(d=>`<i class="legend-swatch" style="background:${color(d)}"></i>${d}`);
+  }
+
+  // 06 Heatmap
+  let heatData=[]; function newHeat(){const rnd=seeded(); const start=new Date(2026,0,1); heatData=d3.timeDays(start,d3.timeDay.offset(start,84)).map(date=>({date,value:Math.round(rnd()*100)}));}
+  function renderHeat(){
+    const {svg,w,h}=svgBase('#heatChart',260); const cell=Math.max(15,Math.min(27,(w-85)/12)); const left=58,top=38; const interp=d3[document.getElementById('heatColor').value],scale=d3.scaleSequential([0,100],interp);
+    svg.append('g').selectAll('text').data(['일','월','화','수','목','금','토']).join('text').attr('x',left-10).attr('y',(d,i)=>top+i*cell+cell*.7).attr('text-anchor','end').attr('fill','var(--muted)').attr('font-size',9).text(d=>d);
+    const cells=svg.append('g').selectAll('rect').data(heatData).join('rect').attr('x',d=>left+d3.timeWeek.count(d3.timeYear(d.date),d.date)*cell).attr('y',d=>top+d.date.getDay()*cell).attr('width',cell-3).attr('height',cell-3).attr('rx',4).attr('fill',d=>scale(d.value));
+    cells.on('pointerenter',(e,d)=>showTip(e,`<b>${d3.timeFormat('%Y-%m-%d')(d.date)}</b><br>활동 ${d.value}`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+    const defs=svg.append('defs'),grad=defs.append('linearGradient').attr('id','heatLegend');d3.range(0,1.01,.1).forEach(t=>grad.append('stop').attr('offset',`${t*100}%`).attr('stop-color',interp(t))); svg.append('rect').attr('x',left).attr('y',h-25).attr('width',Math.min(220,w-left-25)).attr('height',8).attr('rx',4).attr('fill','url(#heatLegend)');svg.append('text').attr('x',left).attr('y',h-30).attr('font-size',9).attr('fill','var(--muted)').text('낮음');svg.append('text').attr('x',left+Math.min(220,w-left-25)).attr('y',h-30).attr('font-size',9).attr('text-anchor','end').attr('fill','var(--muted)').text('높음');
+  }
+
+  // 07 Radar
+  const radarAxes=['효율성','정확성','속도','확장성','사용성','안정성']; let radarSeries=[]; function newRadar(){const rnd=seeded();radarSeries=[{name:'현재',values:radarAxes.map(()=>45+rnd()*45)},{name:'목표',values:radarAxes.map(()=>70+rnd()*28)}];}
+  function renderRadar(){
+    const {svg,w,h}=svgBase('#radarChart',270); const cx=w/2,cy=h/2+4,r=Math.min(w,h)*.34,levels=5,angle=i=>i/radarAxes.length*Math.PI*2-Math.PI/2; const g=svg.append('g').attr('transform',`translate(${cx},${cy})`);
+    for(let l=1;l<=levels;l++){g.append('path').attr('d',d3.lineRadial().angle((d,i)=>angle(i)).radius(r*l/levels).curve(d3.curveLinearClosed)(radarAxes)).attr('fill','none').attr('stroke','var(--line)');}
+    g.selectAll('.axis-line').data(radarAxes).join('line').attr('x2',(d,i)=>Math.cos(angle(i))*r).attr('y2',(d,i)=>Math.sin(angle(i))*r).attr('stroke','var(--line)');g.selectAll('.axis-label').data(radarAxes).join('text').attr('x',(d,i)=>Math.cos(angle(i))*(r+18)).attr('y',(d,i)=>Math.sin(angle(i))*(r+18)+3).attr('text-anchor',(d,i)=>Math.cos(angle(i))>.2?'start':Math.cos(angle(i))<-.2?'end':'middle').attr('font-size',9).attr('fill','var(--muted)').text(d=>d);
+    const radial=d3.lineRadial().angle((d,i)=>angle(i)).radius(d=>r*d/100).curve(d3.curveLinearClosed); radarSeries.forEach((s,si)=>{g.append('path').datum(s.values).attr('d',radial).attr('fill',palette[si]).attr('fill-opacity',.16).attr('stroke',palette[si]).attr('stroke-width',2);g.selectAll(`.pt${si}`).data(s.values).join('circle').attr('cx',(d,i)=>Math.cos(angle(i))*r*d/100).attr('cy',(d,i)=>Math.sin(angle(i))*r*d/100).attr('r',3).attr('fill',palette[si]);});
+    const leg=d3.select('#radarChart').append('div').attr('class','legend');leg.selectAll('span').data(radarSeries).join('span').attr('class','legend-item').html((d,i)=>`<i class="legend-swatch" style="background:${palette[i]}"></i>${d.name}`);
+  }
+
+  // 08 Symbols
+  function renderSymbols(){
+    const {svg,w,h}=svgBase('#symbolChart',260); const types=[d3.symbolCircle,d3.symbolCross,d3.symbolDiamond,d3.symbolSquare,d3.symbolStar,d3.symbolTriangle,d3.symbolWye]; const names=['Circle','Cross','Diamond','Square','Star','Triangle','Wye']; const x=d3.scalePoint(d3.range(types.length),[35,w-35]); const size=d3.scaleSqrt([0,types.length-1],[180,850]);
+    svg.append('line').attr('x1',25).attr('x2',w-25).attr('y1',h/2).attr('y2',h/2).attr('stroke','var(--line)'); svg.selectAll('path').data(types).join('path').attr('transform',(d,i)=>`translate(${x(i)},${h/2})`).attr('d',(d,i)=>d3.symbol(d,size(i))()).attr('fill',(d,i)=>palette[i]).on('pointerenter',(e,d)=>{const i=types.indexOf(d);showTip(e,`<b>${names[i]}</b><br>symbol.size ${Math.round(size(i))}`)}).on('pointermove',moveTip).on('pointerleave',hideTip); svg.selectAll('text').data(names).join('text').attr('x',(d,i)=>x(i)).attr('y',h/2+62).attr('text-anchor','middle').attr('font-size',9).attr('fill','var(--muted)').text(d=>d);
+  }
+
+  // 09 Scatter zoom
+  let scatterData=[], scatterZoom; function newScatter(){const rnd=seeded(),n1=d3.randomNormal.source(rnd)(35,12),n2=d3.randomNormal.source(rnd)(65,15);scatterData=d3.range(160).map((_,i)=>({x:i<80?n1():n2(),y:i<80?n2():n1(),group:i<80?'A':'B',r:2+rnd()*4}));}
+  function renderScatter(){
+    const {svg,w,h}=svgBase('#scatterChart',300); const m={t:16,r:18,b:40,l:45},iw=w-m.l-m.r,ih=h-m.t-m.b,g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`); const x0=d3.scaleLinear([0,100],[0,iw]),y0=d3.scaleLinear([0,100],[ih,0]); const clipId='scatterClip';svg.append('defs').append('clipPath').attr('id',clipId).append('rect').attr('width',iw).attr('height',ih); const plot=g.append('g').attr('clip-path',`url(#${clipId})`); const gx=g.append('g').attr('class','axis').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x0));const gy=g.append('g').attr('class','axis').call(d3.axisLeft(y0));
+    const dots=plot.selectAll('circle').data(scatterData).join('circle').attr('cx',d=>x0(d.x)).attr('cy',d=>y0(d.y)).attr('r',d=>d.r).attr('fill',d=>d.group==='A'?'#2563eb':'#ec4899').attr('opacity',.7).on('pointerenter',(e,d)=>showTip(e,`<b>그룹 ${d.group}</b><br>x ${d.x.toFixed(1)} · y ${d.y.toFixed(1)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+    scatterZoom=d3.zoom().scaleExtent([.7,12]).extent([[0,0],[iw,ih]]).on('zoom',e=>{const zx=e.transform.rescaleX(x0),zy=e.transform.rescaleY(y0);gx.call(d3.axisBottom(zx).ticks(7));gy.call(d3.axisLeft(zy).ticks(6));dots.attr('cx',d=>zx(d.x)).attr('cy',d=>zy(d.y)).attr('r',d=>d.r/Math.sqrt(e.transform.k));}); svg.call(scatterZoom).on('dblclick.zoom',()=>svg.transition().duration(duration(450)).call(scatterZoom.transform,d3.zoomIdentity)); window.scatterSvg=svg;
+  }
+
+  // 10 Brush
+  let brushData=[]; function newBrushData(){const rnd=seeded();let v=60;brushData=d3.range(180).map((_,i)=>{v=Math.max(15,v+(rnd()-.49)*11);return{date:d3.timeDay.offset(new Date(2025,6,1),i),value:v};});}
+  function renderBrush(){
+    const {svg,w,h}=svgBase('#brushChart',390); const m={t:18,r:20,b:32,l:48},focusH=235,contextY=282,contextH=68,iw=w-m.l-m.r; const x=d3.scaleTime(d3.extent(brushData,d=>d.date),[0,iw]),x2=x.copy(),y=d3.scaleLinear([0,d3.max(brushData,d=>d.value)*1.08],[focusH,0]),y2=y.copy().range([contextH,0]); const g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`),focus=g.append('g'),context=g.append('g').attr('transform',`translate(0,${contextY})`); const area=(xs,ys)=>d3.area().x(d=>xs(d.date)).y0(ys.range()[0]).y1(d=>ys(d.value)).curve(d3.curveMonotoneX);
+    const focusPath=focus.append('path').datum(brushData).attr('fill','#2563eb').attr('fill-opacity',.2).attr('stroke','#2563eb').attr('stroke-width',2).attr('d',area(x,y)); const gx=focus.append('g').attr('class','axis').attr('transform',`translate(0,${focusH})`).call(d3.axisBottom(x).ticks(6));focus.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5)); context.append('path').datum(brushData).attr('fill','#7c3aed').attr('fill-opacity',.25).attr('stroke','#7c3aed').attr('d',area(x2,y2));context.append('g').attr('class','axis').attr('transform',`translate(0,${contextH})`).call(d3.axisBottom(x2).ticks(7));
+    const brush=d3.brushX().extent([[0,0],[iw,contextH]]).on('brush end',e=>{if(!e.selection)return; const domain=e.selection.map(x2.invert,x2);x.domain(domain);focusPath.attr('d',area(x,y));gx.call(d3.axisBottom(x).ticks(6));}); context.append('g').attr('class','brush').call(brush).call(brush.move,x.range());window.brushObj={context,brush,x2};
+  }
+
+  // 11 Drag bubbles
+  let bubbleSim;
+  function renderDragBubbles(){
+    const {svg,w,h}=svgBase('#dragBubbleChart',260); const rnd=seeded(),nodes=d3.range(28).map((_,i)=>({id:i,r:7+rnd()*16,group:i%5})); const circles=svg.selectAll('circle').data(nodes).join('circle').attr('r',d=>d.r).attr('fill',d=>palette[d.group]).attr('opacity',.78).attr('stroke','var(--surface)').attr('stroke-width',2).call(d3.drag().on('start',(e,d)=>{if(!e.active)bubbleSim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)bubbleSim.alphaTarget(0);d.fx=null;d.fy=null;})).on('pointerenter',(e,d)=>showTip(e,`<b>버블 ${d.id+1}</b><br>반지름 ${d.r.toFixed(1)}`)).on('pointermove',moveTip).on('pointerleave',hideTip); bubbleSim=d3.forceSimulation(nodes).force('center',d3.forceCenter(w/2,h/2)).force('charge',d3.forceManyBody().strength(2)).force('collide',d3.forceCollide(d=>d.r+2).iterations(2)).on('tick',()=>circles.attr('cx',d=>d.x=Math.max(d.r,Math.min(w-d.r,d.x))).attr('cy',d=>d.y=Math.max(d.r,Math.min(h-d.r,d.y))));
+  }
+
+  // 12 Easing
+  function renderEase(){const {svg,w,h}=svgBase('#easeChart',260); const eases=[['Linear',d3.easeLinear],['Cubic',d3.easeCubicInOut],['Bounce',d3.easeBounceOut],['Elastic',d3.easeElasticOut],['Back',d3.easeBackOut]]; const y=d3.scalePoint(eases.map(d=>d[0]),[32,h-32]);svg.selectAll('line').data(eases).join('line').attr('x1',35).attr('x2',w-30).attr('y1',d=>y(d[0])).attr('y2',d=>y(d[0])).attr('stroke','var(--line)');svg.selectAll('text').data(eases).join('text').attr('x',8).attr('y',d=>y(d[0])+4).attr('font-size',9).attr('fill','var(--muted)').text(d=>d[0]);svg.selectAll('circle').data(eases).join('circle').attr('class','ease-dot').attr('cx',45).attr('cy',d=>y(d[0])).attr('r',7).attr('fill',(d,i)=>palette[i]);window.playEase=()=>{svg.selectAll('.ease-dot').each(function(d,i){d3.select(this).interrupt().attr('cx',45).transition().duration(duration(1500)).delay(i*90).ease(d[1]).attr('cx',w-35);});};window.playEase();}
+
+  // 13 Canvas quadtree
+  let canvasPoints=[];
+  function renderCanvas(){
+    const host=document.querySelector('#canvasChart');host.innerHTML='';const w=Math.max(320,host.clientWidth),h=255,dpr=window.devicePixelRatio||1;const canvas=document.createElement('canvas');canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';host.appendChild(canvas);const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const rnd=seeded();canvasPoints=d3.range(2000).map((_,i)=>({x:rnd()*w,y:rnd()*h,v:rnd(),group:i%7}));const q=d3.quadtree(canvasPoints,d=>d.x,d=>d.y);const draw=selected=>{ctx.clearRect(0,0,w,h);ctx.globalAlpha=.52;canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,1.5+p.v*2.5,0,Math.PI*2);ctx.fillStyle=palette[p.group];ctx.fill();});if(selected){ctx.globalAlpha=1;ctx.beginPath();ctx.arc(selected.x,selected.y,9,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();ctx.beginPath();ctx.arc(selected.x,selected.y,11,0,Math.PI*2);ctx.strokeStyle='#ef4444';ctx.lineWidth=2;ctx.stroke();}ctx.globalAlpha=1;};draw();canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,p=q.find(x,y,28);draw(p);document.getElementById('canvasInfo').textContent=p?`최근접: x ${p.x.toFixed(0)}, y ${p.y.toFixed(0)}, 값 ${p.v.toFixed(2)}`:'반경 28px 내 점 없음';});canvas.addEventListener('pointerleave',()=>{draw();document.getElementById('canvasInfo').textContent='포인터를 움직여 최근접 점 확인';});
+  }
+
+  // hierarchy data
+  const hierarchyData={name:'수협 업무',children:[{name:'금융',children:[{name:'상호금융',value:36},{name:'자금운용',value:22},{name:'리스크',value:16}]},{name:'보험',children:[{name:'공제',value:25},{name:'정책보험',value:21},{name:'보상',value:13}]},{name:'경제',children:[{name:'유통',value:24},{name:'판매',value:18},{name:'무역',value:15},{name:'급식',value:11}]},{name:'지원',children:[{name:'회원지원',value:19},{name:'어업양식',value:17},{name:'안전조업',value:14},{name:'홍보',value:9}]}]};
+
+  // 14 Tree
+  let treeRoot;
+  function initTree(){treeRoot=d3.hierarchy(JSON.parse(JSON.stringify(hierarchyData)));treeRoot.x0=0;treeRoot.y0=0;treeRoot.descendants().forEach((d,i)=>{d.id=i;d._children=d.children;});}
+  function renderTree(){
+    const {svg,w,h}=svgBase('#treeChart',390); const m={t:18,r:120,b:18,l:55},iw=w-m.l-m.r,ih=h-m.t-m.b; const tree=d3.tree().size([ih,iw]); tree(treeRoot); const g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`); const links=treeRoot.links();g.selectAll('.link').data(links,d=>d.target.id).join('path').attr('fill','none').attr('stroke','var(--line)').attr('stroke-width',1.6).attr('d',d3.linkHorizontal().x(d=>d.y).y(d=>d.x)); const nodes=g.selectAll('.node').data(treeRoot.descendants(),d=>d.id).join('g').attr('class','node').attr('transform',d=>`translate(${d.y},${d.x})`).style('cursor','pointer').on('click',(e,d)=>{d.children=d.children?null:d._children;renderTree();}); nodes.append('circle').attr('r',d=>d._children?7:5).attr('fill',d=>d.children?'#2563eb':d._children?'#7c3aed':'#fff').attr('stroke',d=>d._children?'#7c3aed':'#2563eb').attr('stroke-width',2);nodes.append('text').attr('x',d=>d._children?-11:11).attr('text-anchor',d=>d._children?'end':'start').attr('dy','.32em').attr('font-size',10).attr('fill','var(--text)').text(d=>d.data.name);
+  }
+
+  // 15 Treemap
+  function renderTreemap(){
+    const {svg,w,h}=svgBase('#treemapChart',270); const root=d3.hierarchy(hierarchyData).sum(d=>d.value||0).sort((a,b)=>b.value-a.value); d3.treemap().tile(d3[document.getElementById('treemapTile').value]).size([w,h]).paddingOuter(4).paddingTop(18).paddingInner(3).round(true)(root); const topColor=d3.scaleOrdinal(root.children.map(d=>d.data.name),palette); const nodes=svg.selectAll('g').data(root.descendants().filter(d=>d.depth>0)).join('g').attr('transform',d=>`translate(${d.x0},${d.y0})`);nodes.append('rect').attr('width',d=>Math.max(0,d.x1-d.x0)).attr('height',d=>Math.max(0,d.y1-d.y0)).attr('rx',5).attr('fill',d=>{let a=d;while(a.depth>1)a=a.parent;return topColor(a.data.name)}).attr('fill-opacity',d=>d.children?.18:.75).attr('stroke','var(--surface)').on('pointerenter',(e,d)=>showTip(e,`<b>${d.ancestors().map(x=>x.data.name).reverse().join(' › ')}</b><br>값 ${fmt(d.value||0)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);nodes.filter(d=>!d.children&&d.x1-d.x0>48&&d.y1-d.y0>25).append('text').attr('x',6).attr('y',15).attr('font-size',9).attr('fill','#fff').attr('font-weight',800).text(d=>d.data.name);nodes.filter(d=>d.children).append('text').attr('x',5).attr('y',13).attr('font-size',9).attr('fill','var(--text)').attr('font-weight',900).text(d=>d.data.name);
+  }
+
+  // 16 Pack
+  function renderPack(){
+    const {svg,w,h}=svgBase('#packChart',270);const root=d3.pack().size([w,h]).padding(4)(d3.hierarchy(hierarchyData).sum(d=>d.value||0).sort((a,b)=>b.value-a.value)); const nodes=svg.selectAll('g').data(root.descendants()).join('g').attr('transform',d=>`translate(${d.x},${d.y})`);nodes.append('circle').attr('r',d=>d.r).attr('fill',d=>d.depth===0?'transparent':palette[(d.depth+d.parent?.children.indexOf(d))%palette.length]).attr('fill-opacity',d=>d.children?.12:.7).attr('stroke',d=>d.depth===0?'var(--line)':'var(--surface)').on('pointerenter',(e,d)=>showTip(e,`<b>${d.data.name}</b><br>${d.children?'하위 '+d.children.length+'개':'값 '+fmt(d.value)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);nodes.filter(d=>!d.children&&d.r>15).append('text').attr('text-anchor','middle').attr('dy','.35em').attr('font-size',d=>Math.min(9,d.r/3)).attr('fill','#fff').text(d=>d.data.name);
+  }
+
+  // 17 Sunburst
+  function renderSunburst(){
+    const {svg,w,h}=svgBase('#sunburstChart',280);const r=Math.min(w,h)/2-8,root=d3.partition().size([2*Math.PI,r])(d3.hierarchy(hierarchyData).sum(d=>d.value||0).sort((a,b)=>b.value-a.value));const g=svg.append('g').attr('transform',`translate(${w/2},${h/2})`);const arc=d3.arc().startAngle(d=>d.x0).endAngle(d=>d.x1).padAngle(d=>Math.min((d.x1-d.x0)/2,.012)).padRadius(r/2).innerRadius(d=>d.y0).outerRadius(d=>d.y1-1);g.selectAll('path').data(root.descendants().filter(d=>d.depth)).join('path').attr('d',arc).attr('fill',d=>{let a=d;while(a.depth>1)a=a.parent;return color(a.data.name)}).attr('fill-opacity',d=>d.children?.58:.9).attr('stroke','var(--surface)').on('pointerenter',(e,d)=>showTip(e,`<b>${d.ancestors().map(x=>x.data.name).reverse().join(' › ')}</b><br>값 ${fmt(d.value)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);g.append('circle').attr('r',root.children[0].y0-3).attr('fill','var(--surface)');g.append('text').attr('text-anchor','middle').attr('y',-2).attr('font-size',10).attr('fill','var(--muted)').text('전체');g.append('text').attr('text-anchor','middle').attr('y',17).attr('font-size',18).attr('font-weight',900).attr('fill','var(--text)').text(fmt(root.value));
+  }
+
+  // 18 Force
+  let forceSim;
+  function renderForce(){
+    const {svg,w,h}=svgBase('#forceChart',390); const groups=['기획','금융','보험','경제','지원']; const nodes=d3.range(24).map((_,i)=>({id:'N'+i,name:i===0?'중앙 허브':`${groups[i%groups.length]} ${i}`,group:i%groups.length,r:i===0?14:7+(i%3)*2})); const links=[];for(let i=1;i<nodes.length;i++){links.push({source:'N'+(i<6?0:Math.floor(i/2)),target:'N'+i,value:1+i%4});if(i>7&&i%3===0)links.push({source:'N'+(i-5),target:'N'+i,value:1});}
+    const link=svg.append('g').attr('stroke','var(--line)').attr('stroke-opacity',.8).selectAll('line').data(links).join('line').attr('stroke-width',d=>Math.sqrt(d.value)); const node=svg.append('g').selectAll('circle').data(nodes).join('circle').attr('r',d=>d.r).attr('fill',d=>palette[d.group]).attr('stroke','var(--surface)').attr('stroke-width',2).call(d3.drag().on('start',(e,d)=>{if(!e.active)forceSim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)forceSim.alphaTarget(0);d.fx=null;d.fy=null;})).on('pointerenter',(e,d)=>showTip(e,`<b>${d.name}</b><br>그룹 ${groups[d.group]}`)).on('pointermove',moveTip).on('pointerleave',hideTip); const label=svg.append('g').selectAll('text').data(nodes.filter(d=>d.id==='N0'||d.r>9)).join('text').attr('font-size',9).attr('fill','var(--text)').attr('font-weight',800).text(d=>d.name);
+    forceSim=d3.forceSimulation(nodes).force('link',d3.forceLink(links).id(d=>d.id).distance(d=>42+d.value*5)).force('charge',d3.forceManyBody().strength(+document.getElementById('chargeRange').value)).force('center',d3.forceCenter(w/2,h/2)).force('collide',d3.forceCollide(d=>d.r+3)).on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('cx',d=>d.x).attr('cy',d=>d.y);label.attr('x',d=>d.x+d.r+4).attr('y',d=>d.y+3);});
+  }
+
+  // 19 Sankey
+  function renderSankey(){
+    const host='#sankeyChart'; if(!d3.sankey){d3.select(host).html('<div class="empty">d3-sankey 확장 모듈을 불러오지 못했다.</div>');return;} const {svg,w,h}=svgBase(host,300); const graph={nodes:['데이터수집','민원접수','현장정보','AI분석','담당자검토','자동처리','의사결정','서비스개선'].map(name=>({name})),links:[{source:0,target:3,value:8},{source:1,target:3,value:6},{source:2,target:3,value:5},{source:3,target:4,value:9},{source:3,target:5,value:7},{source:3,target:6,value:3},{source:4,target:6,value:7},{source:5,target:7,value:7},{source:6,target:7,value:9}]}; const sankey=d3.sankey().nodeWidth(14).nodePadding(15).extent([[18,15],[w-18,h-16]]); const {nodes,links}=sankey({nodes:graph.nodes.map(d=>({...d})),links:graph.links.map(d=>({...d}))}); const c=d3.scaleOrdinal(graph.nodes.map(d=>d.name),palette);
+    svg.append('g').attr('fill','none').attr('stroke-opacity',.32).selectAll('path').data(links).join('path').attr('d',d3.sankeyLinkHorizontal()).attr('stroke',d=>c(d.source.name)).attr('stroke-width',d=>Math.max(1,d.width)).style('mix-blend-mode','multiply').on('pointerenter',(e,d)=>showTip(e,`<b>${d.source.name} → ${d.target.name}</b><br>흐름 ${d.value}`)).on('pointermove',moveTip).on('pointerleave',hideTip); const node=svg.append('g').selectAll('g').data(nodes).join('g');node.append('rect').attr('x',d=>d.x0).attr('y',d=>d.y0).attr('height',d=>d.y1-d.y0).attr('width',d=>d.x1-d.x0).attr('rx',3).attr('fill',d=>c(d.name));node.append('text').attr('x',d=>d.x0<w/2?d.x1+6:d.x0-6).attr('y',d=>(d.y0+d.y1)/2).attr('dy','.35em').attr('text-anchor',d=>d.x0<w/2?'start':'end').attr('font-size',9).attr('fill','var(--text)').text(d=>d.name);
+  }
+
+  // 20 Chord
+  function renderChord(){
+    const {svg,w,h}=svgBase('#chordChart',300); const names=['금융','보험','경제','지원','ICT']; const matrix=[[0,18,11,8,16],[14,0,8,12,13],[10,7,0,15,9],[9,11,14,0,12],[17,12,10,13,0]];const outer=Math.min(w,h)*.42,inner=outer-20,chord=d3.chord().padAngle(.045).sortSubgroups(d3.descending)(matrix),arc=d3.arc().innerRadius(inner).outerRadius(outer),ribbon=d3.ribbon().radius(inner);const g=svg.append('g').attr('transform',`translate(${w/2},${h/2})`);const group=g.append('g').selectAll('g').data(chord.groups).join('g');group.append('path').attr('d',arc).attr('fill',d=>palette[d.index]).attr('stroke','var(--surface)').on('pointerenter',(e,d)=>showTip(e,`<b>${names[d.index]}</b><br>총 교류 ${d.value}`)).on('pointermove',moveTip).on('pointerleave',hideTip);group.append('text').each(d=>d.angle=(d.startAngle+d.endAngle)/2).attr('dy','.35em').attr('transform',d=>`rotate(${d.angle*180/Math.PI-90}) translate(${outer+12}) ${d.angle>Math.PI?'rotate(180)':''}`).attr('text-anchor',d=>d.angle>Math.PI?'end':null).attr('font-size',9).attr('fill','var(--muted)').text(d=>names[d.index]);g.append('g').attr('fill-opacity',.64).selectAll('path').data(chord).join('path').attr('d',ribbon).attr('fill',d=>palette[d.source.index]).attr('stroke','var(--surface)').on('pointerenter',(e,d)=>showTip(e,`<b>${names[d.source.index]} ↔ ${names[d.target.index]}</b><br>${d.source.value} / ${d.target.value}`)).on('pointermove',moveTip).on('pointerleave',hideTip);
+  }
+
+  // 21 Density
+  let densityPoints=[]; function newDensity(){const rnd=seeded(),aX=d3.randomNormal.source(rnd)(.34,.09),aY=d3.randomNormal.source(rnd)(.52,.12),bX=d3.randomNormal.source(rnd)(.69,.11),bY=d3.randomNormal.source(rnd)(.42,.1);densityPoints=d3.range(500).map((_,i)=>({x:i<270?aX():bX(),y:i<270?aY():bY()}));}
+  function renderDensity(){
+    const {svg,w,h}=svgBase('#densityChart',270); const m={t:12,r:14,b:28,l:35},iw=w-m.l-m.r,ih=h-m.t-m.b,g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`);const x=d3.scaleLinear([0,1],[0,iw]),y=d3.scaleLinear([0,1],[ih,0]);const contours=d3.contourDensity().x(d=>x(d.x)).y(d=>y(d.y)).size([iw,ih]).bandwidth(+document.getElementById('densityBandwidth').value).thresholds(14)(densityPoints);const c=d3.scaleSequential([0,d3.max(contours,d=>d.value)],d3.interpolateTurbo);g.selectAll('path').data(contours).join('path').attr('d',d3.geoPath()).attr('fill',d=>c(d.value)).attr('stroke','rgba(255,255,255,.35)').attr('stroke-width',.5).attr('opacity',.82);g.selectAll('circle').data(densityPoints.filter((d,i)=>i%8===0)).join('circle').attr('cx',d=>x(d.x)).attr('cy',d=>y(d.y)).attr('r',1.4).attr('fill','var(--text)').attr('opacity',.35);g.append('g').attr('class','axis').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(5));g.append('g').attr('class','axis').call(d3.axisLeft(y).ticks(5));
+  }
+
+  // 22 Voronoi
+  let voronoiPoints=[]; function newVoronoi(){const rnd=seeded();voronoiPoints=d3.range(52).map((_,i)=>[25+rnd()*450,20+rnd()*220,i]);}
+  function renderVoronoi(){
+    const {svg,w,h}=svgBase('#voronoiChart',270);const pts=voronoiPoints.map(d=>[d[0]/500*w,d[1]/260*h,d[2]]);const delaunay=d3.Delaunay.from(pts),vor=delaunay.voronoi([1,1,w-1,h-1]);svg.append('path').attr('d',vor.render()).attr('fill','none').attr('stroke','var(--line)');svg.append('path').attr('d',delaunay.render()).attr('fill','none').attr('stroke','var(--brand)').attr('stroke-opacity',.14);const dots=svg.selectAll('circle').data(pts).join('circle').attr('cx',d=>d[0]).attr('cy',d=>d[1]).attr('r',3).attr('fill',(d,i)=>palette[i%palette.length]);const hi=svg.append('path').attr('fill','color-mix(in srgb,var(--brand) 18%,transparent)').attr('stroke','var(--brand)').style('display','none');svg.on('pointermove',function(e){const [x,y]=d3.pointer(e,this),i=delaunay.find(x,y);hi.style('display',null).attr('d',vor.renderCell(i));dots.attr('r',(d,j)=>j===i?7:3).attr('stroke',(d,j)=>j===i?'#fff':null).attr('stroke-width',2);showTip(e,`<b>포인트 ${i+1}</b><br>x ${pts[i][0].toFixed(0)} · y ${pts[i][1].toFixed(0)}`);}).on('pointerleave',()=>{hi.style('display','none');dots.attr('r',3).attr('stroke',null);hideTip();});
+  }
+
+  // 23 Streamgraph
+  let streamData=[];const streamKeys=['A','B','C','D','E','F']; function newStream(){const rnd=seeded();streamData=d3.range(42).map((_,i)=>{const o={x:i};streamKeys.forEach((k,j)=>o[k]=8+22*Math.abs(Math.sin(i/(4+j*.35)+j))+rnd()*12);return o;});}
+  function renderStream(){
+    const {svg,w,h}=svgBase('#streamChart',270);const m={t:12,r:15,b:32,l:18},iw=w-m.l-m.r,ih=h-m.t-m.b,g=svg.append('g').attr('transform',`translate(${m.l},${m.t})`);const stack=d3.stack().keys(streamKeys).offset(d3.stackOffsetWiggle).order(d3.stackOrderInsideOut)(streamData);const x=d3.scaleLinear([0,streamData.length-1],[0,iw]),y=d3.scaleLinear([d3.min(stack,s=>d3.min(s,d=>d[0])),d3.max(stack,s=>d3.max(s,d=>d[1]))],[ih,0]);const area=d3.area().x((d,i)=>x(i)).y0(d=>y(d[0])).y1(d=>y(d[1])).curve(d3.curveBasis);g.selectAll('path').data(stack).join('path').attr('d',area).attr('fill',(d,i)=>palette[i]).attr('opacity',.83).on('pointerenter',(e,d)=>showTip(e,`<b>계열 ${d.key}</b><br>평균 ${d3.mean(streamData,x=>x[d.key]).toFixed(1)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);g.append('g').attr('class','axis').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(7).tickFormat(d=>`T${Math.round(d)+1}`));
+  }
+
+  // 24 Geo
+  let geoRotating=false,geoTimer=null,geoRotation=[0,0,0]; const ports=[{name:'부산',coord:[129.0756,35.1796]},{name:'도쿄',coord:[139.6917,35.6895]},{name:'싱가포르',coord:[103.8198,1.3521]},{name:'로테르담',coord:[4.4777,51.9244]},{name:'LA',coord:[-118.2437,34.0522]}];
+  function renderGeo(){
+    const {svg,w,h}=svgBase('#geoChart',390); const pName=document.getElementById('projectionSelect').value; let projection=d3[pName](); if(pName==='geoOrthographic')projection.clipAngle(90); projection.fitExtent([[20,18],[w-20,h-30]],{type:'Sphere'}).rotate(geoRotation); const path=d3.geoPath(projection); svg.append('path').datum({type:'Sphere'}).attr('d',path).attr('fill','color-mix(in srgb,var(--brand) 8%,var(--surface-2))').attr('stroke','var(--line)');svg.append('path').datum(d3.geoGraticule10()).attr('d',path).attr('fill','none').attr('stroke','var(--line)').attr('stroke-width',.65); const routeCoords=ports.map(d=>d.coord);for(let i=0;i<routeCoords.length-1;i++){const a=routeCoords[i],b=routeCoords[i+1],interp=d3.geoInterpolate(a,b),coords=d3.range(0,1.001,.025).map(interp);svg.append('path').datum({type:'LineString',coordinates:coords}).attr('d',path).attr('fill','none').attr('stroke',palette[i]).attr('stroke-width',2.2).attr('stroke-dasharray','5 4').attr('opacity',.85);}
+    const valid=ports.filter(d=>{const p=projection(d.coord);return p&&Number.isFinite(p[0])});const pg=svg.append('g').selectAll('g').data(valid).join('g').attr('transform',d=>`translate(${projection(d.coord)})`);pg.append('circle').attr('r',5).attr('fill',(d,i)=>palette[i]).attr('stroke','#fff').attr('stroke-width',2);pg.append('text').attr('x',8).attr('y',4).attr('font-size',9).attr('font-weight',800).attr('fill','var(--text)').text(d=>d.name);pg.on('pointerenter',(e,d)=>showTip(e,`<b>${d.name}</b><br>경도 ${d.coord[0].toFixed(2)} · 위도 ${d.coord[1].toFixed(2)}`)).on('pointermove',moveTip).on('pointerleave',hideTip);const total=d3.sum(d3.pairs(ports),([a,b])=>d3.geoDistance(a.coord,b.coord)*6371);svg.append('text').attr('x',20).attr('y',h-8).attr('font-size',10).attr('fill','var(--muted)').text(`가상 항로 총 대권거리 약 ${fmt(Math.round(total))} km`);
+  }
+  function toggleGeoRotate(){geoRotating=!geoRotating;document.getElementById('rotateGlobe').textContent=geoRotating?'회전 정지':'자동 회전';if(geoTimer){geoTimer.stop();geoTimer=null;}if(geoRotating){geoTimer=d3.timer(elapsed=>{if(animationsPaused)return;geoRotation=[(elapsed*.008)%360,-8,0];renderGeo();});}}
+
+  // 25 CSV
+  const initialCsv=document.getElementById('csvInput').value;
+  function parseCsv(){
+    try{const data=d3.csvParse(document.getElementById('csvInput').value,d3.autoType);if(!data.length)throw new Error('데이터 행이 없다.');const groupField=document.getElementById('groupField').value;const grouped=d3.rollups(data,v=>({매출:d3.sum(v,d=>+d.매출||0),건수:d3.sum(v,d=>+d.건수||0),평균:d3.mean(v,d=>+d.매출||0)}),d=>d[groupField]);const summary=[['행 수',data.length+'행'],['매출 합계',fmt(d3.sum(data,d=>+d.매출||0))],['건수 합계',fmt(d3.sum(data,d=>+d.건수||0))],['최대 매출',fmt(d3.max(data,d=>+d.매출||0))]];d3.select('#csvSummary').selectAll('.feature').data(summary).join('div').attr('class','feature').html(d=>`<b>${d[0]}</b><span>${d[1]}</span>`);const table=d3.select('#csvTable');table.html('');table.append('thead').append('tr').selectAll('th').data([groupField,'매출 합계','건수 합계','평균 매출']).join('th').text(d=>d);const rows=table.append('tbody').selectAll('tr').data(grouped).join('tr');rows.selectAll('td').data(d=>[d[0],fmt(d[1].매출),fmt(d[1].건수),d3.format(',.1f')(d[1].평균)]).join('td').text(d=>d);toast(`CSV ${data.length}행 파싱 완료`);}catch(err){toast('CSV 오류: '+err.message);}
+  }
+
+  function renderAll(){window.heroSim?.stop();bubbleSim?.stop();forceSim?.stop();renderHero();renderBar();renderLine();renderDonut();renderHist();renderStack();renderHeat();renderRadar();renderSymbols();renderScatter();renderBrush();renderDragBubbles();renderEase();renderCanvas();renderTree();renderTreemap();renderPack();renderSunburst();renderForce();renderSankey();renderChord();renderDensity();renderVoronoi();renderStream();renderGeo();parseCsv();}
+  function initData(){newBarData();newLineData();newHist();newHeat();newRadar();newScatter();newBrushData();newDensity();newVoronoi();newStream();initTree();}
+  initData();renderAll();
+
+  // Controls
+  document.getElementById('themeBtn').onclick=()=>{document.body.classList.toggle('dark');document.getElementById('themeBtn').textContent=document.body.classList.contains('dark')?'라이트 모드':'다크 모드';renderAll();};
+  document.getElementById('refreshAll').onclick=()=>{seedCounter+=11;initData();donutData.forEach(d=>d.value=12+Math.round(seeded()()*42));renderAll();toast('전체 샘플 데이터를 갱신했다.');};
+  document.getElementById('pauseBtn').onclick=e=>{animationsPaused=!animationsPaused;e.currentTarget.textContent=animationsPaused?'애니메이션 재개':'애니메이션 일시정지';if(animationsPaused){d3.selectAll('*').interrupt();forceSim?.stop();bubbleSim?.stop();window.heroSim?.stop();}else{forceSim?.restart();bubbleSim?.restart();window.heroSim?.restart();}toast(animationsPaused?'애니메이션을 멈췄다.':'애니메이션을 재개했다.');};
+  document.getElementById('resetViewBtn').onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});document.getElementById('searchInput').value='';document.getElementById('categoryFilter').value='all';filterCards();};
+  document.getElementById('barRandom').onclick=()=>{newBarData();renderBar();};document.getElementById('barSort').onclick=e=>{barDesc=!barDesc;e.currentTarget.textContent=barDesc?'원래 순서':'내림차순 정렬';renderBar();};document.getElementById('barEase').onchange=renderBar;
+  document.getElementById('curveSelect').onchange=renderLine;document.getElementById('lineRefresh').onclick=()=>{newLineData();renderLine();};
+  document.getElementById('donutRefresh').onclick=()=>{const rnd=seeded();donutData.forEach(d=>d.value=12+Math.round(rnd()*42));renderDonut();};document.getElementById('donutToggle').onclick=e=>{donutHole=!donutHole;e.currentTarget.textContent=donutHole?'도넛 ↔ 파이':'파이 ↔ 도넛';renderDonut();};
+  document.getElementById('binRange').oninput=renderHist;document.getElementById('histRefresh').onclick=()=>{newHist();renderHist();};
+  document.getElementById('stackMode').onclick=e=>{stackGrouped=!stackGrouped;e.currentTarget.textContent=stackGrouped?'그룹 → 누적':'누적 → 그룹';renderStack();};document.getElementById('stackOffset').onchange=renderStack;
+  document.getElementById('heatColor').onchange=renderHeat;document.getElementById('heatRefresh').onclick=()=>{newHeat();renderHeat();};document.getElementById('radarRefresh').onclick=()=>{newRadar();renderRadar();};
+  document.getElementById('scatterReset').onclick=()=>window.scatterSvg?.transition().duration(duration(450)).call(scatterZoom.transform,d3.zoomIdentity);document.getElementById('scatterRefresh').onclick=()=>{newScatter();renderScatter();};
+  document.getElementById('brushReset').onclick=()=>window.brushObj?.context.select('.brush').call(window.brushObj.brush.move,window.brushObj.x2.range());document.getElementById('bubbleRestart').onclick=()=>bubbleSim?.alpha(1).restart();document.getElementById('easePlay').onclick=()=>window.playEase();document.getElementById('canvasRefresh').onclick=renderCanvas;
+  document.getElementById('treeExpand').onclick=()=>{treeRoot.descendants().forEach(d=>d.children=d._children);renderTree();};document.getElementById('treeCollapse').onclick=()=>{treeRoot.descendants().forEach(d=>{if(d.depth>=2)d.children=null;});renderTree();};document.getElementById('treemapTile').onchange=renderTreemap;
+  document.getElementById('forceRestart').onclick=()=>forceSim?.alpha(1).restart();document.getElementById('chargeRange').oninput=e=>{forceSim?.force('charge').strength(+e.target.value);forceSim?.alpha(.6).restart();};
+  document.getElementById('densityBandwidth').oninput=renderDensity;document.getElementById('voronoiRefresh').onclick=()=>{newVoronoi();renderVoronoi();};document.getElementById('streamRefresh').onclick=()=>{newStream();renderStream();};
+  document.getElementById('projectionSelect').onchange=renderGeo;document.getElementById('rotateGlobe').onclick=toggleGeoRotate;document.getElementById('geoReset').onclick=()=>{geoRotation=[0,0,0];renderGeo();};
+  document.getElementById('parseCsvBtn').onclick=parseCsv;document.getElementById('sampleCsvBtn').onclick=()=>{document.getElementById('csvInput').value=initialCsv;parseCsv();};document.getElementById('groupField').onchange=parseCsv;
+
+  function filterCards(){const q=document.getElementById('searchInput').value.trim().toLowerCase(),cat=document.getElementById('categoryFilter').value;let visible=0;document.querySelectorAll('.demo-card').forEach(card=>{const okCat=cat==='all'||card.dataset.category===cat,okQ=!q||(card.textContent+' '+card.dataset.keywords).toLowerCase().includes(q);card.classList.toggle('hidden-card',!(okCat&&okQ));if(okCat&&okQ)visible++;});document.getElementById('metricDemo').textContent=visible;}
+  document.getElementById('searchInput').addEventListener('input',filterCards);document.getElementById('categoryFilter').addEventListener('change',filterCards);
+
+  const navLinks=[...document.querySelectorAll('#nav a')]; const sections=navLinks.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean); const observer=new IntersectionObserver(entries=>{const entry=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(entry){navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+entry.target.id));}},{rootMargin:'-20% 0px -65% 0px',threshold:[0,.1,.4]});sections.forEach(s=>observer.observe(s));
+
+  let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{renderAll();},220);});
+})();
+</script>
+</body>
+</html>
