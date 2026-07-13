@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Alpine.js 3.15.12 코어 디렉티브와 공식 플러그인을 한 페이지에서 실습하는 종합 샘플">
+  <title>Alpine.js 종합 기능 실습실</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: rgba(255, 255, 255, .92);
+      --surface-2: #f8fafc;
+      --text: #172033;
+      --muted: #697386;
+      --line: #dfe5ef;
+      --primary: #6657e8;
+      --primary-2: #8577f1;
+      --primary-soft: #eeebff;
+      --success: #16865f;
+      --success-soft: #e8f8f1;
+      --warning: #b16913;
+      --warning-soft: #fff4df;
+      --danger: #c64050;
+      --danger-soft: #fff0f2;
+      --shadow: 0 14px 45px rgba(31, 41, 55, .08);
+      --radius: 20px;
+      --code-bg: #172033;
+      --code-text: #e9eef9;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% -10%, rgba(102, 87, 232, .15), transparent 30%),
+        radial-gradient(circle at 100% 0%, rgba(41, 190, 153, .10), transparent 24%),
+        var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.55;
+      min-height: 100vh;
+      transition: background .25s ease, color .25s ease;
+    }
+
+    body.dark {
+      --bg: #0d1220;
+      --surface: rgba(23, 31, 50, .94);
+      --surface-2: #111827;
+      --text: #edf1f8;
+      --muted: #aab4c6;
+      --line: #2c374d;
+      --primary: #9488ff;
+      --primary-2: #ad9fff;
+      --primary-soft: #29234f;
+      --success: #56d6aa;
+      --success-soft: #12372e;
+      --warning: #f0b85e;
+      --warning-soft: #402e15;
+      --danger: #ff8291;
+      --danger-soft: #431e28;
+      --shadow: 0 18px 55px rgba(0, 0, 0, .28);
+      --code-bg: #080c14;
+      --code-text: #e7ecf5;
+    }
+
+    [x-cloak] { display: none !important; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .app-shell { min-height: 100vh; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--bg) 78%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+    }
+
+    .topbar-inner {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: grid;
+      grid-template-columns: minmax(230px, .8fr) minmax(320px, 1.5fr) auto;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), #20b78d);
+      box-shadow: 0 10px 24px rgba(102, 87, 232, .28);
+      font-weight: 900;
+      letter-spacing: -.04em;
+    }
+    .brand strong { display: block; font-size: 1rem; white-space: nowrap; }
+    .brand small { display: block; color: var(--muted); font-size: .75rem; }
+
+    .search-wrap { position: relative; }
+    .search-wrap input {
+      width: 100%;
+      height: 44px;
+      padding: 0 42px 0 42px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      box-shadow: 0 5px 20px rgba(31, 41, 55, .04);
+    }
+    .search-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent); }
+    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); padding: 7px; border-radius: 9px; }
+
+    .toolbar { display: flex; gap: 8px; justify-content: flex-end; }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      color: var(--text);
+      background: var(--surface);
+      display: inline-grid;
+      place-items: center;
+    }
+    .icon-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    .hero {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 48px 24px 24px;
+    }
+    .hero-grid {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
+      border-radius: 28px;
+      background:
+        linear-gradient(120deg, color-mix(in srgb, var(--primary-soft) 78%, var(--surface)), var(--surface));
+      box-shadow: var(--shadow);
+      padding: 38px;
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 28px;
+      align-items: center;
+    }
+    .hero-grid::after {
+      content: "A";
+      position: absolute;
+      right: -28px;
+      bottom: -110px;
+      font-size: 320px;
+      font-weight: 900;
+      color: color-mix(in srgb, var(--primary) 7%, transparent);
+      line-height: 1;
+      pointer-events: none;
+    }
+    .eyebrow { color: var(--primary); font-weight: 800; font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 9px 0 15px; font-size: clamp(2rem, 4vw, 4.2rem); line-height: 1.08; letter-spacing: -.055em; }
+    .hero p { max-width: 780px; margin: 0; color: var(--muted); font-size: 1.02rem; }
+    .hero-actions { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .hero-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; position: relative; z-index: 1; }
+    .stat { border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 88%, transparent); padding: 18px; border-radius: 18px; }
+    .stat strong { display: block; font-size: 1.55rem; letter-spacing: -.03em; }
+    .stat span { color: var(--muted); font-size: .8rem; }
+
+    .category-bar {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 10px 24px 22px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .filter-btn {
+      white-space: nowrap;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: .82rem;
+    }
+    .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .content {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      grid-column: span 6;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform .2s ease, border-color .2s ease;
+    }
+    .card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 40%, var(--line)); }
+    .card.wide { grid-column: span 12; }
+    .card.third { grid-column: span 4; }
+    .card-head { padding: 20px 22px 15px; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 1px solid var(--line); }
+    .card-title { min-width: 0; }
+    .card-title h2 { margin: 0 0 5px; font-size: 1.03rem; letter-spacing: -.02em; }
+    .card-title p { margin: 0; color: var(--muted); font-size: .82rem; }
+    .number { flex: 0 0 auto; min-width: 34px; height: 30px; display: grid; place-items: center; padding: 0 8px; color: var(--primary); background: var(--primary-soft); border-radius: 10px; font-size: .75rem; font-weight: 900; }
+    .card-body { padding: 21px 22px 22px; }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
+    .tag { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 8px; color: var(--primary); background: var(--primary-soft); font: 700 .7rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .tag.plugin { color: var(--success); background: var(--success-soft); }
+
+    .demo-panel { padding: 16px; border: 1px dashed color-mix(in srgb, var(--line) 80%, var(--primary)); background: var(--surface-2); border-radius: 15px; }
+    .demo-panel + .demo-panel { margin-top: 12px; }
+    .row { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+    .row.between { justify-content: space-between; }
+    .stack { display: grid; gap: 10px; }
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .muted { color: var(--muted); }
+    .small { font-size: .78rem; }
+    .result { margin-top: 12px; min-height: 42px; padding: 10px 12px; border-radius: 11px; background: color-mix(in srgb, var(--primary-soft) 65%, var(--surface)); font-size: .86rem; }
+    .metric { font-weight: 900; color: var(--primary); font-size: 1.2rem; }
+
+    .btn {
+      min-height: 38px;
+      padding: 8px 13px;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 750;
+      font-size: .82rem;
+    }
+    .btn:hover { border-color: var(--primary); }
+    .btn.primary { color: white; border-color: var(--primary); background: linear-gradient(135deg, var(--primary), var(--primary-2)); }
+    .btn.success { color: var(--success); border-color: color-mix(in srgb, var(--success) 35%, var(--line)); background: var(--success-soft); }
+    .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, var(--line)); background: var(--danger-soft); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .field { display: grid; gap: 6px; min-width: 0; }
+    .field label { color: var(--muted); font-size: .75rem; font-weight: 700; }
+    input[type="text"], input[type="number"], input[type="search"], input[type="email"], input[type="date"], select, textarea, .text-input {
+      width: 100%;
+      min-height: 40px;
+      padding: 9px 11px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: none;
+    }
+    textarea { min-height: 86px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent); }
+    input[type="range"] { accent-color: var(--primary); width: 100%; }
+    input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
+
+    details.code { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    details.code summary { cursor: pointer; padding: 10px 12px; font-size: .76rem; color: var(--muted); font-weight: 800; background: var(--surface-2); }
+    pre { margin: 0; padding: 14px; overflow: auto; color: var(--code-text); background: var(--code-bg); font: .75rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .counter { display: flex; align-items: center; gap: 13px; }
+    .counter-value { min-width: 76px; padding: 9px 14px; text-align: center; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 1.3rem; font-weight: 900; }
+
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); font-size: .74rem; }
+    .pill.ok { color: var(--success); background: var(--success-soft); border-color: transparent; }
+    .pill.warn { color: var(--warning); background: var(--warning-soft); border-color: transparent; }
+
+    .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .list-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); }
+    .list-item.done .item-text { text-decoration: line-through; opacity: .55; }
+    .drag-handle { user-select: none; cursor: grab; color: var(--muted); font-weight: 900; letter-spacing: .12em; }
+    .sortable-ghost { opacity: .38 !important; }
+    #sort-warning { display: none; position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 100; padding: 10px 16px; border-radius: 999px; background: var(--warning); color: #1d1609; font-weight: 800; box-shadow: var(--shadow); }
+    body.sorting #sort-warning { display: block; }
+
+    .transition-box { padding: 20px; border-radius: 14px; color: white; background: linear-gradient(135deg, var(--primary), #28b792); text-align: center; font-weight: 800; }
+    .progress { height: 10px; overflow: hidden; border-radius: 999px; background: var(--line); }
+    .progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), #24b88c); transition: width .3s ease; }
+
+    .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+    .tab { border: 0; color: var(--muted); background: transparent; padding: 8px 10px; border-bottom: 2px solid transparent; font-weight: 800; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(8, 12, 22, .62); backdrop-filter: blur(7px); }
+    .modal { width: min(520px, 100%); border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: 0 30px 90px rgba(0, 0, 0, .34); padding: 22px; }
+    .modal h3 { margin: 0 0 8px; }
+
+    .popover { z-index: 80; width: 230px; padding: 13px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow); }
+    .tooltip { z-index: 80; padding: 7px 9px; border-radius: 8px; color: white; background: #141b2a; font-size: .72rem; white-space: nowrap; }
+
+    .resize-box { resize: both; overflow: auto; min-width: 210px; min-height: 120px; max-width: 100%; padding: 13px; border: 2px dashed var(--primary); border-radius: 13px; background: var(--primary-soft); }
+    .intersect-stage { height: 230px; overflow-y: auto; scroll-snap-type: y mandatory; border: 1px solid var(--line); border-radius: 13px; }
+    .intersect-spacer { height: 250px; display: grid; place-items: center; color: var(--muted); scroll-snap-align: start; }
+    .intersect-target { min-height: 190px; display: grid; place-items: center; padding: 24px; text-align: center; scroll-snap-align: start; background: linear-gradient(135deg, var(--primary-soft), var(--success-soft)); }
+
+    .kanban { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .kanban-col { min-height: 225px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+    .kanban-col h4 { margin: 0 0 10px; font-size: .82rem; }
+    .kanban-card { margin-bottom: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 5px 12px rgba(31, 41, 55, .05); }
+
+    .toast-stack { position: fixed; top: 76px; right: 18px; z-index: 110; display: grid; gap: 8px; width: min(340px, calc(100vw - 36px)); }
+    .toast { padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--success) 35%, var(--line)); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow); }
+
+    .empty-state { grid-column: 1 / -1; padding: 60px 20px; text-align: center; border: 1px dashed var(--line); border-radius: 20px; color: var(--muted); }
+    .footer { padding: 28px 24px 45px; color: var(--muted); text-align: center; font-size: .78rem; }
+    .compact .card-head { padding: 15px 17px 11px; }
+    .compact .card-body { padding: 15px 17px 17px; }
+
+    @media (max-width: 1050px) {
+      .topbar-inner { grid-template-columns: 1fr auto; }
+      .search-wrap { grid-row: 2; grid-column: 1 / -1; }
+      .hero-grid { grid-template-columns: 1fr; }
+      .card.third { grid-column: span 6; }
+    }
+    @media (max-width: 720px) {
+      .topbar-inner, .hero, .category-bar, .content { padding-left: 14px; padding-right: 14px; }
+      .brand small { display: none; }
+      .hero { padding-top: 28px; }
+      .hero-grid { padding: 24px; border-radius: 22px; }
+      .hero-stats { grid-template-columns: repeat(2, 1fr); }
+      .card, .card.third, .card.wide { grid-column: 1 / -1; }
+      .two-col, .three-col, .kanban { grid-template-columns: 1fr; }
+      .content { gap: 14px; }
+    }
+  </style>
+
+
+
+</head>
+<body x-data="appShell" :class="{ dark: $store.ui.dark, compact: $store.ui.compact }">
+  <div id="alpine-load-error" class="load-error" role="alert">
+    Alpine.js를 불러오지 못했습니다. 인터넷 연결 또는 외부 CDN 차단 여부를 확인한 뒤 Chrome에서 다시 열어 주세요.
+  </div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark">A</div>
+          <div>
+            <strong>Alpine.js 기능 실습실</strong>
+            <small>v3.15.12 · Core + 9 Plugins</small>
+          </div>
+        </div>
+
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="search" x-model.debounce.250ms="query" placeholder="기능 검색: x-model, modal, persist, sort..." aria-label="기능 검색">
+          <button class="search-clear" x-show="query" x-cloak @click="query = ''" aria-label="검색어 지우기">✕</button>
+        </div>
+
+        <div class="toolbar">
+          <button class="icon-btn" @click="$store.ui.toggleCompact()" :title="$store.ui.compact ? '넓게 보기' : '촘촘하게 보기'">▦</button>
+          <button class="icon-btn" @click="$store.ui.toggleTheme()" :title="$store.ui.dark ? '라이트 모드' : '다크 모드'" x-text="$store.ui.dark ? '☀' : '◐'"></button>
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">HTML-FIRST REACTIVE UI</div>
+          <h1>작지만 강력한<br>Alpine.js 종합 샘플</h1>
+          <p>반응형 상태, 템플릿, 양방향 바인딩, 이벤트, 수명주기, 전역 스토어, 접근성 모달과 공식 플러그인까지 한 파일에서 직접 조작하며 확인하는 예제다.</p>
+          <div class="hero-actions">
+            <button class="btn primary" @click="document.querySelector('.content').scrollIntoView({behavior:'smooth'})">샘플 시작</button>
+            <button class="btn" @click="copyText('<script defer src=&quot;https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js&quot;><\/script>')">CDN 코드 복사</button>
+            <span class="pill ok">MIT License</span>
+            <span class="pill">단일 HTML</span>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><strong>15</strong><span>주요 코어 디렉티브</span></div>
+          <div class="stat"><strong>9</strong><span>공식 플러그인 실습</span></div>
+          <div class="stat"><strong>10+</strong><span>매직·전역 API</span></div>
+          <div class="stat"><strong>24</strong><span>독립 기능 카드</span></div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="category-bar" aria-label="기능 분류">
+      <template x-for="item in categories" :key="item.key">
+        <button class="filter-btn" :class="{ active: category === item.key }" @click="setCategory(item.key)" x-text="item.label"></button>
+      </template>
+    </nav>
+
+    <main class="content">
+      <!-- 01 -->
+      <section class="card" x-show="matches('설치 cdn version 플러그인 alpine start installation', 'core')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>설치·로드 상태</h2><p>버전 고정 CDN과 플러그인 로드 확인</p></div>
+          <span class="number">01</span>
+        </div>
+        <div class="card-body" x-data="{ loaded: false }" x-init="loaded = typeof Alpine !== 'undefined'">
+          <div class="tag-row"><span class="tag">defer</span><span class="tag">alpine:init</span><span class="tag">CDN</span></div>
+          <div class="demo-panel stack">
+            <div class="row between"><span>Alpine Core</span><span class="pill ok" x-text="loaded ? '정상 로드' : '로드 실패'"></span></div>
+            <div class="row between"><span>고정 버전</span><strong>3.15.12</strong></div>
+            <div class="row between"><span>플러그인 순서</span><span class="small muted">Plugin → Core</span></div>
+          </div>
+          <details class="code"><summary>CDN 설치 코드</summary><pre>&lt;script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"&gt;&lt;/script&gt;</pre></details>
+        </div>
+      </section>
+
+      <!-- 02 -->
+      <section class="card" x-show="matches('x-data state method getter counter 반응형 상태 메서드 계산', 'state')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>반응형 상태와 메서드</h2><p>x-data, 메서드, getter 기반 계산 값</p></div>
+          <span class="number">02</span>
+        </div>
+        <div class="card-body" x-data="{ count: 2, step: 1, get doubled() { return this.count * 2 }, reset() { this.count = 0 } }">
+          <div class="tag-row"><span class="tag">x-data</span><span class="tag">@click</span><span class="tag">getter</span><span class="tag">x-text</span></div>
+          <div class="demo-panel stack">
+            <div class="counter">
+              <button class="btn" @click="count -= step">−</button>
+              <div class="counter-value" x-text="count"></div>
+              <button class="btn primary" @click="count += step">＋</button>
+              <button class="btn" @click="reset">초기화</button>
+            </div>
+            <div class="field"><label>증감 단위: <strong x-text="step"></strong></label><input type="range" min="1" max="10" x-model.number="step"></div>
+            <div class="result">두 배 계산 값: <strong x-text="doubled"></strong></div>
+          </div>
+          <details class="code"><summary>핵심 문법</summary><pre>&lt;div x-data="{ count: 0, get doubled() { return this.count * 2 } }"&gt;
+  &lt;button @click="count++"&gt;+1&lt;/button&gt;
+  &lt;span x-text="doubled"&gt;&lt;/span&gt;
+&lt;/div&gt;</pre></details>
+        </div>
+      </section>
+
+      <!-- 03 -->
+      <section class="card" x-show="matches('x-text x-html x-bind class style disabled attribute 텍스트 html 속성 바인딩', 'core')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>텍스트·HTML·속성 바인딩</h2><p>DOM 내용과 클래스·스타일·속성 동적 변경</p></div>
+          <span class="number">03</span>
+        </div>
+        <div class="card-body" x-data="{ message: 'Alpine은 마크업 안에서 반응한다.', trustedHtml: '<strong>신뢰 가능한 HTML</strong>만 사용', active: true, size: 16 }">
+          <div class="tag-row"><span class="tag">x-text</span><span class="tag">x-html</span><span class="tag">x-bind</span><span class="tag">:class</span><span class="tag">:style</span></div>
+          <div class="demo-panel stack">
+            <div class="field"><label>메시지</label><input type="text" x-model="message"></div>
+            <p x-text="message" :class="{ 'pill ok': active }" :style="`font-size:${size}px`"></p>
+            <div class="row"><label><input type="checkbox" x-model="active"> 강조 클래스</label><input style="max-width:130px" type="number" min="12" max="30" x-model.number="size"></div>
+            <div class="result" x-html="trustedHtml"></div>
+            <button class="btn" :disabled="!active" :title="active ? '활성 상태' : '비활성 상태'">동적 disabled</button>
+          </div>
+          <p class="small muted">주의: x-html에는 사용자 입력을 직접 넣지 말고 반드시 정화된 콘텐츠만 사용해야 한다.</p>
+        </div>
+      </section>
+
+      <!-- 04 -->
+      <section class="card wide" x-show="matches('x-model input checkbox radio select textarea lazy number debounce form 양방향 바인딩 폼', 'core')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>폼 양방향 바인딩</h2><p>텍스트·숫자·체크박스·라디오·선택·수정자</p></div>
+          <span class="number">04</span>
+        </div>
+        <div class="card-body" x-data="{ name: '해양수산', age: 30, memo: '', lazyValue: '', debounced: '', agreed: true, skills: ['HTML'], level: '중급', region: '부산' }">
+          <div class="tag-row"><span class="tag">x-model</span><span class="tag">.number</span><span class="tag">.lazy</span><span class="tag">.debounce</span><span class="tag">checkbox</span><span class="tag">radio</span></div>
+          <div class="three-col">
+            <div class="field"><label>일반 텍스트</label><input type="text" x-model="name"></div>
+            <div class="field"><label>숫자 변환 .number</label><input type="number" x-model.number="age"></div>
+            <div class="field"><label>지역 선택</label><select x-model="region"><option>부산</option><option>서울</option><option>제주</option></select></div>
+            <div class="field"><label>포커스가 빠질 때 반영 .lazy</label><input type="text" x-model.lazy="lazyValue"></div>
+            <div class="field"><label>500ms 뒤 반영 .debounce</label><input type="text" x-model.debounce.500ms="debounced"></div>
+            <div class="field"><label>메모</label><textarea x-model="memo" placeholder="내용 입력"></textarea></div>
+          </div>
+          <div class="demo-panel" style="margin-top:12px">
+            <div class="row">
+              <label><input type="checkbox" x-model="agreed"> 약관 동의</label>
+              <label><input type="checkbox" value="HTML" x-model="skills"> HTML</label>
+              <label><input type="checkbox" value="CSS" x-model="skills"> CSS</label>
+              <label><input type="checkbox" value="Alpine" x-model="skills"> Alpine</label>
+              <label><input type="radio" value="초급" x-model="level"> 초급</label>
+              <label><input type="radio" value="중급" x-model="level"> 중급</label>
+              <label><input type="radio" value="고급" x-model="level"> 고급</label>
+            </div>
+            <pre style="margin-top:12px;border-radius:10px" x-text="JSON.stringify({name, age, region, lazyValue, debounced, agreed, skills, level, memo}, null, 2)"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 -->
+      <section class="card" x-show="matches('x-show x-if x-transition x-cloak 표시 숨김 조건 렌더링 전환', 'core')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>표시·조건 렌더링·전환</h2><p>x-show와 x-if의 차이, transition 효과</p></div>
+          <span class="number">05</span>
+        </div>
+        <div class="card-body" x-data="{ show: true, create: true }">
+          <div class="tag-row"><span class="tag">x-show</span><span class="tag">x-if</span><span class="tag">x-transition</span><span class="tag">x-cloak</span></div>
+          <div class="row"><button class="btn primary" @click="show = !show">x-show 전환</button><button class="btn" @click="create = !create">x-if 생성·제거</button></div>
+          <div style="margin-top:13px">
+            <div class="transition-box" x-show="show" x-cloak x-transition:enter.duration.500ms x-transition:leave.duration.250ms>DOM에 남아 display만 변경</div>
+          </div>
+          <template x-if="create"><div class="result">이 노드는 조건에 따라 실제 DOM에서 생성·제거됩니다. 생성 시각: <strong x-text="$timestamp()"></strong></div></template>
+        </div>
+      </section>
+
+      <!-- 06 -->
+      <section class="card" x-show="matches('x-for loop key filter todo list 반복 목록 필터 할일', 'state')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>목록 반복·필터·계산 속성</h2><p>x-for와 :key를 활용한 미니 할 일 관리</p></div>
+          <span class="number">06</span>
+        </div>
+        <div class="card-body" x-data="todoDemo">
+          <div class="tag-row"><span class="tag">x-for</span><span class="tag">:key</span><span class="tag">getter</span><span class="tag">@keyup.enter</span></div>
+          <div class="row"><input style="flex:1;min-width:180px" type="text" x-model="newTodo" @keyup.enter="add" placeholder="할 일 입력 후 Enter"><button class="btn primary" @click="add">추가</button></div>
+          <div class="tabs" style="margin-top:12px">
+            <template x-for="tab in [{k:'all',l:'전체'},{k:'active',l:'진행'},{k:'done',l:'완료'}]" :key="tab.k"><button class="tab" :class="{active:filter===tab.k}" @click="filter=tab.k" x-text="tab.l"></button></template>
+          </div>
+          <ul class="list">
+            <template x-for="todo in filtered" :key="todo.id">
+              <li class="list-item" :class="{done:todo.done}">
+                <label class="row" style="flex:1"><input type="checkbox" x-model="todo.done"><span class="item-text" x-text="todo.text"></span></label>
+                <button class="btn danger" @click="remove(todo.id)">삭제</button>
+              </li>
+            </template>
+          </ul>
+          <div class="result">남은 작업 <strong x-text="remaining"></strong>개 · 전체 <strong x-text="todos.length"></strong>개</div>
+        </div>
+      </section>
+
+      <!-- 07 -->
+      <section class="card" x-show="matches('x-on event modifiers prevent stop once debounce throttle window outside keyboard 이벤트 수정자 키보드', 'event')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>이벤트와 수정자</h2><p>키 이벤트·once·debounce·throttle·outside</p></div>
+          <span class="number">07</span>
+        </div>
+        <div class="card-body" x-data="{ logs: [], onceCount: 0, throttled: 0, menu: false, add(msg){ this.logs.unshift(new Date().toLocaleTimeString('ko-KR')+' · '+msg); this.logs=this.logs.slice(0,5) } }">
+          <div class="tag-row"><span class="tag">@click.once</span><span class="tag">@input.debounce</span><span class="tag">@mousemove.throttle</span><span class="tag">@click.outside</span><span class="tag">@keyup.shift.enter</span></div>
+          <div class="stack">
+            <div class="row"><button class="btn" @click.once="onceCount++; add('once 버튼 실행')">한 번만 실행</button><span class="pill">실행 <b x-text="onceCount"></b>회</span></div>
+            <input type="text" @input.debounce.500ms="add('debounce 입력: '+$event.target.value)" @keyup.shift.enter="add('Shift+Enter 감지')" placeholder="입력 또는 Shift+Enter">
+            <div class="demo-panel" @mousemove.throttle.300ms="throttled++; add('throttle mousemove #'+throttled)">이 영역에서 마우스를 움직여 throttle 확인</div>
+            <div style="position:relative"><button class="btn primary" @click="menu=!menu">outside 메뉴</button><div class="popover" x-show="menu" x-cloak @click.outside="menu=false" x-transition style="position:absolute;top:45px;left:0">바깥을 클릭하면 닫힙니다.</div></div>
+            <ul class="list"><template x-for="(log,index) in logs" :key="index"><li class="list-item small" x-text="log"></li></template></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 08 -->
+      <section class="card" x-show="matches('x-init watch effect nextTick lifecycle 수명주기 감시 dom update', 'event')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>수명주기와 반응 감시</h2><p>x-init, $watch, x-effect, $nextTick</p></div>
+          <span class="number">08</span>
+        </div>
+        <div class="card-body" x-data="{ value: 1, watchLog: '초기화 전', effectRuns: 0, domText: '대기' }" x-init="watchLog='x-init 완료'; $watch('value', (v,old) => watchLog=`$watch: ${old} → ${v}`)">
+          <div class="tag-row"><span class="tag">x-init</span><span class="tag">$watch</span><span class="tag">x-effect</span><span class="tag">$nextTick</span></div>
+          <div x-effect="effectRuns = value * 10" class="stack">
+            <div class="row"><button class="btn primary" @click="value++">값 변경</button><span class="metric" x-text="value"></span></div>
+            <div class="result" x-text="watchLog"></div>
+            <div class="result">x-effect 계산 결과: <strong x-text="effectRuns"></strong></div>
+            <button class="btn" @click="value++; $nextTick(() => domText = $refs.domValue.textContent)">$nextTick 이후 DOM 읽기</button>
+            <div>현재 DOM 값: <strong x-ref="domValue" x-text="value"></strong> · 읽은 값: <strong x-text="domText"></strong></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 09 -->
+      <section class="card" x-show="matches('$el $refs $root $data $id magic custom 매직 참조 id 접근', 'magic')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>매직 속성과 고유 ID</h2><p>DOM 참조·루트·데이터·자동 ID·사용자 매직</p></div>
+          <span class="number">09</span>
+        </div>
+        <div class="card-body" x-data="{ label: '원본 버튼', refMessage: '참조 대상', rootTag: '', dataKeys: '' }" x-id="['demo-input','demo-help']">
+          <div class="tag-row"><span class="tag">$el</span><span class="tag">$refs</span><span class="tag">$root</span><span class="tag">$data</span><span class="tag">$id</span><span class="tag">$timestamp</span></div>
+          <div class="stack">
+            <button class="btn" @click="$el.textContent='현재 시각 '+$timestamp()" x-text="label"></button>
+            <div class="row"><span x-ref="target" class="pill" x-text="refMessage"></span><button class="btn" @click="$refs.target.textContent='refs로 변경됨'">$refs 변경</button></div>
+            <div class="field"><label :for="$id('demo-input')">고유 ID 연결</label><input :id="$id('demo-input')" :aria-describedby="$id('demo-help')" type="text"><small :id="$id('demo-help')" class="muted">여러 컴포넌트에서도 충돌하지 않는 ID</small></div>
+            <button class="btn" @click="rootTag=$root.tagName; dataKeys=Object.keys($data).join(', ')" >$root·$data 확인</button>
+            <div class="result">Root: <strong x-text="rootTag"></strong><br>Data keys: <span x-text="dataKeys"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section class="card" x-show="matches('Alpine.data Alpine.bind reusable component global 재사용 컴포넌트 전역 바인드 dropdown', 'magic')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>재사용 컴포넌트와 바인딩</h2><p>Alpine.data()·Alpine.bind() 전역 등록</p></div>
+          <span class="number">10</span>
+        </div>
+        <div class="card-body">
+          <div class="tag-row"><span class="tag">Alpine.data()</span><span class="tag">Alpine.bind()</span><span class="tag">x-bind</span></div>
+          <div class="two-col">
+            <div x-data="reusableDropdown('첫 번째 드롭다운')" class="demo-panel" style="position:relative">
+              <button class="btn primary" @click="toggle" x-text="label"></button>
+              <ul class="list" x-show="open" x-cloak @click.outside="open=false" x-transition style="margin-top:10px"><template x-for="item in items" :key="item"><li class="list-item" x-text="item"></li></template></ul>
+            </div>
+            <div x-data="{ boundClicks: 0, boundDisabled: false, handleBoundClick(){ this.boundClicks++; Alpine.store('notice').push('Alpine.bind 클릭 '+this.boundClicks+'회') } }" class="demo-panel stack">
+              <button x-bind="PrimaryAction">재사용 속성 버튼</button>
+              <label><input type="checkbox" x-model="boundDisabled"> 버튼 비활성</label>
+              <span class="small">클릭 수: <b x-text="boundClicks"></b></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section class="card" x-show="matches('Alpine.store $store global state cart theme 전역 상태 스토어 장바구니', 'magic')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>전역 스토어</h2><p>서로 다른 컴포넌트가 공유하는 상태</p></div>
+          <span class="number">11</span>
+        </div>
+        <div class="card-body">
+          <div class="tag-row"><span class="tag">Alpine.store()</span><span class="tag">$store</span><span class="tag">methods</span></div>
+          <div class="two-col">
+            <div class="demo-panel stack" x-data><strong>상품 컴포넌트 A</strong><button class="btn primary" @click="$store.cart.add()">장바구니 추가</button></div>
+            <div class="demo-panel stack" x-data><strong>헤더 컴포넌트 B</strong><div class="metric"><span x-text="$store.cart.items"></span>개</div><div class="row"><button class="btn" @click="$store.cart.remove()">-1</button><button class="btn danger" @click="$store.cart.clear()">비우기</button></div></div>
+          </div>
+          <div class="result">상단의 다크 모드와 밀도 설정도 Persist가 결합된 전역 스토어를 사용합니다.</div>
+        </div>
+      </section>
+
+      <!-- 12 -->
+      <section class="card" x-show="matches('$dispatch custom event window 사용자 이벤트 컴포넌트 통신 toast', 'event')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>사용자 이벤트와 컴포넌트 통신</h2><p>$dispatch와 .window 수신</p></div>
+          <span class="number">12</span>
+        </div>
+        <div class="card-body" x-data="{ received: '아직 없음' }" @demo-message.window="received = $event.detail.message">
+          <div class="tag-row"><span class="tag">$dispatch</span><span class="tag">@event.window</span><span class="tag">$event.detail</span></div>
+          <div class="two-col">
+            <div class="demo-panel" x-data="{ text: '다른 컴포넌트에서 보낸 메시지' }"><div class="field"><label>발신 컴포넌트</label><input x-model="text"></div><button class="btn primary" style="margin-top:10px" @click="$dispatch('demo-message',{message:text})">전역 이벤트 발송</button></div>
+            <div class="demo-panel"><strong>수신 컴포넌트</strong><div class="result" x-text="received"></div><button class="btn success" @click="$store.notice.push('전역 Toast 스토어 호출')">Toast 발생</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 13 -->
+      <section class="card wide" x-show="matches('teleport focus trap modal dialog x-id accessibility 접근성 모달 포커스', 'advanced')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Teleport + 접근성 모달 + Focus Trap</h2><p>중첩 레이아웃을 벗어난 렌더링과 키보드 포커스 관리</p></div>
+          <span class="number">13</span>
+        </div>
+        <div class="card-body" x-data="{ modalOpen: false }" x-id="['modal-title','modal-desc']">
+          <div class="tag-row"><span class="tag">x-teleport</span><span class="tag plugin">Focus</span><span class="tag">x-trap.noscroll</span><span class="tag">@keyup.escape.window</span><span class="tag">x-id</span></div>
+          <button class="btn primary" @click="modalOpen=true">모달 열기</button>
+          <template x-teleport="body">
+            <div class="modal-backdrop" x-show="modalOpen" x-cloak x-transition.opacity @keyup.escape.window="modalOpen=false" @click.self="modalOpen=false">
+              <section class="modal" role="dialog" aria-modal="true" :aria-labelledby="$id('modal-title')" :aria-describedby="$id('modal-desc')" x-trap.noscroll.inert="modalOpen" x-transition.scale.origin.center>
+                <h3 :id="$id('modal-title')">접근성 모달</h3>
+                <p :id="$id('modal-desc')" class="muted">Tab 키를 반복해도 포커스가 모달 내부에 유지되며, ESC 또는 바깥 클릭으로 닫힙니다.</p>
+                <div class="two-col"><div class="field"><label>이름</label><input type="text" placeholder="첫 입력"></div><div class="field"><label>부서</label><input type="text" placeholder="두 번째 입력"></div></div>
+                <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" @click="modalOpen=false">취소</button><button class="btn primary" @click="$store.notice.push('저장 예시 완료'); modalOpen=false">저장</button></div>
+              </section>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- 14 -->
+      <section class="card" x-show="matches('x-modelable custom input component 양방향 사용자 컴포넌트 모델', 'advanced')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>사용자 컴포넌트 양방향 모델</h2><p>x-modelable로 내부 상태를 외부 x-model에 노출</p></div>
+          <span class="number">14</span>
+        </div>
+        <div class="card-body" x-data="{ outerValue: 5 }">
+          <div class="tag-row"><span class="tag">x-modelable</span><span class="tag">x-model</span><span class="tag">scope</span></div>
+          <div class="demo-panel" x-data="{ innerValue: 0 }" x-modelable="innerValue" x-model="outerValue">
+            <div class="counter"><button class="btn" @click="innerValue--">−</button><div class="counter-value" x-text="innerValue"></div><button class="btn primary" @click="innerValue++">＋</button></div>
+          </div>
+          <div class="result">외부 부모 값: <strong x-text="outerValue"></strong></div>
+        </div>
+      </section>
+
+      <!-- 15 -->
+      <section class="card" x-show="matches('persist plugin localStorage 새로고침 유지 저장 상태', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Persist 플러그인</h2><p>페이지를 새로 열어도 유지되는 상태</p></div>
+          <span class="number">15</span>
+        </div>
+        <div class="card-body" x-data="persistDemo">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/persist</span><span class="tag">$persist</span><span class="tag">.as()</span><span class="tag">localStorage</span></div>
+          <div class="stack">
+            <div class="field"><label>영구 메모</label><textarea x-model="note"></textarea></div>
+            <div class="row"><button class="btn primary" @click="count++">영구 카운터 +1</button><span class="metric" x-text="count"></span><button class="btn" @click="note=''; count=0">값 초기화</button></div>
+            <div class="pill ok">입력 후 브라우저 새로고침으로 유지 여부 확인</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 16 -->
+      <section class="card" x-show="matches('collapse plugin accordion expand height 접기 펼치기 아코디언', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Collapse 플러그인</h2><p>높이를 계산하는 부드러운 아코디언</p></div>
+          <span class="number">16</span>
+        </div>
+        <div class="card-body" x-data="{ open: 1 }">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/collapse</span><span class="tag">x-collapse</span><span class="tag">.duration</span><span class="tag">.min</span></div>
+          <div class="stack">
+            <template x-for="item in [{id:1,title:'왜 Collapse가 필요한가?',text:'일반 x-transition과 달리 동적인 높이를 계산하여 자연스럽게 접고 펼칩니다.'},{id:2,title:'여러 패널 제어',text:'단일 open 상태에 번호를 저장해 아코디언처럼 한 패널만 열 수 있습니다.'},{id:3,title:'최소 높이',text:'x-collapse.min.40px처럼 완전히 닫히지 않는 형태도 구성할 수 있습니다.'}]" :key="item.id">
+              <div class="demo-panel" style="padding:0;overflow:hidden">
+                <button class="btn" style="width:100%;border:0;border-radius:0;text-align:left;display:flex;justify-content:space-between" @click="open=open===item.id?0:item.id"><span x-text="item.title"></span><span x-text="open===item.id?'−':'＋'"></span></button>
+                <div x-show="open===item.id" x-collapse.duration.450ms><p style="padding:0 13px 13px;margin:0" class="muted" x-text="item.text"></p></div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </section>
+
+      <!-- 17 -->
+      <section class="card" x-show="matches('mask plugin input format phone date money card 입력 마스크 전화 날짜 금액 카드', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Mask 플러그인</h2><p>날짜·전화·카드·금액 입력 자동 형식화</p></div>
+          <span class="number">17</span>
+        </div>
+        <div class="card-body" x-data="{ date:'', phone:'', card:'', money:'' }">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/mask</span><span class="tag">x-mask</span><span class="tag">x-mask:dynamic</span><span class="tag">$money</span></div>
+          <div class="two-col">
+            <div class="field"><label>날짜</label><input x-model="date" x-mask="9999-99-99" placeholder="YYYY-MM-DD"></div>
+            <div class="field"><label>휴대전화</label><input x-model="phone" x-mask="999-9999-9999" placeholder="010-0000-0000"></div>
+            <div class="field"><label>카드번호 동적 마스크</label><input x-model="card" x-mask:dynamic="$input.startsWith('34') || $input.startsWith('37') ? '9999 999999 99999' : '9999 9999 9999 9999'" placeholder="34 또는 일반 번호"></div>
+            <div class="field"><label>금액</label><input x-model="money" x-mask:dynamic="$money($input, '.', ',')" placeholder="1,000,000.00"></div>
+          </div>
+          <div class="result" x-text="JSON.stringify({date, phone, card, money})"></div>
+        </div>
+      </section>
+
+      <!-- 18 -->
+      <section class="card" x-show="matches('intersect plugin intersection observer viewport scroll lazy animation 스크롤 뷰포트', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Intersect 플러그인</h2><p>요소의 뷰포트 진입·이탈 감지</p></div>
+          <span class="number">18</span>
+        </div>
+        <div class="card-body" x-data="{ entered: 0, visible: false }">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/intersect</span><span class="tag">x-intersect</span><span class="tag">:leave</span><span class="tag">.threshold.50</span></div>
+          <div class="intersect-stage">
+            <div class="intersect-spacer">아래로 스크롤 ↓</div>
+            <div class="intersect-target" x-intersect.threshold.50="visible=true; entered++" x-intersect:leave="visible=false">
+              <div x-show="visible" x-transition.scale><strong>50% 이상 보임</strong><p class="muted">진입 횟수 <span x-text="entered"></span>회</p></div>
+            </div>
+            <div class="intersect-spacer">다시 위로 스크롤해 이탈 감지</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 19 -->
+      <section class="card" x-show="matches('resize plugin observer width height document 크기 관찰 리사이즈', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Resize 플러그인</h2><p>요소 또는 문서 크기 변화 감지</p></div>
+          <span class="number">19</span>
+        </div>
+        <div class="card-body" x-data="{ width: 0, height: 0, docWidth: 0 }" x-resize.document="docWidth=$width">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/resize</span><span class="tag">x-resize</span><span class="tag">$width</span><span class="tag">$height</span><span class="tag">.document</span></div>
+          <div class="resize-box" x-resize="width=$width; height=$height">
+            우측 아래 핸들로 크기 조절
+            <div class="result"><strong x-text="Math.round(width)"></strong> × <strong x-text="Math.round(height)"></strong> px</div>
+          </div>
+          <div class="pill" style="margin-top:10px">문서 너비: <b x-text="Math.round(docWidth)"></b>px</div>
+        </div>
+      </section>
+
+      <!-- 20 -->
+      <section class="card" x-show="matches('anchor plugin floating ui tooltip popover dropdown 위치 기준 앵커 툴팁', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Anchor 플러그인</h2><p>버튼을 기준으로 팝오버와 툴팁 위치 계산</p></div>
+          <span class="number">20</span>
+        </div>
+        <div class="card-body" x-data="{ popover:false, tooltip:false }">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/anchor</span><span class="tag">x-anchor</span><span class="tag">.bottom-start</span><span class="tag">.offset.8</span></div>
+          <div class="row" style="min-height:110px;align-items:flex-start">
+            <button class="btn primary" x-ref="anchorButton" @click="popover=!popover">팝오버 열기</button>
+            <div class="popover" x-show="popover" x-cloak x-anchor.bottom-start.offset.8="$refs.anchorButton" @click.outside="popover=false" x-transition><strong>자동 위치 계산</strong><p class="small muted">화면 공간이 부족하면 Floating UI가 위치를 조정합니다.</p><button class="btn" @click="popover=false">닫기</button></div>
+            <button class="btn" x-ref="tipButton" @mouseenter="tooltip=true" @mouseleave="tooltip=false">마우스 올리기</button>
+            <div class="tooltip" x-show="tooltip" x-cloak x-anchor.top.offset.6="$refs.tipButton">Anchor 기반 툴팁</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 21 -->
+      <section class="card wide" x-show="matches('sort plugin sortable drag drop group handle ghost kanban 정렬 드래그 드롭 칸반', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Sort 플러그인</h2><p>드래그 정렬·핸들·그룹 간 이동·Ghost</p></div>
+          <span class="number">21</span>
+        </div>
+        <div class="card-body" x-data="{ lastMove:'아직 이동 없음', handle(item, position){ this.lastMove=`항목 ${item} → 위치 ${position}` } }">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/sort</span><span class="tag">x-sort</span><span class="tag">x-sort:item</span><span class="tag">x-sort:group</span><span class="tag">x-sort:handle</span><span class="tag">.ghost</span></div>
+          <div class="kanban">
+            <div><h4>대기</h4><div class="kanban-col" x-sort.ghost="handle" x-sort:group="work"><div class="kanban-card" x-sort:item="A"><span class="drag-handle" x-sort:handle>⠿</span> 요구사항 정리</div><div class="kanban-card" x-sort:item="B"><span class="drag-handle" x-sort:handle>⠿</span> 화면 설계 <button class="btn" x-sort:ignore @click="$store.notice.push('편집 버튼 클릭')">편집</button></div><div class="kanban-card" x-sort:item="C"><span class="drag-handle" x-sort:handle>⠿</span> 테스트 작성</div></div></div>
+            <div><h4>완료</h4><div class="kanban-col" x-sort.ghost="handle" x-sort:group="work"><div class="kanban-card" x-sort:item="D"><span class="drag-handle" x-sort:handle>⠿</span> Alpine 설치</div></div></div>
+          </div>
+          <div class="result" x-text="lastMove"></div>
+        </div>
+      </section>
+
+      <!-- 22 -->
+      <section class="card" x-show="matches('morph plugin dom diff patch server html state preserve 상태 보존 서버 렌더링', 'plugin')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>Morph 플러그인</h2><p>새 HTML로 패치하면서 Alpine·브라우저 상태 보존</p></div>
+          <span class="number">22</span>
+        </div>
+        <div class="card-body" x-data="morphDemo">
+          <div class="tag-row"><span class="tag plugin">@alpinejs/morph</span><span class="tag">Alpine.morph()</span><span class="tag">DOM diff</span><span class="tag">state preserve</span></div>
+          <div x-ref="target" class="demo-panel">
+            <div class="field"><label>현재 Alpine 상태</label><input type="text" x-model="message"></div>
+            <div class="result">입력 상태: <strong x-text="message"></strong></div>
+          </div>
+          <button class="btn primary" style="margin-top:12px" @click="runMorph">서버 HTML 응답을 가정해 Morph</button>
+        </div>
+      </section>
+
+      <!-- 23 -->
+      <section class="card" x-show="matches('async await promise loading 비동기 함수 api fetch', 'advanced')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>비동기 표현식과 함수</h2><p>Promise·async/await를 Alpine 표현식에서 사용</p></div>
+          <span class="number">23</span>
+        </div>
+        <div class="card-body" x-data="asyncDemo">
+          <div class="tag-row"><span class="tag">async</span><span class="tag">await</span><span class="tag">Promise</span><span class="tag">loading state</span></div>
+          <div class="stack">
+            <button class="btn primary" @click="load" :disabled="loading"><span x-show="!loading">비동기 작업 실행</span><span x-show="loading" x-cloak>처리 중...</span></button>
+            <div class="progress" x-show="loading" x-cloak><span style="width:65%"></span></div>
+            <div class="result" x-text="result"></div>
+            <div class="pill">x-text에서 async 함수 자동 처리: <strong x-text="label"></strong></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 24 -->
+      <section class="card wide" x-show="matches('x-ignore csp security advanced limitation 보안 무시 지시어 제약', 'advanced')" x-transition.opacity>
+        <div class="card-head">
+          <div class="card-title"><h2>x-ignore·CSP·운영 적용 주의사항</h2><p>외부 위젯 격리, HTML 주입, CDN·CSP 고려</p></div>
+          <span class="number">24</span>
+        </div>
+        <div class="card-body" x-data="{ outer:'부모 Alpine 정상 작동' }">
+          <div class="tag-row"><span class="tag">x-ignore</span><span class="tag">CSP build</span><span class="tag">x-html security</span><span class="tag">version pinning</span></div>
+          <div class="three-col">
+            <div class="demo-panel"><strong>x-ignore 영역</strong><div x-ignore x-data="{ ignored:'초기화되지 않음' }" class="result">Alpine이 이 하위 트리를 건드리지 않습니다. 외부 에디터·지도 위젯 등에 유용합니다.</div></div>
+            <div class="demo-panel"><strong>CSP 환경</strong><p class="small muted">일반 빌드는 HTML 속성의 JavaScript 표현식을 처리하기 위해 Function 생성이 필요하다. 엄격한 CSP 환경에서는 공식 @alpinejs/csp 빌드와 외부 함수 추출 방식을 검토해야 합니다.</p></div>
+            <div class="demo-panel"><strong>운영 체크</strong><p class="small muted">CDN 버전 고정, SRI·내부 배포 검토, x-html 입력 정화, 플러그인 선행 로드, x-cloak CSS 설정이 필요합니다.</p></div>
+          </div>
+          <div class="result" x-text="outer"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <div id="sort-warning">정렬 중 · 마우스를 놓으면 반영됩니다.</div>
+
+    <div class="toast-stack" x-data>
+      <template x-for="notice in $store.notice.items" :key="notice.id">
+        <div class="toast" x-transition x-text="notice.message"></div>
+      </template>
+    </div>
+
+    <footer class="footer">
+      Alpine.js v3.15.12 · 코어 기능 및 공식 플러그인 학습용 단일 HTML 샘플<br>
+      현재 파일은 CDN 연결 방식입니다. 버튼이 작동하지 않으면 화면 상단의 로드 오류 안내와 인터넷·CDN 차단 여부를 확인하세요.
+    </footer>
+  </div>
+
+  <!-- 플러그인 → 사용자 등록 코드 → Alpine Core 순서가 중요합니다. -->
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/mask@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/resize@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/anchor@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.15.12/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.15.12/dist/cdn.min.js"></script>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('ui', {
+        dark: Alpine.$persist(false).as('alpine-demo-dark'),
+        compact: Alpine.$persist(false).as('alpine-demo-compact'),
+        toggleTheme() { this.dark = !this.dark },
+        toggleCompact() { this.compact = !this.compact }
+      })
+
+      Alpine.store('cart', {
+        items: 0,
+        add() { this.items++ },
+        remove() { if (this.items > 0) this.items-- },
+        clear() { this.items = 0 }
+      })
+
+      Alpine.store('notice', {
+        items: [],
+        push(message) {
+          const id = Date.now() + Math.random()
+          this.items.push({ id, message })
+          setTimeout(() => this.items = this.items.filter(item => item.id !== id), 2400)
+        }
+      })
+
+      Alpine.magic('timestamp', () => () => new Date().toLocaleTimeString('ko-KR'))
+
+      Alpine.bind('PrimaryAction', () => ({
+        type: 'button',
+        class: 'btn primary',
+        '@click'() { this.handleBoundClick() },
+        ':disabled'() { return this.boundDisabled }
+      }))
+
+      Alpine.data('appShell', () => ({
+        query: '',
+        category: 'all',
+        categories: [
+          { key: 'all', label: '전체' },
+          { key: 'core', label: '코어 문법' },
+          { key: 'state', label: '상태·컴포넌트' },
+          { key: 'event', label: '이벤트·수명주기' },
+          { key: 'magic', label: '매직·전역 API' },
+          { key: 'plugin', label: '공식 플러그인' },
+          { key: 'advanced', label: '고급 기능' }
+        ],
+        matches(tags, cardCategory) {
+          const categoryMatch = this.category === 'all' || this.category === cardCategory
+          const words = this.query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+          const textMatch = words.length === 0 || words.every(word => tags.toLowerCase().includes(word))
+          return categoryMatch && textMatch
+        },
+        setCategory(value) { this.category = value },
+        clearFilters() { this.query = ''; this.category = 'all' },
+        copyText(text) {
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => Alpine.store('notice').push('CDN 코드가 복사됐습니다.'))
+          } else {
+            const area = document.createElement('textarea')
+            area.value = text
+            document.body.appendChild(area)
+            area.select()
+            document.execCommand('copy')
+            area.remove()
+            Alpine.store('notice').push('CDN 코드가 복사됐습니다.')
+          }
+        }
+      }))
+
+      Alpine.data('reusableDropdown', (label = '메뉴 열기') => ({
+        open: false,
+        label,
+        items: ['프로필 보기', '설정 열기', '로그아웃'],
+        toggle() { this.open = !this.open }
+      }))
+
+      Alpine.data('todoDemo', () => ({
+        newTodo: '',
+        filter: 'all',
+        nextId: 4,
+        todos: [
+          { id: 1, text: 'x-data 상태 만들기', done: true },
+          { id: 2, text: 'x-for 목록 렌더링', done: false },
+          { id: 3, text: '필터와 계산 속성 확인', done: false }
+        ],
+        add() {
+          const text = this.newTodo.trim()
+          if (!text) return
+          this.todos.push({ id: this.nextId++, text, done: false })
+          this.newTodo = ''
+        },
+        remove(id) { this.todos = this.todos.filter(todo => todo.id !== id) },
+        get filtered() {
+          if (this.filter === 'active') return this.todos.filter(todo => !todo.done)
+          if (this.filter === 'done') return this.todos.filter(todo => todo.done)
+          return this.todos
+        },
+        get remaining() { return this.todos.filter(todo => !todo.done).length }
+      }))
+
+      Alpine.data('persistDemo', () => ({
+        note: Alpine.$persist('새로고침해도 이 문장은 유지됩니다.').as('alpine-demo-note'),
+        count: Alpine.$persist(0).as('alpine-demo-persist-count')
+      }))
+
+      Alpine.data('morphDemo', () => ({
+        message: '이 입력값을 바꾼 뒤 Morph를 실행해 보세요.',
+        runMorph() {
+          const el = this.$refs.target
+          Alpine.morph(el, `
+            <div x-ref="target" class="demo-panel">
+              <div class="pill ok">서버 응답을 가정한 새 HTML 적용 완료</div>
+              <div class="field" style="margin-top:10px">
+                <label>보존되는 Alpine 상태</label>
+                <input type="text" x-model="message">
+              </div>
+              <div class="result">현재 상태: <strong x-text="message"></strong></div>
+              <p class="small muted">새 노드가 추가됐지만 입력 상태는 유지됩니다.</p>
+            </div>
+          `)
+        }
+      }))
+
+      Alpine.data('asyncDemo', () => ({
+        loading: false,
+        result: '아직 실행하지 않음',
+        async load() {
+          this.loading = true
+          this.result = await new Promise(resolve => setTimeout(() => resolve('비동기 작업 완료 · ' + new Date().toLocaleTimeString('ko-KR')), 900))
+          this.loading = false
+        },
+        async label() {
+          return await new Promise(resolve => setTimeout(() => resolve('await로 받은 비동기 라벨'), 400))
+        }
+      }))
+    })
+  </script>
+
+  <script>
+    window.setTimeout(() => {
+      const errorBox = document.getElementById('alpine-load-error')
+      if (!window.Alpine && errorBox) errorBox.classList.add('show')
+    }, 2500)
+    document.addEventListener('alpine:initialized', () => {
+      const errorBox = document.getElementById('alpine-load-error')
+      if (errorBox) errorBox.classList.remove('show')
+    })
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+</body>
+</html>
