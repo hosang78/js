@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>CodeMirror 6 종합 기능 샘플</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --text: #142033;
+      --muted: #66758a;
+      --line: #dbe3ee;
+      --brand: #2563eb;
+      --brand-2: #1d4ed8;
+      --brand-soft: #eaf1ff;
+      --success: #0f9f6e;
+      --warning: #b7791f;
+      --danger: #dc3545;
+      --shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 0 0, rgba(37, 99, 235, 0.09), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, select, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: 0.5; }
+    .app { width: min(1540px, calc(100% - 28px)); margin: 18px auto 50px; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      gap: 22px;
+      align-items: center;
+      padding: 26px 28px;
+      color: #fff;
+      background: linear-gradient(125deg, #111c35 0%, #1e3a8a 58%, #2563eb 100%);
+      border-radius: 22px;
+      box-shadow: 0 20px 44px rgba(30, 58, 138, 0.22);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      border: 56px solid rgba(255,255,255,.07);
+      border-radius: 50%;
+      right: -130px;
+      top: -190px;
+    }
+    .hero-copy { position: relative; z-index: 1; }
+    .eyebrow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border: 1px solid rgba(255,255,255,.24);
+      background: rgba(255,255,255,.10);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    h1 { margin: 0; font-size: clamp(25px, 3vw, 40px); letter-spacing: -.04em; }
+    .hero p { max-width: 780px; margin: 10px 0 0; color: #dbeafe; line-height: 1.65; }
+    .hero-stats {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(90px, 1fr));
+      gap: 10px;
+      min-width: 260px;
+    }
+    .hero-stat {
+      padding: 13px 14px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 13px;
+      backdrop-filter: blur(8px);
+    }
+    .hero-stat b { display: block; font-size: 22px; }
+    .hero-stat span { color: #bfdbfe; font-size: 12px; }
+
+    .notice {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 14px 2px;
+      padding: 11px 14px;
+      color: #6b4d0e;
+      background: #fff8df;
+      border: 1px solid #f4d879;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      margin: 14px 0;
+      padding: 6px;
+      background: rgba(255,255,255,.76);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(15,23,42,.05);
+      scrollbar-width: thin;
+    }
+    .tab-btn {
+      border: 0;
+      padding: 10px 15px;
+      white-space: nowrap;
+      color: var(--muted);
+      background: transparent;
+      border-radius: 9px;
+      font-weight: 750;
+    }
+    .tab-btn.active { color: #fff; background: var(--brand); box-shadow: 0 5px 14px rgba(37,99,235,.25); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .sidebar { position: sticky; top: 12px; padding: 18px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 12px;
+      font-size: 15px;
+      letter-spacing: -.02em;
+    }
+    .control-group { margin-bottom: 16px; }
+    .control-group:last-child { margin-bottom: 0; }
+    .label { display: block; margin: 0 0 6px; color: var(--muted); font-size: 12px; font-weight: 750; }
+    select, input[type="number"], input[type="text"], input[type="search"] {
+      width: 100%;
+      height: 39px;
+      padding: 0 11px;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .inline-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .switch-list { display: grid; gap: 4px; }
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 35px;
+      padding: 5px 2px;
+      color: #344258;
+      font-size: 13px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 23px;
+      flex: 0 0 auto;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #cbd5e1;
+      border-radius: 999px;
+      transition: .18s ease;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 17px;
+      height: 17px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(15,23,42,.24);
+      transition: .18s ease;
+    }
+    .switch input:checked + .slider { background: var(--brand); }
+    .switch input:checked + .slider::before { transform: translateX(19px); }
+    .side-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 12px; }
+
+    .editor-card { overflow: hidden; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      background: var(--panel-2);
+      border-bottom: 1px solid var(--line);
+    }
+    .toolbar .spacer { flex: 1 1 auto; }
+    .btn {
+      min-height: 35px;
+      padding: 7px 10px;
+      color: #334155;
+      background: #fff;
+      border: 1px solid #d7e0ec;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #9eb4d1; background: #f8fbff; }
+    .btn.primary { color: #fff; background: var(--brand); border-color: var(--brand); }
+    .btn.primary:hover { background: var(--brand-2); }
+    .btn.danger { color: #b42335; border-color: #efc5cb; background: #fff7f8; }
+    .btn.icon { width: 35px; padding: 0; font-size: 15px; }
+    .btn.wide { width: 100%; }
+
+    .editor-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); min-height: 620px; }
+    .editor-pane { min-width: 0; border-right: 1px solid var(--line); background: #fff; }
+    #editor { min-height: 580px; }
+    .preview-pane { display: flex; min-width: 0; flex-direction: column; background: #f8fafc; }
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 40px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    #previewFrame { flex: 1; width: 100%; min-height: 400px; border: 0; background: #fff; }
+    #previewText { flex: 1; overflow: auto; margin: 0; padding: 15px; color: #27364a; background: #fff; font: 13px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+    .hidden { display: none !important; }
+    .statusbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      min-height: 36px;
+      padding: 7px 12px;
+      color: #58677c;
+      background: var(--panel-2);
+      border-top: 1px solid var(--line);
+      font-size: 11px;
+    }
+    .statusbar b { color: #25344a; }
+    .save-state { margin-left: auto; color: var(--success); font-weight: 800; }
+
+    .cm-editor { height: var(--editor-height, 580px); font-family: "D2Coding", "JetBrains Mono", Consolas, "Courier New", monospace; }
+    .cm-scroller { overflow: auto; }
+    .cm-focused { outline: none !important; }
+    .cm-tooltip { z-index: 50; }
+    .cm-tooltip-autocomplete > ul { max-height: 260px !important; }
+    .cm-breakpoint-gutter .cm-gutterElement { width: 14px; padding: 0 2px; cursor: pointer; }
+    .cm-breakpoint-marker::after { content: ""; display: block; width: 8px; height: 8px; margin: auto; border-radius: 50%; background: #e11d48; box-shadow: 0 0 0 2px rgba(225,29,72,.15); }
+    .cm-todo-mark { color: #9a3412 !important; background: #ffedd5; border-radius: 3px; font-weight: 800; }
+    .cm-fixme-mark { color: #991b1b !important; background: #fee2e2; border-radius: 3px; font-weight: 800; }
+    .cm-hover-info { min-width: 190px; max-width: 310px; padding: 9px 11px; color: #e5eefc; background: #172033; border: 1px solid #334155; border-radius: 8px; box-shadow: 0 10px 24px rgba(15,23,42,.25); font: 12px/1.55 system-ui, sans-serif; }
+    .cm-hover-info b { color: #93c5fd; }
+
+    .lower-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .mini-card { padding: 16px; }
+    .mini-card h3 { margin: 0 0 10px; font-size: 14px; }
+    .feature-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip { padding: 6px 9px; color: #334155; background: #f1f5f9; border: 1px solid #dbe3ee; border-radius: 999px; font-size: 11px; font-weight: 750; }
+    .event-log { height: 172px; overflow: auto; margin: 0; padding: 11px; color: #cbd5e1; background: #111827; border-radius: 10px; font: 11px/1.55 ui-monospace, monospace; white-space: pre-wrap; }
+
+    .full-card { padding: 18px; }
+    .full-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .full-head h2 { margin: 0; font-size: 19px; }
+    .full-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .merge-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    #mergeHost { min-height: 560px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
+    .cm-mergeView { height: 560px; overflow: auto; }
+    .cm-mergeViewEditors { height: 100%; }
+    .cm-mergeViewEditor { min-width: 0; }
+    .merge-status { margin-top: 9px; color: var(--muted); font-size: 12px; }
+
+    #readonlyEditor { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; }
+    #readonlyEditor .cm-editor { height: 500px; }
+
+    .api-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    .api-card { padding: 15px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; }
+    .api-card code { color: var(--brand-2); font-weight: 800; }
+    .api-card p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .api-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .state-view { height: 310px; overflow: auto; margin: 0; padding: 14px; color: #dbeafe; background: #0f172a; border-radius: 11px; font: 12px/1.6 ui-monospace, monospace; }
+    .api-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .shortcut-table { width: 100%; border-collapse: collapse; }
+    .shortcut-table th, .shortcut-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; font-size: 13px; }
+    .shortcut-table th { color: #4b5c72; background: #f8fafc; }
+    kbd { display: inline-block; min-width: 24px; padding: 3px 6px; color: #24334a; background: #fff; border: 1px solid #cfd8e5; border-bottom-width: 2px; border-radius: 5px; font: 11px ui-monospace, monospace; text-align: center; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: min(14vh, 130px);
+      background: rgba(15,23,42,.55);
+      backdrop-filter: blur(4px);
+    }
+    .modal.open { display: flex; }
+    .palette { width: min(620px, calc(100% - 28px)); overflow: hidden; background: #fff; border: 1px solid #cbd5e1; border-radius: 14px; box-shadow: 0 28px 80px rgba(15,23,42,.34); }
+    .palette input { height: 50px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0 16px; font-size: 15px; }
+    .palette-list { max-height: 380px; overflow: auto; padding: 7px; }
+    .palette-item { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 12px; color: #26364c; background: transparent; border: 0; border-radius: 8px; text-align: left; }
+    .palette-item:hover, .palette-item.active { background: #edf4ff; }
+    .palette-item small { color: var(--muted); }
+    .toast-wrap { position: fixed; z-index: 1100; right: 18px; bottom: 18px; display: grid; gap: 8px; }
+    .toast { min-width: 220px; max-width: 360px; padding: 11px 13px; color: #fff; background: #172033; border-radius: 10px; box-shadow: 0 12px 30px rgba(15,23,42,.28); font-size: 12px; animation: toastIn .2s ease; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
+    .fullscreen-card { position: fixed !important; inset: 8px !important; z-index: 900 !important; border-radius: 14px !important; }
+    .fullscreen-card .editor-layout { height: calc(100vh - 128px); }
+    .fullscreen-card .cm-editor { height: calc(100vh - 165px); }
+
+    @media (max-width: 1100px) {
+      .workspace { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .sidebar .settings-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .control-group { margin-bottom: 0; }
+      .editor-layout { grid-template-columns: 1fr; }
+      .editor-pane { border-right: 0; border-bottom: 1px solid var(--line); }
+      .preview-pane { min-height: 360px; }
+      .api-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 720px) {
+      .app { width: min(100% - 16px, 1540px); margin-top: 8px; }
+      .hero { padding: 20px; align-items: flex-start; }
+      .hero-stats { display: none; }
+      .sidebar .settings-body { grid-template-columns: 1fr; }
+      .lower-grid, .api-layout { grid-template-columns: 1fr; }
+      .api-grid { grid-template-columns: 1fr; }
+      .toolbar .spacer { display: none; }
+      .btn { flex: 1 0 auto; }
+      .editor-layout { min-height: 520px; }
+      .cm-editor { height: 500px; }
+      .shortcut-table { min-width: 620px; }
+      .table-scroll { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">
+          <span class="badge">CodeMirror 6</span>
+          <span class="badge">ES Modules</span>
+          <span class="badge">MIT License</span>
+        </div>
+        <h1>CodeMirror 종합 기능 플레이그라운드</h1>
+        <p>언어 모드, 동적 재구성, 자동완성, 검색, 코드 접기, 린트, 중단점 거터, 호버 툴팁, 다중 선택, 실시간 미리보기, 읽기 전용 편집기와 Merge View를 한 페이지에서 시험하는 샘플이다.</p>
+      </div>
+      <div class="hero-stats" aria-label="포함 기능 요약">
+        <div class="hero-stat"><b>12</b><span>언어 모드</span></div>
+        <div class="hero-stat"><b>30+</b><span>상호작용 기능</span></div>
+        <div class="hero-stat"><b>2</b><span>테마</span></div>
+        <div class="hero-stat"><b>4</b><span>기능 화면</span></div>
+      </div>
+    </section>
+
+    <div class="notice">
+      <strong>실행 조건</strong>
+      <span>CodeMirror 모듈을 esm.sh CDN에서 불러오므로 최초 실행 시 인터넷 연결이 필요하다. 보안망·폐쇄망 적용 시 사용 패키지를 로컬 파일로 내려받아 import 주소만 교체하면 된다.</span>
+    </div>
+
+    <nav class="tabs" aria-label="기능 화면 선택">
+      <button class="tab-btn active" data-tab="playground">통합 편집기</button>
+      <button class="tab-btn" data-tab="merge">변경 비교 · Merge</button>
+      <button class="tab-btn" data-tab="readonly">읽기 전용</button>
+      <button class="tab-btn" data-tab="api">API · 이벤트</button>
+      <button class="tab-btn" data-tab="shortcuts">단축키</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-playground">
+      <div class="workspace">
+        <aside class="card sidebar">
+          <h2 class="section-title">편집기 설정 <span class="chip">동적 적용</span></h2>
+          <div class="settings-body">
+            <div class="control-group">
+              <label class="label" for="languageSelect">언어 모드</label>
+              <select id="languageSelect">
+                <option value="javascript">JavaScript</option>
+                <option value="typescript">TypeScript</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="json">JSON</option>
+                <option value="markdown">Markdown</option>
+                <option value="python">Python</option>
+                <option value="sql">SQL</option>
+                <option value="xml">XML</option>
+                <option value="yaml">YAML</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+              </select>
+              <button class="btn wide" id="loadSampleBtn" style="margin-top:7px">선택 언어 샘플 불러오기</button>
+            </div>
+
+            <div class="control-group">
+              <div class="inline-controls">
+                <div>
+                  <label class="label" for="themeSelect">테마</label>
+                  <select id="themeSelect"><option value="light">Light</option><option value="dark">One Dark</option></select>
+                </div>
+                <div>
+                  <label class="label" for="fontSize">글자 크기</label>
+                  <input id="fontSize" type="number" min="11" max="24" value="14" />
+                </div>
+              </div>
+              <div class="inline-controls" style="margin-top:8px">
+                <div>
+                  <label class="label" for="tabSize">탭 크기</label>
+                  <select id="tabSize"><option>2</option><option>4</option><option>8</option></select>
+                </div>
+                <div>
+                  <label class="label" for="editorHeight">편집기 높이</label>
+                  <select id="editorHeight"><option value="480">480px</option><option value="580" selected>580px</option><option value="720">720px</option></select>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <span class="label">기능 확장</span>
+              <div class="switch-list">
+                <label class="switch-row">줄 번호 <span class="switch"><input id="lineNumbersToggle" type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row">코드 접기 거터 <span class="switch"><input id="foldToggle" type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row">줄 바꿈 <span class="switch"><input id="wrapToggle" type="checkbox"><span class="slider"></span></span></label>
+                <label class="switch-row">자동완성 <span class="switch"><input id="autocompleteToggle" type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row">커스텀 린트 <span class="switch"><input id="lintToggle" type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row">활성 줄 강조 <span class="switch"><input id="activeLineToggle" type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row">선택어 일치 강조 <span class="switch"><input id="matchToggle" type="checkbox" checked><span class="slider"></span></span></label>
+                <label class="switch-row">공백 문자 표시 <span class="switch"><input id="whitespaceToggle" type="checkbox"><span class="slider"></span></span></label>
+                <label class="switch-row">읽기 전용 <span class="switch"><input id="readonlyToggle" type="checkbox"><span class="slider"></span></span></label>
+                <label class="switch-row">자동 저장 <span class="switch"><input id="autosaveToggle" type="checkbox" checked><span class="slider"></span></span></label>
+              </div>
+            </div>
+          </div>
+          <div class="side-actions">
+            <button class="btn" id="resetSettingsBtn">설정 초기화</button>
+            <button class="btn danger" id="clearStorageBtn">저장값 삭제</button>
+          </div>
+        </aside>
+
+        <div>
+          <section class="card editor-card" id="editorCard">
+            <div class="toolbar">
+              <button class="btn icon" id="newBtn" title="새 문서">＋</button>
+              <button class="btn" id="openBtn">파일 열기</button>
+              <input id="fileInput" type="file" class="hidden" />
+              <button class="btn" id="downloadBtn">다운로드</button>
+              <button class="btn icon" id="undoBtn" title="실행 취소">↶</button>
+              <button class="btn icon" id="redoBtn" title="다시 실행">↷</button>
+              <button class="btn" id="searchBtn">검색</button>
+              <button class="btn" id="gotoBtn">줄 이동</button>
+              <button class="btn" id="commentBtn">주석 전환</button>
+              <button class="btn" id="indentBtn">들여쓰기</button>
+              <button class="btn" id="completeBtn">자동완성</button>
+              <span class="spacer"></span>
+              <button class="btn" id="paletteBtn">명령 팔레트</button>
+              <button class="btn primary" id="runBtn">실행 · 미리보기</button>
+              <button class="btn icon" id="fullscreenBtn" title="전체 화면">⛶</button>
+            </div>
+
+            <div class="editor-layout">
+              <div class="editor-pane"><div id="editor"></div></div>
+              <div class="preview-pane">
+                <div class="pane-head"><span>실행 결과 / 미리보기</span><button class="btn" id="clearPreviewBtn">비우기</button></div>
+                <iframe id="previewFrame" sandbox="allow-scripts" title="코드 실행 미리보기"></iframe>
+                <pre id="previewText" class="hidden">실행 버튼을 누르면 선택한 언어에 맞는 결과가 표시된다.</pre>
+              </div>
+            </div>
+
+            <div class="statusbar">
+              <span><b id="langStatus">JavaScript</b></span>
+              <span>줄 <b id="lineStatus">1</b>, 열 <b id="colStatus">1</b></span>
+              <span>선택 <b id="selectionStatus">0</b></span>
+              <span>줄 <b id="linesStatus">1</b></span>
+              <span>단어 <b id="wordsStatus">0</b></span>
+              <span>문자 <b id="charsStatus">0</b></span>
+              <span>변경 <b id="changesStatus">0</b></span>
+              <span class="save-state" id="saveStatus">저장됨</span>
+            </div>
+          </section>
+
+          <div class="lower-grid">
+            <section class="card mini-card">
+              <h3>포함 기능</h3>
+              <div class="feature-chips">
+                <span class="chip">구문 강조</span><span class="chip">다중 커서</span><span class="chip">사각 선택</span>
+                <span class="chip">괄호 매칭</span><span class="chip">자동 괄호</span><span class="chip">검색·치환</span>
+                <span class="chip">실행 취소 이력</span><span class="chip">코드 접기</span><span class="chip">린트 거터</span>
+                <span class="chip">중단점 거터</span><span class="chip">호버 툴팁</span><span class="chip">TODO 장식</span>
+                <span class="chip">파일 입출력</span><span class="chip">로컬 저장</span><span class="chip">명령 팔레트</span>
+              </div>
+            </section>
+            <section class="card mini-card">
+              <h3>실시간 이벤트 로그</h3>
+              <pre class="event-log" id="eventLog"></pre>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-merge">
+      <div class="card full-card">
+        <div class="full-head">
+          <div><h2>Side-by-side Merge View</h2><p>두 문서의 변경 구간, 인라인 차이, 변경 거터, 접힌 동일 구간과 되돌리기 컨트롤을 확인한다.</p></div>
+          <span class="chip">@codemirror/merge</span>
+        </div>
+        <div class="merge-toolbar">
+          <button class="btn" id="mergeResetBtn">비교 샘플 초기화</button>
+          <button class="btn" id="mergeSwapBtn">A ↔ B 교환</button>
+          <label class="switch-row" style="padding:0 4px">차이 강조 <span class="switch"><input id="mergeHighlight" type="checkbox" checked><span class="slider"></span></span></label>
+          <label class="switch-row" style="padding:0 4px">변경 거터 <span class="switch"><input id="mergeGutter" type="checkbox" checked><span class="slider"></span></span></label>
+          <label class="switch-row" style="padding:0 4px">동일 구간 접기 <span class="switch"><input id="mergeCollapse" type="checkbox" checked><span class="slider"></span></span></label>
+          <select id="mergeDirection" style="width:auto; min-width:150px"><option value="a-to-b">A → B 되돌리기</option><option value="b-to-a">B → A 되돌리기</option></select>
+        </div>
+        <div id="mergeHost"></div>
+        <div class="merge-status">변경 청크: <b id="mergeChunks">0</b> · 가운데 화살표를 누르면 선택 방향으로 변경 내용을 반영할 수 있다.</div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-readonly">
+      <div class="card full-card">
+        <div class="full-head">
+          <div><h2>읽기 전용 편집기</h2><p>선택·검색·복사는 허용하면서 문서 변경만 차단하는 구성 예시다.</p></div>
+          <button class="btn" id="copyReadonlyBtn">전체 복사</button>
+        </div>
+        <div id="readonlyEditor"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-api">
+      <div class="card full-card">
+        <div class="full-head"><div><h2>상태·트랜잭션·확장 API</h2><p>메인 편집기의 현재 상태를 확인하고 API 호출 예시를 직접 실행한다.</p></div></div>
+        <div class="api-grid">
+          <div class="api-card"><code>EditorState</code><p>문서, 선택 영역, Facet, StateField를 보관하는 불변 상태 객체</p></div>
+          <div class="api-card"><code>Transaction</code><p>문서 변경, 선택 변경, 효과를 하나의 상태 전이로 전달하는 단위</p></div>
+          <div class="api-card"><code>Compartment</code><p>편집기를 다시 만들지 않고 언어·테마·옵션을 재구성하는 확장 구획</p></div>
+          <div class="api-card"><code>ViewPlugin</code><p>DOM 장식, 이벤트 반응, 툴팁 등 화면 동작을 추가하는 확장 방식</p></div>
+        </div>
+        <div class="api-layout">
+          <section>
+            <h3 class="section-title">현재 상태 JSON <button class="btn" id="refreshStateBtn">새로고침</button></h3>
+            <pre class="state-view" id="stateView"></pre>
+          </section>
+          <section>
+            <h3 class="section-title">API 실행</h3>
+            <div class="api-actions">
+              <button class="btn" id="insertTimeBtn">현재 시각 삽입</button>
+              <button class="btn" id="uppercaseBtn">선택 영역 대문자</button>
+              <button class="btn" id="multiCursorBtn">다중 커서 생성</button>
+              <button class="btn" id="selectAllBtn">전체 선택</button>
+              <button class="btn" id="scrollCenterBtn">마지막 줄 중앙 이동</button>
+              <button class="btn" id="focusEditorBtn">메인 편집기 포커스</button>
+              <button class="btn" id="clearBreakpointsBtn">중단점 모두 제거</button>
+              <button class="btn" id="exportStateBtn">상태 JSON 저장</button>
+            </div>
+            <h3 class="section-title" style="margin-top:16px">최근 이벤트</h3>
+            <pre class="event-log" id="apiEventLog" style="height:186px"></pre>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-shortcuts">
+      <div class="card full-card">
+        <div class="full-head"><div><h2>주요 단축키</h2><p>운영체제와 브라우저에 따라 Ctrl 대신 Cmd가 적용될 수 있다.</p></div></div>
+        <div class="table-scroll">
+          <table class="shortcut-table">
+            <thead><tr><th>기능</th><th>단축키</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>검색 / 치환</td><td><kbd>Ctrl</kbd> + <kbd>F</kbd> / <kbd>Ctrl</kbd> + <kbd>H</kbd></td><td>검색 패널 열기 및 치환 모드</td></tr>
+              <tr><td>다음 검색 결과</td><td><kbd>F3</kbd></td><td>다음 일치 항목으로 이동</td></tr>
+              <tr><td>줄 이동</td><td><kbd>Alt</kbd> + <kbd>G</kbd></td><td>지정한 줄 번호로 이동</td></tr>
+              <tr><td>자동완성</td><td><kbd>Ctrl</kbd> + <kbd>Space</kbd></td><td>현재 위치의 완성 목록 표시</td></tr>
+              <tr><td>실행 취소 / 다시 실행</td><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>편집 이력 이동</td></tr>
+              <tr><td>줄 주석</td><td><kbd>Ctrl</kbd> + <kbd>/</kbd></td><td>언어별 주석 토큰 사용</td></tr>
+              <tr><td>들여쓰기</td><td><kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd></td><td>선택 영역 들여쓰기·내어쓰기</td></tr>
+              <tr><td>코드 접기</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd></td><td>현재 구문 블록 접기</td></tr>
+              <tr><td>다중 선택</td><td><kbd>Ctrl</kbd> + 클릭</td><td>여러 커서 또는 선택 영역 생성</td></tr>
+              <tr><td>사각 선택</td><td><kbd>Alt</kbd> + 드래그</td><td>열 기준 직사각형 선택</td></tr>
+              <tr><td>명령 팔레트</td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd></td><td>이 샘플 페이지의 기능 명령 검색</td></tr>
+              <tr><td>실행</td><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>현재 언어에 맞는 미리보기 실행</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="commandModal" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+    <div class="palette">
+      <input id="commandSearch" type="search" placeholder="명령 검색..." autocomplete="off" />
+      <div class="palette-list" id="commandList"></div>
+    </div>
+  </div>
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script type="module">
+    import {
+      EditorState, EditorSelection, Compartment, StateEffect, StateField, RangeSet
+    } from "https://esm.sh/@codemirror/state";
+    import {
+      EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars,
+      drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightActiveLine,
+      highlightTrailingWhitespace, highlightWhitespace, placeholder, hoverTooltip,
+      Decoration, ViewPlugin, gutter, GutterMarker
+    } from "https://esm.sh/@codemirror/view";
+    import {
+      defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, selectAll,
+      toggleComment, indentSelection
+    } from "https://esm.sh/@codemirror/commands";
+    import {
+      searchKeymap, highlightSelectionMatches, openSearchPanel, gotoLine
+    } from "https://esm.sh/@codemirror/search";
+    import {
+      defaultHighlightStyle, syntaxHighlighting, bracketMatching, foldGutter, foldKeymap,
+      indentOnInput, indentUnit
+    } from "https://esm.sh/@codemirror/language";
+    import {
+      autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap,
+      snippetCompletion, startCompletion
+    } from "https://esm.sh/@codemirror/autocomplete";
+    import {
+      linter, lintKeymap, lintGutter, forceLinting
+    } from "https://esm.sh/@codemirror/lint";
+    import { oneDark } from "https://esm.sh/@codemirror/theme-one-dark";
+    import { javascript } from "https://esm.sh/@codemirror/lang-javascript";
+    import { MergeView } from "https://esm.sh/@codemirror/merge";
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+    const samples = {
+      javascript: `// CodeMirror 6 JavaScript 샘플\nconst members = [\n  { name: "해오름수협", score: 91 },\n  { name: "바다수협", score: 84 },\n  { name: "푸른수협", score: 96 }\n];\n\nfunction rankMembers(items) {\n  // TODO: 동점 처리 기준 추가\n  return [...items]\n    .filter(item => item.score >= 85)\n    .sort((a, b) => b.score - a.score)\n    .map((item, index) => ({ ...item, rank: index + 1 }));\n}\n\nconsole.table(rankMembers(members));\nconsole.log("CodeMirror 종합 샘플 실행 완료");`,
+      typescript: `interface Member {\n  id: number;\n  name: string;\n  active: boolean;\n}\n\nconst members: Member[] = [\n  { id: 1, name: "해오름수협", active: true },\n  { id: 2, name: "바다수협", active: false }\n];\n\nfunction activeNames(list: Member[]): string[] {\n  return list.filter(item => item.active).map(item => item.name);\n}\n\nconsole.log(activeNames(members));`,
+      html: `<!DOCTYPE html>\n<html lang="ko">\n<head>\n  <meta charset="UTF-8">\n  <style>\n    body { font-family: system-ui; padding: 28px; background: #f1f5f9; }\n    .card { max-width: 480px; padding: 24px; background: white; border-radius: 16px; box-shadow: 0 10px 30px #94a3b844; }\n    button { padding: 10px 16px; color: white; background: #2563eb; border: 0; border-radius: 8px; }\n  </style>\n</head>\n<body>\n  <section class="card">\n    <h1>수산 업무 대시보드</h1>\n    <p id="message">HTML 미리보기 기능을 시험해 보세요.</p>\n    <button onclick="document.querySelector('#message').textContent='버튼이 정상 작동했습니다.'">실행</button>\n  </section>\n</body>\n</html>`,
+      css: `:root {\n  --ocean: #0f4c81;\n  --foam: #e0f2fe;\n}\n\n.demo-card {\n  max-width: 460px;\n  margin: 40px auto;\n  padding: 28px;\n  color: #0f172a;\n  background: linear-gradient(145deg, white, var(--foam));\n  border: 1px solid #bae6fd;\n  border-radius: 18px;\n  box-shadow: 0 18px 40px rgba(15, 76, 129, .16);\n}\n\n.demo-card button {\n  padding: 10px 16px;\n  color: white;\n  background: var(--ocean);\n  border: 0;\n  border-radius: 8px;\n}`,
+      json: `{
+  "organization": "수협",
+  "project": "CodeMirror 기능 검증",
+  "features": ["syntax", "autocomplete", "lint", "merge"],
+  "active": true,
+  "progress": 87,
+  "owner": {
+    "department": "ICT전략실",
+    "priority": "high"
+  }
+}`,
+      markdown: `# CodeMirror 6 기능 확인\n\n## 핵심 기능\n\n- **구문 강조**와 언어 전환\n- 자동완성, 검색, 코드 접기\n- 린트 진단과 Merge View\n\n> Markdown은 간단한 내장 미리보기 렌더러로 표시한다.\n\n### 작업 예시\n\n1. 언어 모드 변경\n2. 편집기 옵션 전환\n3. 파일 다운로드\n\n\`Ctrl + Space\`로 자동완성 목록을 열 수 있다.`,
+      python: `from dataclasses import dataclass\n\n@dataclass\nclass Member:\n    name: str\n    score: int\n\ndef top_members(items: list[Member]) -> list[Member]:\n    # TODO: 평가 연도 필터 추가\n    return sorted(\n        (item for item in items if item.score >= 85),\n        key=lambda item: item.score,\n        reverse=True,\n    )\n\nmembers = [Member("해오름수협", 91), Member("바다수협", 84)]\nprint(top_members(members))`,
+      sql: `-- 회원조합별 처리 실적 집계\nWITH monthly_result AS (\n  SELECT\n    cooperative_id,\n    strftime('%Y-%m', processed_at) AS month,\n    COUNT(*) AS task_count,\n    AVG(process_minutes) AS avg_minutes\n  FROM work_log\n  WHERE processed_at >= date('now', '-6 months')\n  GROUP BY cooperative_id, month\n)\nSELECT c.name, m.month, m.task_count, ROUND(m.avg_minutes, 1) AS avg_minutes\nFROM monthly_result m\nJOIN cooperative c ON c.id = m.cooperative_id\nORDER BY m.month DESC, m.task_count DESC;`,
+      xml: `<?xml version="1.0" encoding="UTF-8"?>\n<cooperatives updated="2026-07-13">\n  <cooperative id="001" active="true">\n    <name>해오름수협</name>\n    <region>동해</region>\n    <members>1250</members>\n  </cooperative>\n  <cooperative id="002" active="false">\n    <name>바다수협</name>\n    <region>남해</region>\n    <members>830</members>\n  </cooperative>\n</cooperatives>`,
+      yaml: `project: CodeMirror 종합 샘플\nversion: 6\nenvironment: browser\nfeatures:\n  - syntax-highlighting\n  - autocompletion\n  - lint\n  - merge-view\nsettings:\n  theme: light\n  tabSize: 2\n  autosave: true\ncontacts:\n  owner: ICT전략실\n  status: active`,
+      java: `import java.util.List;\n\npublic class CooperativeReport {\n    record Member(String name, int score) {}\n\n    public static List<Member> topMembers(List<Member> items) {\n        return items.stream()\n            .filter(item -> item.score() >= 85)\n            .sorted((a, b) -> Integer.compare(b.score(), a.score()))\n            .toList();\n    }\n\n    public static void main(String[] args) {\n        var members = List.of(new Member("해오름수협", 91), new Member("바다수협", 84));\n        System.out.println(topMembers(members));\n    }\n}`,
+      cpp: `#include <algorithm>\n#include <iostream>\n#include <string>\n#include <vector>\n\nstruct Member {\n    std::string name;\n    int score;\n};\n\nint main() {\n    std::vector<Member> members = {{"해오름수협", 91}, {"바다수협", 84}};\n    std::sort(members.begin(), members.end(), [](const auto& a, const auto& b) {\n        return a.score > b.score;\n    });\n    for (const auto& member : members) {\n        std::cout << member.name << ": " << member.score << '\\n';\n    }\n}`
+    };
+
+    const languageLabels = {
+      javascript: "JavaScript", typescript: "TypeScript", html: "HTML", css: "CSS",
+      json: "JSON", markdown: "Markdown", python: "Python", sql: "SQL", xml: "XML",
+      yaml: "YAML", java: "Java", cpp: "C++"
+    };
+    const fileExtensions = {
+      javascript: "js", typescript: "ts", html: "html", css: "css", json: "json",
+      markdown: "md", python: "py", sql: "sql", xml: "xml", yaml: "yaml", java: "java", cpp: "cpp"
+    };
+    const extensionToLanguage = {
+      js: "javascript", mjs: "javascript", cjs: "javascript", jsx: "javascript",
+      ts: "typescript", tsx: "typescript", html: "html", htm: "html", css: "css",
+      json: "json", md: "markdown", markdown: "markdown", py: "python", sql: "sql",
+      xml: "xml", svg: "xml", yaml: "yaml", yml: "yaml", java: "java", cpp: "cpp", cc: "cpp", hpp: "cpp"
+    };
+
+    const languageCompartment = new Compartment();
+    const themeCompartment = new Compartment();
+    const lineNumberCompartment = new Compartment();
+    const foldCompartment = new Compartment();
+    const wrappingCompartment = new Compartment();
+    const autocompleteCompartment = new Compartment();
+    const lintCompartment = new Compartment();
+    const activeLineCompartment = new Compartment();
+    const selectionMatchCompartment = new Compartment();
+    const whitespaceCompartment = new Compartment();
+    const readOnlyCompartment = new Compartment();
+    const tabCompartment = new Compartment();
+    const fontCompartment = new Compartment();
+
+    let currentLanguage = "javascript";
+    let currentLanguageExtension = javascript({ jsx: true });
+    let changeCount = 0;
+    let saveTimer = null;
+    let mergeView = null;
+    let readonlyView = null;
+    let docsByLanguage = { javascript: localStorage.getItem("cm6-doc-javascript") || samples.javascript };
+    const eventEntries = [];
+
+    const lightEditorTheme = EditorView.theme({
+      "&": { backgroundColor: "#ffffff", color: "#1e293b" },
+      ".cm-content": { caretColor: "#2563eb", padding: "10px 0" },
+      ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#2563eb" },
+      "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "#cfe0ff" },
+      ".cm-activeLine": { backgroundColor: "#f4f7fb" },
+      ".cm-activeLineGutter": { backgroundColor: "#eaf1fb", color: "#1d4ed8" },
+      ".cm-gutters": { backgroundColor: "#f8fafc", color: "#8694a8", borderRight: "1px solid #e2e8f0" },
+      ".cm-foldPlaceholder": { backgroundColor: "#e2e8f0", border: "0", color: "#475569" },
+      ".cm-searchMatch": { backgroundColor: "#fde68a88" },
+      ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "#fb923c88" }
+    }, { dark: false });
+
+    const koreanPhrases = EditorState.phrases.of({
+      "Find": "찾기", "Replace": "바꾸기", "next": "다음", "previous": "이전",
+      "all": "모두", "match case": "대소문자 구분", "by word": "단어 단위",
+      "close": "닫기", "replaced $ matches": "$개 바꿈", "replaced match on line $": "$줄의 일치 항목 바꿈",
+      "on line": "줄", "Go to line": "줄 이동", "Folded lines": "접힌 줄", "Unfolded lines": "펼친 줄"
+    });
+
+    const completionOptions = [
+      snippetCompletion("function ${name}(${params}) {\n\t${}\n}", { label: "function", detail: "함수 스니펫", type: "function" }),
+      snippetCompletion("const ${name} = (${params}) => {\n\t${}\n};", { label: "arrow", detail: "화살표 함수", type: "function" }),
+      snippetCompletion("try {\n\t${}\n} catch (error) {\n\tconsole.error(error);\n}", { label: "trycatch", detail: "예외 처리", type: "keyword" }),
+      snippetCompletion("fetch(\"${url}\")\n\t.then(response => response.json())\n\t.then(data => console.log(data));", { label: "fetch", detail: "Fetch API", type: "function" }),
+      { label: "수협업무", detail: "커스텀 용어", type: "text", apply: "수협 업무 자동화" },
+      { label: "console.table", detail: "표 형태 콘솔 출력", type: "function", apply: "console.table()" },
+      { label: "TODO", detail: "할 일 표시", type: "keyword", apply: "TODO: " },
+      { label: "FIXME", detail: "수정 필요 표시", type: "keyword", apply: "FIXME: " }
+    ];
+
+    function customCompletionSource(context) {
+      const word = context.matchBefore(/[\w가-힣.-]*/);
+      if (!context.explicit && (!word || word.from === word.to)) return null;
+      return { from: word ? word.from : context.pos, options: completionOptions, validFor: /^[\w가-힣.-]*$/ };
+    }
+
+    const customCompletionLanguageData = EditorState.languageData.of(() => [{ autocomplete: customCompletionSource }]);
+    const customAutocomplete = autocompletion({
+      activateOnTyping: true,
+      closeOnBlur: false,
+      maxRenderedOptions: 80,
+      defaultKeymap: true
+    });
+
+    function diagnosticsFor(view) {
+      const diagnostics = [];
+      const text = view.state.doc.toString();
+      const language = currentLanguage;
+      let match;
+      const trailing = /[ \t]+$/gm;
+      while ((match = trailing.exec(text))) {
+        diagnostics.push({ from: match.index, to: match.index + match[0].length, severity: "warning", message: "줄 끝의 불필요한 공백" });
+      }
+      const todo = /\b(TODO|FIXME)\b/g;
+      while ((match = todo.exec(text))) {
+        diagnostics.push({ from: match.index, to: match.index + match[0].length, severity: match[0] === "FIXME" ? "error" : "info", message: match[0] === "FIXME" ? "수정이 필요한 코드" : "추후 처리할 작업" });
+      }
+      if (["javascript", "typescript"].includes(language)) {
+        const varRegex = /\bvar\b/g;
+        while ((match = varRegex.exec(text))) diagnostics.push({ from: match.index, to: match.index + 3, severity: "warning", message: "var 대신 let 또는 const 사용 권장" });
+        const evalRegex = /\beval\s*\(/g;
+        while ((match = evalRegex.exec(text))) diagnostics.push({ from: match.index, to: match.index + 4, severity: "error", message: "eval 사용은 보안상 권장되지 않음" });
+      }
+      if (language === "json" && text.trim()) {
+        try { JSON.parse(text); }
+        catch (error) { diagnostics.push({ from: 0, to: Math.min(1, text.length), severity: "error", message: `JSON 구문 오류: ${error.message}` }); }
+      }
+      return diagnostics;
+    }
+    const customLint = [linter(diagnosticsFor, { delay: 250 }), lintGutter()];
+
+    const breakpointEffect = StateEffect.define({ map: (value, mapping) => ({ pos: mapping.mapPos(value.pos), on: value.on }) });
+    const clearBreakpointsEffect = StateEffect.define();
+    const breakpointMarker = new class extends GutterMarker {
+      toDOM() { const el = document.createElement("span"); el.className = "cm-breakpoint-marker"; return el; }
+    }();
+    const breakpointState = StateField.define({
+      create() { return RangeSet.empty; },
+      update(set, transaction) {
+        set = set.map(transaction.changes);
+        for (const effect of transaction.effects) {
+          if (effect.is(clearBreakpointsEffect)) set = RangeSet.empty;
+          if (effect.is(breakpointEffect)) {
+            set = effect.value.on
+              ? set.update({ add: [breakpointMarker.range(effect.value.pos)] })
+              : set.update({ filter: from => from !== effect.value.pos });
+          }
+        }
+        return set;
+      }
+    });
+    function toggleBreakpoint(view, pos) {
+      const set = view.state.field(breakpointState);
+      let exists = false;
+      set.between(pos, pos, () => { exists = true; });
+      view.dispatch({ effects: breakpointEffect.of({ pos, on: !exists }) });
+      logEvent(`중단점 ${exists ? "해제" : "설정"}: ${view.state.doc.lineAt(pos).number}줄`);
+    }
+    const breakpointGutter = [
+      breakpointState,
+      gutter({
+        class: "cm-breakpoint-gutter",
+        markers: view => view.state.field(breakpointState),
+        initialSpacer: () => breakpointMarker,
+        domEventHandlers: { mousedown(view, line) { toggleBreakpoint(view, line.from); return true; } }
+      })
+    ];
+
+    function buildKeywordDecorations(view) {
+      const ranges = [];
+      for (const visible of view.visibleRanges) {
+        const text = view.state.doc.sliceString(visible.from, visible.to);
+        const regex = /\b(TODO|FIXME)\b/g;
+        let match;
+        while ((match = regex.exec(text))) {
+          ranges.push(Decoration.mark({ class: match[0] === "TODO" ? "cm-todo-mark" : "cm-fixme-mark" }).range(visible.from + match.index, visible.from + match.index + match[0].length));
+        }
+      }
+      return Decoration.set(ranges, true);
+    }
+    const keywordDecorationPlugin = ViewPlugin.fromClass(class {
+      constructor(view) { this.decorations = buildKeywordDecorations(view); }
+      update(update) { if (update.docChanged || update.viewportChanged) this.decorations = buildKeywordDecorations(update.view); }
+    }, { decorations: value => value.decorations });
+
+    const wordHover = hoverTooltip((view, pos) => {
+      const line = view.state.doc.lineAt(pos);
+      let start = pos, end = pos;
+      while (start > line.from && /[\w가-힣$.-]/.test(view.state.doc.sliceString(start - 1, start))) start--;
+      while (end < line.to && /[\w가-힣$.-]/.test(view.state.doc.sliceString(end, end + 1))) end++;
+      if (start === end) return null;
+      const token = view.state.doc.sliceString(start, end);
+      return {
+        pos: start, end, above: true,
+        create() {
+          const dom = document.createElement("div");
+          dom.className = "cm-hover-info";
+          dom.innerHTML = `<b>${escapeHTML(token)}</b><br>위치: ${line.number}줄 ${start - line.from + 1}열<br>길이: ${token.length}자`;
+          return { dom };
+        }
+      };
+    }, { hoverTime: 350 });
+
+    const updateListener = EditorView.updateListener.of(update => {
+      if (update.docChanged) {
+        changeCount++;
+        docsByLanguage[currentLanguage] = update.state.doc.toString();
+        logEvent(`문서 변경 · 길이 ${update.state.doc.length}자`);
+        if ($("#autosaveToggle").checked) scheduleSave();
+      }
+      if (update.selectionSet) {
+        const main = update.state.selection.main;
+        logEvent(`선택 변경 · ${main.from}~${main.to}`);
+      }
+      if (update.focusChanged) logEvent(update.view.hasFocus ? "편집기 포커스" : "편집기 포커스 해제");
+      updateStatus(update.state);
+    });
+
+    const mainState = EditorState.create({
+      doc: docsByLanguage.javascript,
+      extensions: [
+        koreanPhrases,
+        breakpointGutter,
+        lineNumberCompartment.of([lineNumbers(), highlightActiveLineGutter()]),
+        foldCompartment.of(foldGutter()),
+        highlightSpecialChars(), history(), drawSelection(), dropCursor(),
+        EditorState.allowMultipleSelections.of(true), rectangularSelection(), crosshairCursor(),
+        indentOnInput(), syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        bracketMatching(), closeBrackets(),
+        languageCompartment.of(currentLanguageExtension),
+        themeCompartment.of(lightEditorTheme),
+        wrappingCompartment.of([]),
+        autocompleteCompartment.of(customAutocomplete),
+        lintCompartment.of(customLint),
+        activeLineCompartment.of(highlightActiveLine()),
+        selectionMatchCompartment.of(highlightSelectionMatches()),
+        whitespaceCompartment.of(highlightTrailingWhitespace()),
+        readOnlyCompartment.of([EditorState.readOnly.of(false), EditorView.editable.of(true)]),
+        tabCompartment.of([EditorState.tabSize.of(2), indentUnit.of("  ")]),
+        fontCompartment.of(EditorView.theme({ "&": { fontSize: "14px" } })),
+        placeholder("코드를 입력하세요..."), customCompletionLanguageData, keywordDecorationPlugin, wordHover,
+        keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, ...completionKeymap, ...lintKeymap, indentWithTab]),
+        updateListener,
+        EditorView.domEventHandlers({
+          keydown(event, view) {
+            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") { event.preventDefault(); runPreview(); return true; }
+            if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "p") { event.preventDefault(); openPalette(); return true; }
+            return false;
+          }
+        })
+      ]
+    });
+    const editorView = new EditorView({ state: mainState, parent: $("#editor") });
+
+    const languageLoaders = {
+      javascript: async () => javascript({ jsx: true }),
+      typescript: async () => javascript({ typescript: true, jsx: true }),
+      html: async () => (await import("https://esm.sh/@codemirror/lang-html")).html({ autoCloseTags: true }),
+      css: async () => (await import("https://esm.sh/@codemirror/lang-css")).css(),
+      json: async () => (await import("https://esm.sh/@codemirror/lang-json")).json(),
+      markdown: async () => (await import("https://esm.sh/@codemirror/lang-markdown")).markdown(),
+      python: async () => (await import("https://esm.sh/@codemirror/lang-python")).python(),
+      sql: async () => (await import("https://esm.sh/@codemirror/lang-sql")).sql(),
+      xml: async () => (await import("https://esm.sh/@codemirror/lang-xml")).xml(),
+      yaml: async () => (await import("https://esm.sh/@codemirror/lang-yaml")).yaml(),
+      java: async () => (await import("https://esm.sh/@codemirror/lang-java")).java(),
+      cpp: async () => (await import("https://esm.sh/@codemirror/lang-cpp")).cpp()
+    };
+
+    async function setLanguage(language, { preserve = true } = {}) {
+      if (!languageLoaders[language]) return;
+      docsByLanguage[currentLanguage] = editorView.state.doc.toString();
+      setSaveStatus("언어 로딩 중...", false);
+      try {
+        const extension = await languageLoaders[language]();
+        const nextDoc = preserve ? (docsByLanguage[language] ?? localStorage.getItem(`cm6-doc-${language}`) ?? samples[language]) : samples[language];
+        currentLanguage = language;
+        currentLanguageExtension = extension;
+        editorView.dispatch({
+          changes: { from: 0, to: editorView.state.doc.length, insert: nextDoc },
+          effects: languageCompartment.reconfigure(extension),
+          selection: { anchor: 0 },
+          scrollIntoView: true
+        });
+        $("#languageSelect").value = language;
+        $("#langStatus").textContent = languageLabels[language];
+        forceLinting(editorView);
+        updateStatus(editorView.state);
+        setSaveStatus("언어 전환 완료", true);
+        logEvent(`언어 전환: ${languageLabels[language]}`);
+        runPreview();
+      } catch (error) {
+        console.error(error);
+        toast(`언어 모듈을 불러오지 못했습니다: ${error.message}`);
+        setSaveStatus("언어 로딩 실패", false);
+      }
+    }
+
+    function replaceDocument(text, { selectStart = true } = {}) {
+      editorView.dispatch({ changes: { from: 0, to: editorView.state.doc.length, insert: text }, selection: selectStart ? { anchor: 0 } : undefined });
+      editorView.focus();
+    }
+
+    function updateStatus(state) {
+      const main = state.selection.main;
+      const line = state.doc.lineAt(main.head);
+      $("#lineStatus").textContent = line.number;
+      $("#colStatus").textContent = main.head - line.from + 1;
+      $("#selectionStatus").textContent = state.selection.ranges.reduce((sum, range) => sum + Math.abs(range.to - range.from), 0).toLocaleString();
+      $("#linesStatus").textContent = state.doc.lines.toLocaleString();
+      const text = state.doc.toString();
+      $("#wordsStatus").textContent = (text.trim().match(/[\p{L}\p{N}_]+/gu) || []).length.toLocaleString();
+      $("#charsStatus").textContent = state.doc.length.toLocaleString();
+      $("#changesStatus").textContent = changeCount.toLocaleString();
+      refreshStateView();
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      setSaveStatus("저장 중...", false);
+      saveTimer = setTimeout(() => {
+        localStorage.setItem(`cm6-doc-${currentLanguage}`, editorView.state.doc.toString());
+        localStorage.setItem("cm6-last-language", currentLanguage);
+        setSaveStatus("자동 저장됨", true);
+      }, 450);
+    }
+    function setSaveStatus(text, ok) {
+      const el = $("#saveStatus");
+      el.textContent = text;
+      el.style.color = ok ? "var(--success)" : "var(--warning)";
+    }
+
+    function logEvent(message) {
+      const time = new Date().toLocaleTimeString("ko-KR", { hour12: false });
+      eventEntries.unshift(`[${time}] ${message}`);
+      if (eventEntries.length > 80) eventEntries.length = 80;
+      const text = eventEntries.join("\n");
+      $("#eventLog").textContent = text;
+      $("#apiEventLog").textContent = text;
+    }
+
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
+    }
+
+    function renderMarkdown(source) {
+      let html = escapeHTML(source);
+      html = html.replace(/^######\s+(.+)$/gm, "<h6>$1</h6>")
+        .replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>")
+        .replace(/^####\s+(.+)$/gm, "<h4>$1</h4>")
+        .replace(/^###\s+(.+)$/gm, "<h3>$1</h3>")
+        .replace(/^##\s+(.+)$/gm, "<h2>$1</h2>")
+        .replace(/^#\s+(.+)$/gm, "<h1>$1</h1>")
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/^&gt;\s+(.+)$/gm, "<blockquote>$1</blockquote>")
+        .replace(/^[-*]\s+(.+)$/gm, "<li>$1</li>")
+        .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
+        .replace(/\n{2,}/g, "</p><p>")
+        .replace(/\n/g, "<br>");
+      return `<!doctype html><meta charset="utf-8"><style>body{font:15px/1.7 system-ui;padding:24px;color:#1e293b}h1,h2,h3{line-height:1.3}code{padding:2px 5px;background:#eef2ff;border-radius:5px;color:#3730a3}blockquote{margin:14px 0;padding:8px 14px;border-left:4px solid #60a5fa;background:#eff6ff}li{margin:5px 0}</style><p>${html}</p>`;
+    }
+
+    function showFrame(srcdoc) {
+      $("#previewText").classList.add("hidden");
+      $("#previewFrame").classList.remove("hidden");
+      $("#previewFrame").srcdoc = srcdoc;
+    }
+    function showText(text) {
+      $("#previewFrame").classList.add("hidden");
+      $("#previewText").classList.remove("hidden");
+      $("#previewText").textContent = text;
+    }
+
+    function runPreview() {
+      const code = editorView.state.doc.toString();
+      logEvent(`미리보기 실행: ${languageLabels[currentLanguage]}`);
+      if (currentLanguage === "html") {
+        showFrame(code);
+      } else if (currentLanguage === "markdown") {
+        showFrame(renderMarkdown(code));
+      } else if (currentLanguage === "css") {
+        showFrame(`<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui;background:#f8fafc;padding:20px}${code}</style><section class="demo-card"><h1>CSS 미리보기</h1><p>현재 편집기의 CSS가 이 카드에 적용된다.</p><button>샘플 버튼</button></section>`);
+      } else if (currentLanguage === "json") {
+        try { showText(JSON.stringify(JSON.parse(code), null, 2)); }
+        catch (error) { showText(`JSON 오류\n\n${error.message}`); }
+      } else if (["javascript", "typescript"].includes(currentLanguage)) {
+        if (currentLanguage === "typescript") {
+          showText("이 샘플은 TypeScript 컴파일러를 포함하지 않는다. 구문 강조·자동완성·편집 기능은 사용할 수 있으며, 실행하려면 별도 TypeScript 변환 모듈이 필요하다.");
+          return;
+        }
+        const safeCode = code.replace(/<\/script/gi, "<\\/script");
+        showFrame(`<!doctype html><meta charset="utf-8"><style>body{font:13px/1.55 ui-monospace,monospace;background:#0f172a;color:#dbeafe;padding:16px;white-space:pre-wrap}.log{border-bottom:1px solid #27364a;padding:5px 0}.error{color:#fda4af}</style><div id="out"></div><script>const out=document.querySelector('#out');const write=(type,args)=>{const d=document.createElement('div');d.className='log '+type;d.textContent='['+type+'] '+args.map(v=>typeof v==='object'?JSON.stringify(v,null,2):String(v)).join(' ');out.appendChild(d)};['log','info','warn','error','table'].forEach(k=>console[k]=(...args)=>write(k,args));window.onerror=(m,s,l,c,e)=>write('error',[m+' ('+l+':'+c+')']);try{${safeCode}}catch(e){write('error',[e.stack||e.message])}<\/script>`);
+      } else {
+        showText(`${languageLabels[currentLanguage]} 실행 엔진은 포함하지 않았다.\n\n이 화면에서는 해당 언어의 구문 강조, 코드 접기, 괄호 매칭, 검색, 선택, 파일 입출력과 편집 기능을 확인할 수 있다.`);
+      }
+    }
+
+    function refreshStateView() {
+      if (!$("#stateView")) return;
+      const state = editorView.state;
+      const main = state.selection.main;
+      const json = {
+        language: currentLanguage,
+        document: { length: state.doc.length, lines: state.doc.lines, preview: state.doc.sliceString(0, Math.min(180, state.doc.length)) },
+        selection: { anchor: main.anchor, head: main.head, from: main.from, to: main.to, ranges: state.selection.ranges.length },
+        options: {
+          readOnly: state.readOnly,
+          tabSize: state.tabSize,
+          lineWrapping: $("#wrapToggle").checked,
+          autocomplete: $("#autocompleteToggle").checked,
+          lint: $("#lintToggle").checked,
+          theme: $("#themeSelect").value
+        }
+      };
+      $("#stateView").textContent = JSON.stringify(json, null, 2);
+    }
+
+    function toast(message) {
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = message;
+      $("#toastWrap").appendChild(el);
+      setTimeout(() => el.remove(), 2600);
+    }
+
+    function downloadText(filename, text, type = "text/plain;charset=utf-8") {
+      const blob = new Blob([text], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = filename; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); toast("클립보드에 복사했습니다."); }
+      catch { const area = document.createElement("textarea"); area.value = text; document.body.appendChild(area); area.select(); document.execCommand("copy"); area.remove(); toast("클립보드에 복사했습니다."); }
+    }
+
+    function initMergeView() {
+      if (mergeView) return;
+      const a = `function calculatePremium(base, rate) {\n  const premium = base * rate;\n  return Math.round(premium);\n}\n\nconst result = calculatePremium(120000, 0.035);\nconsole.log("보험료:", result);\n\nfunction validateMember(member) {\n  return member && member.id && member.name;\n}`;
+      const b = `function calculatePremium(base, rate, discount = 0) {\n  const premium = base * rate * (1 - discount);\n  return Math.round(premium);\n}\n\nconst result = calculatePremium(120000, 0.035, 0.1);\nconsole.log("할인 보험료:", result);\n\nfunction validateMember(member) {\n  return Boolean(member?.id && member?.name && member?.active);\n}\n\nexport { calculatePremium, validateMember };`;
+      const common = [
+        lineNumbers(), highlightActiveLineGutter(), highlightSpecialChars(), history(), drawSelection(),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }), javascript(), bracketMatching(), closeBrackets(),
+        EditorView.theme({ "&": { fontSize: "13px" } }),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap])
+      ];
+      const chunkListener = EditorView.updateListener.of(() => setTimeout(updateMergeChunks, 0));
+      mergeView = new MergeView({
+        a: { doc: a, extensions: [...common, chunkListener] },
+        b: { doc: b, extensions: [...common, chunkListener] },
+        parent: $("#mergeHost"),
+        highlightChanges: true,
+        gutter: true,
+        collapseUnchanged: { margin: 3, minSize: 4 },
+        revertControls: "a-to-b"
+      });
+      updateMergeChunks();
+      logEvent("Merge View 초기화");
+    }
+    function updateMergeChunks() { if (mergeView) $("#mergeChunks").textContent = mergeView.chunks.length; }
+    function reconfigureMerge() {
+      if (!mergeView) return;
+      mergeView.reconfigure({
+        highlightChanges: $("#mergeHighlight").checked,
+        gutter: $("#mergeGutter").checked,
+        collapseUnchanged: $("#mergeCollapse").checked ? { margin: 3, minSize: 4 } : undefined,
+        revertControls: $("#mergeDirection").value
+      });
+      updateMergeChunks();
+    }
+
+    function initReadonlyEditor() {
+      if (readonlyView) return;
+      readonlyView = new EditorView({
+        doc: `// 읽기 전용 문서\n// 선택, 검색, 코드 접기와 복사는 가능하지만 입력은 차단됩니다.\n\nconst policy = {\n  name: "어업인 안전 지원",\n  target: ["어선원", "양식업 종사자"],\n  active: true\n};\n\nfunction summarize(item) {\n  return \`${'${item.name}'}: ${'${item.target.length}'}개 대상\`;\n}\n\nconsole.log(summarize(policy));`,
+        parent: $("#readonlyEditor"),
+        extensions: [
+          lineNumbers(), foldGutter(), highlightSpecialChars(), drawSelection(),
+          syntaxHighlighting(defaultHighlightStyle, { fallback: true }), javascript(),
+          bracketMatching(), highlightActiveLine(), highlightSelectionMatches(),
+          EditorState.readOnly.of(true), EditorView.editable.of(false),
+          EditorView.theme({ "&": { fontSize: "14px" } }),
+          keymap.of([...searchKeymap, ...foldKeymap])
+        ]
+      });
+    }
+
+    const commands = [
+      { label: "실행 · 미리보기", hint: "Ctrl+Enter", run: runPreview },
+      { label: "언어: JavaScript", hint: "구문 모드 변경", run: () => setLanguage("javascript") },
+      { label: "언어: HTML", hint: "구문 모드 변경", run: () => setLanguage("html") },
+      { label: "언어: JSON", hint: "구문 모드 변경", run: () => setLanguage("json") },
+      { label: "언어: Python", hint: "구문 모드 변경", run: () => setLanguage("python") },
+      { label: "검색 패널 열기", hint: "Ctrl+F", run: () => openSearchPanel(editorView) },
+      { label: "줄 이동", hint: "Alt+G", run: () => gotoLine(editorView) },
+      { label: "자동완성 열기", hint: "Ctrl+Space", run: () => startCompletion(editorView) },
+      { label: "주석 전환", hint: "Ctrl+/", run: () => toggleComment(editorView) },
+      { label: "실행 취소", hint: "Ctrl+Z", run: () => undo(editorView) },
+      { label: "다시 실행", hint: "Ctrl+Y", run: () => redo(editorView) },
+      { label: "코드 다운로드", hint: fileExtensions[currentLanguage], run: () => $("#downloadBtn").click() },
+      { label: "전체 화면 전환", hint: "", run: toggleFullscreen },
+      { label: "다크 테마 전환", hint: "", run: () => { $("#themeSelect").value = $("#themeSelect").value === "dark" ? "light" : "dark"; $("#themeSelect").dispatchEvent(new Event("change")); } }
+    ];
+
+    function renderCommandList(query = "") {
+      const normalized = query.trim().toLowerCase();
+      const list = commands.filter(command => `${command.label} ${command.hint}`.toLowerCase().includes(normalized));
+      $("#commandList").innerHTML = "";
+      list.forEach((command, index) => {
+        const button = document.createElement("button");
+        button.className = `palette-item${index === 0 ? " active" : ""}`;
+        button.innerHTML = `<span>${escapeHTML(command.label)}</span><small>${escapeHTML(command.hint)}</small>`;
+        button.addEventListener("click", () => { closePalette(); command.run(); });
+        $("#commandList").appendChild(button);
+      });
+    }
+    function openPalette() { $("#commandModal").classList.add("open"); $("#commandSearch").value = ""; renderCommandList(); setTimeout(() => $("#commandSearch").focus(), 0); }
+    function closePalette() { $("#commandModal").classList.remove("open"); editorView.focus(); }
+    function toggleFullscreen() { $("#editorCard").classList.toggle("fullscreen-card"); document.body.style.overflow = $("#editorCard").classList.contains("fullscreen-card") ? "hidden" : ""; editorView.requestMeasure(); }
+
+    $$(".tab-btn").forEach(button => button.addEventListener("click", () => {
+      $$(".tab-btn").forEach(item => item.classList.toggle("active", item === button));
+      $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === `tab-${button.dataset.tab}`));
+      if (button.dataset.tab === "merge") initMergeView();
+      if (button.dataset.tab === "readonly") initReadonlyEditor();
+      if (button.dataset.tab === "api") refreshStateView();
+    }));
+
+    $("#languageSelect").addEventListener("change", event => setLanguage(event.target.value));
+    $("#loadSampleBtn").addEventListener("click", () => { docsByLanguage[currentLanguage] = samples[currentLanguage]; replaceDocument(samples[currentLanguage]); runPreview(); toast("샘플 코드를 불러왔습니다."); });
+    $("#themeSelect").addEventListener("change", event => {
+      editorView.dispatch({ effects: themeCompartment.reconfigure(event.target.value === "dark" ? oneDark : lightEditorTheme) });
+      document.documentElement.style.colorScheme = event.target.value === "dark" ? "dark" : "light";
+      logEvent(`테마 변경: ${event.target.value}`); refreshStateView();
+    });
+    $("#fontSize").addEventListener("change", event => editorView.dispatch({ effects: fontCompartment.reconfigure(EditorView.theme({ "&": { fontSize: `${Math.max(11, Math.min(24, Number(event.target.value) || 14))}px` } })) }));
+    $("#tabSize").addEventListener("change", event => {
+      const size = Number(event.target.value);
+      editorView.dispatch({ effects: tabCompartment.reconfigure([EditorState.tabSize.of(size), indentUnit.of(" ".repeat(size))]) });
+      refreshStateView();
+    });
+    $("#editorHeight").addEventListener("change", event => { document.documentElement.style.setProperty("--editor-height", `${event.target.value}px`); editorView.requestMeasure(); });
+    $("#lineNumbersToggle").addEventListener("change", event => editorView.dispatch({ effects: lineNumberCompartment.reconfigure(event.target.checked ? [lineNumbers(), highlightActiveLineGutter()] : []) }));
+    $("#foldToggle").addEventListener("change", event => editorView.dispatch({ effects: foldCompartment.reconfigure(event.target.checked ? foldGutter() : []) }));
+    $("#wrapToggle").addEventListener("change", event => { editorView.dispatch({ effects: wrappingCompartment.reconfigure(event.target.checked ? EditorView.lineWrapping : []) }); refreshStateView(); });
+    $("#autocompleteToggle").addEventListener("change", event => { editorView.dispatch({ effects: autocompleteCompartment.reconfigure(event.target.checked ? customAutocomplete : []) }); refreshStateView(); });
+    $("#lintToggle").addEventListener("change", event => { editorView.dispatch({ effects: lintCompartment.reconfigure(event.target.checked ? customLint : []) }); if (event.target.checked) forceLinting(editorView); refreshStateView(); });
+    $("#activeLineToggle").addEventListener("change", event => editorView.dispatch({ effects: activeLineCompartment.reconfigure(event.target.checked ? highlightActiveLine() : []) }));
+    $("#matchToggle").addEventListener("change", event => editorView.dispatch({ effects: selectionMatchCompartment.reconfigure(event.target.checked ? highlightSelectionMatches() : []) }));
+    $("#whitespaceToggle").addEventListener("change", event => editorView.dispatch({ effects: whitespaceCompartment.reconfigure(event.target.checked ? [highlightWhitespace(), highlightTrailingWhitespace()] : highlightTrailingWhitespace()) }));
+    $("#readonlyToggle").addEventListener("change", event => { editorView.dispatch({ effects: readOnlyCompartment.reconfigure([EditorState.readOnly.of(event.target.checked), EditorView.editable.of(!event.target.checked)]) }); refreshStateView(); });
+    $("#autosaveToggle").addEventListener("change", event => { if (event.target.checked) scheduleSave(); else setSaveStatus("자동 저장 꺼짐", false); });
+
+    $("#newBtn").addEventListener("click", () => { replaceDocument(""); runPreview(); });
+    $("#openBtn").addEventListener("click", () => $("#fileInput").click());
+    $("#fileInput").addEventListener("change", async event => {
+      const file = event.target.files?.[0]; if (!file) return;
+      const ext = file.name.split(".").pop().toLowerCase();
+      const language = extensionToLanguage[ext];
+      const text = await file.text();
+      if (language && language !== currentLanguage) { docsByLanguage[language] = text; await setLanguage(language); }
+      else replaceDocument(text);
+      toast(`${file.name} 파일을 열었습니다.`); runPreview(); event.target.value = "";
+    });
+    $("#downloadBtn").addEventListener("click", () => downloadText(`codemirror_sample.${fileExtensions[currentLanguage]}`, editorView.state.doc.toString()));
+    $("#undoBtn").addEventListener("click", () => undo(editorView));
+    $("#redoBtn").addEventListener("click", () => redo(editorView));
+    $("#searchBtn").addEventListener("click", () => { openSearchPanel(editorView); editorView.focus(); });
+    $("#gotoBtn").addEventListener("click", () => { gotoLine(editorView); editorView.focus(); });
+    $("#commentBtn").addEventListener("click", () => { toggleComment(editorView); editorView.focus(); });
+    $("#indentBtn").addEventListener("click", () => { if (editorView.state.selection.main.empty) editorView.dispatch({ selection: { anchor: 0, head: editorView.state.doc.length } }); indentSelection(editorView); editorView.focus(); });
+    $("#completeBtn").addEventListener("click", () => { startCompletion(editorView); editorView.focus(); });
+    $("#paletteBtn").addEventListener("click", openPalette);
+    $("#runBtn").addEventListener("click", runPreview);
+    $("#fullscreenBtn").addEventListener("click", toggleFullscreen);
+    $("#clearPreviewBtn").addEventListener("click", () => showText("미리보기를 비웠습니다."));
+
+    $("#resetSettingsBtn").addEventListener("click", () => {
+      $("#themeSelect").value = "light"; $("#themeSelect").dispatchEvent(new Event("change"));
+      $("#fontSize").value = 14; $("#fontSize").dispatchEvent(new Event("change"));
+      $("#tabSize").value = 2; $("#tabSize").dispatchEvent(new Event("change"));
+      const defaults = { lineNumbersToggle: true, foldToggle: true, wrapToggle: false, autocompleteToggle: true, lintToggle: true, activeLineToggle: true, matchToggle: true, whitespaceToggle: false, readonlyToggle: false, autosaveToggle: true };
+      Object.entries(defaults).forEach(([id, checked]) => { const el = $(`#${id}`); if (el.checked !== checked) { el.checked = checked; el.dispatchEvent(new Event("change")); } });
+      toast("편집기 설정을 초기화했습니다.");
+    });
+    $("#clearStorageBtn").addEventListener("click", () => {
+      Object.keys(localStorage).filter(key => key.startsWith("cm6-")).forEach(key => localStorage.removeItem(key));
+      docsByLanguage = { javascript: samples.javascript };
+      toast("CodeMirror 샘플 저장값을 삭제했습니다.");
+    });
+
+    ["#mergeHighlight", "#mergeGutter", "#mergeCollapse", "#mergeDirection"].forEach(id => $(id).addEventListener("change", reconfigureMerge));
+    $("#mergeResetBtn").addEventListener("click", () => { if (mergeView) { mergeView.destroy(); mergeView = null; $("#mergeHost").innerHTML = ""; initMergeView(); } });
+    $("#mergeSwapBtn").addEventListener("click", () => {
+      if (!mergeView) return;
+      const a = mergeView.a.state.doc.toString(), b = mergeView.b.state.doc.toString();
+      mergeView.a.dispatch({ changes: { from: 0, to: mergeView.a.state.doc.length, insert: b } });
+      mergeView.b.dispatch({ changes: { from: 0, to: mergeView.b.state.doc.length, insert: a } });
+      updateMergeChunks();
+    });
+    $("#copyReadonlyBtn").addEventListener("click", () => { if (readonlyView) copyText(readonlyView.state.doc.toString()); });
+
+    $("#refreshStateBtn").addEventListener("click", refreshStateView);
+    $("#insertTimeBtn").addEventListener("click", () => editorView.dispatch(editorView.state.replaceSelection(new Date().toISOString())));
+    $("#uppercaseBtn").addEventListener("click", () => {
+      const changes = editorView.state.changeByRange(range => ({ changes: { from: range.from, to: range.to, insert: editorView.state.sliceDoc(range.from, range.to).toUpperCase() }, range: EditorSelection.range(range.from, range.from + (range.to - range.from)) }));
+      editorView.dispatch(changes);
+    });
+    $("#multiCursorBtn").addEventListener("click", () => {
+      const lines = [1, Math.min(3, editorView.state.doc.lines), Math.min(5, editorView.state.doc.lines)];
+      const positions = [...new Set(lines)].map(number => editorView.state.doc.line(number).from);
+      editorView.dispatch({ selection: EditorSelection.create(positions.map(pos => EditorSelection.cursor(pos)), 0) }); editorView.focus();
+    });
+    $("#selectAllBtn").addEventListener("click", () => { selectAll(editorView); editorView.focus(); });
+    $("#scrollCenterBtn").addEventListener("click", () => editorView.dispatch({ effects: EditorView.scrollIntoView(editorView.state.doc.length, { y: "center" }) }));
+    $("#focusEditorBtn").addEventListener("click", () => { $(`.tab-btn[data-tab="playground"]`).click(); setTimeout(() => editorView.focus(), 0); });
+    $("#clearBreakpointsBtn").addEventListener("click", () => editorView.dispatch({ effects: clearBreakpointsEffect.of(null) }));
+    $("#exportStateBtn").addEventListener("click", () => downloadText("codemirror-state.json", $("#stateView").textContent, "application/json;charset=utf-8"));
+
+    $("#commandSearch").addEventListener("input", event => renderCommandList(event.target.value));
+    $("#commandSearch").addEventListener("keydown", event => {
+      if (event.key === "Escape") closePalette();
+      if (event.key === "Enter") { const first = $(".palette-item", $("#commandList")); if (first) first.click(); }
+    });
+    $("#commandModal").addEventListener("mousedown", event => { if (event.target === $("#commandModal")) closePalette(); });
+    document.addEventListener("keydown", event => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "p") { event.preventDefault(); openPalette(); }
+      if (event.key === "Escape" && $("#editorCard").classList.contains("fullscreen-card")) toggleFullscreen();
+    });
+
+    async function restoreLastSession() {
+      const language = localStorage.getItem("cm6-last-language");
+      if (language && language !== "javascript" && languageLoaders[language]) await setLanguage(language);
+      else runPreview();
+    }
+
+    updateStatus(editorView.state);
+    logEvent("CodeMirror 6 편집기 초기화 완료");
+    restoreLastSession();
+    window.__cm6Ready = true;
+  </script>
+  <script>
+    setTimeout(() => {
+      if (!window.__cm6Ready && !document.querySelector("#editor .cm-editor")) {
+        const host = document.getElementById("editor");
+        if (host) host.innerHTML = '<div style="margin:18px;padding:18px;border:1px solid #fecaca;border-radius:12px;background:#fff1f2;color:#9f1239;font:14px/1.6 system-ui"><b>CodeMirror 모듈을 불러오지 못했습니다.</b><br>인터넷 연결 또는 esm.sh CDN 접속 가능 여부를 확인하세요. 폐쇄망에서는 CodeMirror 패키지를 로컬에 배치한 뒤 import 주소를 변경해야 합니다.</div>';
+      }
+    }, 12000);
+  </script>
+</body>
+</html>
