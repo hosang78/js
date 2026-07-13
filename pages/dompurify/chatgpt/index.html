@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>DOMPurify Security Lab — 기능 종합 샘플</title>
+  <style>
+    :root {
+      --ink: #142035;
+      --muted: #667085;
+      --line: #dce3ee;
+      --panel: #ffffff;
+      --canvas: #f5f7fb;
+      --navy: #132b4c;
+      --blue: #1769e0;
+      --cyan: #0e7490;
+      --green: #17803d;
+      --amber: #a75a00;
+      --red: #ba2d3c;
+      --purple: #7441d2;
+      --shadow: 0 14px 40px rgba(24, 43, 73, .09);
+      --radius: 16px;
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    code, pre, textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .app { max-width: 1600px; margin: 0 auto; padding: 24px; }
+    .hero {
+      color: white; border-radius: 22px; padding: 30px; overflow: hidden; position: relative;
+      background: linear-gradient(120deg, #10253f 0%, #174a74 55%, #087991 100%);
+      box-shadow: 0 16px 36px rgba(16, 37, 63, .22);
+    }
+    .hero:after { content: "</>"; position: absolute; right: 28px; bottom: -42px; font: 900 180px/1 ui-monospace, monospace; opacity: .11; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #bfeeff; }
+    .hero h1 { margin: 9px 0 8px; font-size: clamp(29px, 4vw, 46px); line-height: 1.08; letter-spacing: -.045em; }
+    .hero p { max-width: 860px; margin: 0; color: #e4f2f8; font-size: 15px; line-height: 1.65; }
+    .hero-bottom { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 22px; position: relative; z-index: 1; }
+    .badge { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 750; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.12); }
+    .status { padding: 9px 12px; border-radius: 9px; margin: 18px 0; font-size: 13px; border: 1px solid; background: #fff; }
+    .status.ok { border-color: #b8e2c5; color: #11652e; background: #f0fbf3; }
+    .status.warn { border-color: #f2d29e; color: #7d4600; background: #fff8e8; }
+    .status.error { border-color: #f1bec6; color: #8c1e2c; background: #fff3f5; }
+    .feature-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+    .feature { padding: 13px 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 4px 12px rgba(20,32,53,.035); }
+    .feature b { display: block; font-size: 12px; margin-bottom: 4px; }
+    .feature span { color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; }
+    .toolbar .grow { flex: 1; min-width: 0; }
+    .btn { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 9px; padding: 9px 12px; font-size: 13px; font-weight: 750; transition: .16s ease; }
+    .btn:hover { border-color: #9eb8d9; transform: translateY(-1px); }
+    .btn.primary { color: white; background: var(--blue); border-color: var(--blue); }
+    .btn.primary:hover { background: #095ac5; }
+    .btn.danger { color: #8f1f2c; border-color: #efc4ca; background: #fff7f8; }
+    .btn.subtle { color: var(--cyan); background: #effbfe; border-color: #bee9f0; }
+    .btn.small { padding: 6px 9px; font-size: 12px; }
+    .layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 16px; align-items: start; }
+    .panel { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: var(--radius); }
+    .config-panel { position: sticky; top: 14px; overflow: hidden; }
+    .panel-head { padding: 17px 18px 13px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0 0 4px; font-size: 16px; letter-spacing: -.02em; }
+    .panel-head p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .config-body { max-height: calc(100vh - 180px); overflow: auto; padding: 9px 0 16px; }
+    .section-label { padding: 13px 18px 7px; color: #436079; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .control { padding: 7px 18px; }
+    .control label.row { display: flex; gap: 9px; align-items: flex-start; cursor: pointer; }
+    .control input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--blue); margin: 1px 0 0; flex: none; }
+    .control strong { display: block; font-size: 12px; line-height: 1.3; }
+    .control .help { display: block; color: var(--muted); font-size: 10.5px; line-height: 1.4; margin-top: 2px; }
+    .control select, .control input[type="text"] { width: 100%; border: 1px solid var(--line); background: white; border-radius: 8px; padding: 8px 9px; font-size: 12px; color: var(--ink); }
+    .control .input-label { display: block; font-size: 11px; font-weight: 800; margin-bottom: 5px; }
+    .inline-note { margin: 8px 18px 0; padding: 8px 9px; border-left: 3px solid #e5ad45; border-radius: 4px; background: #fff8e7; color: #6d490f; font-size: 10.5px; line-height: 1.45; }
+    .main-grid { display: grid; gap: 16px; }
+    .workspace { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(340px, 1fr); gap: 16px; }
+    .work-card { overflow: hidden; }
+    .card-title { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 15px 17px 10px; }
+    .card-title h2 { font-size: 15px; margin: 0; letter-spacing: -.02em; }
+    .card-title span { font-size: 11px; color: var(--muted); }
+    textarea.code-input { display: block; width: calc(100% - 28px); height: 390px; margin: 0 14px 14px; resize: vertical; outline: none; border: 1px solid #cfd9e8; border-radius: 11px; background: #0e1a2b; color: #d8f0ff; padding: 16px; font-size: 12.5px; line-height: 1.65; tab-size: 2; }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 14px 14px; }
+    .chip { border: 1px solid #d6e0eb; color: #3c536b; background: #f8fbfd; padding: 5px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 750; }
+    .chip.good { border-color: #b8e2c5; background: #f0fbf3; color: #176c37; }
+    .chip.warn { border-color: #f3d49c; background: #fff9e9; color: #915512; }
+    .chip.red { border-color: #f0c4ca; background: #fff6f7; color: #9d2533; }
+    .output { padding: 0 14px 14px; }
+    .output pre { white-space: pre-wrap; word-break: break-word; min-height: 184px; max-height: 300px; overflow: auto; margin: 0; border: 1px solid #dae2ef; border-radius: 11px; padding: 14px; background: #f7f9fc; color: #26384d; font-size: 12px; line-height: 1.65; }
+    .preview-wrap { padding: 0 14px 14px; }
+    .preview { min-height: 124px; overflow: auto; border: 1px dashed #b9c8da; border-radius: 11px; background: #fff; padding: 14px; line-height: 1.55; color: #1c2a3a; }
+    .preview a { color: #075fb9; }
+    .preview img { max-width: 160px; height: auto; border-radius: 6px; }
+    .audit-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; }
+    .audit-list { margin: 0; max-height: 250px; overflow: auto; padding: 13px; list-style: none; border: 1px solid #f0d7dc; border-radius: 11px; background: #fff8f9; }
+    .audit-list li { border-bottom: 1px solid #f3e1e5; padding: 8px 2px; color: #7b2c38; font: 11px/1.45 ui-monospace, monospace; }
+    .audit-list li:last-child { border: 0; }
+    .audit-list .empty { color: #4b6653; font-family: inherit; }
+    .hook-log { min-height: 210px; max-height: 250px; overflow: auto; margin: 0; padding: 13px; border: 1px solid #d8d2ef; border-radius: 11px; background: #faf9ff; color: #554579; font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
+    .code-sample { margin: 0; max-height: 280px; overflow: auto; padding: 14px; border-radius: 11px; background: #101d31; color: #d8efff; font-size: 11px; line-height: 1.65; white-space: pre-wrap; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; padding: 14px; }
+    .metric { border: 1px solid var(--line); border-radius: 11px; padding: 13px; background: #fbfcfe; }
+    .metric .n { font-size: 23px; font-weight: 900; letter-spacing: -.05em; }
+    .metric .l { margin-top: 3px; font-size: 10.5px; color: var(--muted); }
+    .info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px; }
+    .info { padding: 13px; border: 1px solid var(--line); border-radius: 11px; }
+    .info b { display: block; margin-bottom: 7px; font-size: 12px; }
+    .info p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .callout { display: flex; gap: 10px; padding: 12px 14px; margin: 14px; background: #eff8ff; border-left: 4px solid #2582d4; border-radius: 5px; color: #244b70; font-size: 12px; line-height: 1.55; }
+    .hidden { display: none !important; }
+    .footer { padding: 18px 0 0; color: #69788b; font-size: 11px; line-height: 1.55; }
+    .kbd { border: 1px solid #bfcbd9; border-radius: 4px; padding: 1px 5px; background: #fff; font-family: ui-monospace, monospace; color: #48586c; }
+    @media (max-width: 1160px) {
+      .feature-strip { grid-template-columns: repeat(3, 1fr); }
+      .layout { grid-template-columns: 1fr; }
+      .config-panel { position: static; }
+      .config-body { max-height: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+      .config-body > .section-label { grid-column: 1 / -1; }
+      .inline-note { grid-column: 1 / -1; }
+    }
+    @media (max-width: 760px) {
+      .app { padding: 12px; }
+      .hero { padding: 23px; }
+      .feature-strip, .workspace, .audit-grid, .summary-grid, .info-grid, .config-body { grid-template-columns: 1fr; }
+      .config-body > .section-label, .inline-note { grid-column: auto; }
+      textarea.code-input { height: 320px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero" aria-labelledby="title">
+      <div class="eyebrow">Security playground · client-side HTML sanitizer</div>
+      <h1 id="title">DOMPurify Security Lab</h1>
+      <p>신뢰할 수 없는 HTML을 정화하는 DOMPurify의 핵심 API와 고급 설정을 직접 비교하는 단일 페이지 샘플입니다. 모든 미리보기는 정화 결과만 렌더링하며, 링크 이동과 폼 제출은 차단됩니다.</p>
+      <div class="hero-bottom">
+        <span class="badge">DOMPurify <b id="versionBadge">loading…</b></span>
+        <span class="badge">문자열 · DOM · Fragment</span>
+        <span class="badge">Hooks · Custom Elements · Trusted Types</span>
+      </div>
+    </section>
+
+    <div id="libraryStatus" class="status warn" role="status">DOMPurify 라이브러리 로딩 상태 확인 중…</div>
+
+    <section class="feature-strip" aria-label="구현 기능 요약">
+      <div class="feature"><b>01. 기본 정화</b><span>스크립트·이벤트 핸들러·위험 URI 제거</span></div>
+      <div class="feature"><b>02. Profile</b><span>HTML / SVG / MathML 범위 제어</span></div>
+      <div class="feature"><b>03. Allow / Block</b><span>허용·추가·금지 태그와 속성</span></div>
+      <div class="feature"><b>04. DOM 보호</b><span>Clobbering·템플릿·문서 단위 처리</span></div>
+      <div class="feature"><b>05. 확장 API</b><span>Hooks·Custom Elements·In-place</span></div>
+      <div class="feature"><b>06. 반환·감사</b><span>DOM·Fragment·TrustedHTML·removed</span></div>
+    </section>
+
+    <div class="layout">
+      <aside class="panel config-panel" aria-label="DOMPurify 설정 패널">
+        <div class="panel-head">
+          <h2>정화 설정</h2>
+          <p>설정을 바꾸면 실제 <code>sanitize()</code> 호출 인자와 결과가 즉시 갱신됩니다.</p>
+        </div>
+        <div class="config-body">
+          <div class="section-label">정화 범위</div>
+          <div class="control">
+            <label class="input-label" for="profile">USE_PROFILES</label>
+            <select id="profile">
+              <option value="default">기본값 — HTML + SVG + MathML</option>
+              <option value="html">HTML 전용</option>
+              <option value="svg">SVG + SVG Filters 전용</option>
+              <option value="mathsvg">MathML + SVG</option>
+            </select>
+          </div>
+          <div class="control">
+            <label class="input-label" for="returnType">반환 형식</label>
+            <select id="returnType">
+              <option value="string">문자열 (기본)</option>
+              <option value="dom">RETURN_DOM — HTMLBodyElement</option>
+              <option value="fragment">RETURN_DOM_FRAGMENT — DocumentFragment</option>
+              <option value="trusted">RETURN_TRUSTED_TYPE — TrustedHTML 가능 시</option>
+            </select>
+          </div>
+          <div class="control">
+            <label class="row"><input id="wholeDocument" type="checkbox"><span><strong>WHOLE_DOCUMENT</strong><span class="help">html/head/body를 포함한 전체 문서 정화</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="forceBody" type="checkbox"><span><strong>FORCE_BODY</strong><span class="help">브라우저의 head 이동 등 엣지 케이스 대응</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="keepContent" type="checkbox" checked><span><strong>KEEP_CONTENT</strong><span class="help">제거한 요소 내부 텍스트·하위 요소 유지</span></span></label>
+          </div>
+
+          <div class="section-label">목록 정책</div>
+          <div class="control">
+            <label class="input-label" for="allowedTags">ALLOWED_TAGS <span style="font-weight:500;color:#7c8796;">(쉼표 구분, Profile 기본값과 동시 사용하지 않음)</span></label>
+            <input id="allowedTags" type="text" placeholder="예: p, b, a, img" />
+          </div>
+          <div class="control">
+            <label class="input-label" for="allowedAttrs">ALLOWED_ATTR</label>
+            <input id="allowedAttrs" type="text" placeholder="예: href, title, style" />
+          </div>
+          <div class="control">
+            <label class="input-label" for="addTags">ADD_TAGS</label>
+            <input id="addTags" type="text" placeholder="예: mark, dialog" />
+          </div>
+          <div class="control">
+            <label class="input-label" for="addAttrs">ADD_ATTR</label>
+            <input id="addAttrs" type="text" placeholder="예: target, loading" />
+          </div>
+          <div class="control">
+            <label class="input-label" for="forbidTags">FORBID_TAGS</label>
+            <input id="forbidTags" type="text" value="" placeholder="예: style, img" />
+          </div>
+          <div class="control">
+            <label class="input-label" for="forbidAttrs">FORBID_ATTR</label>
+            <input id="forbidAttrs" type="text" value="" placeholder="예: style, id" />
+          </div>
+          <div class="control">
+            <label class="row"><input id="allowData" type="checkbox" checked><span><strong>ALLOW_DATA_ATTR</strong><span class="help">data-* 속성 허용 (기본 true)</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="allowAria" type="checkbox" checked><span><strong>ALLOW_ARIA_ATTR</strong><span class="help">aria-* 속성 허용 (기본 true)</span></span></label>
+          </div>
+
+          <div class="section-label">보호·URI·템플릿</div>
+          <div class="control">
+            <label class="row"><input id="safeTemplates" type="checkbox"><span><strong>SAFE_FOR_TEMPLATES</strong><span class="help">{{…}}, ${…}, &lt;%…%&gt; 패턴 제거</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="namedProps" type="checkbox"><span><strong>SANITIZE_NAMED_PROPS</strong><span class="help">id/name에 user-content- 접두사 부여</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="unknownProtocols" type="checkbox"><span><strong>ALLOW_UNKNOWN_PROTOCOLS</strong><span class="help">비표준 URL 프로토콜 허용 — 운영 환경 주의</span></span></label>
+          </div>
+          <div class="control">
+            <label class="input-label" for="uriMode">ALLOWED_URI_REGEXP 예시</label>
+            <select id="uriMode">
+              <option value="default">기본 DOMPurify URI 정책</option>
+              <option value="httpsOnly">https / mailto / tel 전용</option>
+              <option value="internal">https / 상대경로 / #anchor 전용</option>
+            </select>
+          </div>
+          <div class="inline-note">보안상 기본값을 완화하거나 <code>ADD_*</code>, <code>CUSTOM_ELEMENT_HANDLING</code>을 사용하기 전에는 입력 데이터와 렌더링 맥락을 별도로 검토해야 합니다.</div>
+
+          <div class="section-label">고급 확장</div>
+          <div class="control">
+            <label class="row"><input id="customElements" type="checkbox"><span><strong>CUSTOM_ELEMENT_HANDLING</strong><span class="help">demo-* 태그와 data-demo/title 속성만 허용</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="hookAudit" type="checkbox" checked><span><strong>Hooks 감사 로그</strong><span class="help">uponSanitizeElement / Attribute 기록</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="hardenLinks" type="checkbox" checked><span><strong>링크 보강 Hook</strong><span class="help">target="_blank" 링크에 rel=noopener noreferrer 부여</span></span></label>
+          </div>
+          <div class="control">
+            <label class="row"><input id="inPlace" type="checkbox"><span><strong>IN_PLACE</strong><span class="help">DOM 노드를 복제하지 않고 원본 노드에서 정화</span></span></label>
+          </div>
+        </div>
+      </aside>
+
+      <section class="main-grid">
+        <div class="toolbar" aria-label="데모 명령">
+          <div class="grow"></div>
+          <button class="btn subtle" type="button" id="runButton">▶ 정화 실행 <span class="kbd">Ctrl Enter</span></button>
+          <button class="btn" type="button" id="copyClean">결과 복사</button>
+          <button class="btn" type="button" id="copyConfig">설정 복사</button>
+          <button class="btn danger" type="button" id="resetButton">초기화</button>
+        </div>
+
+        <div class="panel">
+          <div class="card-title"><h2>테스트 프리셋</h2><span>입력값과 핵심 설정을 빠르게 바꿉니다.</span></div>
+          <div class="meta-row" id="presetButtons">
+            <button class="btn small" data-preset="basic">기본 XSS</button>
+            <button class="btn small" data-preset="rich">리치 텍스트</button>
+            <button class="btn small" data-preset="svg">SVG · MathML</button>
+            <button class="btn small" data-preset="templates">템플릿 구문</button>
+            <button class="btn small" data-preset="clobbering">DOM Clobbering</button>
+            <button class="btn small" data-preset="custom">Custom Element</button>
+            <button class="btn small" data-preset="document">Whole Document</button>
+            <button class="btn small" data-preset="inplace">In-place DOM</button>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <article class="panel work-card">
+            <div class="card-title"><h2>① 신뢰할 수 없는 입력</h2><span id="inputLength">0 bytes</span></div>
+            <textarea id="dirtyInput" class="code-input" spellcheck="false" aria-label="정화 전 HTML 입력"></textarea>
+            <div class="meta-row">
+              <span class="chip red">렌더링 금지 · 텍스트로만 보관</span>
+              <span class="chip">HTML / SVG / MathML 입력 가능</span>
+            </div>
+          </article>
+
+          <article class="panel work-card">
+            <div class="card-title"><h2>② 정화된 HTML</h2><span id="returnTypeBadge" class="chip">String</span></div>
+            <div class="output"><pre id="cleanOutput" aria-live="polite"></pre></div>
+            <div class="card-title"><h2>③ 안전 미리보기</h2><span id="durationBadge" class="chip good">0 ms</span></div>
+            <div class="preview-wrap"><div id="preview" class="preview" aria-label="정화 결과 미리보기"></div></div>
+          </article>
+        </div>
+
+        <div class="panel">
+          <div class="summary-grid">
+            <div class="metric"><div class="n" id="removedCount">0</div><div class="l">제거된 요소·속성</div></div>
+            <div class="metric"><div class="n" id="inputBytes">0</div><div class="l">입력 바이트</div></div>
+            <div class="metric"><div class="n" id="outputBytes">0</div><div class="l">출력 바이트</div></div>
+            <div class="metric"><div class="n" id="supportValue">—</div><div class="l">isSupported</div></div>
+          </div>
+        </div>
+
+        <div class="audit-grid">
+          <article class="panel">
+            <div class="card-title"><h2>DOMPurify.removed 감사 목록</h2><span>참고용이며 접근통제 판단에 사용 금지</span></div>
+            <ul id="removedList" class="audit-list"><li class="empty">정화 실행 후 제거 내역이 표시됩니다.</li></ul>
+          </article>
+          <article class="panel">
+            <div class="card-title"><h2>Hook 처리 로그</h2><span>선택된 Hook만 기록</span></div>
+            <pre id="hookLog" class="hook-log">Hook 감사 로그 대기 중…</pre>
+          </article>
+        </div>
+
+        <div class="audit-grid">
+          <article class="panel">
+            <div class="card-title"><h2>실행 코드</h2><span>현재 UI 설정을 반영한 개념 코드</span></div>
+            <div style="padding:0 14px 14px;"><pre id="codeSample" class="code-sample"></pre></div>
+          </article>
+          <article class="panel">
+            <div class="card-title"><h2>Persistent Configuration</h2><span>setConfig / clearConfig</span></div>
+            <div class="callout"><span>ℹ</span><span><code>setConfig()</code> 이후에는 같은 인스턴스의 다음 <code>sanitize()</code> 호출에서 전달 인자가 무시될 수 있습니다. 아래 버튼은 현재 설정을 1회 적용·검증한 뒤 즉시 <code>clearConfig()</code> 합니다.</span></div>
+            <div class="meta-row">
+              <button id="persistentTest" class="btn small" type="button">현재 설정으로 setConfig() 실험</button>
+              <span id="persistentResult" class="chip">대기 중</span>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="card-title"><h2>기능별 활용 포인트</h2><span>데모에서 바로 확인 가능한 API</span></div>
+          <div class="info-grid">
+            <div class="info"><b>허용·차단 정책</b><p><code>USE_PROFILES</code>, <code>ALLOWED_*</code>, <code>ADD_*</code>, <code>FORBID_*</code>로 적용 범위를 최소 권한으로 설계합니다.</p></div>
+            <div class="info"><b>렌더링 전 처리</b><p><code>SAFE_FOR_TEMPLATES</code>, <code>SANITIZE_NAMED_PROPS</code>, <code>WHOLE_DOCUMENT</code>로 템플릿·DOM 이름·문서 단위 맥락을 실험합니다.</p></div>
+            <div class="info"><b>확장과 관찰</b><p><code>addHook</code>으로 감사·정책 보강을 구현하고, <code>removed</code>로 제거 결과를 관찰합니다.</p></div>
+            <div class="info"><b>사용자 정의 요소</b><p><code>CUSTOM_ELEMENT_HANDLING</code>에서 태그·속성 패턴을 좁게 정의하여 컴포넌트 기반 UI와 병행합니다.</p></div>
+            <div class="info"><b>반환 방식</b><p><code>RETURN_DOM</code>, <code>RETURN_DOM_FRAGMENT</code>, <code>RETURN_TRUSTED_TYPE</code>를 비교해 후속 DOM 처리 방식을 선택합니다.</p></div>
+            <div class="info"><b>직접 DOM 정화</b><p><code>IN_PLACE</code> 모드로 노드를 정화해 복사 비용을 줄이는 사용 사례를 확인합니다.</p></div>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <b>운영 주의:</b> 이 페이지는 DOMPurify 기능을 학습·비교하기 위한 클라이언트 측 데모입니다. 서버 측 저장·권한 검증·CSP·Trusted Types 정책·출력 후 변형 방지까지 포함한 다층 방어를 별도로 설계해야 합니다.
+    </footer>
+  </main>
+
+  <!-- 오프라인 사용 시 assets/purify.min.js에 DOMPurify 배포본을 배치합니다. 없으면 아래 CDN으로 대체합니다. -->
+  <script src="assets/purify.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/dompurify@3.4.11/dist/purify.min.js'"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (id) => document.getElementById(id);
+    const dirtyInput = $('dirtyInput');
+    const cleanOutput = $('cleanOutput');
+    const preview = $('preview');
+    const removedList = $('removedList');
+    const hookLog = $('hookLog');
+    const codeSample = $('codeSample');
+    const libraryStatus = $('libraryStatus');
+    const utf8Bytes = (value) => new TextEncoder().encode(value).length;
+    const splitList = (value) => value.split(',').map((item) => item.trim()).filter(Boolean);
+    const esc = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[c]));
+    const format = (obj) => JSON.stringify(obj, null, 2)
+      .replace(/"__REGEX_([^\"]+)__"/g, (_, val) => val);
+
+    const presets = {
+      basic: {
+        input: `<h2>회원조합 게시글</h2>\n<p data-board="notice">정상 <strong>서식</strong>과 <a href="https://example.com">링크</a></p>\n<img src="x" onerror="alert('XSS')" alt="이미지">\n<a href="javascript:alert(1)">위험 링크</a>\n<script>alert('script tag')<\/script>\n<iframe src="https://evil.example"></iframe>`,
+        options: { profile: 'default', safeTemplates: false, namedProps: false, customElements: false, wholeDocument: false, inPlace: false }
+      },
+      rich: {
+        input: `<article class="post">\n  <h2 style="color:teal">오늘의 수산물</h2>\n  <p aria-label="소개" data-category="seafood">문단과 <mark>강조</mark>, <a href="https://example.com" target="_blank">새 창 링크</a></p>\n  <ul><li>광어</li><li>전복</li></ul>\n  <style>body { display:none }</style>\n</article>`,
+        options: { profile: 'html', hardenLinks: true, forbidTags: 'style', inPlace: false }
+      },
+      svg: {
+        input: `<p>HTML 문단</p>\n<svg width="120" height="80" viewBox="0 0 120 80" onload="alert(2)"><circle cx="40" cy="40" r="26" fill="teal"></circle><script>alert(3)<\/script></svg>\n<math><mi>x</mi><mo>=</mo><mn>2</mn><mi xlink:href="data:x,<script>alert(4)<\/script>"></mi></math>`,
+        options: { profile: 'default', inPlace: false }
+      },
+      templates: {
+        input: `<p>환영합니다, {{ user.name }}!</p>\n<div>${'${dangerousExpression}'}</div>\n<span><% serverExpression %></span>\n<script type="text/x-template">{{not_rendered}}<\/script>`,
+        options: { profile: 'html', safeTemplates: true, inPlace: false }
+      },
+      clobbering: {
+        input: `<form id="constructor" name="action"><input name="__proto__" value="pollute"></form>\n<div id="location">이름 충돌 테스트</div>\n<a id="submit" name="cookie" href="https://example.com">링크</a>`,
+        options: { profile: 'html', namedProps: true, inPlace: false }
+      },
+      custom: {
+        input: `<demo-card data-demo="market" title="오늘의 시세" forbidden="x" onclick="alert(1)">\n  <p>사용자 정의 요소 내부 콘텐츠</p>\n</demo-card>\n<other-widget data-demo="remove">삭제 대상</other-widget>`,
+        options: { profile: 'html', customElements: true, inPlace: false }
+      },
+      document: {
+        input: `<!doctype html><html><head><title>제목</title><script>alert('head')<\/script></head><body><h1>전체 문서</h1><p>정상 본문</p><iframe src="https://evil.example"></iframe></body></html>`,
+        options: { profile: 'default', wholeDocument: true, forceBody: true, inPlace: false }
+      },
+      inplace: {
+        input: `<section id="preview-root"><p>원본 DOM 노드에서 정화</p><img src="x" onerror="alert(1)"><a href="javascript:alert(1)">링크</a></section>`,
+        options: { profile: 'html', inPlace: true, inPlace: true }
+      }
+    };
+
+    const controlIds = [
+      'profile', 'returnType', 'wholeDocument', 'forceBody', 'keepContent', 'allowedTags', 'allowedAttrs',
+      'addTags', 'addAttrs', 'forbidTags', 'forbidAttrs', 'allowData', 'allowAria', 'safeTemplates',
+      'namedProps', 'unknownProtocols', 'uriMode', 'customElements', 'hookAudit', 'hardenLinks', 'inPlace'
+    ];
+
+    function setOption(id, value) {
+      const node = $(id);
+      if (!node || value === undefined) return;
+      if (node.type === 'checkbox') node.checked = Boolean(value);
+      else node.value = value;
+    }
+
+    function applyPreset(name) {
+      const preset = presets[name];
+      if (!preset) return;
+      dirtyInput.value = preset.input;
+      const opts = preset.options || {};
+      Object.entries(opts).forEach(([key, val]) => setOption(key, val));
+      if (name === 'rich') setOption('forbidTags', 'style');
+      if (name === 'custom') setOption('customElements', true);
+      if (name === 'document') setOption('wholeDocument', true);
+      if (name === 'inplace') setOption('inPlace', true);
+      run();
+    }
+
+    function selectedConfig() {
+      const config = {
+        KEEP_CONTENT: $('keepContent').checked,
+        ALLOW_DATA_ATTR: $('allowData').checked,
+        ALLOW_ARIA_ATTR: $('allowAria').checked,
+        WHOLE_DOCUMENT: $('wholeDocument').checked,
+        FORCE_BODY: $('forceBody').checked,
+        SANITIZE_DOM: true,
+        SANITIZE_NAMED_PROPS: $('namedProps').checked,
+        SAFE_FOR_TEMPLATES: $('safeTemplates').checked,
+      };
+      const profile = $('profile').value;
+      if (profile === 'html') config.USE_PROFILES = { html: true };
+      if (profile === 'svg') config.USE_PROFILES = { svg: true, svgFilters: true };
+      if (profile === 'mathsvg') config.USE_PROFILES = { mathMl: true, svg: true };
+      const allowedTags = splitList($('allowedTags').value);
+      const allowedAttrs = splitList($('allowedAttrs').value);
+      const addTags = splitList($('addTags').value);
+      const addAttrs = splitList($('addAttrs').value);
+      const forbidTags = splitList($('forbidTags').value);
+      const forbidAttrs = splitList($('forbidAttrs').value);
+      if (allowedTags.length && profile === 'default') config.ALLOWED_TAGS = allowedTags;
+      if (allowedAttrs.length) config.ALLOWED_ATTR = allowedAttrs;
+      if (addTags.length) config.ADD_TAGS = addTags;
+      if (addAttrs.length) config.ADD_ATTR = addAttrs;
+      if (forbidTags.length) config.FORBID_TAGS = forbidTags;
+      if (forbidAttrs.length) config.FORBID_ATTR = forbidAttrs;
+      if ($('unknownProtocols').checked) config.ALLOW_UNKNOWN_PROTOCOLS = true;
+
+      const uriMode = $('uriMode').value;
+      if (uriMode === 'httpsOnly') config.ALLOWED_URI_REGEXP = /^(?:(?:https:|mailto:|tel:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
+      if (uriMode === 'internal') config.ALLOWED_URI_REGEXP = /^(?:(?:https:)|(?:\/|#|\?)[^\s]*$)/i;
+
+      if ($('customElements').checked) {
+        config.CUSTOM_ELEMENT_HANDLING = {
+          tagNameCheck: /^demo-/,
+          attributeNameCheck: /^(data-demo|title)$/,
+          allowCustomizedBuiltInElements: false
+        };
+      }
+      if ($('hardenLinks').checked) {
+        config.ADD_ATTR = Array.from(new Set([...(config.ADD_ATTR || []), 'target']));
+      }
+      const returnType = $('returnType').value;
+      if (returnType === 'dom') config.RETURN_DOM = true;
+      if (returnType === 'fragment') config.RETURN_DOM_FRAGMENT = true;
+      if (returnType === 'trusted') config.RETURN_TRUSTED_TYPE = true;
+      return config;
+    }
+
+    function configForDisplay(config) {
+      const replacer = (key, value) => {
+        if (value instanceof RegExp) return `__REGEX_${value.toString()}__`;
+        if (typeof value === 'function') return `__FUNCTION_${value.toString()}__`;
+        return value;
+      };
+      const plain = JSON.parse(JSON.stringify(config, replacer));
+      const pretty = JSON.stringify(plain, null, 2)
+        .replace(/"__REGEX_(.*?)__"/g, '$1')
+        .replace(/"__FUNCTION_(.*?)__"/g, '$1');
+      return pretty;
+    }
+
+    function describeRemoved(item) {
+      try {
+        if (item.element) {
+          return `요소 제거  <${String(item.element.nodeName || item.element.tagName || 'unknown').toLowerCase()}>`;
+        }
+        if (item.attribute) {
+          const from = item.from && (item.from.nodeName || item.from.tagName) ? String(item.from.nodeName || item.from.tagName).toLowerCase() : '요소';
+          return `속성 제거  ${item.attribute.name || item.attribute.nodeName || String(item.attribute)}  (from <${from}>)`;
+        }
+      } catch (_) { /* best effort only */ }
+      return JSON.stringify(item, (_, value) => (value instanceof Node ? value.nodeName : value));
+    }
+
+    function serializeResult(result) {
+      if (result instanceof DocumentFragment) {
+        const shell = document.createElement('div');
+        shell.append(result.cloneNode(true));
+        return shell.innerHTML;
+      }
+      if (result && result.nodeType === Node.ELEMENT_NODE) return result.outerHTML;
+      return String(result ?? '');
+    }
+
+    function getResultForPreview(result, cleanString) {
+      if (result instanceof DocumentFragment) return result.cloneNode(true);
+      if (result && result.nodeType === Node.ELEMENT_NODE) return result.cloneNode(true);
+      return cleanString;
+    }
+
+    function clearHooks() {
+      if (window.DOMPurify && typeof DOMPurify.removeAllHooks === 'function') DOMPurify.removeAllHooks();
+    }
+
+    function installHooks(hookMessages) {
+      clearHooks();
+      if (!$('hookAudit').checked && !$('hardenLinks').checked) return;
+      if ($('hookAudit').checked) {
+        let elementCount = 0;
+        let attrCount = 0;
+        DOMPurify.addHook('uponSanitizeElement', (node, data) => {
+          if (elementCount++ < 35) hookMessages.push(`element  <${String(node.nodeName).toLowerCase()}>  allowed=${Boolean(data?.allowedTags?.[String(node.nodeName).toLowerCase()])}`);
+        });
+        DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
+          if (attrCount++ < 45) hookMessages.push(`attr     ${data.attrName}="${String(data.attrValue).slice(0, 70)}"  on <${String(node.nodeName).toLowerCase()}>`);
+        });
+      }
+      if ($('hardenLinks').checked) {
+        DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+          if (node.nodeName === 'A' && node.getAttribute('target') === '_blank') {
+            const current = node.getAttribute('rel') || '';
+            const rel = new Set(current.split(/\s+/).filter(Boolean));
+            rel.add('noopener'); rel.add('noreferrer');
+            node.setAttribute('rel', [...rel].join(' '));
+            hookMessages.push(`policy   rel="noopener noreferrer" added to external-tab link`);
+          }
+        });
+      }
+    }
+
+    function renderPreview(value) {
+      preview.replaceChildren();
+      if (value instanceof Node) {
+        preview.append(value);
+      } else {
+        preview.innerHTML = value;
+      }
+    }
+
+    function updateCode(config) {
+      const configText = configForDisplay(config);
+      const usage = $('inPlace').checked
+        ? `const node = document.createElement('div');\nnode.innerHTML = dirty;\nconst clean = DOMPurify.sanitize(node, {\n${configText.split('\n').slice(1, -1).map(l => '  ' + l).join('\n')}\n  IN_PLACE: true\n});`
+        : `const clean = DOMPurify.sanitize(dirty, ${configText});`;
+      codeSample.textContent = `// DOMPurify ${window.DOMPurify?.version || 'not loaded'}\n${usage}\n\n// 결과 타입: ${$('returnType').value}`;
+    }
+
+    function renderAudit(removed) {
+      removedList.replaceChildren();
+      if (!removed.length) {
+        const li = document.createElement('li'); li.className = 'empty'; li.textContent = '제거된 요소·속성이 없습니다.'; removedList.append(li); return;
+      }
+      removed.forEach((item) => {
+        const li = document.createElement('li'); li.textContent = describeRemoved(item); removedList.append(li);
+      });
+    }
+
+    function setStatus(message, type) {
+      libraryStatus.textContent = message;
+      libraryStatus.className = `status ${type}`;
+    }
+
+    function run() {
+      const raw = dirtyInput.value;
+      $('inputLength').textContent = `${utf8Bytes(raw).toLocaleString()} bytes`;
+      $('inputBytes').textContent = utf8Bytes(raw).toLocaleString();
+      if (!window.DOMPurify || !DOMPurify.isSupported) {
+        setStatus('DOMPurify를 불러오지 못했습니다. 온라인 환경에서는 CDN 연결을 확인하고, 오프라인 환경에서는 assets/purify.min.js를 배치하세요.', 'error');
+        cleanOutput.textContent = 'DOMPurify 미로딩';
+        return;
+      }
+      const config = selectedConfig();
+      const hookMessages = [];
+      installHooks(hookMessages);
+      const start = performance.now();
+      let result;
+      try {
+        if ($('inPlace').checked) {
+          const holder = document.createElement('div');
+          holder.innerHTML = raw;
+          result = DOMPurify.sanitize(holder, { ...config, IN_PLACE: true });
+        } else {
+          result = DOMPurify.sanitize(raw, config);
+        }
+      } catch (error) {
+        setStatus(`정화 중 오류: ${error.message}`, 'error');
+        cleanOutput.textContent = error.stack || String(error);
+        return;
+      } finally {
+        clearHooks();
+      }
+      const duration = performance.now() - start;
+      const cleanString = serializeResult(result);
+      const removed = Array.from(DOMPurify.removed || []);
+      const type = result instanceof DocumentFragment ? 'DocumentFragment'
+        : result && result.nodeType === Node.ELEMENT_NODE ? result.constructor.name
+        : (window.trustedTypes && typeof TrustedHTML !== 'undefined' && result instanceof TrustedHTML ? 'TrustedHTML' : typeof result);
+      cleanOutput.textContent = cleanString || '(빈 문자열)';
+      try { renderPreview(getResultForPreview(result, cleanString)); }
+      catch (e) { preview.textContent = `미리보기 렌더링 실패: ${e.message}`; }
+      renderAudit(removed);
+      hookLog.textContent = hookMessages.length ? hookMessages.join('\n') : '활성화된 Hook 로그가 없습니다.';
+      $('removedCount').textContent = removed.length.toLocaleString();
+      $('outputBytes').textContent = utf8Bytes(cleanString).toLocaleString();
+      $('returnTypeBadge').textContent = type;
+      $('durationBadge').textContent = `${duration.toFixed(2)} ms`;
+      $('supportValue').textContent = DOMPurify.isSupported ? 'true' : 'false';
+      updateCode(config);
+      setStatus(`DOMPurify ${DOMPurify.version} 로드 완료 — ${type} 결과 생성, ${removed.length}개 제거 항목 감지`, 'ok');
+    }
+
+    function reset() {
+      $('profile').value = 'default';
+      $('returnType').value = 'string';
+      ['wholeDocument','forceBody','safeTemplates','namedProps','unknownProtocols','customElements','inPlace'].forEach((id) => $(id).checked = false);
+      ['keepContent','allowData','allowAria','hookAudit','hardenLinks'].forEach((id) => $(id).checked = true);
+      ['allowedTags','allowedAttrs','addTags','addAttrs','forbidTags','forbidAttrs'].forEach((id) => $(id).value = '');
+      $('uriMode').value = 'default';
+      applyPreset('basic');
+    }
+
+    function safeCopy(text, label) {
+      navigator.clipboard?.writeText(text).then(() => {
+        setStatus(`${label}을(를) 클립보드에 복사했습니다.`, 'ok');
+      }).catch(() => {
+        setStatus(`클립보드 권한이 없어 복사하지 못했습니다. ${label}을 직접 선택해 복사하세요.`, 'warn');
+      });
+    }
+
+    $('runButton').addEventListener('click', run);
+    $('resetButton').addEventListener('click', reset);
+    $('copyClean').addEventListener('click', () => safeCopy(cleanOutput.textContent, '정화 결과'));
+    $('copyConfig').addEventListener('click', () => safeCopy(configForDisplay(selectedConfig()), '현재 설정'));
+    $('presetButtons').addEventListener('click', (event) => {
+      const name = event.target?.dataset?.preset;
+      if (name) applyPreset(name);
+    });
+    dirtyInput.addEventListener('input', () => {
+      $('inputLength').textContent = `${utf8Bytes(dirtyInput.value).toLocaleString()} bytes`;
+    });
+    controlIds.forEach((id) => $(id).addEventListener('change', run));
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); run(); }
+    });
+    preview.addEventListener('click', (event) => {
+      if (event.target.closest('a')) event.preventDefault();
+    });
+    preview.addEventListener('submit', (event) => event.preventDefault());
+
+    $('persistentTest').addEventListener('click', () => {
+      if (!window.DOMPurify) return;
+      const config = selectedConfig();
+      const label = $('persistentResult');
+      try {
+        clearHooks();
+        DOMPurify.clearConfig();
+        DOMPurify.setConfig(config);
+        const result = DOMPurify.sanitize('<p data-persistent="yes">Persistent 설정 적용 <img src=x onerror=alert(1)></p>');
+        const text = serializeResult(result);
+        DOMPurify.clearConfig();
+        label.textContent = `성공: ${text.length} chars 후 clearConfig()`;
+        label.className = 'chip good';
+      } catch (error) {
+        try { DOMPurify.clearConfig(); } catch (_) {}
+        label.textContent = `실패: ${error.message}`;
+        label.className = 'chip red';
+      }
+    });
+
+    if (window.DOMPurify) {
+      $('versionBadge').textContent = `v${DOMPurify.version}`;
+      setStatus(`DOMPurify v${DOMPurify.version} 로드 완료 — 기본 프리셋을 실행했습니다.`, 'ok');
+      applyPreset('basic');
+    } else {
+      $('versionBadge').textContent = 'not loaded';
+      applyPreset('basic');
+    }
+  })();
+  </script>
+</body>
+</html>
