@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Vega 6 종합 기능 샘플 · 오류 수정판</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: rgba(255,255,255,.92);
+      --panel-solid: #fff;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #dbe3ee;
+      --primary: #3157d5;
+      --primary-2: #6d4de6;
+      --accent: #0f9f84;
+      --danger: #dc3e64;
+      --shadow: 0 16px 40px rgba(30, 48, 88, .09);
+      --radius: 20px;
+      --code: #111827;
+      --code-text: #e5e7eb;
+    }
+    html[data-theme="dark"] {
+      --bg: #0b1020;
+      --panel: rgba(19,27,47,.94);
+      --panel-solid: #131b2f;
+      --text: #e7ecf5;
+      --muted: #9aa9c2;
+      --line: #2c3852;
+      --primary: #7c9cff;
+      --primary-2: #b09bff;
+      --accent: #41d6b5;
+      --danger: #ff7393;
+      --shadow: 0 20px 52px rgba(0,0,0,.28);
+      --code: #070b14;
+      --code-text: #dce6f4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 12% -5%, rgba(109,77,230,.16), transparent 25rem),
+        radial-gradient(circle at 95% 5%, rgba(15,159,132,.12), transparent 22rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+    button, select, input, textarea { font: inherit; }
+    button, select { color: inherit; }
+    .shell { width: min(1580px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 56px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 34px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--panel-solid) 94%, var(--primary) 6%), var(--panel));
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -120px;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(49,87,213,.18), rgba(109,77,230,.08));
+      pointer-events: none;
+    }
+    .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--primary); font-weight: 800; letter-spacing: .06em; font-size: .84rem; text-transform: uppercase; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 16%, transparent); }
+    h1 { margin: 10px 0 6px; font-size: clamp(2rem, 4vw, 4.1rem); line-height: 1.08; letter-spacing: -.055em; }
+    .hero p { max-width: 850px; margin: 0; color: var(--muted); font-size: 1.02rem; }
+    .badges { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
+    .badge { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--panel-solid) 82%, transparent); color: var(--muted); font-size: .84rem; font-weight: 700; }
+    .toolbar {
+      position: sticky;
+      top: 10px;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(230px, 1fr) auto auto auto;
+      gap: 10px;
+      margin: 18px 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--panel-solid) 90%, transparent);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 28px rgba(28, 45, 81, .08);
+    }
+    .search-wrap { position: relative; }
+    .search-wrap span { position: absolute; left: 13px; top: 50%; translate: 0 -50%; color: var(--muted); }
+    input[type="search"] { width: 100%; padding: 10px 12px 10px 38px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-solid); color: var(--text); outline: none; }
+    input[type="search"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent); }
+    .btn, select {
+      min-height: 42px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-solid);
+      cursor: pointer;
+      font-weight: 750;
+    }
+    .btn:hover, select:hover { border-color: color-mix(in srgb, var(--primary) 58%, var(--line)); }
+    .btn.primary { border-color: transparent; color: white; background: linear-gradient(135deg, #3157d5, #6d4de6); }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .summary { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 8px 26px rgba(30,48,88,.05); }
+    .summary strong { display: block; font-size: 1.55rem; letter-spacing: -.04em; }
+    .summary span { color: var(--muted); font-size: .88rem; }
+    .feature-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 14px; scrollbar-width: thin; }
+    .feature-chip { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--panel); font-size: .8rem; font-weight: 700; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 12px 34px rgba(25, 44, 83, .06);
+      overflow: hidden;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .card.full { grid-column: 1 / -1; }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 18px 18px 10px; }
+    .card-index { color: var(--primary); font-size: .78rem; font-weight: 850; letter-spacing: .08em; }
+    .card h2 { margin: 2px 0 3px; font-size: 1.18rem; letter-spacing: -.025em; }
+    .card-desc { margin: 0; color: var(--muted); font-size: .86rem; }
+    .card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    .icon-btn { min-width: 36px; min-height: 34px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-solid); color: var(--muted); cursor: pointer; font-size: .78rem; font-weight: 800; }
+    .icon-btn:hover { color: var(--primary); border-color: var(--primary); }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 18px 8px; }
+    .tag { padding: 4px 7px; border-radius: 7px; background: color-mix(in srgb, var(--primary) 9%, transparent); color: var(--primary); font-size: .72rem; font-weight: 800; }
+    .viz-area { position: relative; min-height: 320px; margin: 0 10px 10px; padding: 10px 8px 6px; border-top: 1px solid var(--line); overflow-x: auto; }
+    .viz { min-width: 280px; min-height: 270px; }
+    .signal-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; min-height: 10px; padding: 0 18px 14px; color: var(--muted); font-size: .8rem; }
+    .signal-controls:empty { display: none; }
+    .signal-controls .vega-bind { display: inline-flex; align-items: center; gap: 6px; }
+    .signal-controls input[type="range"] { width: 110px; accent-color: var(--primary); }
+    .signal-controls select, .signal-controls input { min-height: 30px; padding: 3px 7px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--text); }
+    .error { margin: 18px; padding: 13px; border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--danger) 8%, transparent); color: var(--danger); font-size: .86rem; white-space: pre-wrap; }
+    .loading { display: grid; place-items: center; min-height: 270px; color: var(--muted); }
+    .loading::before { content: ""; width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; margin-right: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .playground { margin-top: 18px; padding: 20px; border: 1px solid var(--line); border-radius: 22px; background: var(--panel); box-shadow: var(--shadow); }
+    .playground-head { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 12px; }
+    .playground h2 { margin: 0; font-size: 1.35rem; }
+    .playground p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+    .playground-grid { display: grid; grid-template-columns: minmax(300px, .95fr) minmax(320px, 1.05fr); gap: 14px; }
+    textarea { width: 100%; min-height: 510px; resize: vertical; padding: 14px; border: 1px solid var(--line); border-radius: 14px; outline: none; background: var(--code); color: var(--code-text); font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; tab-size: 2; }
+    textarea:focus { border-color: var(--primary); }
+    .playground-output { min-height: 510px; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-solid); overflow: auto; }
+    .playground-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .status { color: var(--muted); font-size: .8rem; align-self: center; }
+    .tooltip {
+      position: fixed;
+      z-index: 1000;
+      max-width: 310px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(12px, 12px);
+      padding: 9px 11px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 10px;
+      background: rgba(15,23,42,.94);
+      color: white;
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
+      font-size: 12px;
+      white-space: pre-line;
+      transition: opacity .08s ease;
+    }
+    .tooltip.show { opacity: 1; }
+    dialog { width: min(930px, calc(100% - 24px)); max-height: 88vh; padding: 0; border: 1px solid var(--line); border-radius: 18px; background: var(--panel-solid); color: var(--text); box-shadow: 0 28px 80px rgba(0,0,0,.35); }
+    dialog::backdrop { background: rgba(5,10,20,.65); backdrop-filter: blur(4px); }
+    .dialog-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+    .dialog-head h3 { margin: 0; }
+    .dialog-body { padding: 14px; }
+    .dialog-body pre { max-height: 65vh; overflow: auto; margin: 0; padding: 14px; border-radius: 12px; background: var(--code); color: var(--code-text); font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+    footer { padding: 24px 6px 0; color: var(--muted); text-align: center; font-size: .82rem; }
+    .hidden { display: none !important; }
+    @media (max-width: 1050px) {
+      .grid { grid-template-columns: 1fr; }
+      .card.full { grid-column: auto; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .playground-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 16px, 1580px); padding-top: 8px; }
+      .hero { padding: 24px 19px; border-radius: 22px; }
+      .toolbar { position: static; grid-template-columns: 1fr 1fr; }
+      .search-wrap { grid-column: 1 / -1; }
+      .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .summary { padding: 13px; }
+      .card-head { flex-direction: column; }
+      .card-actions { justify-content: flex-start; }
+      .viz-area { min-height: 300px; }
+    }
+  </style>
+  <!-- Vega v6.2.0. 사내망 환경에서는 이 파일을 내려받아 같은 경로에 두고 src를 ./vega.min.js로 변경하면 됩니다. -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@6.2.0/build/vega.min.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow"><span class="dot"></span> Vega Visualization Grammar</div>
+      <h1>Vega 6 종합 기능 샘플</h1>
+      <p>순수 Vega JSON 사양으로 구현한 차트·변환·신호·이벤트·계층·네트워크·지리 시각화 모음입니다. 각 카드에서 사양 확인, PNG/SVG 내보내기, Canvas/SVG 렌더러 전환을 직접 시험할 수 있습니다.</p>
+      <div class="badges">
+        <span class="badge">Vega 6.2.0</span><span class="badge">순수 Vega 사양</span><span class="badge">인라인 샘플 데이터</span><span class="badge">반응형 크기 조정</span><span class="badge">PNG · SVG Export</span><span class="badge">JSON Playground</span>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <label class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="차트명·기능 검색 (예: force, bin, 지도)" /></label>
+      <select id="renderer" title="렌더러 선택"><option value="canvas">Canvas</option><option value="svg">SVG</option></select>
+      <button class="btn" id="themeBtn" type="button">다크 모드</button>
+      <button class="btn primary" id="rerenderBtn" type="button">전체 다시 그리기</button>
+    </div>
+
+    <section class="summary-grid">
+      <div class="summary"><strong id="chartCount">15</strong><span>독립 Vega 예제</span></div>
+      <div class="summary"><strong>20+</strong><span>데이터 변환·레이아웃</span></div>
+      <div class="summary"><strong>8</strong><span>그래픽 마크 유형</span></div>
+      <div class="summary"><strong>2</strong><span>Canvas / SVG 렌더러</span></div>
+    </section>
+
+    <div class="feature-strip" aria-label="포함 기능">
+      <span class="feature-chip">signals</span><span class="feature-chip">event streams</span><span class="feature-chip">scales</span><span class="feature-chip">axes</span><span class="feature-chip">legends</span><span class="feature-chip">filter</span><span class="feature-chip">formula</span><span class="feature-chip">aggregate</span><span class="feature-chip">window</span><span class="feature-chip">bin</span><span class="feature-chip">stack</span><span class="feature-chip">pie</span><span class="feature-chip">stratify</span><span class="feature-chip">treemap</span><span class="feature-chip">partition</span><span class="feature-chip">force</span><span class="feature-chip">linkpath</span><span class="feature-chip">wordcloud</span><span class="feature-chip">projection</span><span class="feature-chip">geoshape</span><span class="feature-chip">facet / group</span><span class="feature-chip">View API</span>
+    </div>
+
+    <main id="chartGrid" class="grid"></main>
+
+    <section class="playground">
+      <div class="playground-head">
+        <div><h2>Vega JSON 플레이그라운드</h2><p>왼쪽 사양을 수정하고 실행하면 오른쪽에서 즉시 다시 렌더링됩니다.</p></div>
+      </div>
+      <div class="playground-grid">
+        <div>
+          <textarea id="editor" spellcheck="false" aria-label="Vega JSON 사양 편집기"></textarea>
+          <div class="playground-controls">
+            <button class="btn primary" id="runEditor" type="button">사양 실행</button>
+            <button class="btn" id="formatEditor" type="button">JSON 정렬</button>
+            <button class="btn" id="resetEditor" type="button">기본값 복원</button>
+            <span class="status" id="editorStatus">준비됨</span>
+          </div>
+        </div>
+        <div>
+          <div id="editorViz" class="playground-output"></div>
+          <div id="editorSignals" class="signal-controls"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>오류 수정판 · 샘플 데이터는 기능 시연용 가상 데이터입니다. 네트워크 접속이 제한된 환경에서는 Vega 배포 파일을 로컬로 저장해 사용하십시오.</footer>
+  </div>
+
+  <div id="tooltip" class="tooltip" role="tooltip"></div>
+  <dialog id="specDialog">
+    <div class="dialog-head"><h3 id="dialogTitle">Vega 사양</h3><div><button class="btn" id="copySpec" type="button">복사</button> <button class="btn" id="closeDialog" type="button">닫기</button></div></div>
+    <div class="dialog-body"><pre id="dialogCode"></pre></div>
+  </dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const SCHEMA = 'https://vega.github.io/schema/vega/v6.json';
+  const tooltip = document.getElementById('tooltip');
+  const views = new Map();
+  let editorView = null;
+  let currentDialogSpec = '';
+  let renderer = 'canvas';
+  let dark = false;
+
+  const axisConfig = () => ({
+    labelColor: dark ? '#aebbd0' : '#64748b',
+    titleColor: dark ? '#dce5f3' : '#334155',
+    domainColor: dark ? '#43506a' : '#cbd5e1',
+    tickColor: dark ? '#43506a' : '#cbd5e1',
+    gridColor: dark ? '#27334a' : '#e7edf5',
+    labelFont: 'Pretendard, Noto Sans KR, sans-serif',
+    titleFont: 'Pretendard, Noto Sans KR, sans-serif',
+    labelFontSize: 11,
+    titleFontSize: 12
+  });
+
+  const withBase = (spec) => ({
+    $schema: SCHEMA,
+    background: 'transparent',
+    padding: spec.padding ?? {left: 8, right: 14, top: 12, bottom: 8},
+    autosize: spec.autosize ?? {type: 'fit', contains: 'padding', resize: true},
+    ...spec,
+    config: {
+      axis: axisConfig(),
+      legend: {
+        labelColor: dark ? '#aebbd0' : '#64748b',
+        titleColor: dark ? '#dce5f3' : '#334155',
+        labelFont: 'Pretendard, Noto Sans KR, sans-serif',
+        titleFont: 'Pretendard, Noto Sans KR, sans-serif'
+      },
+      text: {font: 'Pretendard, Noto Sans KR, sans-serif'},
+      title: {font: 'Pretendard, Noto Sans KR, sans-serif', color: dark ? '#e7ecf5' : '#172033'},
+      ...(spec.config || {})
+    }
+  });
+
+  const seedRandom = (seed) => {
+    let s = seed >>> 0;
+    return () => ((s = Math.imul(1664525, s) + 1013904223 >>> 0) / 4294967296);
+  };
+  const rnd = seedRandom(20260713);
+
+  const scatterData = Array.from({length: 52}, (_, i) => ({
+    name: `관측 ${i + 1}`,
+    x: Math.round((18 + rnd() * 78) * 10) / 10,
+    y: Math.round((12 + rnd() * 85) * 10) / 10,
+    size: Math.round(18 + rnd() * 82),
+    group: ['연안', '근해', '양식', '유통'][i % 4]
+  }));
+
+  const histData = Array.from({length: 240}, (_, i) => {
+    const u1 = Math.max(rnd(), 1e-8), u2 = rnd();
+    const normal = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    return {value: Math.round((52 + normal * 14 + (i % 11 === 0 ? 15 : 0)) * 10) / 10};
+  });
+
+  const lineData = Array.from({length: 24}, (_, i) => ({
+    month: i + 1,
+    value: Math.round((46 + i * 1.3 + Math.sin(i / 2.2) * 12 + (rnd() - .5) * 8) * 10) / 10
+  }));
+
+  const heatData = [];
+  ['월','화','수','목','금','토','일'].forEach((day, di) => {
+    ['06','09','12','15','18','21'].forEach((hour, hi) => {
+      heatData.push({day, hour: hour + '시', value: Math.round(20 + di * 4 + hi * 5 + rnd() * 35)});
+    });
+  });
+
+  const stackedData = [];
+  ['1월','2월','3월','4월','5월','6월'].forEach((month, mi) => {
+    ['어획','양식','가공','유통'].forEach((category, ci) => {
+      stackedData.push({month, category, value: Math.round(20 + mi * 4 + ci * 7 + rnd() * 28)});
+    });
+  });
+
+  const smallMultipleData = [];
+  ['동해','서해','남해','제주'].forEach((region, ri) => {
+    for (let m = 1; m <= 12; m++) {
+      smallMultipleData.push({region, month: m, value: Math.round(30 + ri * 8 + m * 1.7 + Math.sin((m + ri) / 2) * 10 + rnd() * 7)});
+    }
+  });
+
+  const baseWidth = 560;
+  const baseHeight = 280;
+
+  function barSpec() {
+    return withBase({
+      description: '신호 기반 필터와 정렬, 클릭 선택, 목표선이 포함된 막대 차트',
+      width: baseWidth, height: 300,
+      signals: [
+        {name:'minValue', value:0, bind:{input:'range', min:0, max:80, step:5, name:'최솟값 '}},
+        {name:'sortOrder', value:'descending', bind:{input:'select', options:['descending','ascending'], labels:['내림차순','오름차순'], name:'정렬 '}},
+        {name:'selected', value:null, on:[{events:'rect:click', update:'datum.category'}]}
+      ],
+      data: [{name:'table', values:[
+        {category:'ICT',value:88,target:80},{category:'회원지원',value:72,target:76},{category:'양식',value:65,target:70},{category:'유통',value:81,target:78},{category:'보험',value:57,target:68},{category:'홍보',value:74,target:72},{category:'자금',value:91,target:85}
+      ], transform:[{type:'filter', expr:'datum.value >= minValue'}]}],
+      scales: [
+        {name:'x', type:'linear', domain:{data:'table', fields:['value','target']}, nice:true, zero:true, range:'width'},
+        {name:'y', type:'band', domain:{data:'table', field:'category', sort:{op:'sum', field:'value', order:{signal:'sortOrder'}}}, range:'height', padding:.2}
+      ],
+      axes:[{orient:'bottom',scale:'x',grid:true,title:'점수'},{orient:'left',scale:'y',title:null}],
+      marks:[
+        {type:'rect',from:{data:'table'},encode:{enter:{x:{scale:'x',value:0},x2:{scale:'x',field:'value'},y:{scale:'y',field:'category'},height:{scale:'y',band:1},cornerRadiusTopRight:{value:5},cornerRadiusBottomRight:{value:5},tooltip:{signal:"datum.category + '\\n실적: ' + datum.value + '\\n목표: ' + datum.target"}},update:{fill:[{test:'datum.category === selected',value:'#6d4de6'},{value:'#3157d5'}],fillOpacity:{value:.9}},hover:{fillOpacity:{value:.68}}}},
+        {type:'rule',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'target'},y:{scale:'y',field:'category'},y2:{scale:'y',field:'category',band:1},stroke:{value:'#ef476f'},strokeWidth:{value:2},strokeDash:{value:[4,3]}}}},
+        {type:'text',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'value',offset:-7},y:{scale:'y',field:'category',band:.5},align:{value:'right'},baseline:{value:'middle'},fill:{value:'white'},fontWeight:{value:800},text:{field:'value'}}}}
+      ]
+    });
+  }
+
+  function lineSpec() {
+    return withBase({
+      description:'window 변환으로 이동평균을 계산하는 영역·선 결합 차트',
+      width:baseWidth,height:300,
+      signals:[
+        {name:'curve',value:'monotone',bind:{input:'select',options:['linear','monotone','step'],labels:['직선','부드럽게','계단형'],name:'보간법 '}},
+        {name:'showAverage',value:true,bind:{input:'checkbox',name:'3개월 이동평균 '}}
+      ],
+      data:[{name:'table',values:lineData,transform:[{type:'window',ops:['mean'],fields:['value'],as:['movingAvg'],frame:[-2,0]}]}],
+      scales:[
+        {name:'x',type:'linear',domain:{data:'table',field:'month'},range:'width',zero:false,nice:false},
+        {name:'y',type:'linear',domain:{data:'table',fields:['value','movingAvg']},range:'height',zero:false,nice:true}
+      ],
+      axes:[{orient:'bottom',scale:'x',tickCount:12,title:'월'},{orient:'left',scale:'y',grid:true,title:'지수'}],
+      marks:[
+        {type:'area',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'month'},y:{scale:'y',field:'value'},y2:{signal:'height'},fill:{value:'#3157d5'},fillOpacity:{value:.14}},update:{interpolate:{signal:'curve'}}}},
+        {type:'line',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'month'},y:{scale:'y',field:'value'},stroke:{value:'#3157d5'},strokeWidth:{value:3}},update:{interpolate:{signal:'curve'}}}},
+        {type:'line',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'month'},y:{scale:'y',field:'movingAvg'},stroke:{value:'#ef476f'},strokeWidth:{value:2},strokeDash:{value:[7,4]}},update:{opacity:{signal:'showAverage ? 1 : 0'},interpolate:{signal:'curve'}}}},
+        {type:'symbol',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'month'},y:{scale:'y',field:'value'},size:{value:55},fill:{value:'white'},stroke:{value:'#3157d5'},strokeWidth:{value:2},tooltip:{signal:"datum.month + '월\\n값: ' + format(datum.value, '.1f') + '\\n이동평균: ' + format(datum.movingAvg, '.1f')"}},update:{size:{value:55}},hover:{size:{value:170},fill:{value:'#3157d5'}}}}
+      ]
+    });
+  }
+
+  function scatterSpec() {
+    return withBase({
+      description:'다중 스케일, 범례, 조건부 필터, 클릭 선택이 포함된 버블 산점도',
+      width:baseWidth,height:310,
+      signals:[
+        {name:'minSize',value:18,bind:{input:'range',min:18,max:90,step:2,name:'최소 규모 '}},
+        {name:'selectedGroup',value:null,on:[
+          {events:'symbol:click',update:'datum.group'},
+          {events:'view:dblclick',update:'null'}
+        ]}
+      ],
+      data:[{name:'points',values:scatterData,transform:[{type:'filter',expr:'datum.size >= minSize'}]}],
+      scales:[
+        {name:'x',type:'linear',domain:{data:'points',field:'x'},nice:true,zero:false,range:'width'},
+        {name:'y',type:'linear',domain:{data:'points',field:'y'},nice:true,zero:false,range:'height'},
+        {name:'color',type:'ordinal',domain:{data:'points',field:'group'},range:{scheme:'tableau10'}},
+        {name:'size',type:'sqrt',domain:{data:'points',field:'size'},range:[45,950]}
+      ],
+      axes:[{orient:'bottom',scale:'x',grid:true,title:'효율'},{orient:'left',scale:'y',grid:true,title:'성과'}],
+      legends:[{fill:'color',title:'분야',orient:'right'}],
+      marks:[{type:'symbol',from:{data:'points'},encode:{enter:{x:{scale:'x',field:'x'},y:{scale:'y',field:'y'},size:{scale:'size',field:'size'},fill:{scale:'color',field:'group'},stroke:{value:'white'},strokeWidth:{value:1.2},tooltip:{signal:"datum.name + '\\n분야: ' + datum.group + '\\n효율: ' + datum.x + '\\n성과: ' + datum.y + '\\n규모: ' + datum.size"}},update:{fillOpacity:[{test:'selectedGroup == null || datum.group === selectedGroup',value:.82},{value:.12}],strokeOpacity:[{test:'selectedGroup == null || datum.group === selectedGroup',value:1},{value:.1}]},hover:{stroke:{value:'#111827'},strokeWidth:{value:2.5}}}}]
+    });
+  }
+
+  function histogramSpec() {
+    return withBase({
+      description:'bin·aggregate 변환과 동적 구간 수를 이용한 히스토그램',
+      width:baseWidth,height:290,
+      signals:[{name:'maxBins',value:16,bind:{input:'range',min:5,max:35,step:1,name:'최대 구간 '}}],
+      data:[{name:'source',values:histData,transform:[
+        {type:'bin',field:'value',extent:[0,120],maxbins:{signal:'maxBins'},as:['bin0','bin1']},
+        {type:'aggregate',groupby:['bin0','bin1'],ops:['count'],as:['count']}
+      ]}],
+      scales:[
+        {name:'x',type:'linear',domain:{data:'source',fields:['bin0','bin1']},range:'width',zero:false,nice:true},
+        {name:'y',type:'linear',domain:{data:'source',field:'count'},range:'height',zero:true,nice:true}
+      ],
+      axes:[{orient:'bottom',scale:'x',title:'관측값'},{orient:'left',scale:'y',grid:true,title:'빈도'}],
+      marks:[{type:'rect',from:{data:'source'},encode:{enter:{x:{scale:'x',field:'bin0',offset:1},x2:{scale:'x',field:'bin1',offset:-1},y:{scale:'y',field:'count'},y2:{scale:'y',value:0},fill:{value:'#0f9f84'},cornerRadiusTopLeft:{value:3},cornerRadiusTopRight:{value:3},tooltip:{signal:"format(datum.bin0, '.1f') + ' ~ ' + format(datum.bin1, '.1f') + '\\n빈도: ' + datum.count"}},hover:{fill:{value:'#3157d5'}}}}]
+    });
+  }
+
+  function heatmapSpec() {
+    return withBase({
+      description:'band 스케일과 연속 색상 스케일을 이용한 요일·시간대 히트맵',
+      width:baseWidth,height:290,
+      signals:[{name:'multiplier',value:1,bind:{input:'range',min:.5,max:1.5,step:.1,name:'가중치 '}}],
+      data:[{name:'table',values:heatData,transform:[{type:'formula',expr:'datum.value * multiplier',as:'adjusted'}]}],
+      scales:[
+        {name:'x',type:'band',domain:['06시','09시','12시','15시','18시','21시'],range:'width',padding:.04},
+        {name:'y',type:'band',domain:['월','화','수','목','금','토','일'],range:'height',padding:.04},
+        {name:'color',type:'linear',domain:{data:'table',field:'adjusted'},range:{scheme:'viridis'},nice:true,zero:false}
+      ],
+      axes:[{orient:'bottom',scale:'x',title:'시간대'},{orient:'left',scale:'y',title:'요일'}],
+      legends:[{fill:'color',type:'gradient',title:'활동량',orient:'right'}],
+      marks:[
+        {type:'rect',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'hour'},y:{scale:'y',field:'day'},width:{scale:'x',band:1},height:{scale:'y',band:1},cornerRadius:{value:4},tooltip:{signal:"datum.day + '요일 ' + datum.hour + '\\n값: ' + format(datum.adjusted, '.1f')"}},update:{fill:{scale:'color',field:'adjusted'}},hover:{stroke:{value:'white'},strokeWidth:{value:2}}}},
+        {type:'text',from:{data:'table'},interactive:false,encode:{enter:{x:{scale:'x',field:'hour',band:.5},y:{scale:'y',field:'day',band:.5},align:{value:'center'},baseline:{value:'middle'},fontSize:{value:10},fill:{signal:"datum.adjusted > 62 ? 'white' : '#111827'"},text:{signal:"format(datum.adjusted, '.0f')"}}}}
+      ]
+    });
+  }
+
+  function donutSpec() {
+    return withBase({
+      description:'pie 변환, arc 마크, 반지름 신호를 이용한 도넛 차트',
+      width:baseWidth,height:310,
+      signals:[
+        {name:'innerRadius',value:70,bind:{input:'range',min:0,max:115,step:5,name:'안쪽 반지름 '}},
+        {name:'padAngle',value:.015,bind:{input:'range',min:0,max:.08,step:.005,name:'조각 간격 '}},
+        {name:'outerRadius',update:'min(width, height) / 2 - 10'}
+      ],
+      data:[{name:'table',values:[{category:'상호금융',value:32},{category:'경제사업',value:24},{category:'회원지원',value:18},{category:'정책보험',value:15},{category:'기타',value:11}],transform:[{type:'pie',field:'value',sort:true}]}],
+      scales:[{name:'color',type:'ordinal',domain:{data:'table',field:'category'},range:{scheme:'tableau10'}}],
+      legends:[{fill:'color',title:'사업영역',orient:'right'}],
+      marks:[
+        {type:'arc',from:{data:'table'},encode:{enter:{x:{signal:'width/2'},y:{signal:'height/2'},fill:{scale:'color',field:'category'},stroke:{value:'white'},strokeWidth:{value:1.5},tooltip:{signal:"datum.category + '\\n비중: ' + datum.value + '%'"}},update:{startAngle:{field:'startAngle'},endAngle:{field:'endAngle'},innerRadius:{signal:'innerRadius'},outerRadius:{signal:'outerRadius'},padAngle:{signal:'padAngle'},cornerRadius:{value:4}},hover:{outerRadius:{signal:'outerRadius + 7'}}}},
+        {type:'text',from:{data:'table'},interactive:false,encode:{enter:{x:{signal:'width/2 + cos((datum.startAngle + datum.endAngle)/2) * (innerRadius + outerRadius) / 2'},y:{signal:'height/2 + sin((datum.startAngle + datum.endAngle)/2) * (innerRadius + outerRadius) / 2'},align:{value:'center'},baseline:{value:'middle'},fill:{value:'white'},fontWeight:{value:800},fontSize:{value:11},text:{signal:"datum.value + '%'"}}}},
+        {type:'text',encode:{enter:{x:{signal:'width/2'},y:{signal:'height/2 - 7'},align:{value:'center'},baseline:{value:'middle'},fontSize:{value:13},fill:{value:'#64748b'},text:{value:'합계'} } }},
+        {type:'text',encode:{enter:{x:{signal:'width/2'},y:{signal:'height/2 + 14'},align:{value:'center'},baseline:{value:'middle'},fontSize:{value:24},fontWeight:{value:900},fill:{value:'#3157d5'},text:{value:'100%'} } }}
+      ]
+    });
+  }
+
+  function stackedSpec() {
+    return withBase({
+      description:'stack 변환의 zero·normalize·center 오프셋을 전환하는 누적 차트',
+      width:baseWidth,height:300,
+      signals:[{name:'stackOffset',value:'zero',bind:{input:'select',options:['zero','normalize','center'],labels:['누적','100%','스트림'],name:'오프셋 '}}],
+      data:[{name:'stacked',values:stackedData,transform:[{type:'stack',groupby:['month'],sort:{field:'category'},field:'value',offset:{signal:'stackOffset'},as:['y0','y1']}]}],
+      scales:[
+        {name:'x',type:'band',domain:{data:'stacked',field:'month'},range:'width',padding:.18},
+        {name:'y',type:'linear',domain:{data:'stacked',fields:['y0','y1']},range:'height',nice:true,zero:false},
+        {name:'color',type:'ordinal',domain:{data:'stacked',field:'category'},range:{scheme:'set2'}}
+      ],
+      axes:[{orient:'bottom',scale:'x',title:'월'},{orient:'left',scale:'y',grid:true,title:'값'}],
+      legends:[{fill:'color',title:'부문',orient:'right'}],
+      marks:[{type:'rect',from:{data:'stacked'},encode:{enter:{x:{scale:'x',field:'month'},width:{scale:'x',band:1},y:{scale:'y',field:'y1'},y2:{scale:'y',field:'y0'},fill:{scale:'color',field:'category'},tooltip:{signal:"datum.month + ' · ' + datum.category + '\\n원값: ' + datum.value"}},hover:{fillOpacity:{value:.65}}}}]
+    });
+  }
+
+  const hierarchyValues = [
+    {id:'root',parent:null,name:'전체',size:0},
+    {id:'digital',parent:'root',name:'디지털',size:0},{id:'field',parent:'root',name:'현장',size:0},{id:'support',parent:'root',name:'지원',size:0},
+    {id:'ai',parent:'digital',name:'AI',size:35},{id:'data',parent:'digital',name:'데이터',size:28},{id:'cloud',parent:'digital',name:'클라우드',size:22},
+    {id:'fishery',parent:'field',name:'어업',size:30},{id:'aquaculture',parent:'field',name:'양식',size:26},{id:'safety',parent:'field',name:'안전',size:18},
+    {id:'member',parent:'support',name:'회원',size:24},{id:'finance',parent:'support',name:'금융',size:21},{id:'distribution',parent:'support',name:'유통',size:19}
+  ];
+
+  function treemapSpec() {
+    return withBase({
+      description:'stratify + treemap 계층 변환과 레이아웃 방식 전환',
+      width:baseWidth,height:330,autosize:'none',padding:2,
+      signals:[
+        {name:'layout',value:'squarify',bind:{input:'select',options:['squarify','binary','slicedice'],name:'레이아웃 '}},
+        {name:'ratio',value:1.6,bind:{input:'range',min:1,max:4,step:.1,name:'비율 '}}
+      ],
+      data:[
+        {name:'tree',values:hierarchyValues,transform:[{type:'stratify',key:'id',parentKey:'parent'},{type:'treemap',field:'size',sort:{field:'value'},round:true,method:{signal:'layout'},ratio:{signal:'ratio'},paddingInner:2,size:[{signal:'width'},{signal:'height'}]}]},
+        {name:'leaves',source:'tree',transform:[{type:'filter',expr:'!datum.children'}]}
+      ],
+      scales:[{name:'color',type:'ordinal',domain:{data:'tree',field:'depth'},range:{scheme:'blues'}}],
+      marks:[
+        {type:'rect',from:{data:'tree'},encode:{enter:{fill:{scale:'color',field:'depth'},stroke:{value:'white'},strokeWidth:{value:1},tooltip:{signal:"datum.name + (datum.size ? '\\n값: ' + datum.size : '')"}},update:{x:{field:'x0'},y:{field:'y0'},x2:{field:'x1'},y2:{field:'y1'}},hover:{fill:{value:'#6d4de6'}}}},
+        {type:'text',from:{data:'leaves'},interactive:false,encode:{enter:{x:{signal:'(datum.x0 + datum.x1)/2'},y:{signal:'(datum.y0 + datum.y1)/2 - 6'},align:{value:'center'},baseline:{value:'middle'},fill:{value:'white'},fontWeight:{value:800},fontSize:{signal:'max(9, min(15, (datum.x1-datum.x0)/5))'},text:{field:'name'}}}},
+        {type:'text',from:{data:'leaves'},interactive:false,encode:{enter:{x:{signal:'(datum.x0 + datum.x1)/2'},y:{signal:'(datum.y0 + datum.y1)/2 + 10'},align:{value:'center'},baseline:{value:'middle'},fill:{value:'white'},fillOpacity:{value:.8},fontSize:{value:10},text:{field:'size'}}}}
+      ]
+    });
+  }
+
+  function sunburstSpec() {
+    return withBase({
+      description:'partition 변환을 방사형 좌표에 매핑한 선버스트 계층도',
+      width:baseWidth,height:340,autosize:'none',padding:4,
+      signals:[
+        {name:'radiusScale',value:.95,bind:{input:'range',min:.65,max:1,step:.05,name:'반지름 비율 '}},
+        {name:'rotate',value:0,bind:{input:'range',min:-180,max:180,step:5,name:'회전 '}}
+      ],
+      data:[{name:'tree',values:hierarchyValues,transform:[
+        {type:'stratify',key:'id',parentKey:'parent'},
+        {type:'partition',field:'size',sort:{field:'value'},size:[{signal:'2 * PI'},{signal:'min(width,height)/2 * radiusScale'}],as:['a0','r0','a1','r1','depth','children']},
+        {type:'formula',expr:'datum.a0 + rotate * PI/180',as:'ra0'},
+        {type:'formula',expr:'datum.a1 + rotate * PI/180',as:'ra1'}
+      ]}],
+      scales:[{name:'color',type:'ordinal',domain:{data:'tree',field:'depth'},range:{scheme:'plasma'}}],
+      marks:[{type:'arc',from:{data:'tree'},encode:{enter:{x:{signal:'width/2'},y:{signal:'height/2'},fill:{scale:'color',field:'depth'},tooltip:{signal:"datum.name + (datum.size ? '\\n값: ' + datum.size : '')"}},update:{startAngle:{field:'ra0'},endAngle:{field:'ra1'},innerRadius:{field:'r0'},outerRadius:{field:'r1'},stroke:{value:'white'},strokeWidth:{value:1}},hover:{stroke:{value:'#111827'},strokeWidth:{value:2.5}}}}]
+    });
+  }
+
+  const networkNodes = [
+    {id:0,name:'ICT전략',group:0},{id:1,name:'데이터',group:0},{id:2,name:'AI',group:0},{id:3,name:'자동화',group:0},
+    {id:4,name:'회원지원',group:1},{id:5,name:'어업',group:1},{id:6,name:'양식',group:1},{id:7,name:'안전',group:1},
+    {id:8,name:'유통',group:2},{id:9,name:'보험',group:2},{id:10,name:'자금',group:2},{id:11,name:'홍보',group:2}
+  ];
+  const networkLinks = [
+    {source:0,target:1},{source:0,target:2},{source:0,target:3},{source:1,target:4},{source:1,target:8},{source:2,target:5},{source:2,target:6},{source:2,target:7},{source:3,target:4},{source:3,target:8},{source:3,target:9},{source:4,target:9},{source:5,target:7},{source:6,target:7},{source:8,target:10},{source:8,target:11},{source:9,target:10},{source:11,target:4}
+  ];
+
+  function forceSpec() {
+    return withBase({
+      description:'force·linkpath 변환, 물리 매개변수 조절, 노드 드래그를 지원하는 네트워크',
+      width:baseWidth,height:360,autosize:'none',padding:0,
+      signals:[
+        {name:'cx',update:'width/2'},{name:'cy',update:'height/2'},
+        {name:'nodeRadius',value:11,bind:{input:'range',min:5,max:24,step:1,name:'노드 크기 '}},
+        {name:'nodeCharge',value:-85,bind:{input:'range',min:-180,max:-10,step:5,name:'반발력 '}},
+        {name:'linkDistance',value:65,bind:{input:'range',min:30,max:130,step:5,name:'연결 거리 '}},
+        {name:'static',value:true,bind:{input:'checkbox',name:'정적 계산 '}},
+        {name:'fix',value:false,on:[
+          {events:'symbol:pointerout[!event.buttons], window:pointerup',update:'false'},
+          {events:'symbol:pointerover',update:'fix || true'},
+          {events:'[symbol:pointerdown, window:pointerup] > window:pointermove!',update:'xy()',force:true}
+        ]},
+        {name:'node',value:null,on:[{events:'symbol:pointerover',update:'fix === true ? item() : node'}]},
+        {name:'restart',value:false,on:[{events:{signal:'fix'},update:'fix && fix.length'}]}
+      ],
+      data:[{name:'node-data',values:networkNodes},{name:'link-data',values:networkLinks}],
+      scales:[{name:'color',type:'ordinal',domain:{data:'node-data',field:'group'},range:{scheme:'tableau10'}}],
+      marks:[
+        {name:'nodes',type:'symbol',zindex:1,from:{data:'node-data'},on:[
+          {trigger:'fix',modify:'node',values:'fix === true ? {fx: node.x, fy: node.y} : {fx: fix[0], fy: fix[1]}'},
+          {trigger:'!fix',modify:'node',values:'{fx:null,fy:null}'}
+        ],encode:{enter:{fill:{scale:'color',field:'group'},stroke:{value:'white'},tooltip:{signal:"datum.name + '\\n그룹: ' + datum.group"}},update:{size:{signal:'2 * nodeRadius * nodeRadius'},cursor:{value:'grab'}},hover:{stroke:{value:'#111827'},strokeWidth:{value:2.5}}},transform:[{type:'force',iterations:300,restart:{signal:'restart'},static:{signal:'static'},signal:'force',forces:[{force:'center',x:{signal:'cx'},y:{signal:'cy'}},{force:'collide',radius:{signal:'nodeRadius + 2'}},{force:'nbody',strength:{signal:'nodeCharge'}},{force:'link',links:'link-data',distance:{signal:'linkDistance'}}]}]},
+        {type:'path',from:{data:'link-data'},interactive:false,encode:{update:{stroke:{value:dark ? '#56627a' : '#b8c2d3'},strokeWidth:{value:1.2},strokeOpacity:{value:.75}}},transform:[{type:'linkpath',require:{signal:'force'},shape:'line',sourceX:'datum.source.x',sourceY:'datum.source.y',targetX:'datum.target.x',targetY:'datum.target.y'}]},
+        {type:'text',from:{data:'node-data'},interactive:false,zindex:2,encode:{enter:{x:{field:'x'},y:{field:'y',offset:17},align:{value:'center'},baseline:{value:'top'},fontSize:{value:10},fill:{value:dark ? '#dce5f3' : '#334155'},text:{field:'name'}}}}
+      ]
+    });
+  }
+
+  const words = [
+    ['Vega',100],['Signal',76],['Dataflow',69],['Transform',66],['Scale',61],['Interaction',58],['Canvas',54],['SVG',52],['Mark',49],['Projection',47],['Aggregate',44],['Hierarchy',43],['Network',42],['Legend',38],['Axis',36],['Expression',34],['Event',33],['Export',31],['Treemap',29],['Force',27],['Wordcloud',26],['Bin',24],['Stack',23],['Facet',22],['Geoshape',20]
+  ].map(([text,count],i)=>({text,count,angle:[0,0,0,-45,45][i%5]}));
+
+  function wordcloudSpec() {
+    return withBase({
+      description:'wordcloud 레이아웃 변환으로 텍스트 크기·회전·위치를 계산',
+      width:baseWidth,height:310,autosize:'none',padding:0,
+      signals:[{name:'maxFont',value:62,bind:{input:'range',min:36,max:90,step:2,name:'최대 글꼴 '}},{name:'paddingWord',value:2,bind:{input:'range',min:0,max:8,step:1,name:'간격 '}}],
+      data:[{name:'table',values:words}],
+      scales:[{name:'color',type:'ordinal',domain:{data:'table',field:'text'},range:{scheme:'tableau20'}}],
+      marks:[{type:'text',from:{data:'table'},encode:{enter:{text:{field:'text'},align:{value:'center'},baseline:{value:'alphabetic'},fill:{scale:'color',field:'text'},tooltip:{signal:"datum.text + '\\n빈도: ' + datum.count"}},update:{fillOpacity:{value:1}},hover:{fillOpacity:{value:.45}}},transform:[{type:'wordcloud',size:[{signal:'width'},{signal:'height'}],text:{field:'text'},rotate:{field:'angle'},font:'Pretendard, Noto Sans KR, sans-serif',fontSize:{field:'count'},fontSizeRange:[12,{signal:'maxFont'}],padding:{signal:'paddingWord'}}]}]
+    });
+  }
+
+  const geoFeatures = {
+    type:'FeatureCollection',
+    features:[
+      {type:'Feature',properties:{name:'서해권',value:72},geometry:{type:'Polygon',coordinates:[[[124.2,33.3],[126.2,33.3],[126.2,37.8],[124.2,37.8],[124.2,33.3]]]}},
+      {type:'Feature',properties:{name:'남해권',value:88},geometry:{type:'Polygon',coordinates:[[[126.2,33.0],[129.3,33.0],[129.3,35.4],[126.2,35.4],[126.2,33.0]]]}},
+      {type:'Feature',properties:{name:'동해권',value:61},geometry:{type:'Polygon',coordinates:[[[129.3,35.0],[131.2,35.0],[131.2,38.2],[129.3,38.2],[129.3,35.0]]]}},
+      {type:'Feature',properties:{name:'제주권',value:55},geometry:{type:'Polygon',coordinates:[[[125.8,32.2],[127.2,32.2],[127.2,33.3],[125.8,33.3],[125.8,32.2]]]}}
+    ]
+  };
+  const geoPoints = [
+    {name:'인천',lon:126.63,lat:37.45,value:45},{name:'목포',lon:126.39,lat:34.79,value:38},{name:'부산',lon:129.07,lat:35.18,value:62},{name:'강릉',lon:128.90,lat:37.75,value:31},{name:'제주',lon:126.53,lat:33.50,value:52}
+  ];
+
+  function geoSpec() {
+    return withBase({
+      description:'GeoJSON, projection, geoshape, geographic point 좌표를 함께 사용한 지도',
+      width:baseWidth,height:340,autosize:'none',padding:8,
+      signals:[
+        {name:'projectionType',value:'mercator',bind:{input:'select',options:['mercator','equirectangular','naturalEarth1'],name:'투영법 '}},
+        {name:'mapScale',value:42,bind:{input:'range',min:28,max:75,step:1,name:'확대 '}}
+      ],
+      data:[
+        {name:'regions',values:geoFeatures.features},
+        {name:'points',values:geoPoints}
+      ],
+      projections:[{name:'proj',type:{signal:'projectionType'},center:[127.7,35.3],scale:{signal:'mapScale * 10'},translate:{signal:'[width/2,height/2]'}}],
+      scales:[
+        {name:'color',type:'linear',domain:{data:'regions',field:'properties.value'},range:{scheme:'tealblues'},zero:false},
+        {name:'size',type:'sqrt',domain:{data:'points',field:'value'},range:[60,900]}
+      ],
+      legends:[{fill:'color',type:'gradient',title:'권역 지수',orient:'right'}],
+      marks:[
+        {type:'shape',from:{data:'regions'},encode:{enter:{stroke:{value:'white'},strokeWidth:{value:2},tooltip:{signal:"datum.properties.name + '\\n지수: ' + datum.properties.value"}},update:{fill:{scale:'color',field:'properties.value'}},hover:{fillOpacity:{value:.65}}},transform:[{type:'geoshape',projection:'proj'}]},
+        {type:'symbol',from:{data:'points'},encode:{enter:{x:{signal:"scale('proj',[datum.lon,datum.lat])[0]"},y:{signal:"scale('proj',[datum.lon,datum.lat])[1]"},size:{scale:'size',field:'value'},fill:{value:'#ef476f'},fillOpacity:{value:.8},stroke:{value:'white'},strokeWidth:{value:1.5},tooltip:{signal:"datum.name + '\\n활동량: ' + datum.value"}},hover:{fill:{value:'#6d4de6'}}}},
+        {type:'text',from:{data:'points'},interactive:false,encode:{enter:{x:{signal:"scale('proj',[datum.lon,datum.lat])[0]"},y:{signal:"scale('proj',[datum.lon,datum.lat])[1]",offset:-11},align:{value:'center'},baseline:{value:'bottom'},fontSize:{value:10},fontWeight:{value:800},fill:{value:dark ? '#e7ecf5' : '#334155'},text:{field:'name'}}}}
+      ]
+    });
+  }
+
+  function smallMultiplesSpec() {
+    return withBase({
+      description:'facet 그룹 마크와 그룹 내부의 독립 스케일·축으로 구성한 소형 다중 차트',
+      width:baseWidth,height:390,autosize:'none',padding:10,
+      signals:[{name:'lineWidth',value:2.5,bind:{input:'range',min:1,max:6,step:.5,name:'선 굵기 '}}],
+      data:[{name:'table',values:smallMultipleData}],
+      layout:{padding:18,columns:2,bounds:'full',align:'all'},
+      marks:[{
+        type:'group',from:{facet:{name:'facet',data:'table',groupby:'region'}},
+        encode:{enter:{width:{value:250},height:{value:150}}},
+        title:{text:{signal:'parent.region'},anchor:'start',fontSize:13},
+        scales:[
+          {name:'x',type:'linear',domain:{data:'facet',field:'month'},range:'width',zero:false},
+          {name:'y',type:'linear',domain:{data:'facet',field:'value'},range:'height',zero:false,nice:true}
+        ],
+        axes:[{orient:'bottom',scale:'x',tickCount:6,labelFontSize:9},{orient:'left',scale:'y',tickCount:4,grid:true,labelFontSize:9}],
+        marks:[
+          {type:'line',from:{data:'facet'},encode:{enter:{x:{scale:'x',field:'month'},y:{scale:'y',field:'value'},stroke:{value:'#3157d5'}},update:{strokeWidth:{signal:'lineWidth'},interpolate:{value:'monotone'}}}},
+          {type:'symbol',from:{data:'facet'},encode:{enter:{x:{scale:'x',field:'month'},y:{scale:'y',field:'value'},size:{value:38},fill:{value:'#3157d5'},tooltip:{signal:"parent.region + ' · ' + datum.month + '월\\n값: ' + datum.value"}},hover:{size:{value:120}}}}
+        ]
+      }]
+    });
+  }
+
+  function gaugeSpec() {
+    return withBase({
+      description:'신호 값을 arc 각도와 텍스트에 연결한 반원형 게이지',
+      width:baseWidth,height:270,autosize:'none',padding:5,
+      signals:[
+        {name:'score',value:72,bind:{input:'range',min:0,max:100,step:1,name:'달성률 '}},
+        {name:'startAngle',value:-1.5708},{name:'endAngle',value:1.5708},
+        {name:'scoreAngle',update:'startAngle + (endAngle-startAngle) * score/100'},
+        {name:'radius',update:'min(width/2,height) - 20'}
+      ],
+      marks:[
+        {type:'arc',encode:{enter:{x:{signal:'width/2'},y:{signal:'height-18'},startAngle:{signal:'startAngle'},endAngle:{signal:'endAngle'},innerRadius:{signal:'radius-30'},outerRadius:{signal:'radius'},fill:{value:dark ? '#2c3852' : '#e7edf5'}}}},
+        {type:'arc',encode:{enter:{x:{signal:'width/2'},y:{signal:'height-18'},startAngle:{signal:'startAngle'},innerRadius:{signal:'radius-30'},outerRadius:{signal:'radius'},cornerRadius:{value:12}},update:{endAngle:{signal:'scoreAngle'},fill:{signal:"score >= 80 ? '#0f9f84' : score >= 60 ? '#3157d5' : '#ef476f'"}}}},
+        {type:'text',encode:{enter:{x:{signal:'width/2'},y:{signal:'height-85'},align:{value:'center'},baseline:{value:'middle'},fontSize:{value:44},fontWeight:{value:900},fill:{value:dark ? '#e7ecf5' : '#172033'}},update:{text:{signal:"format(score, '.0f') + '%'"}}}},
+        {type:'text',encode:{enter:{x:{signal:'width/2'},y:{signal:'height-44'},align:{value:'center'},baseline:{value:'middle'},fontSize:{value:13},fill:{value:'#64748b'},text:{value:'목표 달성률'}}}}
+      ]
+    });
+  }
+
+  function boxplotSpec() {
+    const groups = [];
+    ['A','B','C','D'].forEach((g, gi) => {
+      for(let i=0;i<45;i++) groups.push({group:g,value:Math.round((35+gi*10+(rnd()-.5)*30+(i%17===0?18:0))*10)/10});
+    });
+    return withBase({
+      description:'aggregate·joinaggregate·window 변환으로 계산한 사분위수 기반 상자그림',
+      width:baseWidth,height:300,
+      data:[
+        {name:'source',values:groups},
+        {name:'summary',source:'source',transform:[{type:'aggregate',groupby:['group'],ops:['q1','median','q3','min','max'],fields:['value','value','value','value','value'],as:['q1','median','q3','min','max']}]}
+      ],
+      scales:[
+        {name:'x',type:'band',domain:{data:'summary',field:'group'},range:'width',padding:.42},
+        {name:'y',type:'linear',domain:{data:'summary',fields:['min','max']},range:'height',nice:true,zero:false}
+      ],
+      axes:[{orient:'bottom',scale:'x',title:'그룹'},{orient:'left',scale:'y',grid:true,title:'값'}],
+      marks:[
+        {type:'rule',from:{data:'summary'},encode:{enter:{x:{scale:'x',field:'group',band:.5},y:{scale:'y',field:'min'},y2:{scale:'y',field:'max'},stroke:{value:'#64748b'},strokeWidth:{value:2}}}},
+        {type:'rect',from:{data:'summary'},encode:{enter:{x:{scale:'x',field:'group'},width:{scale:'x',band:1},y:{scale:'y',field:'q3'},y2:{scale:'y',field:'q1'},fill:{value:'#6d4de6'},fillOpacity:{value:.72},stroke:{value:'#5036bc'},cornerRadius:{value:4},tooltip:{signal:"datum.group + ' 그룹\\n최소: ' + datum.min + '\\nQ1: ' + format(datum.q1,'.1f') + '\\n중앙값: ' + format(datum.median,'.1f') + '\\nQ3: ' + format(datum.q3,'.1f') + '\\n최대: ' + datum.max"}}}},
+        {type:'rule',from:{data:'summary'},encode:{enter:{x:{scale:'x',field:'group'},x2:{scale:'x',field:'group',band:1},y:{scale:'y',field:'median'},stroke:{value:'white'},strokeWidth:{value:3}}}},
+        {type:'rule',from:{data:'summary'},encode:{enter:{x:{scale:'x',field:'group',band:.2},x2:{scale:'x',field:'group',band:.8},y:{scale:'y',field:'min'},stroke:{value:'#64748b'},strokeWidth:{value:2}}}},
+        {type:'rule',from:{data:'summary'},encode:{enter:{x:{scale:'x',field:'group',band:.2},x2:{scale:'x',field:'group',band:.8},y:{scale:'y',field:'max'},stroke:{value:'#64748b'},strokeWidth:{value:2}}}}
+      ]
+    });
+  }
+
+  const chartDefs = [
+    {id:'bar',title:'상호작용 막대 차트',desc:'필터·정렬·클릭 선택·목표선',tags:['rect','rule','signal','filter','scale'],spec:barSpec},
+    {id:'line',title:'영역 + 선 + 이동평균',desc:'window 변환과 보간 방식 전환',tags:['area','line','symbol','window','interpolate'],spec:lineSpec},
+    {id:'scatter',title:'버블 산점도',desc:'색상·크기 스케일과 조건부 강조',tags:['symbol','legend','sqrt scale','events'],spec:scatterSpec},
+    {id:'histogram',title:'동적 히스토그램',desc:'구간 수를 바꾸는 bin·aggregate',tags:['bin','aggregate','rect'],spec:histogramSpec},
+    {id:'heatmap',title:'요일·시간 히트맵',desc:'band 스케일과 연속 색상 범례',tags:['band','linear color','formula','legend'],spec:heatmapSpec},
+    {id:'donut',title:'조절 가능한 도넛',desc:'pie 변환과 arc 마크, 반지름 신호',tags:['pie','arc','signal','legend'],spec:donutSpec},
+    {id:'stacked',title:'누적·100%·스트림 전환',desc:'stack offset 세 가지 비교',tags:['stack','zero','normalize','center'],spec:stackedSpec},
+    {id:'boxplot',title:'상자그림',desc:'집계 통계량으로 구성한 분포 요약',tags:['aggregate','q1','median','q3','rule'],spec:boxplotSpec},
+    {id:'treemap',title:'계층형 트리맵',desc:'stratify와 treemap 레이아웃',tags:['stratify','treemap','hierarchy'],spec:treemapSpec},
+    {id:'sunburst',title:'선버스트 계층도',desc:'partition 변환과 방사형 arc',tags:['partition','arc','hierarchy'],spec:sunburstSpec},
+    {id:'force',title:'드래그 가능한 Force 네트워크',desc:'물리 시뮬레이션과 링크 경로',tags:['force','linkpath','drag','network'],spec:forceSpec,full:true},
+    {id:'wordcloud',title:'워드 클라우드',desc:'텍스트 배치 전용 wordcloud 변환',tags:['wordcloud','text','layout'],spec:wordcloudSpec},
+    {id:'geo',title:'GeoJSON 권역 지도',desc:'투영법·geoshape·경위도 포인트',tags:['projection','geoshape','GeoJSON'],spec:geoSpec},
+    {id:'smallmultiples',title:'Facet 소형 다중 차트',desc:'group 내부 독립 스케일과 축',tags:['facet','group','local scales','layout'],spec:smallMultiplesSpec,full:true},
+    {id:'gauge',title:'신호 기반 반원 게이지',desc:'값을 각도·색상·텍스트에 반응형 연결',tags:['arc','expression','signal'],spec:gaugeSpec}
+  ];
+
+  function createCards() {
+    const grid = document.getElementById('chartGrid');
+    grid.innerHTML = chartDefs.map((d,i) => `
+      <article class="card ${d.full ? 'full':''}" id="card-${d.id}" data-search="${(d.title+' '+d.desc+' '+d.tags.join(' ')).toLowerCase()}">
+        <div class="card-head">
+          <div><div class="card-index">EXAMPLE ${String(i+1).padStart(2,'0')}</div><h2>${d.title}</h2><p class="card-desc">${d.desc}</p></div>
+          <div class="card-actions">
+            <button class="icon-btn" data-action="spec" data-id="${d.id}">JSON</button>
+            <button class="icon-btn" data-action="png" data-id="${d.id}">PNG</button>
+            <button class="icon-btn" data-action="svg" data-id="${d.id}">SVG</button>
+          </div>
+        </div>
+        <div class="tags">${d.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        <div class="viz-area"><div id="viz-${d.id}" class="viz"><div class="loading">렌더링 중</div></div></div>
+        <div id="signals-${d.id}" class="signal-controls"></div>
+      </article>`).join('');
+    document.getElementById('chartCount').textContent = chartDefs.length;
+  }
+
+  function datumToText(datum) {
+    if (!datum || typeof datum !== 'object') return '';
+    const preferred = ['name','category','group','region','month','day','hour','value','count','size','x','y'];
+    const keys = [...preferred.filter(k => k in datum), ...Object.keys(datum).filter(k => !preferred.includes(k) && !k.startsWith('_')).slice(0,5)];
+    return [...new Set(keys)].slice(0,8).map(k => `${k}: ${typeof datum[k] === 'object' ? JSON.stringify(datum[k]) : datum[k]}`).join('\n');
+  }
+
+  function attachTooltip(view) {
+    view.addEventListener('mousemove', (event, item) => {
+      if (!item) return hideTooltip();
+      let text = '';
+      const tip = item.tooltip ?? item.datum?.tooltip;
+      if (typeof tip === 'string') text = tip;
+      else if (tip && typeof tip === 'object') text = datumToText(tip);
+      else if (item.datum) text = datumToText(item.datum);
+      if (!text) return hideTooltip();
+      tooltip.textContent = text;
+      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.top = `${event.clientY}px`;
+      tooltip.classList.add('show');
+    });
+    view.addEventListener('mouseout', hideTooltip);
+  }
+  function hideTooltip() { tooltip.classList.remove('show'); }
+
+  async function renderOne(def) {
+    const viz = document.getElementById(`viz-${def.id}`);
+    const signalBox = document.getElementById(`signals-${def.id}`);
+    if (!viz) return;
+    const prior = views.get(def.id);
+    if (prior) { try { prior.finalize(); } catch (_) {} views.delete(def.id); }
+    viz.innerHTML = '';
+    signalBox.innerHTML = '';
+    try {
+      if (!window.vega) throw new Error('Vega 라이브러리를 불러오지 못했습니다. 인터넷 연결 또는 로컬 vega.min.js 경로를 확인하십시오.');
+      const spec = def.spec();
+      const runtime = vega.parse(spec);
+      const view = new vega.View(runtime, {renderer, logLevel: vega.Warn});
+      view.initialize(viz, signalBox).hover();
+      attachTooltip(view);
+      await view.runAsync();
+      views.set(def.id, view);
+      if (spec.autosize !== 'none' && !def.full) resizeView(def.id);
+    } catch (err) {
+      console.error(def.id, err);
+      viz.innerHTML = `<div class="error"><strong>렌더링 오류</strong>\n${escapeHtml(err.message || String(err))}</div>`;
+    }
+  }
+
+  function resizeView(id) {
+    const view = views.get(id);
+    const container = document.getElementById(`viz-${id}`);
+    if (!view || !container) return;
+    const width = Math.max(300, Math.min(720, container.clientWidth - 20));
+    try { view.width(width).runAsync(); } catch (_) {}
+  }
+
+  async function renderAll() {
+    document.getElementById('rerenderBtn').disabled = true;
+    for (const def of chartDefs) await renderOne(def);
+    document.getElementById('rerenderBtn').disabled = false;
+  }
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  async function exportChart(id, type) {
+    const view = views.get(id);
+    if (!view) return;
+    try {
+      const url = await view.toImageURL(type, type === 'png' ? 2 : 1);
+      const a = document.createElement('a');
+      a.href = url; a.download = `vega-${id}.${type}`; a.click();
+    } catch (err) { alert(`내보내기 실패: ${err.message}`); }
+  }
+
+  function showSpec(id) {
+    const def = chartDefs.find(d => d.id === id);
+    if (!def) return;
+    currentDialogSpec = JSON.stringify(def.spec(), null, 2);
+    document.getElementById('dialogTitle').textContent = `${def.title} · Vega JSON`;
+    document.getElementById('dialogCode').textContent = currentDialogSpec;
+    document.getElementById('specDialog').showModal();
+  }
+
+  const defaultEditorSpec = withBase({
+    description:'편집 가능한 기본 막대 차트',width:560,height:300,
+    signals:[{name:'barColor',value:'#3157d5',bind:{input:'color',name:'막대 색상 '}}],
+    data:[{name:'table',values:[{name:'A',value:28},{name:'B',value:55},{name:'C',value:43},{name:'D',value:81},{name:'E',value:64}]}],
+    scales:[{name:'x',type:'band',domain:{data:'table',field:'name'},range:'width',padding:.25},{name:'y',type:'linear',domain:{data:'table',field:'value'},range:'height',nice:true,zero:true}],
+    axes:[{orient:'bottom',scale:'x'},{orient:'left',scale:'y',grid:true}],
+    marks:[{type:'rect',from:{data:'table'},encode:{enter:{x:{scale:'x',field:'name'},width:{scale:'x',band:1},y:{scale:'y',field:'value'},y2:{scale:'y',value:0},cornerRadiusTopLeft:{value:5},cornerRadiusTopRight:{value:5},tooltip:{signal:"datum.name + ': ' + datum.value"}},update:{fill:{signal:'barColor'}},hover:{fillOpacity:{value:.65}}}}]
+  });
+
+  async function runEditor() {
+    const output = document.getElementById('editorViz');
+    const signals = document.getElementById('editorSignals');
+    const status = document.getElementById('editorStatus');
+    try {
+      const spec = JSON.parse(document.getElementById('editor').value);
+      if (editorView) editorView.finalize();
+      output.innerHTML = ''; signals.innerHTML = '';
+      const runtime = vega.parse(spec);
+      editorView = new vega.View(runtime,{renderer,logLevel:vega.Warn}).initialize(output,signals).hover();
+      attachTooltip(editorView);
+      await editorView.runAsync();
+      status.textContent = `실행 완료 · ${new Date().toLocaleTimeString('ko-KR')}`;
+      status.style.color = 'var(--accent)';
+    } catch (err) {
+      output.innerHTML = `<div class="error"><strong>사양 오류</strong>\n${escapeHtml(err.message || String(err))}</div>`;
+      status.textContent = '실행 실패'; status.style.color = 'var(--danger)';
+    }
+  }
+
+  function bindUI() {
+    document.getElementById('chartGrid').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]'); if (!btn) return;
+      const {action,id} = btn.dataset;
+      if (action === 'spec') showSpec(id); else exportChart(id, action);
+    });
+    document.getElementById('search').addEventListener('input', e => {
+      const q = e.target.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => card.classList.toggle('hidden', q && !card.dataset.search.includes(q)));
+    });
+    document.getElementById('renderer').addEventListener('change', async e => { renderer = e.target.value; await renderAll(); await runEditor(); });
+    document.getElementById('themeBtn').addEventListener('click', async () => {
+      dark = !dark;
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      document.getElementById('themeBtn').textContent = dark ? '라이트 모드' : '다크 모드';
+      await renderAll(); await runEditor();
+    });
+    document.getElementById('rerenderBtn').addEventListener('click', renderAll);
+    document.getElementById('closeDialog').addEventListener('click', () => document.getElementById('specDialog').close());
+    document.getElementById('copySpec').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(currentDialogSpec); document.getElementById('copySpec').textContent = '복사됨'; setTimeout(()=>document.getElementById('copySpec').textContent='복사',1200); }
+      catch { alert('클립보드 복사에 실패했습니다.'); }
+    });
+    document.getElementById('runEditor').addEventListener('click', runEditor);
+    document.getElementById('formatEditor').addEventListener('click', () => {
+      try { const obj = JSON.parse(document.getElementById('editor').value); document.getElementById('editor').value = JSON.stringify(obj,null,2); }
+      catch(err) { alert(`JSON 정렬 실패: ${err.message}`); }
+    });
+    document.getElementById('resetEditor').addEventListener('click', () => { document.getElementById('editor').value = JSON.stringify(defaultEditorSpec,null,2); runEditor(); });
+    document.getElementById('editor').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runEditor();
+      if (e.key === 'Tab') { e.preventDefault(); const t=e.target,s=t.selectionStart,n=t.selectionEnd; t.value=t.value.slice(0,s)+'  '+t.value.slice(n); t.selectionStart=t.selectionEnd=s+2; }
+    });
+    let resizeTimer;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>chartDefs.forEach(d=>resizeView(d.id)),180); });
+  }
+
+  async function init() {
+    createCards();
+    bindUI();
+    document.getElementById('editor').value = JSON.stringify(defaultEditorSpec,null,2);
+    if (!window.vega) {
+      document.getElementById('chartGrid').innerHTML = '<div class="card full"><div class="error"><strong>Vega 로딩 실패</strong>\nCDN 접속이 차단되었습니다. vega.min.js를 내려받아 HTML과 같은 폴더에 둔 뒤 script src를 ./vega.min.js로 변경하십시오.</div></div>';
+      return;
+    }
+    await renderAll();
+    await runEditor();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
