@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Mammoth.js DOCX 변환 기능 탐색 샘플" />
+  <title>Mammoth.js 기능 탐색기 | DOCX → HTML</title>
+  <style>
+    :root{
+      --bg:#f4f7fb; --panel:#ffffff; --ink:#172033; --muted:#667085; --line:#dce3ef;
+      --brand:#2a5bd7; --brand-2:#153b95; --soft:#eef3ff; --good:#087443; --warn:#a76400;
+      --danger:#b42318; --shadow:0 10px 28px rgba(19,38,81,.08); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#f8faff 0,#f2f5fa 100%);color:var(--ink);font-family:Arial,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.55}
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:1600px;margin:0 auto;padding:28px 24px 56px}
+    .hero{background:linear-gradient(135deg,#123278 0%,#245fd9 55%,#64a7ff 125%);color:#fff;border-radius:26px;padding:30px 34px;box-shadow:0 18px 40px rgba(31,82,187,.25);position:relative;overflow:hidden}
+    .hero:after{content:"";position:absolute;width:400px;height:400px;border:55px solid rgba(255,255,255,.09);border-radius:50%;right:-135px;top:-210px}
+    .hero > *{position:relative;z-index:1}
+    .eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;opacity:.82;margin-bottom:7px}
+    h1{font-size:32px;line-height:1.2;margin:0 0 10px;letter-spacing:-.03em}
+    .hero p{margin:0;max-width:880px;font-size:15px;opacity:.94}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+    .chip{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700}
+    .topbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin:20px 0 16px}
+    .library-status{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;font-weight:700}
+    .status-dot{width:10px;height:10px;border-radius:50%;background:#aab5c8;box-shadow:0 0 0 4px rgba(170,181,200,.17)}
+    .status-dot.ready{background:#11a36d;box-shadow:0 0 0 4px rgba(17,163,109,.15)}
+    .status-dot.fail{background:#d92d20;box-shadow:0 0 0 4px rgba(217,45,32,.15)}
+    .mini-actions{display:flex;flex-wrap:wrap;gap:8px}
+    .button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:800;display:inline-flex;gap:7px;align-items:center;justify-content:center;text-decoration:none;transition:.18s ease}
+    .button:hover{border-color:#aebee3;transform:translateY(-1px)}
+    .button.primary{background:var(--brand);border-color:var(--brand);color:#fff}.button.primary:hover{background:var(--brand-2)}
+    .button.ghost{background:var(--soft);color:var(--brand);border-color:#cddaff}
+    .button.danger{color:var(--danger);border-color:#f4c7c4;background:#fff6f5}
+    .layout{display:grid;grid-template-columns:420px minmax(0,1fr);gap:18px;align-items:start}
+    .stack{display:grid;gap:18px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .panel-header{padding:18px 20px 12px;border-bottom:1px solid #edf0f5}
+    .panel h2{font-size:16px;margin:0;font-weight:800;letter-spacing:-.02em}.panel h3{font-size:14px;margin:0 0 7px}.panel-desc{margin:5px 0 0;color:var(--muted);font-size:12px}
+    .panel-body{padding:18px 20px}
+    .dropzone{border:2px dashed #b6c6e8;background:#f7faff;border-radius:14px;padding:25px 16px;text-align:center;transition:.18s ease;outline:none}
+    .dropzone.dragover,.dropzone:focus{border-color:var(--brand);background:#edf4ff}
+    .drop-icon{font-size:30px;line-height:1;margin-bottom:10px}.dropzone strong{display:block;font-size:14px}.dropzone small{display:block;margin-top:4px;color:var(--muted);font-size:12px}
+    .file-row{display:none;margin-top:12px;background:#f7f9fc;border:1px solid #e5eaf2;border-radius:12px;padding:10px 11px;gap:10px;align-items:center}.file-row.active{display:flex}.file-row .file-name{font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-row .file-meta{font-size:11px;color:var(--muted)}.file-row .file-icon{font-size:22px}
+    .fieldset{border:0;margin:0;padding:0}.control-group{border-top:1px solid #edf0f5;padding-top:15px;margin-top:15px}.control-group:first-child{border-top:0;padding-top:0;margin-top:0}.control-group label.title{display:block;font-size:13px;font-weight:800;margin-bottom:8px}
+    .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.check{display:flex;gap:8px;align-items:flex-start;color:#405066;font-size:12px;margin:8px 0}.check input{margin:3px 0 0;accent-color:var(--brand)}
+    .small-label{font-size:11px;color:var(--muted);font-weight:700}.select,.text-input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff;color:var(--ink);font-size:13px}.text-input{margin-top:7px}
+    .style-map{width:100%;min-height:230px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:12px;background:#0e1b33;color:#e9f0ff;font-family:Consolas,"Courier New",monospace;font-size:12px;line-height:1.52;tab-size:2}
+    .preset-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.preset{border:1px solid #d6e1f7;border-radius:999px;background:#f6f9ff;color:#2e5bb4;padding:5px 9px;font-weight:800;font-size:11px}.preset:hover{background:#eaf1ff}
+    .run-area{padding:14px 20px 18px;border-top:1px solid #edf0f5;display:grid;gap:9px}.run-area .button.primary{padding:12px 14px;font-size:14px}.run-note{font-size:11px;color:var(--muted);margin:0}
+    .notice{border-left:4px solid #e3a008;background:#fff9e8;border-radius:9px;padding:10px 11px;color:#75520a;font-size:12px}.notice strong{display:block;margin-bottom:3px;color:#654604}
+    .feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.feature{border:1px solid #e4eaf3;border-radius:12px;padding:12px;background:#fbfcfe}.feature .n{font-weight:900;color:var(--brand);font-size:18px}.feature .k{font-size:11px;font-weight:800;color:#3e4d66}.feature .v{font-size:11px;color:var(--muted);margin-top:3px}
+    .summary{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.summary-title{font-size:18px;margin:0}.summary-desc{font-size:12px;color:var(--muted);margin:4px 0 0}.summary-badge{background:#edf7f2;color:var(--good);border:1px solid #c6ead8;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;white-space:nowrap}
+    .tabs{display:flex;gap:3px;padding:9px 12px 0;border-bottom:1px solid #edf0f5;overflow:auto}.tab{border:0;background:transparent;color:#6c7a91;padding:10px 12px;font-size:12px;font-weight:800;border-bottom:3px solid transparent;white-space:nowrap}.tab.active{color:var(--brand);border-color:var(--brand)}
+    .tabcontent{display:none;padding:18px 20px}.tabcontent.active{display:block}.output-frame{width:100%;height:610px;border:1px solid #dce4f0;border-radius:12px;background:#fff}.code-output{white-space:pre-wrap;word-break:break-word;min-height:500px;max-height:610px;overflow:auto;margin:0;border-radius:12px;background:#0d192e;color:#dceaff;padding:15px;font:12px/1.6 Consolas,"Courier New",monospace}.plain-output{background:#fbfcfe;color:#22304a;border:1px solid #e0e7f0}
+    .result-toolbar{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:0 0 12px}.result-toolbar .button{padding:7px 9px;font-size:11px}.empty{border:1px dashed #cbd6e9;border-radius:14px;background:#f9fbff;min-height:360px;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--muted);font-size:13px}.empty .emoji{font-size:35px;margin-bottom:9px}.empty strong{display:block;color:#3a4a63;font-size:14px}
+    .message-list{display:grid;gap:8px}.message{border:1px solid #e5e9f1;border-radius:10px;padding:10px 11px;background:#fbfcfe;font-size:12px}.message .message-type{font-weight:900;text-transform:uppercase;font-size:10px;letter-spacing:.06em;color:var(--warn);margin-bottom:3px}.message.error{border-color:#f2c2bf;background:#fff7f6}.message.error .message-type{color:var(--danger)}.message.ok{border-color:#c5e8d6;background:#f4fcf8}.message.ok .message-type{color:var(--good)}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.stat{border:1px solid #e6ebf4;border-radius:11px;padding:10px;background:#fbfcff}.stat b{display:block;font-size:18px;color:#243b73}.stat span{font-size:11px;color:var(--muted);font-weight:700}.info-list{display:grid;gap:10px}.info{border-bottom:1px solid #eef1f5;padding-bottom:10px}.info:last-child{border:0;padding-bottom:0}.info b{font-size:12px}.info p{margin:3px 0 0;font-size:11px;color:var(--muted)}
+    .toast{position:fixed;right:20px;bottom:20px;z-index:10;max-width:370px;background:#15234a;color:#fff;border-radius:12px;box-shadow:0 14px 32px rgba(16,29,65,.25);padding:12px 14px;font-size:13px;display:none}.toast.show{display:block;animation:slideIn .22s ease}.toast.error{background:#982b23}@keyframes slideIn{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .footnote{margin-top:18px;color:#77849a;font-size:11px;line-height:1.6}.footnote code{background:#e9eef8;border-radius:4px;padding:1px 3px;color:#334866}
+    @media (max-width:1100px){.layout{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(4,minmax(130px,1fr))}}
+    @media (max-width:730px){.app{padding:16px 12px 38px}.hero{padding:23px 20px;border-radius:20px}.hero h1{font-size:26px}.topbar{align-items:flex-start;flex-direction:column}.panel-header,.panel-body,.tabcontent{padding-left:15px;padding-right:15px}.feature-grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(2,1fr)}.output-frame{height:500px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="eyebrow">BROWSER-ONLY · DOCX CONVERSION LAB</div>
+      <h1 id="page-title">Mammoth.js 기능 탐색기</h1>
+      <p>Word <strong>.docx</strong> 파일을 브라우저에서 HTML·원본 텍스트·레거시 Markdown으로 변환하고, 스타일 매핑·이미지 처리·문서 변환 훅·임베디드 스타일맵을 한 화면에서 비교합니다.</p>
+      <div class="chips" aria-label="핵심 기능">
+        <span class="chip">DOCX → Semantic HTML</span><span class="chip">Style Map</span><span class="chip">Image Converter</span><span class="chip">Raw Text</span><span class="chip">Embedded Style Map</span><span class="chip">Messages</span>
+      </div>
+    </section>
+
+    <div class="topbar">
+      <div class="library-status" aria-live="polite"><span id="libraryDot" class="status-dot"></span><span id="libraryStatus">Mammoth.js 라이브러리를 준비하는 중입니다…</span></div>
+      <div class="mini-actions">
+        <a class="button ghost" href="mammoth_test_document.docx" download>샘플 DOCX 받기</a>
+        <button class="button" id="loadSampleSettings" type="button">권장 설정 불러오기</button>
+        <button class="button danger" id="resetButton" type="button">초기화</button>
+      </div>
+    </div>
+
+    <section class="layout">
+      <aside class="stack" aria-label="입력 및 변환 설정">
+        <section class="panel">
+          <div class="panel-header"><h2>1. DOCX 파일 선택</h2><p class="panel-desc">서버 업로드 없이 현재 브라우저 탭 안에서만 변환합니다.</p></div>
+          <div class="panel-body">
+            <input id="fileInput" class="sr-only" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="DOCX 파일 선택 또는 끌어놓기">
+              <div class="drop-icon">📄</div><strong>DOCX 파일을 놓거나 클릭하세요</strong><small>.doc 형식은 지원하지 않습니다.</small>
+            </div>
+            <div id="fileRow" class="file-row"><span class="file-icon">🗂️</span><div style="min-width:0"><div id="fileName" class="file-name"></div><div id="fileMeta" class="file-meta"></div></div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>2. 변환 옵션</h2><p class="panel-desc">각 옵션은 <code>convertToHtml()</code>의 설정으로 전달됩니다.</p></div>
+          <div class="panel-body">
+            <fieldset class="fieldset">
+              <div class="control-group">
+                <label class="title" for="imageMode">이미지 처리 방식</label>
+                <select id="imageMode" class="select">
+                  <option value="default">기본 · Data URI로 인라인 포함</option>
+                  <option value="decorated">사용자 변환기 · class / lazy 속성 추가</option>
+                  <option value="placeholder">사용자 변환기 · 원본 대신 미리보기 자리표시자</option>
+                </select>
+                <div class="small-label" style="margin-top:7px">두 번째·세 번째 항목은 <code>mammoth.images.imgElement()</code>를 사용합니다.</div>
+              </div>
+              <div class="control-group">
+                <label class="title" for="idPrefix">생성 ID 접두어</label>
+                <input id="idPrefix" class="text-input" value="mammoth-demo-" placeholder="예: article-2026-" />
+              </div>
+              <div class="control-group">
+                <label class="check"><input id="includeDefault" type="checkbox" checked /><span><b>기본 스타일맵 포함</b><br>Heading 1, 목록 등 Mammoth 기본 매핑을 함께 사용</span></label>
+                <label class="check"><input id="includeEmbedded" type="checkbox" checked /><span><b>DOCX에 저장된 스타일맵 포함</b><br>임베디드 스타일맵이 있으면 기본 맵과 결합</span></label>
+                <label class="check"><input id="keepEmpty" type="checkbox" /><span><b>빈 문단 보존</b><br>기본값은 빈 문단 무시, 선택 시 빈 문단도 출력</span></label>
+                <label class="check"><input id="transformCentered" type="checkbox" /><span><b>중앙 정렬 무스타일 문단 → H2</b><br>문서 변환 훅 <code>transformDocument</code> 시연용</span></label>
+              </div>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>3. 스타일 매핑</h2><p class="panel-desc">Word 스타일명과 HTML 구조를 연결합니다. 실제 문서의 스타일명과 정확히 일치해야 합니다.</p></div>
+          <div class="panel-body">
+            <div class="preset-row" aria-label="스타일 맵 예시">
+              <button class="preset" data-preset="empty" type="button">비우기</button>
+              <button class="preset" data-preset="semantic" type="button">권장 구조화</button>
+              <button class="preset" data-preset="inline" type="button">인라인 서식</button>
+              <button class="preset" data-preset="grouping" type="button">그룹 구조</button>
+            </div>
+            <textarea id="styleMap" class="style-map" spellcheck="false" aria-label="Mammoth 스타일 매핑"></textarea>
+            <div class="inline" style="margin-top:10px">
+              <button class="button" id="embedMapButton" type="button">스타일맵을 DOCX에 저장</button>
+              <span class="small-label">새 DOCX가 다운로드됩니다.</span>
+            </div>
+          </div>
+          <div class="run-area">
+            <button class="button primary" id="convertButton" type="button">DOCX 전체 분석 및 변환</button>
+            <p class="run-note">HTML 변환 · 원본 텍스트 추출 · Markdown 변환 · 결과 메시지 · 구조 통계를 함께 실행</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>지원 범위 요약</h2></div>
+          <div class="panel-body">
+            <div class="info-list">
+              <div class="info"><b>주요 변환 요소</b><p>제목, 목록, 표, 이미지, 링크, 각주·미주, 굵게·기울임·취소선·위/아래 첨자, 줄바꿈, 텍스트 상자, 주석</p></div>
+              <div class="info"><b>표현 방식</b><p>워드의 글꼴·색상·정확한 배치 복제보다 의미 있는 HTML 구조 생성에 중점</p></div>
+              <div class="info"><b>변환 후 보안</b><p>신뢰할 수 없는 DOCX에서 생성한 HTML은 별도 정화 후 서비스 화면에 삽입해야 함</p></div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="stack" aria-label="변환 결과">
+        <section class="panel">
+          <div class="panel-body">
+            <div class="summary">
+              <div><h2 id="resultTitle" class="summary-title">결과 대기 중</h2><p id="resultDesc" class="summary-desc">DOCX 파일을 선택한 뒤 변환을 실행하세요.</p></div>
+              <div id="resultBadge" class="summary-badge">READY</div>
+            </div>
+          </div>
+          <div class="panel-body" style="padding-top:0">
+            <div class="feature-grid" aria-label="HTML 구조 통계">
+              <div class="feature"><div class="n" id="statHeadings">–</div><div class="k">제목</div><div class="v">h1 ~ h6</div></div>
+              <div class="feature"><div class="n" id="statLists">–</div><div class="k">목록</div><div class="v">ul / ol</div></div>
+              <div class="feature"><div class="n" id="statTables">–</div><div class="k">표</div><div class="v">table</div></div>
+              <div class="feature"><div class="n" id="statImages">–</div><div class="k">이미지</div><div class="v">img</div></div>
+              <div class="feature"><div class="n" id="statLinks">–</div><div class="k">링크</div><div class="v">a</div></div>
+              <div class="feature"><div class="n" id="statNotes">–</div><div class="k">주석·각주</div><div class="v">references</div></div>
+              <div class="feature"><div class="n" id="statParagraphs">–</div><div class="k">문단</div><div class="v">p</div></div>
+              <div class="feature"><div class="n" id="statChars">–</div><div class="k">문자 수</div><div class="v">추출 텍스트</div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="tabs" role="tablist" aria-label="변환 결과 탭">
+            <button class="tab active" role="tab" aria-selected="true" data-tab="preview" type="button">안전 격리 미리보기</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="html" type="button">HTML 소스</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="text" type="button">원본 텍스트</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="markdown" type="button">Markdown (레거시)</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="messages" type="button">메시지</button>
+          </div>
+          <div id="tab-preview" class="tabcontent active">
+            <div class="result-toolbar"><button class="button" data-download="html" type="button">HTML 조각 저장</button><button class="button" data-copy="html" type="button">HTML 복사</button></div>
+            <div id="previewEmpty" class="empty"><div><div class="emoji">🦣</div><strong>변환된 문서의 HTML 미리보기 영역</strong><span>스크립트 실행을 제한한 iframe 안에 렌더링합니다.</span></div></div>
+            <iframe id="previewFrame" class="output-frame" sandbox="" title="Mammoth 변환 HTML 미리보기" hidden></iframe>
+          </div>
+          <div id="tab-html" class="tabcontent">
+            <div class="result-toolbar"><button class="button" data-download="html" type="button">HTML 조각 저장</button><button class="button" data-copy="html" type="button">복사</button></div>
+            <pre id="htmlOutput" class="code-output">변환 전입니다.</pre>
+          </div>
+          <div id="tab-text" class="tabcontent">
+            <div class="result-toolbar"><button class="button" data-download="text" type="button">TXT 저장</button><button class="button" data-copy="text" type="button">복사</button></div>
+            <pre id="textOutput" class="code-output plain-output">변환 전입니다.</pre>
+          </div>
+          <div id="tab-markdown" class="tabcontent">
+            <div class="notice"><strong>Markdown 변환은 레거시 기능</strong>공식 문서는 HTML을 만든 뒤 별도 라이브러리로 Markdown을 생성하는 방식을 권장합니다. 여기서는 API 비교 목적으로 표시합니다.</div>
+            <div class="result-toolbar" style="margin-top:12px"><button class="button" data-download="markdown" type="button">MD 저장</button><button class="button" data-copy="markdown" type="button">복사</button></div>
+            <pre id="markdownOutput" class="code-output">변환 전입니다.</pre>
+          </div>
+          <div id="tab-messages" class="tabcontent"><div id="messageList" class="message-list"><div class="message ok"><div class="message-type">READY</div>변환을 실행하면 Mammoth 메시지와 처리 결과가 표시됩니다.</div></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2>API 및 실무 적용 포인트</h2><p class="panel-desc">이 화면에서 실제로 호출하거나 확인하는 Mammoth.js 기능입니다.</p></div>
+          <div class="panel-body">
+            <div class="stats">
+              <div class="stat"><b>convertToHtml</b><span>핵심 HTML 변환</span></div>
+              <div class="stat"><b>extractRawText</b><span>서식 제거 텍스트</span></div>
+              <div class="stat"><b>convertToMarkdown</b><span>레거시 비교</span></div>
+              <div class="stat"><b>embedStyleMap</b><span>DOCX에 맵 저장</span></div>
+              <div class="stat"><b>imgElement</b><span>이미지 콜백</span></div>
+            </div>
+            <div class="footnote">현재 화면은 브라우저 입력 방식인 <code>{ arrayBuffer }</code>를 사용합니다. 외부 파일 참조 접근은 기본적으로 비활성화된 상태를 유지합니다. <code>transformDocument</code>는 공식 문서상 안정 API로 보장되지 않으므로 실제 도입 시 버전 고정 및 회귀 검증이 필요합니다.</div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  // Mammoth.js의 최신 브라우저 번들을 순서대로 시도합니다. 오프라인 환경에서는 같은 폴더에
+  // mammoth.browser.min.js를 저장하고 아래 목록의 첫 줄을 "./mammoth.browser.min.js"로 바꾸면 됩니다.
+  window.mammothReady = new Promise(function(resolve, reject) {
+    var sources = [
+      "./mammoth.browser.min.js",
+      "https://cdn.jsdelivr.net/npm/mammoth@1.12.0/mammoth.browser.min.js",
+      "https://unpkg.com/mammoth@1.12.0/mammoth.browser.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"
+    ];
+    var i = 0;
+    function loadNext() {
+      if (i >= sources.length) { reject(new Error("모든 CDN에서 Mammoth.js를 불러오지 못했습니다.")); return; }
+      var script = document.createElement("script");
+      script.src = sources[i++];
+      script.onload = function(){ window.mammoth ? resolve(window.mammoth) : loadNext(); };
+      script.onerror = loadNext;
+      document.head.appendChild(script);
+    }
+    loadNext();
+  });
+  </script>
+  <script>
+  (function () {
+    "use strict";
+
+    var state = { file: null, html: "", text: "", markdown: "", messages: [], libraryReady: false };
+    var $ = function(id){ return document.getElementById(id); };
+    var defaultMap = [
+      "# Word 스타일명은 문서에서 실제 사용한 이름과 일치해야 합니다.",
+      "p[style-name='Title'] => h1.document-title:fresh",
+      "p[style-name='Subtitle'] => p.document-subtitle:fresh",
+      "p[style-name='Section Title'] => h1.section-title:fresh",
+      "p[style-name='Subsection Title'] => h2.section-subtitle:fresh",
+      "p[style-name='Warning'] => aside.warning > p:fresh",
+      "p[style-name='Code'] => pre.code-block:fresh",
+      "r[style-name='Key Term'] => mark.key-term"
+    ].join("\n");
+    var presets = {
+      empty: "",
+      semantic: defaultMap,
+      inline: [
+        "# 명시적으로 적용한 인라인 서식만 매칭합니다.",
+        "b => strong.emphasis",
+        "i => em.emphasis",
+        "u => span.underlined",
+        "strike => del",
+        "highlight[color='yellow'] => mark.highlighted"
+      ].join("\n"),
+      grouping: [
+        "# Aside Heading과 Aside Text를 하나의 div.aside 안에 그룹화",
+        "p[style-name='Aside Heading'] => div.aside > h3:fresh",
+        "p[style-name='Aside Text'] => div.aside > p:fresh",
+        "p[style-name='Warning'] => aside.warning > p:fresh",
+        "p[style-name='Code'] => pre.code-block:fresh"
+      ].join("\n")
+    };
+    $("styleMap").value = defaultMap;
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return "–";
+      var units = ["B","KB","MB","GB"], index = 0, value = bytes;
+      while (value >= 1024 && index < units.length - 1) { value /= 1024; index++; }
+      return (index === 0 ? value : value.toFixed(value < 10 ? 1 : 0)) + " " + units[index];
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"]/g, function(ch){ return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[ch]; });
+    }
+    function filenameBase(name) { return (name || "mammoth-output").replace(/\.docx$/i, "").replace(/[^\w가-힣.-]+/g, "_"); }
+    function toast(message, isError) {
+      var node = $("toast"); node.textContent = message; node.className = "toast show" + (isError ? " error" : "");
+      window.clearTimeout(toast.timer); toast.timer = window.setTimeout(function(){ node.className = "toast"; }, 3600);
+    }
+    function setBusy(busy, label) {
+      var button = $("convertButton"); button.disabled = busy; button.textContent = busy ? (label || "변환 중…") : "DOCX 전체 분석 및 변환";
+      button.style.opacity = busy ? ".72" : "1";
+      $("embedMapButton").disabled = busy;
+    }
+    function setFile(file) {
+      if (!file) return;
+      if (!/\.docx$/i.test(file.name)) { toast(".docx 형식만 선택할 수 있습니다.", true); return; }
+      state.file = file;
+      $("fileName").textContent = file.name;
+      $("fileMeta").textContent = formatBytes(file.size) + " · " + (file.type || "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      $("fileRow").classList.add("active");
+      $("resultTitle").textContent = "파일 선택 완료";
+      $("resultDesc").textContent = "옵션을 확인한 뒤 ‘DOCX 전체 분석 및 변환’을 실행하세요.";
+      $("resultBadge").textContent = "FILE READY";
+      toast("DOCX 파일이 선택되었습니다.");
+    }
+    function currentStyleMap() { return $("styleMap").value; }
+    function svgDataUri(label) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="480" viewBox="0 0 960 480"><rect width="960" height="480" fill="#e8efff"/><path d="M0 320 C150 270 240 370 390 320 S690 260 960 330 V480 H0Z" fill="#3267cf" opacity=".85"/><circle cx="160" cy="130" r="60" fill="#f6ca65"/><text x="480" y="205" text-anchor="middle" font-size="46" font-family="Arial, sans-serif" font-weight="700" fill="#1a3e88">Mammoth image placeholder</text><text x="480" y="258" text-anchor="middle" font-size="25" font-family="Arial, sans-serif" fill="#2c4b86">' + escapeHtml(label) + '</text></svg>';
+      return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+    }
+    function buildOptions() {
+      var options = {
+        styleMap: currentStyleMap(),
+        includeDefaultStyleMap: $("includeDefault").checked,
+        includeEmbeddedStyleMap: $("includeEmbedded").checked,
+        ignoreEmptyParagraphs: !$("keepEmpty").checked,
+        idPrefix: $("idPrefix").value.trim()
+      };
+      var mode = $("imageMode").value;
+      if (mode === "decorated") {
+        options.convertImage = mammoth.images.imgElement(function(image) {
+          return image.readAsBase64String().then(function(base64) {
+            return { src: "data:" + image.contentType + ";base64," + base64, class: "mammoth-image", loading: "lazy", "data-content-type": image.contentType };
+          });
+        });
+      }
+      if (mode === "placeholder") {
+        options.convertImage = mammoth.images.imgElement(function(image) {
+          return { src: svgDataUri("원본 타입: " + image.contentType), class: "mammoth-image-placeholder", loading: "lazy", "data-content-type": image.contentType };
+        });
+      }
+      if ($("transformCentered").checked && mammoth.transforms && mammoth.transforms.paragraph) {
+        options.transformDocument = mammoth.transforms.paragraph(function(paragraph) {
+          if (paragraph.alignment === "center" && !paragraph.styleId) {
+            return Object.assign({}, paragraph, { styleId: "Heading2", styleName: "Heading 2" });
+          }
+          return paragraph;
+        });
+      }
+      return options;
+    }
+    function renderPreview(html) {
+      var frame = $("previewFrame");
+      var previewCss = [
+        "body{margin:0;background:#fff;color:#1e293b;font-family:Arial,'Malgun Gothic',sans-serif;line-height:1.7}",
+        "article{max-width:980px;margin:0 auto;padding:32px}",
+        "h1{font-size:30px;border-bottom:2px solid #1d4ed8;padding-bottom:9px;margin:26px 0 14px}h2{font-size:24px;margin:24px 0 12px}h3{font-size:19px;margin:19px 0 9px}",
+        "p{margin:0 0 12px}a{color:#1d4ed8}img{max-width:100%;height:auto;border:1px solid #dbe4f2;border-radius:8px;margin:8px 0}",
+        "table{border-collapse:collapse;width:100%;margin:16px 0}td,th{border:1px solid #bfcce0;padding:8px;text-align:left}th{background:#eef4ff}",
+        "blockquote{margin:14px 0;padding:8px 14px;border-left:4px solid #7599e9;background:#f4f7ff}.document-subtitle{color:#64748b;font-size:17px}.warning{background:#fff6e8;border-left:4px solid #d99018;padding:8px 12px;margin:12px 0}.aside{background:#f0f6ff;border:1px solid #cdddff;border-radius:10px;padding:12px 14px;margin:14px 0}.aside h3{margin-top:0}.code-block{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;white-space:pre-wrap}.underlined{text-decoration:underline}.key-term,.highlighted{background:#fff0a7;padding:0 2px}sup,sub{line-height:0}"
+      ].join("");
+      frame.srcdoc = "<!doctype html><html lang='ko'><head><meta charset='utf-8'><style>" + previewCss + "</style></head><body><article>" + html + "</article></body></html>";
+      $("previewEmpty").hidden = true; frame.hidden = false;
+    }
+    function updateStats(html, text) {
+      var doc = new DOMParser().parseFromString(html || "", "text/html");
+      function count(selector){ return doc.querySelectorAll(selector).length; }
+      $("statHeadings").textContent = count("h1,h2,h3,h4,h5,h6");
+      $("statLists").textContent = count("ul,ol");
+      $("statTables").textContent = count("table");
+      $("statImages").textContent = count("img");
+      $("statLinks").textContent = count("a");
+      $("statNotes").textContent = count("[id*='footnote'],[id*='endnote'],[id*='comment']");
+      $("statParagraphs").textContent = count("p");
+      $("statChars").textContent = (text || "").replace(/\s/g, "").length.toLocaleString("ko-KR");
+    }
+    function renderMessages(messages, extra) {
+      var list = $("messageList"); list.innerHTML = "";
+      var all = (messages || []).slice();
+      if (extra && extra.length) all = all.concat(extra);
+      if (!all.length) {
+        list.innerHTML = '<div class="message ok"><div class="message-type">SUCCESS</div>변환이 완료되었으며 Mammoth가 보고한 경고 또는 오류가 없습니다.</div>';
+        return;
+      }
+      all.forEach(function(message) {
+        var type = String(message.type || "info").toLowerCase();
+        var item = document.createElement("div"); item.className = "message " + (type === "error" ? "error" : "");
+        var label = document.createElement("div"); label.className = "message-type"; label.textContent = type;
+        var content = document.createElement("div"); content.textContent = message.message || String(message);
+        item.appendChild(label); item.appendChild(content); list.appendChild(item);
+      });
+    }
+    function renderOutputs() {
+      $("htmlOutput").textContent = state.html || "(HTML 출력 없음)";
+      $("textOutput").textContent = state.text || "(텍스트 출력 없음)";
+      $("markdownOutput").textContent = state.markdown || "(Markdown 출력 없음)";
+      renderPreview(state.html || "<p>출력된 HTML이 없습니다.</p>");
+      updateStats(state.html, state.text);
+      renderMessages(state.messages);
+    }
+    async function convert() {
+      if (!state.file) { toast("먼저 DOCX 파일을 선택하세요.", true); return; }
+      if (!state.libraryReady || !window.mammoth) { toast("Mammoth.js 라이브러리가 아직 준비되지 않았습니다.", true); return; }
+      setBusy(true, "변환·분석 중…");
+      $("resultTitle").textContent = "변환 및 분석 진행 중";
+      $("resultDesc").textContent = "HTML, 원본 텍스트, Markdown과 메시지를 순차적으로 처리합니다.";
+      $("resultBadge").textContent = "RUNNING";
+      try {
+        var source = await state.file.arrayBuffer();
+        var options = buildOptions();
+        var htmlResult = await mammoth.convertToHtml({ arrayBuffer: source.slice(0) }, options);
+        var rawResult = await mammoth.extractRawText({ arrayBuffer: source.slice(0) });
+        var mdResult = null, markdownExtra = [];
+        if (typeof mammoth.convertToMarkdown === "function") {
+          try { mdResult = await mammoth.convertToMarkdown({ arrayBuffer: source.slice(0) }, options); }
+          catch (mdError) { markdownExtra.push({ type: "warning", message: "Markdown 변환을 완료하지 못했습니다: " + (mdError.message || mdError) }); }
+        } else {
+          markdownExtra.push({ type: "warning", message: "현재 불러온 Mammoth 번들에는 convertToMarkdown API가 없습니다." });
+        }
+        state.html = htmlResult.value || "";
+        state.text = rawResult.value || "";
+        state.markdown = mdResult ? (mdResult.value || "") : "";
+        state.messages = [].concat(htmlResult.messages || [], rawResult.messages || [], mdResult ? (mdResult.messages || []) : [], markdownExtra);
+        renderOutputs();
+        $("resultTitle").textContent = "변환 완료 · " + state.file.name;
+        $("resultDesc").textContent = "HTML " + state.html.length.toLocaleString("ko-KR") + "자 · 원본 텍스트 " + state.text.length.toLocaleString("ko-KR") + "자 · 메시지 " + state.messages.length + "건";
+        $("resultBadge").textContent = state.messages.some(function(m){ return m.type === "error"; }) ? "CHECK MESSAGES" : "SUCCESS";
+        toast("변환과 기능 분석이 완료되었습니다.");
+      } catch (error) {
+        state.messages = [{ type: "error", message: error && error.message ? error.message : String(error) }];
+        renderMessages(state.messages);
+        $("resultTitle").textContent = "변환 실패";
+        $("resultDesc").textContent = "메시지 탭에서 오류 내용을 확인하세요.";
+        $("resultBadge").textContent = "ERROR";
+        toast("변환 중 오류가 발생했습니다.", true);
+      } finally { setBusy(false); }
+    }
+    function downloadBlob(content, type, name) {
+      var url = URL.createObjectURL(new Blob([content], { type: type }));
+      var a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1200);
+    }
+    async function embedStyleMap() {
+      if (!state.file) { toast("스타일맵을 저장할 DOCX 파일을 선택하세요.", true); return; }
+      if (!state.libraryReady || !window.mammoth) { toast("Mammoth.js 라이브러리를 불러오지 못했습니다.", true); return; }
+      setBusy(true, "스타일맵 저장 중…");
+      try {
+        var source = await state.file.arrayBuffer();
+        var docx = await mammoth.embedStyleMap({ arrayBuffer: source }, currentStyleMap());
+        var output = await docx.toArrayBuffer();
+        downloadBlob(output, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", filenameBase(state.file.name) + "_embedded-style-map.docx");
+        toast("스타일맵이 포함된 새 DOCX를 만들었습니다.");
+      } catch (error) { toast("스타일맵 저장 실패: " + (error.message || error), true); }
+      finally { setBusy(false); }
+    }
+    function copy(kind) {
+      var value = kind === "html" ? state.html : kind === "text" ? state.text : state.markdown;
+      if (!value) { toast("복사할 결과가 없습니다.", true); return; }
+      navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(value).then(function(){ toast("클립보드에 복사했습니다."); }).catch(function(){ fallbackCopy(value); }) : fallbackCopy(value);
+    }
+    function fallbackCopy(value) {
+      var area = document.createElement("textarea"); area.value = value; document.body.appendChild(area); area.select();
+      try { document.execCommand("copy"); toast("클립보드에 복사했습니다."); } catch(e) { toast("복사 권한을 확인하세요.", true); }
+      area.remove();
+    }
+    function download(kind) {
+      if (!state.file || !(kind === "html" ? state.html : kind === "text" ? state.text : state.markdown)) { toast("저장할 변환 결과가 없습니다.", true); return; }
+      var base = filenameBase(state.file.name);
+      if (kind === "html") downloadBlob(state.html, "text/html;charset=utf-8", base + ".html");
+      if (kind === "text") downloadBlob(state.text, "text/plain;charset=utf-8", base + ".txt");
+      if (kind === "markdown") downloadBlob(state.markdown, "text/markdown;charset=utf-8", base + ".md");
+      toast("파일 저장을 시작했습니다.");
+    }
+    function reset() {
+      state.file = null; state.html = ""; state.text = ""; state.markdown = ""; state.messages = [];
+      $("fileInput").value = ""; $("fileRow").classList.remove("active");
+      $("styleMap").value = defaultMap; $("includeDefault").checked = true; $("includeEmbedded").checked = true; $("keepEmpty").checked = false; $("transformCentered").checked = false; $("imageMode").value = "default"; $("idPrefix").value = "mammoth-demo-";
+      $("htmlOutput").textContent = "변환 전입니다."; $("textOutput").textContent = "변환 전입니다."; $("markdownOutput").textContent = "변환 전입니다.";
+      $("previewFrame").hidden = true; $("previewFrame").srcdoc = ""; $("previewEmpty").hidden = false;
+      renderMessages([]); updateStats("", "");
+      $("resultTitle").textContent = "결과 대기 중"; $("resultDesc").textContent = "DOCX 파일을 선택한 뒤 변환을 실행하세요."; $("resultBadge").textContent = "READY";
+      toast("화면을 초기 상태로 되돌렸습니다.");
+    }
+    function selectTab(tabName) {
+      document.querySelectorAll(".tab").forEach(function(tab){ var on = tab.dataset.tab === tabName; tab.classList.toggle("active", on); tab.setAttribute("aria-selected", String(on)); });
+      document.querySelectorAll(".tabcontent").forEach(function(panel){ panel.classList.toggle("active", panel.id === "tab-" + tabName); });
+    }
+
+    var dropzone = $("dropzone");
+    dropzone.addEventListener("click", function(){ $("fileInput").click(); });
+    dropzone.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("fileInput").click(); } });
+    $("fileInput").addEventListener("change", function(e){ if (e.target.files && e.target.files[0]) setFile(e.target.files[0]); });
+    ["dragenter","dragover"].forEach(function(type){ dropzone.addEventListener(type, function(e){ e.preventDefault(); dropzone.classList.add("dragover"); }); });
+    ["dragleave","drop"].forEach(function(type){ dropzone.addEventListener(type, function(e){ e.preventDefault(); dropzone.classList.remove("dragover"); }); });
+    dropzone.addEventListener("drop", function(e){ if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+    document.querySelectorAll(".preset").forEach(function(button){ button.addEventListener("click", function(){ $("styleMap").value = presets[button.dataset.preset]; toast("스타일 매핑 예시를 적용했습니다."); }); });
+    $("convertButton").addEventListener("click", convert); $("embedMapButton").addEventListener("click", embedStyleMap); $("resetButton").addEventListener("click", reset);
+    $("loadSampleSettings").addEventListener("click", function(){ $("styleMap").value = defaultMap + "\n\n" + presets.inline; $("imageMode").value = "decorated"; $("keepEmpty").checked = true; $("transformCentered").checked = true; toast("샘플 DOCX에 맞춘 권장 설정을 적용했습니다."); });
+    document.querySelectorAll(".tab").forEach(function(tab){ tab.addEventListener("click", function(){ selectTab(tab.dataset.tab); }); });
+    document.querySelectorAll("[data-copy]").forEach(function(button){ button.addEventListener("click", function(){ copy(button.dataset.copy); }); });
+    document.querySelectorAll("[data-download]").forEach(function(button){ button.addEventListener("click", function(){ download(button.dataset.download); }); });
+
+    window.mammothReady.then(function(){
+      state.libraryReady = true; $("libraryDot").className = "status-dot ready"; $("libraryStatus").textContent = "Mammoth.js 로드 완료 · 브라우저 변환 준비됨";
+    }).catch(function(error){
+      $("libraryDot").className = "status-dot fail"; $("libraryStatus").textContent = "Mammoth.js를 불러오지 못했습니다 · 네트워크 또는 CDN 접근을 확인하세요";
+      $("resultTitle").textContent = "라이브러리 로드 실패"; $("resultDesc").textContent = "온라인 CDN에 연결할 수 없는 환경에서는 mammoth.browser.min.js를 HTML과 같은 폴더에 두고 로컬 경로로 변경하세요."; $("resultBadge").textContent = "OFFLINE";
+      console.error(error);
+    });
+  })();
+  </script>
+</body>
+</html>
