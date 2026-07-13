@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WebCola 종합 기능 샘플</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@4.13.0/build/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/webcola@3.4.0/dist/cola.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--line:#dfe6ef;--text:#172033;--muted:#667085;--accent:#2563eb;--accent2:#0f766e;--danger:#dc2626;--shadow:0 10px 30px rgba(31,41,55,.08)}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{padding:28px 30px 22px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:white} header h1{margin:0 0 7px;font-size:28px} header p{margin:0;opacity:.84}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;padding:18px;min-height:calc(100vh - 112px)}
+.sidebar,.main{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.sidebar{padding:16px;height:fit-content;position:sticky;top:18px}.sidebar h2{font-size:14px;margin:4px 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.demo-list{display:grid;gap:7px}.demo-btn{width:100%;border:1px solid transparent;background:#f8fafc;padding:11px 12px;border-radius:11px;text-align:left;cursor:pointer;font-weight:700;color:#344054}.demo-btn:hover{background:#eef4ff}.demo-btn.active{background:#e8efff;border-color:#b9ccff;color:#1746a2}
+.sidebar .note{margin-top:15px;border-top:1px solid var(--line);padding-top:14px;font-size:12px;line-height:1.6;color:var(--muted)}
+.main{overflow:hidden}.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+button,select,input{font:inherit}.action{border:1px solid #cfd8e6;background:white;padding:8px 11px;border-radius:9px;cursor:pointer;font-weight:700;color:#344054}.action:hover{background:#f3f6fa}.action.primary{background:var(--accent);border-color:var(--accent);color:white}.action.danger{color:var(--danger)}
+.control{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}input[type=range]{width:120px}.badge{padding:5px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:800}
+.info{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;padding:15px 17px;border-bottom:1px solid var(--line)}.info h2{margin:0 0 5px;font-size:20px}.info p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}.metrics{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.stage-wrap{position:relative;height:650px;background:radial-gradient(circle at 30% 20%,#fff,#f8fbff 65%,#f0f4fa)}svg{display:block;width:100%;height:100%}.empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}
+.link{stroke:#94a3b8;stroke-opacity:.75}.link.directed{marker-end:url(#arrow)}.node rect,.node circle{stroke:#fff;stroke-width:2px;filter:drop-shadow(0 2px 3px rgba(15,23,42,.18))}.node text{font-size:11px;fill:#fff;font-weight:800;pointer-events:none;text-anchor:middle;dominant-baseline:central}.group-shape{fill-opacity:.11;stroke-width:2;stroke-dasharray:6 4}.label-bg{fill:white;stroke:#d7dee9}.edge-label{font-size:10px;fill:#475569;text-anchor:middle}.guide{stroke:#f59e0b;stroke-width:1.5;stroke-dasharray:5 4;opacity:.85}.route{fill:none;stroke-linejoin:round;stroke-linecap:round}.mini-log{position:absolute;right:12px;bottom:12px;width:min(360px,45%);max-height:130px;overflow:auto;background:rgba(15,23,42,.88);color:#dbeafe;border-radius:10px;padding:9px 11px;font:11px/1.55 ui-monospace,monospace;pointer-events:none}.legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--muted)}
+@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:static}.demo-list{grid-template-columns:repeat(2,1fr)}.stage-wrap{height:590px}.info{grid-template-columns:1fr}.metrics{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<header><h1>WebCola 종합 기능 실험실</h1><p>제약 기반 그래프 레이아웃, 충돌 방지, 그룹, 흐름, 링크 라우팅, 상호작용을 한 페이지에서 확인</p></header>
+<div class="app">
+<aside class="sidebar">
+<h2>기능 시나리오</h2><div class="demo-list" id="demoList"></div>
+<div class="note"><b>조작법</b><br>노드 드래그 · 휠 확대/축소 · 배경 드래그 이동<br><br>WebCola는 렌더러가 아니라 좌표 계산 엔진입니다. 이 예제는 D3 SVG 렌더링과 결합했습니다.</div>
+</aside>
+<main class="main">
+<div class="toolbar">
+<button class="action primary" id="restartBtn">레이아웃 재시작</button><button class="action" id="randomBtn">위치 섞기</button><button class="action" id="fitBtn">화면 맞춤</button><button class="action" id="addBtn">노드 추가</button><button class="action danger" id="removeBtn">노드 제거</button>
+<label class="control">링크 길이 <input type="range" id="linkLength" min="35" max="180" value="90"><span id="lengthValue">90</span></label>
+<label class="control"><input type="checkbox" id="overlap" checked> 겹침 방지</label><label class="control"><input type="checkbox" id="labels" checked> 링크 라벨</label>
+</div>
+<div class="info"><div><h2 id="demoTitle"></h2><p id="demoDesc"></p></div><div class="metrics"><span class="badge" id="nodeMetric"></span><span class="badge" id="linkMetric"></span><span class="badge" id="constraintMetric"></span></div></div>
+<div class="stage-wrap" id="stage"><svg id="graph"></svg><div class="legend">색상: 노드 유형 · 점선 박스: 그룹 · 주황 점선: 정렬 기준선</div><div class="mini-log" id="log"></div></div>
+</main></div>
+<script>
+(function(){
+'use strict';
+var W=1100,H=650, svg=d3.select('#graph'), viewport, zoomBehavior, layout, nodeSel, linkSel, labelSel, groupSel, guideSel;
+var currentKey='basic', currentData, linkLength=90, showLabels=true, overlap=true, seq=100;
+var palette=['#2563eb','#0f766e','#7c3aed','#ea580c','#db2777','#0891b2','#4f46e5'];
+var demos={
+ basic:{title:'1. 기본 Force-directed 레이아웃',desc:'WebCola의 링크 거리 최적화와 D3 드래그·줌을 결합한 기본 네트워크입니다.',build:function(){return makeGraph(12,18);}},
+ overlap:{title:'2. 사각 노드 충돌 방지',desc:'서로 다른 폭·높이를 가진 노드가 겹치지 않도록 avoidOverlaps를 적용합니다.',build:function(){var d=makeGraph(15,24);d.nodes.forEach(function(n,i){n.width=42+(i%4)*18;n.height=30+(i%3)*10;});return d;}},
+ alignment:{title:'3. 정렬 제약조건',desc:'일부 노드를 같은 X축·Y축에 강제로 정렬합니다. 주황 점선이 제약 기준선입니다.',build:function(){var d=makeGraph(9,11);d.constraints=[{type:'alignment',axis:'x',offsets:[{node:0,offset:0},{node:1,offset:0},{node:2,offset:0}]},{type:'alignment',axis:'y',offsets:[{node:3,offset:0},{node:4,offset:0},{node:5,offset:0}]}];return d;}},
+ separation:{title:'4. 간격·순서 제약조건',desc:'노드 간 최소 간격과 좌우·상하 순서를 지정하여 업무 흐름 같은 구조를 보존합니다.',build:function(){var d=makeGraph(8,9);d.constraints=[{axis:'x',left:0,right:1,gap:100},{axis:'x',left:1,right:2,gap:100},{axis:'y',left:3,right:4,gap:90},{axis:'y',left:4,right:5,gap:90}];return d;}},
+ flow:{title:'5. 방향성 Flow 레이아웃',desc:'flowLayout을 사용해 링크 방향에 따라 좌→우 단계형 구조를 만듭니다.',flow:true,directed:true,build:function(){return pipelineData();}},
+ groups:{title:'6. 중첩 그룹과 패딩',desc:'관련 노드를 그룹 영역으로 묶고 그룹 간 배치를 최적화합니다. 일부 그룹은 중첩됩니다.',build:function(){var d=makeGraph(14,18);d.groups=[{id:'g0',name:'본부 A',leaves:[0,1,2,3],padding:20},{id:'g1',name:'본부 B',leaves:[4,5,6,7],padding:20},{id:'g2',name:'공동 프로젝트',leaves:[8,9],groups:[0,1],padding:28}];return d;}},
+ disconnected:{title:'7. 분리 컴포넌트 처리',desc:'서로 연결되지 않은 여러 컴포넌트를 화면 공간에 균형 있게 배치합니다.',handleDisconnected:true,build:function(){return disconnectedData();}},
+ routing:{title:'8. 직교 링크 라우팅',desc:'레이아웃 종료 후 prepareEdgeRouting과 routeEdge로 노드를 피하는 직교 경로를 계산합니다.',routing:true,directed:true,build:function(){return routingData();}},
+ dynamic:{title:'9. 동적 그래프 편집',desc:'상단의 노드 추가·제거 버튼으로 데이터를 바꾼 뒤 레이아웃을 재계산합니다.',build:function(){return makeGraph(10,14);}},
+ fixed:{title:'10. 고정 노드·핀 고정',desc:'빨간 노드는 위치가 고정됩니다. 다른 노드를 움직여도 기준점은 유지됩니다.',build:function(){var d=makeGraph(12,18);d.nodes[0].fixed=1;d.nodes[0].x=180;d.nodes[0].y=160;d.nodes[0].color='#dc2626';d.nodes[6].fixed=1;d.nodes[6].x=850;d.nodes[6].y=440;d.nodes[6].color='#dc2626';return d;}},
+ linktypes:{title:'11. 링크 유형별 거리',desc:'링크 유형에 따라 서로 다른 이상적 거리를 적용합니다. 긴 링크와 짧은 링크를 비교할 수 있습니다.',customLength:true,build:function(){var d=makeGraph(13,20);d.links.forEach(function(l,i){l.kind=i%3;l.label=['긴 협업','보통','긴밀'][l.kind];});return d;}},
+ grid:{title:'12. 그리드 스냅 후처리',desc:'WebCola 계산 좌표를 종료 시점에 일정 격자로 스냅하는 실무형 후처리 예시입니다.',grid:true,build:function(){return makeGraph(16,25);}}
+};
+function makeGraph(n,m){var nodes=d3.range(n).map(function(i){return{id:i,name:'N'+(i+1),width:54,height:34,color:palette[i%palette.length]};});var links=[];for(var i=1;i<n;i++)links.push({source:i,target:Math.floor(Math.random()*i),label:'L'+i});while(links.length<m){var a=Math.floor(Math.random()*n),b=Math.floor(Math.random()*n);if(a!==b&&!links.some(function(x){return(+x.source===a&&+x.target===b)||(+x.source===b&&+x.target===a)}))links.push({source:a,target:b,label:'관계'});}return{nodes:nodes,links:links,constraints:[],groups:[]};}
+function pipelineData(){var names=['접수','검증','분류','심사 A','심사 B','승인','지급','사후관리'];var nodes=names.map(function(x,i){return{id:i,name:x,width:70,height:38,color:palette[i%palette.length]};});return{nodes:nodes,links:[{source:0,target:1},{source:1,target:2},{source:2,target:3},{source:2,target:4},{source:3,target:5},{source:4,target:5},{source:5,target:6},{source:6,target:7}],constraints:[],groups:[]};}
+function disconnectedData(){var d=makeGraph(15,0);d.links=[{source:0,target:1},{source:1,target:2},{source:2,target:3},{source:4,target:5},{source:5,target:6},{source:4,target:6},{source:7,target:8},{source:8,target:9},{source:9,target:10},{source:10,target:7},{source:11,target:12}];return d;}
+function routingData(){var d=makeGraph(10,13);d.nodes.forEach(function(n,i){n.width=68;n.height=38;n.name='업무 '+(i+1)});return d;}
+function cloneData(x){return JSON.parse(JSON.stringify(x));}
+function initUI(){var list=d3.select('#demoList');Object.keys(demos).forEach(function(k){list.append('button').attr('class','demo-btn').attr('data-key',k).text(demos[k].title).on('click',function(){loadDemo(k);});});
+d3.select('#restartBtn').on('click',startLayout);d3.select('#randomBtn').on('click',function(){currentData.nodes.forEach(function(n){if(!n.fixed){n.x=Math.random()*W;n.y=Math.random()*H;}});startLayout();});d3.select('#fitBtn').on('click',fitView);d3.select('#addBtn').on('click',addNode);d3.select('#removeBtn').on('click',removeNode);d3.select('#linkLength').on('input',function(){linkLength=+this.value;d3.select('#lengthValue').text(linkLength);startLayout();});d3.select('#overlap').on('change',function(){overlap=this.checked;startLayout();});d3.select('#labels').on('change',function(){showLabels=this.checked;if(labelSel)labelSel.style('display',showLabels?null:'none');});}
+function setupSvg(){svg.selectAll('*').remove();var defs=svg.append('defs');defs.append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',18).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#64748b');viewport=svg.append('g');zoomBehavior=d3.zoom().scaleExtent([.25,4]).on('zoom',function(){viewport.attr('transform',d3.event.transform);});svg.call(zoomBehavior);}
+function loadDemo(k){currentKey=k;currentData=cloneData(demos[k].build());d3.selectAll('.demo-btn').classed('active',function(){return this.dataset.key===k});d3.select('#demoTitle').text(demos[k].title);d3.select('#demoDesc').text(demos[k].desc);setupSvg();render();startLayout();}
+function render(){viewport.selectAll('*').remove();var cfg=demos[currentKey];groupSel=viewport.append('g').selectAll('rect').data(currentData.groups||[]).enter().append('rect').attr('class','group-shape').attr('rx',18).attr('stroke',function(d,i){return palette[i%palette.length]}).attr('fill',function(d,i){return palette[i%palette.length]});
+linkSel=viewport.append('g').selectAll('path').data(currentData.links).enter().append('path').attr('class',cfg.directed?'link route directed':'link route').attr('stroke-width',function(d){return d.kind===2?3:1.8});
+labelSel=viewport.append('g').selectAll('text').data(currentData.links).enter().append('text').attr('class','edge-label').text(function(d){return d.label||''}).style('display',showLabels?null:'none');
+nodeSel=viewport.append('g').selectAll('g').data(currentData.nodes).enter().append('g').attr('class','node');nodeSel.append('rect').attr('x',function(d){return-d.width/2}).attr('y',function(d){return-d.height/2}).attr('width',function(d){return d.width}).attr('height',function(d){return d.height}).attr('rx',9).attr('fill',function(d){return d.color});nodeSel.append('text').text(function(d){return d.name});guideSel=viewport.append('g');updateMetrics();}
+function startLayout(){if(layout)layout.stop();var cfg=demos[currentKey];layout=cola.d3adaptor(d3).size([W,H]).nodes(currentData.nodes).links(currentData.links).avoidOverlaps(overlap).handleDisconnected(cfg.handleDisconnected!==false).convergenceThreshold(.01);
+if(currentData.groups&&currentData.groups.length)layout.groups(currentData.groups);
+if(currentData.constraints&&currentData.constraints.length)layout.constraints(currentData.constraints);
+if(cfg.flow)layout.flowLayout('x',110);
+if(cfg.customLength)layout.linkDistance(function(l){return l.kind===0?155:l.kind===1?90:48;});else layout.linkDistance(linkLength);
+layout.on('tick',tick).on('end',function(){log('레이아웃 수렴 완료');if(cfg.routing)applyRouting();if(cfg.grid)applyGrid();});
+nodeSel.call(layout.drag);log('레이아웃 시작: '+demos[currentKey].title);layout.start(35,25,35);}
+function tick(){var cfg=demos[currentKey];nodeSel.attr('transform',function(d){return'translate('+d.x+','+d.y+')'});if(groupSel)groupSel.attr('x',function(d){return d.bounds.x}).attr('y',function(d){return d.bounds.y}).attr('width',function(d){return d.bounds.width()}).attr('height',function(d){return d.bounds.height()});
+linkSel.attr('d',function(d){var s=d.source,t=d.target;return'M'+s.x+','+s.y+'L'+t.x+','+t.y});labelSel.attr('x',function(d){return(d.source.x+d.target.x)/2}).attr('y',function(d){return(d.source.y+d.target.y)/2-5});drawGuides();}
+function drawGuides(){var cs=currentData.constraints||[], lines=[];cs.forEach(function(c){if(c.type==='alignment'&&c.offsets&&c.offsets.length){var n=currentData.nodes[c.offsets[0].node];if(c.axis==='x')lines.push({x1:n.x,y1:20,x2:n.x,y2:H-20});else lines.push({x1:20,y1:n.y,x2:W-20,y2:n.y});}});var s=guideSel.selectAll('line').data(lines);s.enter().append('line').attr('class','guide').merge(s).attr('x1',function(d){return d.x1}).attr('y1',function(d){return d.y1}).attr('x2',function(d){return d.x2}).attr('y2',function(d){return d.y2});s.exit().remove();}
+function applyRouting(){try{layout.prepareEdgeRouting(8);linkSel.attr('d',function(d){var pts=layout.routeEdge(d);return d3.line().x(function(p){return p.x}).y(function(p){return p.y})(pts);});log('직교 경로 계산 완료');}catch(e){log('라우팅 미지원 또는 실패: '+e.message);}}
+function applyGrid(){var g=55;currentData.nodes.forEach(function(n){n.x=Math.round(n.x/g)*g;n.y=Math.round(n.y/g)*g;});tick();log('55px 그리드 스냅 적용');}
+function addNode(){var id=seq++,n={id:id,name:'추가 '+id,width:62,height:36,color:palette[id%palette.length],x:W/2+Math.random()*80,y:H/2+Math.random()*80};currentData.nodes.push(n);if(currentData.nodes.length>1){var target=currentData.nodes[Math.floor(Math.random()*(currentData.nodes.length-1))];currentData.links.push({source:currentData.nodes.indexOf(target),target:currentData.nodes.length-1,label:'신규'});}render();startLayout();}
+function removeNode(){if(currentData.nodes.length<=2)return;var n=currentData.nodes.pop(),id=n.id;currentData.links=currentData.links.filter(function(l){var s=typeof l.source==='object'?l.source.id:l.source,t=typeof l.target==='object'?l.target.id:l.target;return s!==id&&t!==id});render();startLayout();}
+function fitView(){var b=viewport.node().getBBox();if(!b.width||!b.height)return;var sw=document.getElementById('stage').clientWidth,sh=document.getElementById('stage').clientHeight,s=Math.min(.92/Math.max(b.width/sw,b.height/sh),2.2),tx=(sw-s*(b.x+b.width/2)),ty=(sh-s*(b.y+b.height/2));svg.transition().duration(500).call(zoomBehavior.transform,d3.zoomIdentity.translate(tx,ty).scale(s));}
+function updateMetrics(){d3.select('#nodeMetric').text('노드 '+currentData.nodes.length);d3.select('#linkMetric').text('링크 '+currentData.links.length);d3.select('#constraintMetric').text('제약 '+((currentData.constraints||[]).length+(currentData.groups||[]).length));}
+function log(msg){var el=document.getElementById('log'),t=new Date().toLocaleTimeString();el.innerHTML='['+t+'] '+msg+'<br>'+el.innerHTML;}
+initUI();loadDemo('basic');
+})();
+</script>
+</body>
+</html>
