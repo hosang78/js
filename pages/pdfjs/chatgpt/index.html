@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>PDF.js Feature Lab - Single HTML</title>
+  <style>
+    :root {
+      --bg: #eef3f8;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --ink: #102a43;
+      --muted: #64748b;
+      --line: #dbe5ef;
+      --brand: #1f6feb;
+      --brand-2: #0f766e;
+      --danger: #b42318;
+      --shadow: 0 8px 26px rgba(15, 35, 55, .10);
+      --page-shadow: 0 9px 24px rgba(15, 35, 55, .18);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; overflow: hidden; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .48; cursor: not-allowed; }
+    .topbar { height: 66px; display: flex; align-items: center; gap: 16px; padding: 0 18px; background: #102a43; color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.16); position: relative; z-index: 5; }
+    .brand { min-width: 247px; display: flex; align-items: center; gap: 10px; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, #2b7fff, #12a594); font-weight: 800; font-size: 15px; }
+    .brand strong { display:block; letter-spacing: -.3px; font-size: 16px; }
+    .brand span { display:block; margin-top: 2px; font-size: 11px; opacity: .72; }
+    .source-row { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; }
+    .url-input { min-width: 180px; max-width: 560px; width: 100%; height: 34px; border: 1px solid rgba(255,255,255,.2); border-radius: 7px; padding: 0 10px; background: rgba(255,255,255,.11); color: #fff; outline: none; }
+    .url-input::placeholder { color: rgba(255,255,255,.62); }
+    .top-status { font-size: 11px; color: #dbeafe; text-align: right; min-width: 180px; }
+    .shell { height: calc(100vh - 66px); display: grid; grid-template-columns: 270px minmax(460px, 1fr) 292px; min-width: 0; }
+    .leftbar, .rightbar { background: var(--panel); overflow: auto; border-color: var(--line); }
+    .leftbar { border-right: 1px solid var(--line); }
+    .rightbar { border-left: 1px solid var(--line); }
+    .side-section { padding: 14px; border-bottom: 1px solid var(--line); }
+    .side-title { display: flex; justify-content: space-between; align-items: center; margin: 0 0 10px; color: #173b61; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; }
+    .tiny { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .source-card { padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #eef6ff, #f1fbfa); border: 1px solid #d7e9e8; }
+    .source-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: 12px; }
+    .progress-wrap { display: none; margin-top: 9px; }
+    .progress-track { height: 5px; overflow: hidden; border-radius: 10px; background: #d8e6f2; }
+    .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--brand), #2db7a3); transition: width .2s; }
+    .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 12px 14px 0; }
+    .tab { border: 1px solid var(--line); background: #fff; color: var(--muted); height: 31px; border-radius: 6px; padding: 0; font-size: 11px; font-weight: 700; }
+    .tab.active { color: #fff; background: var(--brand); border-color: var(--brand); }
+    .tab-panel { display: none; padding: 12px 14px 15px; }
+    .tab-panel.active { display: block; }
+    .thumb-list { display: grid; gap: 10px; }
+    .thumb { position: relative; border: 2px solid transparent; border-radius: 7px; background: #f5f8fb; padding: 6px; transition: .15s; }
+    .thumb:hover { border-color: #93c5fd; }
+    .thumb.active { border-color: var(--brand); background: #eff6ff; }
+    .thumb canvas { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 1px 5px rgba(15,35,55,.15); }
+    .thumb-label { position: absolute; right: 8px; bottom: 7px; min-width: 22px; height: 19px; border-radius: 10px; display:grid; place-items:center; padding: 0 5px; color:#fff; background:#102a43; font-size: 10px; font-weight: 700; }
+    .outline-tree, .bookmark-list, .search-result-list, .attachment-list, .layer-list { display: grid; gap: 4px; }
+    .outline-node { width: 100%; border: 0; background: transparent; color: #334e68; text-align: left; padding: 7px 6px; border-radius: 5px; font-size: 12px; line-height: 1.35; }
+    .outline-node:hover, .search-result:hover { background: #eff6ff; color: #0b4ea2; }
+    .outline-indent { margin-left: 12px; border-left: 1px dashed #cbd5e1; padding-left: 5px; }
+    .search-controls { display: grid; grid-template-columns: 1fr 32px 32px; gap: 5px; }
+    .search-input { width: 100%; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; outline: none; }
+    .search-input:focus, .input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(31,111,235,.12); }
+    .search-result { padding: 8px; border: 1px solid #e5edf5; border-radius: 6px; background: #fff; color: #3d566e; font-size: 11px; line-height: 1.4; cursor: pointer; }
+    .search-result.active { border-color: var(--brand); background: #eff6ff; }
+    .search-page { display: block; color: #0b5ec8; font-weight: 800; font-size: 10px; margin-bottom: 3px; }
+    .bookmark-item { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 5px; padding: 6px 7px; border: 1px solid #e5edf5; border-radius: 6px; font-size: 11px; }
+    .bookmark-item button { border: 0; background: transparent; color: var(--brand); font-size: 11px; padding: 0; }
+    .viewer-shell { min-width: 0; display: grid; grid-template-rows: auto 1fr; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 9px 12px; background: #fff; border-bottom: 1px solid var(--line); }
+    .toolbar .spacer { flex: 1; min-width: 4px; }
+    .button, .icon-btn, .select, .input { height: 33px; border: 1px solid var(--line); background: #fff; color: #26435e; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .button { padding: 0 10px; }
+    .button:hover, .icon-btn:hover { border-color: #8dbaf5; background: #f4f9ff; }
+    .button.primary { border-color: var(--brand); background: var(--brand); color: #fff; }
+    .button.teal { border-color: var(--brand-2); background: var(--brand-2); color: #fff; }
+    .icon-btn { min-width: 33px; padding: 0 7px; }
+    .select { padding: 0 7px; }
+    .input { padding: 0 8px; }
+    .page-input { width: 50px; text-align: center; }
+    .zoom-readout { width: 47px; text-align: center; color: #36526d; font-size: 11px; }
+    .divider { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
+    .viewer { position: relative; overflow: auto; padding: 28px 34px 70px; background: linear-gradient(135deg, #dae5ee, #e9f0f5); }
+    .viewer.drop-target { outline: 3px dashed var(--brand); outline-offset: -10px; background: #d8ebfd; }
+    .empty-state { width: min(600px, 96%); margin: 64px auto; padding: 30px; border: 1px dashed #9eb5c9; border-radius: 14px; background: rgba(255,255,255,.72); text-align: center; color: #47637c; }
+    .empty-state strong { display:block; color:#102a43; font-size:17px; margin-bottom:8px; }
+    .page-wrap { position: relative; width: fit-content; margin: 0 auto 24px; background: #fff; box-shadow: var(--page-shadow); overflow: hidden; }
+    .page-wrap.current { outline: 3px solid rgba(31,111,235,.45); outline-offset: 3px; }
+    .page-label { position: absolute; right: 9px; top: 8px; z-index: 6; background: rgba(16,42,67,.80); color:#fff; padding: 4px 7px; border-radius: 5px; font-size: 10px; font-weight: 800; opacity: .9; }
+    .pdf-canvas { display: block; }
+    .textLayer, .annotationLayer { position: absolute; inset: 0; overflow: hidden; }
+    .textLayer { line-height: 1; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; z-index: 2; }
+    .textLayer span, .textLayer br { position: absolute; color: transparent; white-space: pre; cursor: text; transform-origin: 0 0; }
+    .textLayer ::selection { background: rgba(33, 150, 243, .35); }
+    .textLayer span.search-hit { background: rgba(250, 204, 21, .52); border-radius: 2px; }
+    .annotationLayer { z-index: 3; }
+    .pdf-link { position: absolute; display: block; border: 1px solid transparent; border-radius: 2px; }
+    .pdf-link:hover { border-color: #0ea5e9; background: rgba(14, 165, 233, .10); }
+    .pdf-widget { position: absolute; border: 1px solid rgba(55, 99, 141, .65); background: rgba(255,255,255,.82); color: #102a43; padding: 1px 4px; font-size: 12px; }
+    .pdf-widget[type="checkbox"], .pdf-widget[type="radio"] { accent-color: var(--brand); padding: 0; }
+    .status-line { min-width: 145px; color: #516a82; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .doc-grid { display: grid; grid-template-columns: 78px 1fr; gap: 7px 8px; font-size: 11px; line-height: 1.35; }
+    .doc-grid dt { color: #789; font-weight: 700; }
+    .doc-grid dd { margin: 0; color: #334e68; word-break: break-word; }
+    .pill { display: inline-block; padding: 3px 6px; border-radius: 999px; background:#e6f4ff; color:#0b5ec8; font-size:10px; font-weight:800; }
+    .event-log { margin: 0; padding: 8px; max-height: 175px; overflow: auto; border-radius: 7px; background: #0f1f31; color: #c8d7e6; font: 10px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; }
+    .warning { padding: 9px; border-left: 3px solid #f59e0b; border-radius: 4px; background: #fffbeb; color: #7c4d10; font-size: 11px; line-height: 1.48; }
+    .hidden { display: none !important; }
+    .notice { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(16px); max-width: min(560px, 92vw); padding: 10px 13px; border-radius: 8px; background: #102a43; color: #fff; box-shadow: var(--shadow); font-size: 12px; opacity: 0; transition: .18s; pointer-events: none; z-index: 50; }
+    .notice.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    dialog { width: min(780px, 92vw); max-height: 82vh; border: 0; border-radius: 14px; box-shadow: 0 24px 80px rgba(2, 10, 21, .42); padding: 0; color: #1e3a56; }
+    dialog::backdrop { background: rgba(15, 35, 55, .47); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; color:#fff; background:#102a43; }
+    .modal-body { padding: 18px; line-height: 1.65; font-size: 13px; }
+    .modal-body code { padding: 2px 5px; border-radius: 4px; background: #eff4f9; color: #0f4e88; }
+    .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin: 12px 0; }
+    .feature-card { padding: 10px; border: 1px solid #dfe8f0; border-radius: 8px; background: #fbfdff; }
+    .feature-card strong { display:block; margin-bottom:3px; color:#173b61; }
+    .theme-dark { --bg:#101a25; --panel:#172534; --panel-2:#1d2d3d; --ink:#e6f0f8; --muted:#a8b9c8; --line:#314559; --shadow:0 8px 26px rgba(0,0,0,.35); --page-shadow:0 10px 24px rgba(0,0,0,.48); }
+    .theme-dark .topbar { background:#0b1520; }
+    .theme-dark .toolbar, .theme-dark .tab, .theme-dark .button, .theme-dark .icon-btn, .theme-dark .select, .theme-dark .input, .theme-dark .search-input, .theme-dark .search-result, .theme-dark .bookmark-item { background:#172534; color:#dceaf4; }
+    .theme-dark .side-title, .theme-dark .source-name, .theme-dark .doc-grid dd, .theme-dark .outline-node { color:#dceaf4; }
+    .theme-dark .source-card { background:linear-gradient(135deg,#15334b,#153837); border-color:#315c65; }
+    .theme-dark .viewer { background:linear-gradient(135deg,#243647,#172836); }
+    .theme-dark .empty-state { background:rgba(23,37,52,.86); color:#b8cad9; }
+    .theme-dark .page-wrap.invert-page .pdf-canvas { filter: invert(.91) hue-rotate(178deg); }
+    .theme-dark .pdf-widget { background:rgba(26,43,59,.88); color:#e4eff8; }
+    @media (max-width: 1150px) { .shell { grid-template-columns: 238px minmax(410px, 1fr); } .rightbar { display:none; } .brand { min-width: 205px; } .top-status { display:none; } }
+    @media (max-width: 760px) { body { overflow:auto; } .topbar { height:auto; min-height:66px; flex-wrap:wrap; padding:10px; } .brand { min-width:0; flex:1; } .source-row { order:3; flex-basis:100%; } .shell { height:auto; min-height:calc(100vh - 105px); grid-template-columns: 1fr; } .leftbar { display:none; } .viewer { min-height:72vh; padding:18px 9px 50px; } .toolbar { padding:8px; } .toolbar .status-line { display:none; } .page-wrap { max-width:100%; } }
+    @media print { body { overflow: visible; background: #fff; } .topbar, .leftbar, .rightbar, .toolbar, .page-label, .notice { display:none !important; } .shell, .viewer-shell { display:block; height:auto; } .viewer { overflow:visible; padding:0; background:#fff; } .page-wrap { box-shadow:none; margin:0 auto; break-after:page; page-break-after:always; } .textLayer, .annotationLayer { display:none; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">PDF</div>
+      <div><strong>PDF.js Feature Lab</strong><span>Single HTML · embedded sample PDF</span></div>
+    </div>
+    <div class="source-row">
+      <label class="button primary" for="fileInput">PDF 파일 열기</label>
+      <input id="fileInput" type="file" accept="application/pdf,.pdf" class="hidden" />
+      <button id="loadSampleBtn" class="button">샘플 불러오기</button>
+      <input id="urlInput" class="url-input" value="" placeholder="https://example.com/file.pdf" aria-label="PDF URL" />
+      <button id="loadUrlBtn" class="button">URL 열기</button>
+    </div>
+    <div id="topStatus" class="top-status">PDF.js 모듈 초기화 중</div>
+  </header>
+
+  <div class="shell">
+    <aside class="leftbar">
+      <section class="side-section">
+        <h2 class="side-title">현재 문서 <span id="pageCountPill" class="pill">0 pages</span></h2>
+        <div class="source-card">
+          <div id="sourceName" class="source-name">불러온 문서 없음</div>
+          <div id="sourceDetail" class="tiny">HTML에 내장된 샘플 PDF 또는 로컬 파일을 선택하세요.</div>
+          <div id="progressWrap" class="progress-wrap"><div class="progress-track"><div id="progressBar" class="progress-bar"></div></div><div id="progressText" class="tiny" style="margin-top:4px"></div></div>
+        </div>
+      </section>
+      <nav class="tabbar" aria-label="left panels">
+        <button class="tab active" data-tab="thumbs">쪽</button>
+        <button class="tab" data-tab="outline">목차</button>
+        <button class="tab" data-tab="search">검색</button>
+        <button class="tab" data-tab="bookmarks">저장</button>
+      </nav>
+      <section id="panel-thumbs" class="tab-panel active"><div id="thumbList" class="thumb-list"><p class="tiny">문서를 불러오면 미리보기가 생성된다.</p></div></section>
+      <section id="panel-outline" class="tab-panel"><div id="outlineTree" class="outline-tree"><p class="tiny">PDF 책갈피가 없으면 비어 있다.</p></div></section>
+      <section id="panel-search" class="tab-panel">
+        <div class="search-controls"><input id="searchInput" class="search-input" placeholder="문서 전체 검색" /><button id="searchPrevBtn" class="icon-btn" title="이전 결과">↑</button><button id="searchNextBtn" class="icon-btn" title="다음 결과">↓</button></div>
+        <div id="searchMeta" class="tiny" style="margin:8px 0 7px">검색어를 입력한 뒤 Enter를 누르세요.</div>
+        <div id="searchResults" class="search-result-list"></div>
+      </section>
+      <section id="panel-bookmarks" class="tab-panel">
+        <p class="tiny">페이지별 로컬 책갈피는 이 브라우저의 저장소에 보관된다.</p>
+        <div id="bookmarkList" class="bookmark-list"></div>
+      </section>
+    </aside>
+
+    <main class="viewer-shell">
+      <div class="toolbar" role="toolbar" aria-label="PDF controls">
+        <button id="firstBtn" class="icon-btn" title="첫 페이지">|‹</button>
+        <button id="prevBtn" class="icon-btn" title="이전 페이지">‹</button>
+        <input id="pageInput" class="input page-input" value="1" inputmode="numeric" aria-label="page number" />
+        <span id="pageTotal" class="tiny">/ 0</span>
+        <button id="nextBtn" class="icon-btn" title="다음 페이지">›</button>
+        <button id="lastBtn" class="icon-btn" title="마지막 페이지">›|</button>
+        <span class="divider"></span>
+        <button id="zoomOutBtn" class="icon-btn" title="축소">−</button>
+        <span id="zoomReadout" class="zoom-readout">100%</span>
+        <button id="zoomInBtn" class="icon-btn" title="확대">+</button>
+        <select id="zoomPreset" class="select" title="zoom preset"><option value="fit-width">너비 맞춤</option><option value="fit-page">페이지 맞춤</option><option value="0.75">75%</option><option value="1">100%</option><option value="1.25" selected>125%</option><option value="1.5">150%</option><option value="2">200%</option></select>
+        <span class="divider"></span>
+        <button id="rotateBtn" class="button" title="시계방향 회전">회전</button>
+        <select id="viewMode" class="select" title="view mode"><option value="continuous">연속 보기</option><option value="single">한 쪽 보기</option></select>
+        <button id="bookmarkBtn" class="button" title="현재 페이지 저장">저장</button>
+        <span class="spacer"></span>
+        <button id="copyTextBtn" class="button">텍스트 복사</button>
+        <button id="exportTextBtn" class="button">TXT</button>
+        <button id="exportPngBtn" class="button">PNG</button>
+        <button id="downloadBtn" class="button teal">PDF 저장</button>
+        <button id="printBtn" class="button">인쇄</button>
+        <button id="fullBtn" class="icon-btn" title="전체 화면">⛶</button>
+        <button id="themeBtn" class="icon-btn" title="테마">◐</button>
+        <button id="helpBtn" class="icon-btn" title="기능 안내">?</button>
+      </div>
+      <div id="pdfViewer" class="viewer" tabindex="0" aria-label="PDF viewer">
+        <div class="empty-state"><strong>PDF.js 기능 시연 페이지</strong><div>상단의 <b>샘플 불러오기</b>를 누르거나 PDF 파일을 이 영역에 놓으세요.<br />기본 샘플 PDF는 HTML 안에 Base64로 내장되어 있다.</div></div>
+      </div>
+    </main>
+
+    <aside class="rightbar">
+      <section class="side-section">
+        <h2 class="side-title">문서 정보 <button id="refreshInfoBtn" class="icon-btn" title="새로 고침">↻</button></h2>
+        <dl id="docInfo" class="doc-grid"><dt>상태</dt><dd>대기 중</dd></dl>
+      </section>
+      <section class="side-section">
+        <h2 class="side-title">PDF 구조</h2>
+        <div id="structureInfo" class="tiny">쪽 수, 양식, 링크, 첨부 파일, 레이어 정보를 표시한다.</div>
+      </section>
+      <section class="side-section">
+        <h2 class="side-title">선택 레이어</h2>
+        <div id="layerList" class="layer-list"><p class="tiny">선택적 콘텐츠 그룹이 있는 PDF에서만 표시된다.</p></div>
+      </section>
+      <section class="side-section">
+        <h2 class="side-title">첨부 파일</h2>
+        <div id="attachmentList" class="attachment-list"><p class="tiny">첨부 파일 없음</p></div>
+      </section>
+      <section class="side-section">
+        <h2 class="side-title">이벤트 로그 <button id="clearLogBtn" class="icon-btn" title="로그 지우기">×</button></h2>
+        <pre id="eventLog" class="event-log">준비 중...</pre>
+      </section>
+      <section class="side-section"><div class="warning"><b>보안 유의</b><br />이 페이지는 브라우저에서 파일을 읽는다. 단, URL로 불러온 문서는 해당 서버의 CORS 정책을 따르며, 민감한 문서는 승인되지 않은 외부 URL에 올리지 않아야 한다.</div></section>
+    </aside>
+  </div>
+
+  <div id="notice" class="notice" role="status"></div>
+  <dialog id="helpDialog">
+    <div class="modal-head"><strong>PDF.js Feature Lab 사용 안내</strong><button id="closeHelpBtn" class="icon-btn" style="background:transparent;border-color:rgba(255,255,255,.35);color:#fff">×</button></div>
+    <div class="modal-body">
+      <p>이 페이지는 PDF.js의 표시 계층을 직접 사용하는 단일 HTML 예제다. 기본 샘플 PDF는 HTML 내부에 Base64로 내장되어 있으며, 텍스트, 내부/외부 링크, 북마크, 벡터 도형, AcroForm 양식이 포함되어 있다.</p>
+      <div class="feature-grid">
+        <div class="feature-card"><strong>문서 로드</strong>파일 입력, 드래그앤드롭, URL 로드, 진행률, 암호 입력 처리</div>
+        <div class="feature-card"><strong>렌더링</strong>HiDPI canvas, 확대/축소, 회전, 연속/한 쪽 보기, PNG 내보내기</div>
+        <div class="feature-card"><strong>정보 추출</strong>메타데이터, 페이지 라벨, 텍스트, 목차, 레이어, 첨부 파일</div>
+        <div class="feature-card"><strong>상호작용</strong>텍스트 선택, 검색, 링크 목적지, 기본 AcroForm 위젯, 로컬 책갈피</div>
+      </div>
+      <p><b>단일 HTML 구성</b>: 기본 테스트 PDF는 이 파일 안에 내장되어 있다. 다만 PDF.js 라이브러리는 CDN에서 불러온다. 폐쇄망에서 완전 오프라인으로 쓰려면 PDF.js generic build 파일을 별도로 배치하거나 빌드 단계에서 라이브러리까지 인라인해야 한다.</p>
+      <p><b>키보드</b>: ←/→ 페이지 이동, Ctrl/Cmd + F 검색 입력, +/− 확대/축소, R 회전, B 현재 페이지 저장.</p>
+    </div>
+  </dialog>
+
+  <script type="module">
+    /*
+      PDF.js CDN configuration
+      - This is a single HTML demo. The sample PDF is embedded as Base64.
+      - PDF.js itself is loaded from jsDelivr CDN. For a completely offline build, inline or locally serve pdf.mjs and pdf.worker.mjs.
+    */
+    const PDFJS_VERSION = '6.1.200';
+    const USE_LOCAL_PDFJS = false;
+    const CDN_BASE = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}`;
+    const PDFJS_MODULE_URL = USE_LOCAL_PDFJS ? './pdfjs/build/pdf.mjs' : `${CDN_BASE}/build/pdf.min.mjs`;
+    const PDFJS_WORKER_URL = USE_LOCAL_PDFJS ? './pdfjs/build/pdf.worker.mjs' : `${CDN_BASE}/build/pdf.worker.min.mjs`;
+    const PDFJS_ASSET_BASE = USE_LOCAL_PDFJS ? './pdfjs/' : `${CDN_BASE}/`;
+
+    const SAMPLE_PDF_BASE64 = `JVBERi0xLjQKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiAzIDAgUgo+PgplbmRvYmoKMiAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUgL1R5cGUxIC9UeXBlIC9Gb250Cj4+CmVuZG9iagozIDAgb2JqCjw8Ci9CYXNlRm9udCAvSGVsdmV0aWNhLUJvbGQgL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcgL05hbWUgL0YyIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udAo+PgplbmRvYmoKNCAwIG9iago8PAovQm9yZGVyIFsgMCAwIDAgXSAvQ29udGVudHMgKCkgL0Rlc3QgWyA4IDAgUiAvRml0IF0gL1JlY3QgWyA1MS4wMjM2MiAxMTAuNTUxMiAyNjAuNzg3NCAxMzMuMjI4MyBdIC9TdWJ0eXBlIC9MaW5rIC9UeXBlIC9Bbm5vdAo+PgplbmRvYmoKNSAwIG9iago8PAovQSA8PAovUyAvVVJJIC9UeXBlIC9BY3Rpb24gL1VSSSAoaHR0cHM6Ly9tb3ppbGxhLmdpdGh1Yi5pby9wZGYuanMvKQo+PiAvQm9yZGVyIFsgMCAwIDAgXSAvQyBbIC4wNTg4MjQgLjQ2Mjc0NSAuNDMxMzczIF0gL1JlY3QgWyAyOTcuNjM3OCAxMTAuNTUxMiA1MDEuNzMyMyAxMzMuMjI4MyBdIC9TdWJ0eXBlIC9MaW5rIC9UeXBlIC9Bbm5vdAo+PgplbmRvYmoKNiAwIG9iago8PAovQW5ub3RzIFsgNCAwIFIgNSAwIFIgXSAvQ29udGVudHMgNDQgMCBSIC9NZWRpYUJveCBbIDAgMCA1OTUuMjc1NiA4NDEuODg5OCBdIC9QYXJlbnQgNDMgMCBSIC9SZXNvdXJjZXMgPDwKL0ZvbnQgMSAwIFIgL1Byb2NTZXQgWyAvUERGIC9UZXh0IC9JbWFnZUIgL0ltYWdlQyAvSW1hZ2VJIF0KPj4gL1JvdGF0ZSAwIAogIC9UcmFucyA8PAoKPj4gL1R5cGUgL1BhZ2UKPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0NvbnRlbnRzIDQ1IDAgUiAvTWVkaWFCb3ggWyAwIDAgNTk1LjI3NTYgODQxLjg4OTggXSAvUGFyZW50IDQzIDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago4IDAgb2JqCjw8Ci9Db250ZW50cyA0NiAwIFIgL01lZGlhQm94IFsgMCAwIDU5NS4yNzU2IDg0MS44ODk4IF0gL1BhcmVudCA0MyAwIFIgL1Jlc291cmNlcyA8PAovRm9udCAxIDAgUiAvUHJvY1NldCBbIC9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUkgXQo+PiAvUm90YXRlIDAgL1RyYW5zIDw8Cgo+PiAKICAvVHlwZSAvUGFnZQo+PgplbmRvYmoKOSAwIG9iago8PC9UeXBlIC9FbmNvZGluZyAvRGlmZmVyZW5jZXMgWzI0IC9icmV2ZSAvY2Fyb24gL2NpcmN1bWZsZXggL2RvdGFjY2VudCAvaHVuZ2FydW1sYXV0IC9vZ29uZWsgL3JpbmcgL3RpbGRlIDM5IC9xdW90ZXNpbmdsZSA5NiAvZ3JhdmUgMTI4IC9idWxsZXQgL2RhZ2dlciAvZGFnZ2VyZGJsIC9lbGxpcHNpcyAvZW1kYXNoIC9lbmRhc2ggL2Zsb3JpbiAvZnJhY3Rpb24gL2d1aWxzaW5nbGxlZnQgL2d1aWxzaW5nbHJpZ2h0IC9taW51cyAvcGVydGhvdXNhbmQgL3F1b3RlZGJsYmFzZSAvcXVvdGVkYmxsZWZ0IC9xdW90ZWRibHJpZ2h0IC9xdW90ZWxlZnQgL3F1b3RlcmlnaHQgL3F1b3Rlc2luZ2xiYXNlIC90cmFkZW1hcmsgL2ZpIC9mbCAvTHNsYXNoIC9PRSAvU2Nhcm9uIC9ZZGllcmVzaXMgL1pjYXJvbiAvZG90bGVzc2kgL2xzbGFzaCAvb2UgL3NjYXJvbiAvemNhcm9uIDE2MCAvRXVybyAxNjQgL2N1cnJlbmN5IDE2NiAvYnJva2VuYmFyIDE2OCAvZGllcmVzaXMgL2NvcHlyaWdodCAvb3JkZmVtaW5pbmUgMTcyIC9sb2dpY2Fsbm90IC8ubm90ZGVmIC9yZWdpc3RlcmVkIC9tYWNyb24gL2RlZ3JlZSAvcGx1c21pbnVzIC90d29zdXBlcmlvciAvdGhyZWVzdXBlcmlvciAvYWN1dGUgL211IDE4MyAvcGVyaW9kY2VudGVyZWQgL2NlZGlsbGEgL29uZXN1cGVyaW9yIC9vcmRtYXNjdWxpbmUgMTg4IC9vbmVxdWFydGVyIC9vbmVoYWxmIC90aHJlZXF1YXJ0ZXJzIDE5MiAvQWdyYXZlIC9BYWN1dGUgL0FjaXJjdW1mbGV4IC9BdGlsZGUgL0FkaWVyZXNpcyAvQXJpbmcgL0FFIC9DY2VkaWxsYSAvRWdyYXZlIC9FYWN1dGUgL0VjaXJjdW1mbGV4IC9FZGllcmVzaXMgL0lncmF2ZSAvSWFjdXRlIC9JY2lyY3VtZmxleCAvSWRpZXJlc2lzIC9FdGggL050aWxkZSAvT2dyYXZlIC9PYWN1dGUgL09jaXJjdW1mbGV4IC9PdGlsZGUgL09kaWVyZXNpcyAvbXVsdGlwbHkgL09zbGFzaCAvVWdyYXZlIC9VYWN1dGUgL1VjaXJjdW1mbGV4IC9VZGllcmVzaXMgL1lhY3V0ZSAvVGhvcm4gL2dlcm1hbmRibHMgL2FncmF2ZSAvYWFjdXRlIC9hY2lyY3VtZmxleCAvYXRpbGRlIC9hZGllcmVzaXMgL2FyaW5nIC9hZSAvY2NlZGlsbGEgL2VncmF2ZSAvZWFjdXRlIC9lY2lyY3VtZmxleCAvZWRpZXJlc2lzIC9pZ3JhdmUgL2lhY3V0ZSAvaWNpcmN1bWZsZXggL2lkaWVyZXNpcyAvZXRoIC9udGlsZGUgL29ncmF2ZSAvb2FjdXRlIC9vY2lyY3VtZmxleCAvb3RpbGRlIC9vZGllcmVzaXMgL2RpdmlkZSAvb3NsYXNoIC91Z3JhdmUgL3VhY3V0ZSAvdWNpcmN1bWZsZXggL3VkaWVyZXNpcyAveWFjdXRlIC90aG9ybiAveWRpZXJlc2lzXT4+CmVuZG9iagoxMCAwIG9iago8PCAvQmFzZUZvbnQgL0hlbHZldGljYSAvU3VidHlwZSAvVHlwZTEgL05hbWUg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RPllbmRzdHJlYW0KZW5kb2JqCjMwIDAgb2JqCjw8Ci9BUCA8PAovRCA8PAovTm9ybWFsIDI2IDAgUiAvT2ZmIDI3IDAgUgo+PiAvTiA8PAovTm9ybWFsIDI0IDAgUiAvT2ZmIDI1IDAgUgo+PiAvUiA8PAovTm9ybWFsIDI4IDAgUiAvT2ZmIDI5IDAgUgo+Pgo+PiAvQVMgL05vcm1hbCAvQlMgPDwKL1MgL1MgL1cgMQo+PiAvRiA0IC9GVCAvQnRuIC9IIC9OIAogIC9NSyA8PAovQkMgWyAuMjc4NDMxIC4zMzMzMzMgLjQxMTc2NSBdIC9CRyBbIDEgMSAxIF0gL0NBIChsKQo+PiAvUCAzMyAwIFIgL1BhcmVudCAyMyAwIFIgL1JlY3QgWyAxMzYuMDYzIDM3MS4zMzg2IDE1Ni4wNjMgMzkxLjMzODYgXSAvU3VidHlwZSAvV2lkZ2V0IC9UeXBlIC9Bbm5vdAo+PgplbmRvYmoKMzEgMCBvYmoKPDwKL0FQIDw8Ci9EIDw8Ci9IaWdoIDI2IDAgUiAvT2ZmIDI3IDAgUgo+PiAvTiA8PAovSGlnaCAyNCAwIFIgL09mZiAyNSAwIFIKPj4gL1IgPDwKL0hpZ2ggMjggMCBSIC9PZmYgMjkgMCBSCj4+Cj4+IC9BUyAvT2ZmIC9CUyA8PAovUyAvUyAvVyAxCj4+IC9GIDQgL0ZUIC9CdG4gL0ggL04gCiAgL01LIDw8Ci9CQyBbIC4yNzg0MzEgLjMzMzMzMyAuNDExNzY1IF0gL0JHIFsgMSAxIDEgXSAvQ0EgKGwpCj4+IC9QIDMzIDAgUiAvUGFyZW50IDIzIDAgUiAvUmVjdCBbIDIzOC4xMTAyIDM3MS4zMzg2IDI1OC4xMTAyIDM5MS4zMzg2IF0gL1N1YnR5cGUgL1dpZGdldCAvVHlwZSAvQW5ub3QKPj4KZW5kb2JqCjMyIDAgb2JqCjw8Ci9Cb3JkZXIgWyAwIDAgMCBdIC9Db250ZW50cyAoKSAvRGVzdCBbIDYgMCBSIC9GaXQgXSAvUmVjdCBbIDcwLjg2NjE0IDI5NC44MDMxIDI1NS4xMTgxIDMyMC4zMTUgXSAvU3VidHlwZSAvTGluayAvVHlwZSAvQW5ub3QKPj4KZW5kb2JqCjMzIDAgb2JqCjw8Ci9Bbm5vdHMgWyAxMiAwIFIgMTUgMCBSIDIyIDAgUiAzMCAwIFIgMzEgMCBSIDMyIDAgUiBdIC9Db250ZW50cyA0NyAwIFIgL01lZGlhQm94IFsgMCAwIDU5NS4yNzU2IDg0MS44ODk4IF0gL1BhcmVudCA0MyAwIFIgL1Jlc291cmNlcyA8PAovRm9udCAxIDAgUiAvUHJvY1NldCBbIC9QREYgL1RleHQgL0ltYWdlQiAvSW1hZ2VDIC9JbWFnZUkgXQo+PiAvUm90YXRlIDAgCiAgL1RyYW5zIDw8Cgo+PiAvVHlwZSAvUGFnZQo+PgplbmRvYmoKMzQgMCBvYmoKPDwKL0NvbnRlbnRzIDQ4IDAgUiAvTWVkaWFCb3ggWyAwIDAgNTk1LjI3NTYgODQxLjg4OTggXSAvUGFyZW50IDQzIDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iagozNSAwIG9iago8PAovQWNyb0Zvcm0gNDkgMCBSIC9PdXRsaW5lcyAzNyAwIFIgL1BhZ2VNb2RlIC9Vc2VOb25lIC9QYWdlcyA0MyAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjM2IDAgb2JqCjw8Ci9BdXRob3IgKE9wZW5BSSAtIFBERi5qcyBzYW1wbGUgZ2VuZXJhdG9yKSAvQ3JlYXRpb25EYXRlIChEOjIwMjYwNjMwMjE1ODE2KzAwJzAwJykgL0NyZWF0b3IgKGFub255bW91cykgL0tleXdvcmRzIChQREYuanMsIGRlbW8sIHNlYXJjaCwgb3V0bGluZSwgYW5ub3RhdGlvbnMsIGZvcm1zLCB0ZXh0IGV4dHJhY3Rpb24pIC9Nb2REYXRlIChEOjIwMjYwNjMwMjE1ODE2KzAwJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSBcKG9wZW5zb3VyY2VcKSkgCiAgL1N1YmplY3QgKFNhbXBsZSBQREYgZm9yIFBERi5qcyB2aWV3ZXIgY2FwYWJpbGl0aWVzOiBzZWFyY2gsIG91dGxpbmUsIGxpbmtzIGFuZCBBY3JvRm9ybSB3aWRnZXRzKSAvVGl0bGUgKFBERi5qcyBGZWF0dXJlIExhYiAtIFNhbXBsZSBEb2N1bWVudCkgL1RyYXBwZWQgL0ZhbHNlCj4+CmVuZG9iagozNyAwIG9iago8PAovQ291bnQgNSAvRmlyc3QgMzggMCBSIC9MYXN0IDQyIDAgUiAvVHlwZSAvT3V0bGluZXMKPj4KZW5kb2JqCjM4IDAgb2JqCjw8Ci9EZXN0IFsgNiAwIFIgL0ZpdCBdIC9OZXh0IDM5IDAgUiAvUGFyZW50IDM3IDAgUiAvVGl0bGUgKE92ZXJ2aWV3KQo+PgplbmRvYmoKMzkgMCBvYmoKPDwKL0Rlc3QgWyA3IDAgUiAvRml0IF0gL05leHQgNDAgMCBSIC9QYXJlbnQgMzcgMCBSIC9QcmV2IDM4IDAgUiAvVGl0bGUgKFRleHQgc2VhcmNoIGFuZCBleHRyYWN0aW9uKQo+PgplbmRvYmoKNDAgMCBvYmoKPDwKL0Rlc3QgWyA4IDAgUiAvRml0IF0gL05leHQgNDEgMCBSIC9QYXJlbnQgMzcgMCBSIC9QcmV2IDM5IDAgUiAvVGl0bGUgKFZlY3RvciByZW5kZXJpbmcpCj4+CmVuZG9iago0MSAwIG9iago8PAovRGVzdCBbIDMzIDAgUiAvRml0IF0gL05leHQgNDIgMCBSIC9QYXJlbnQgMzcgMCBSIC9QcmV2IDQwIDAgUiAvVGl0bGUgKEludGVyYWN0aXZlIGZvcm0gYW5ub3RhdGlvbnMpCj4+CmVuZG9iago0MiAwIG9iago8PAovRGVzdCBbIDM0IDAgUiAvRml0IF0gL1BhcmVudCAzNyAwIFIgL1ByZXYgNDEgMCBSIC9UaXRsZSAoSW1wbGVtZW50YXRpb24gbm90ZXMpCj4+CmVuZG9iago0MyAwIG9iago8PAovQ291bnQgNSAvS2lkcyBbIDYgMCBSIDcgMCBSIDggMCBSIDMzIDAgUiAzNCAwIFIgXSAvVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjQ0IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDE4NjYKPj4Kc3RyZWFtCkdhdTBEaGMmO2cmOlZDL0BdKiI9OGVxO2pTW1csSmcuWjU3K2tLSXJOUilQUjU1VCg2JylMNCgtLzRVTlBnWz5JJG8lRlxyY1ZCP0JyKlpoTVZsWVYvcEA7NmYncjZwIVRVRHUiPUF0WW9ia0RKWTZgXDY4LU9aXEJyRDZRVnBHPWxiISFVbS8sUC1xbylqZlNSOU1DNFxeMj1UayFaSzBeajY3Q3JyMXEscSlIMCg8SyZrYiJfWWZuR0hoJlBsUEloZTJqaz9nTGk/XWQsXCc6S0c4TUpMYzY7NDlocmRudSxhMSxFRlNRaXREUlY6QSZeV1AmNGhAZFNFN3NvJz4/QEdzKm0uciE+Z3VKMmhTRTsnQSkxSjExJCk8XDQ5TGFeTVVDQmlLNTg7PjleUEcqJVtFPzVVKl0vLDhrP2chIj5wSkhgKy9tR0VcWVtsZFEuSFJDZi4+TjhFVWw8UlJwLi42XFw0TVo8WThqQ1pvVD9cRnIwKiw0bGBDLW1FXklAcSI9WW9uJUdnKG08NHJLW2RqRy9AZD11NTJDPUdiMTFaWHE7TnBjS21tbUgyOUY5XSlhT24vLTNwWTFAP089ZD5BcmcuMkkxVTdYNGUwTkcvUVVmZitxKSVMUylgT0FsQi9CaXFiRlVQZzMtQTZMaWpeR1BeW2tSaTApQjFxM24mZFFDUzRsUGhQIiQhI1xFLTtiYk9AQToxcWVnZl86QWsncS5hYmM2MUMoSF9jYTxeM0NaJS1QX0taTHRDTThZblFoRWpvbS5OcUVqLnJBOipRTjwiWj91LS0paFwyXmtBLysta2MnNjNcZkYiai1Gb1Q0bkZQPiVpNC83TklWSlFZZVleYFUvXj4nSj85bmYpMG9EIyFIT1Yqb2YyQSxiPUNrPW1zTTlJYUNyMS1wZFdGPi8mSTUrXVJDRS5pXTw7a1ZabSMmKCdAWCNAc2B0S2xUTkplKTNWb05cLVUzI140KzpoTm08TD9JXyViLTVbUHREZ0slRl04Y1UmNTkyTS9AZ2Ywb25ucmBFSyVGQVMzUS1OQClyTEc4PE85PFhEV2xnUzswMlBmPT9nbEw2MVEpQVJpJVwhc1klZ0J0Wk1OQjdwYD5MX1VsLGM8Q2tnMlE8M14/TjVwPy4hIWk6L2FVSVxsYiJGLy5NZCUlVzczJWhPbGolL1QwbCkjPHVJMGF0UidMT2k6ZE4lR21bJV45bCZIYWlZIiwsPS0vZjEncyg3Z2RRNylCKlpFQjRjckxQQyUhWGxqSzAmaDFxVWZOYnUsSFE/bjNJbj4mSUgmXmpdPW5mMyVJTClrVHVAJD8oLl5YRSIpK0QuQyZEWy5WSzhSRj5BcWk0Y18kSWRqP0YrV1tNPlUxZVBHTTRFL3VpdEZtJVdzYTg1UVxYUmBQWWMsLEtKK1NsSkNaLEpITmtbLmMlbnFuYmQiM049RXNWXzlePGZQRVU2N0pTakc4bDl1PCcob2s3MkdVUUpMKmpjYUlQLXI5aVJtKDpgTGhuYzQ6RiZlNEcsOlJMPkJLZl86OmVySDhEUUVAKVVBSzw+UyVkV3Fca2heODU1KXNtbWJrQ1JSYSRATEYjakYhI1pZPCJrKDRbW2B0VFJHR3FQaVdSKTVXRD1iVVREODBrOD8xJ3MoN2dyN15ZWk9VYWJZJSc0T3A/JUsuPmVxbTU5IWBsT11UQ1FEIWE/OTBqU0dUJVlsQGprLEA2Mi9xSTc0QWJAZjM9REVUMzIpPC5mS2dMPU0hPGFlRV0lWzNwWikqSnQwTExubGkoJ0YyL107XitIa08/PmhmX09zOTpJZS5CT1RqcCouRzxNYV9eQGMqKk8nLnBuPltuSGMydSJxP0VBKWJpcGRbKkMrYC9pOSFLX19uNEBALyJFcCdWbG9wLi0uQUt1XWJgLWpIaVdMNVQ1SCZsJCNrO28yPT5dJTVNdXJtPkZoMW9OTGoscldiWjZrK2lwYE9iJDhdZl1mKSs7I3AiVCo0WUt1Lm5oPjpQI1ZJXGktS2ozZjUoQm9jWmZQcVVwTmwtOiFmO2Baa1pgJk0oQ25MUlgtNyxUOzMzZCMhRkcpaXRSWyhbWE0uUnFzX1BrRmU/S1ppbCREZ2k8QHJsS01xLDcyJzVuSGVJMV5IVjBrMTV0ayFvcGdPLCoqOVc8Zi9hSGpxST1QNTNaVWMqXDg5c2pbJ09ja051WCYrZTRXbCwrTiNQSipObVtAIV1gYF5kYjliN1gxUCtGKTJBOTIjLyMtQjxVNipXMTc4LUd1MzAxRDpOJDhEIUxSMFdaKG9mZ1s5PDdAXWBKXXI+YzthSVdlWlYyY0hbNCotPVgwaEsmXz5rLHNNLChIP2A1czBRTi4uKzVmVl9lLUlOWUhDIjteXiRMYEBFbjRJTGE2PyEmTCJSM3M3K3FXP0ddaUhpcTdDQUc1SjAtbXNMaj8lVGtOTSsmVWI4OCxUWG88clc0RjNpNzB+PmVuZHN0cmVhbQplbmRvYmoKNDUgMCBvYmoKPDwKL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9MZW5ndGggMTYyNAo+PgpzdHJlYW0KR2F1MS5nTiklLCY7S1pIJ1JRNls+X0cpImxzMlozSGZMI1pVLSZFRF8lbV1BO3V0LXNcKmpBQDVXRzQuOXVqXFQvRjFucyYoJCpOUCFYbDsyI1FhJCE1RUkyaCksQVlAIWA4XCYtOk4pcG9yUzk5IU1QaitCNDMvO0YiPzNEc29TbSNtMk9RJm1kLXQ6bzAoZzhQLW4yQFNlUkUsXS4+TCpvWT9rVU1ZMlQ0bWxgbypiWTk7MypZNGByQT1LVGdGb2RaKW9BbmwmWSZwXWk8UDEzWnJVc0ViZDhROzBQKlpOLW8+ajYsQ0dMZ3FRaSEpOXVsOU5fVl0hOUhmTW80STRjJC9xVyIjbEVFQCw6UmczSCwwWU1JcFtFbitGM14pPjhyOVJqdD9dP1lEQ2tcdEUjIllkRWJTT1clZ2EyNmwqJmswMDtHYV9JWF5oa1wyai0rUWFbLW4oO0dcUTtlI1x1UCtyW19ELidBSSU0O3I9Mi8/K0BQK21cJyFPX1RkPEApOG8oPiIjLCo0VUdEVkFDQWc8LWhwQ3BLcEhxKEZlNGtfIVcnckI4b3VKaFYzcFUzUVs+dTVoPChyUElKWSw1Q0JGUE9CZUJFX1AwZDVlJmVoQCZXMG1uazw6bSgqQ0lvTmo6YjssbDcqQ0UkKiQoN2UuLy9JNywjNktIZCcwaypLLzw1UVNUXFc2NW0ob0I0bFNFV185aFlQW1NJJTcjSUhZWTNzLF9gWW9kVTdITUkrZDRGbztAbCI3VUpiWi46OE49MloqQ0c+V2ExZiVMI05VOyRbSHAwK0BUViUvaDdFS2RqaSovPCwnc183akpTMThVNEw6Pj1vOkldX2dIbEohQGNeTkgvYWZvRCJlVyo+P0k3XERYZSZgN05INGU+J1JYTXBpLGAwcFpXMiU7USc9U05CMjNPc1s4XWxvU2RXOWJXPj5fOzJPKVE8IVFuXk5jbmBOQGtrYj9obHVtPlw3VWxPOGZIIzI3QktXYC5sUDZNNFpiPW5bSlZTXW9RPD1pVG9VPGBfIislNldUdGEqIXBVclpTIUguZUopPmEuOHFyal5xXjgyT1dUMihUQGgqUUkpXVtJMjNGazdNb3FIWTFFcWhsXUk6T11raSRdLV06VkAoblw8M1Z0JSJLYkxiMXAoUiQ1dDZjYW9yOTxULSJZMVpqYixBLiRlRDs5N1tgb3BQY1E3N0EzRFRpYCtKMTg4SnI1RGs8dCknOUBZPFZDVl5mS29zMVojUGdnW28lXW84J0BEKXJPWWpVYjdHO2srcGRUNFtiVjBQMWtkSW01PF08NjpKRGY1XWRGdWZnYU8xSEUjKnRIWDJcPVA3N0M5XihuVnNcck5wP15ASl1ILl5DX0w7SVBYUlM0LTpqSE0lO1FXPFJvNkMhJzVXZ1t1VWZnQTc5TCdWaU9xWWopbHFyaDdha2dbWipRQi1KKEFEYVxTQ2Jya1pnc1pgSygjY2U6aklcQVBLQ0JJQUAsSjcoKiJcUy9rKlQ4REUpPlVAazZHZ1goW2BZPHRZa1NaVz9TLzAkS1Bsa0dxS2w/Vi9GdCVdLEprOGAmJ04wNlpWTHElZW8kb1plWjxpXGdLYDZfbiVbQjMiLSJvKDNDU11uK0tPRGZCRyMlLSZIMkhmTzc7Ti04OTIlTHMlWzVNdD85cyxaP21fcmtKciswZGkwbTYjQEQ5byhXdE1rTTYtKCpnKm05QWFyOl9HYktuOjJibSNvPC8hSzEqJy1yMnRZLz4mPERLT0pYdF1DNU1zNSRbN2phLWhhbzxuOjBQWkppZTBxJyQ6Lis9USNEXVw7Il1jY0E7dURCakk5WC9fJ2soNzZHW2xzJEdQLEdSRjpHTDxHOylrWz9QQEhHSE45PmNOUlxCZTtObkIiWEBtLUJdTkMzIzJhIUprSk1EU29FLiptM2BwM2leVlBVJTtURCdAPkhBb1pAJ0FCcDJlZmxPbkdTJy9saTY7L2EtIlEpVzw6TzUpRDUwTj9vSlBUUC9HPSkyZTE3aF8/NylZaU9GbWI4Sy1NY2c7Q3IhQCUvNl9KJVkiXmNiY2IsPlVaO19cJHFURkQ9aTRxKXNCY1tpI1VUSHJYTnUmVEBKPjgndWA8LGc1dSJJUWk/Tk8qKzM0SCV1UDVraFp+PmVuZHN0cmVhbQplbmRvYmoKNDYgMCBvYmoKPDwKL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9MZW5ndGggMTkwMAo+PgpzdHJlYW0KR2F0bTxnTVllKSY6Ti8zbj4vQWgiOlI8J3BHJEJHUV83KCU3R2cmMGldLFNLWXEqOlBeVjMyTjNNXmgmW2ckWE5OZFdaRjQjOHBmTW1RPVVmKDc0OjA/ITE5R2tHKUY5aypdc0JJZzQ7XUdFZU0zaVA0RmxcKmRFIzNDUTdqbVVaODJdajIvREU7Nis0b2VQcERQczxUaiUwQUxkY2hJYUFoVW1zRDxUJSM4VU1LZjJvRm5KRSVBQVApdEBOZXBqSUspNTxrLCQmKiVrQ28yVFU1YlRCVig+LC1kLm85WVA+bGVxKkxfZGIhKiM7ZiRQUWpZN19CSUAwR19PRTQ1ZHMuSEtwaVxYYkxbZks8TXJVXz1uRV9caV9tc2onaCRsJFZrcjxTJF1BbT4ucjomL3MxJlE8SDRIM2VpY0p1SiombWpLODUwOG8hJDtubFgqJHBNbSw4ay40YSo2QDUkWFA8WCpCWGVaXFlSM1laZERAPUJJXkZtUURBXlM8NlFcUVhjL1MicHM6NCZaMD0/aVg5RTN1WEJnYDFSQ3BHWl9KWW9JWE9tYklIP1BSST5vMG0/QzMkMTo1JV45Tj5sZSNPJEgtaU0pQ1dYKExjTzdrNFNATnNtZSlKSmFiOUAxYE0/QzI4OGFtODBJN01KcG5LcFQjPEhUOlZeVjc1VkAnYUZeR19yIyNRQSlAZXMqRUlkZmNYMWdsVSpvP3UmXE4vTnVrK2VzKkVJZSEpK2xuZ2kxQC9aLjVpKSYiM3JiLEpLazcnZUpFLF9KJVxbOlNeUTJDZHI/VjNQbzYvbzF1N1AiZjhsW1oiTUU9c0FlYjgkK0BRLnBKdUU0LmdKb282ajNSaG1jOjY6K0lWIi9zQ0hOYz9GTmpCYlAjMkExRyJpIzYhTS5gTysxN01LJk4iJGVXRm9tal0qKlp1TWU+KGlEblA8YEpYYyhUWmdmNjJLa1xKVGI9VlcwZmIqI0VzcDs4P1MrNzgxN0ZQLyRBO0RDbCwnUUYzJ11ZUmRTRF8oXVJXJjhdN1RRVkxQVjo9clNAT0Y+SmorVlY6aihEVGhYSGg0WUhhPmsrSTE3JDxbS1M7RWI/Jk5RKEojZiglPTMsTzhoNjl0RFI8YCxuIzZHUCdSZi4oNCcyW1loKzBpR0deL1heQVM8V1pkLFZGUixUKG4xWVlMVy8+TW9qWWxtMFthJCgpMiJxT0MnOkA/QmMiKlErYEVJWDwhQCclY3NVIzBSQ2BnYi5UYXJpS1ctNGVEKF8mPDpLSVVSUCMmJEdBPkJROCQjckNFRi1XWmZdVWhec2w5JFhqK0VDQDFaN0A0REBkQURELkRcQWs0dUBPLm11KDFINjNYQSUoZV87ODBucyVJLHFxQElANCFXWydWb1lQL0p0dW8iQ2piUG9kJmQyPFMvZyJyRjJqI1R0dGI3OVs1QSJBYTo1QDVgZ01lLylqLy9rL2dkTFBaQlU3PFNSWFdbLD5kbyJGPyE7SmBOUWUkWVhMRmBaZyw5QXBXY0kuMllDMDc8cmFIQCpqT2o7N140a0BeMClsZilWPV1gWCYoYEFoKGZQZTVITmBFalk1UU1Ic1ZjWUhCWDhhIz9edWNJZSNKbkpBN01oQjk3SVIxYVwuNkgtNUUkQC5vUjxPU0piJDNnWWZjTGw/LCJvRUJqQCxBLyVNMVI7ND1EOD1NWFpGQzFVT3A7ailUZjBwImJWbWtvXV9WWGQhQUUkazZIWTVTPzkoNi5UIilcMFVjMFNWUS0iZk1FJGZgYzorNy9AJjEhLzEnVD9NVWRtOGQ4XixRN1dqI1JDPCVfN2hBaGMsRSVdR0tAUiczZ2cqK0pDQSVzYjE0LmwiT11NbnUoIS5TUGd1SUIjRlNXVywlM1ROVD85JURcRWRKRU4/LE9US2llJSdDVG5HVlVrPUNCMFklQStQaltXIzFGYyZTTForY2pQLD1KV1pOZUFJKThhNmtEJm5lVW8+KDdhMCwtQjssZWwxOG4kMFYlRDZ0MEQiZkUsL0FkXmgtPWJ0LDRKQURKT1JPRiIyckdNLUZsLU0+LF9NRlBaTU4rZkVRP2FZXF9ZIy8xTiZAViI5dF1CdFw9PWVoI1I3bklnU3VNTG9rI0BeQWU4Q25qUVApa2IvXmZnXiRRMj1uNy9nWlpNXD1eQUhSV1FSMWVGa0xCKkNsOyEzNWwoPmhDcFRVUmcjY0JEMG8oK0BWa1NjbV5MQz1MPXRRcGBZI1UiUChadVlNak5eJGBvPkI7a2s+QyRqJSw6Q0ppaWhCXjA/MyQvNkBZMitaT0EkLEVBUUNBTD5pJm4/YVAzazQsYSInbTMmayNrbG86KCtOJE0jVEMqMmFDby1YQkheRlI9YU5lXnRyM1ZfTi9FPmUwQlxHckkpbDNwZjVDT11XPzhTQEhTJTchQzBuOHVXWG8qSlxEaG1gVEUjUVtsbTNoRXJdS2MsRVNOKFFecFVgYEgqO2JOaUUrbi1TWF1SOnQ+WW4yS0JXIUgwcj0vSHMmXCV+PmVuZHN0cmVhbQplbmRvYmoKNDcgMCBvYmoKPDwKL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9MZW5ndGggMTIxNwo+PgpzdHJlYW0KR2F0bTpnTVolMCY6Ti8zYltWVSE+aSUscF00ZlkvI2BBI1BZczlEQSQ9ZGtQTV51cUFvQ2o5ajY3SHA+aCNhaGo5MFQ0YiVNKjFeYWFpQj9OU2U6TG44OEpMWHIvbyddL3NEYDhEKWI2Y2IiZCpjJkdbZlIkTkpBK0ZPJUFtdS1dSiVVPmkjIkokVyJQZy1ISixFclNcXy5aUlhFcz9kc0kudCk5XUJjVjxecGdmQltWYFhtJW9xNXVOSU1COHBUWE1yXTttWUIyY143aTcjV2NBT3RpYGBiWGUlXzBmUyxcP2NqdUBZcWpfRm0oNVYiaVRVIjpiLHViNGVPRmZgZGwjbyw2NF9XNjRxJiRYSy0ubkhJMiplaSV1bCdsbkJcQHQhSVRSIypDQjU8VHQ2aj9vTmBLSFVuKEs3PVdnSTxVbFNUMF0hNFo3L2JIbk4jWFxhWCg3SVByOFwhSj4yKyE8P10tOWttNlIzbnJhWG8zLS4jUzhXR2RTNWNYJmhoaFBgVlJdO2Q/SGUrXFYpL1BValkxQDJxXzM7ZDJxdFVSJzdFT1o/SV4xPGstJy9UWSdoa05TUz08IzE4S21ja2Bgblo3JHFqXjlMQT11LUpSO2o+LD5Zb0d0KGsjX2xQNlgmaV0kTj0qMVxoUDlyXjZGW1ZYOiI0M0klUGU3JDUpa2U9RisoQz1ESXBqNTtvNSJxVCNHbkBZY2JIYDJUbS8lTj5UTG5ROGxTZTBuRlhHW0NwUSw9SSMnO1NAZz5DakNNMVcsTFhzUFUvKjg4KWpJamJnXWhSS01BSl0kaGhNMG5FN109bExzMFFyJl9TajJoNT0pOVNvXGtOXFYnNiQ6OyJLSjI8cFpAMFVrK0c/O2EqPkNLW2xgMjhcWlZbIWc5ajprc1ZTajY/cDk3KCpmWmxnIkc/IkI7UFBLRktfXC9zbzVlcz8hbjJXLW8lUE1PRmo1RDIjU0BMb1huVzVLJUBnYFUwcDR0azhuJ1xoLXNKIS9oQzI0bWtHMVcxQVNGRTU/V0M3TWo7Z0ItPl41P0RFQSNqI0U1PkF1NSUrPXA7RDlwKz8tPFMoPGlqL1lrXD90XkhOJFZaKy0oMDcyaVkpayFRLktLc1s3U3FsXEtMODRDJjxlIk82YGBPVTBUIThUTV9Vb3RgUT5vYyRfTFRGSylvOSszLz48ckdhYENLbj5UKTAlcENzVTM3JGJmKDIiIzE8R3MtT0YjOFZKQyptJFgqSVosX1k5UFokTDFsbC5YUWpdLT1WZS5DJlBCWjgzQSltbGotV2hSL2ljc2I6big+ITUqKiZwSC5GTFM4QChjaGU2RE9IKVIkNzVXNkBAbzNoLCQ7YiQ8N3NgIlNEY1huSU10L3V1KThcQWNZRUQsRk1HYC0rNTplKjVxRmFVNUM7NjFLSVpcXyhsZFoxWV1VKjRsJG8tV2YnIjF1a2hCRSxMUS4nNEREbUpLIU1UW2QrdGNhMjhbbWQsXkJXTDItTG5sczJOM0Y4PW09SCpdUm88LGtRYWU4ays9Wm8lPiJfS0EtQDdDVGh0VEFeNzdGSlovVyRiPlpJO1xSbURBXmFLIicpKnFmM2hqYUBFJShcaFhrbV1ifj5lbmRzdHJlYW0KZW5kb2JqCjQ4IDAgb2JqCjw8Ci9GaWx0ZXIgWyAvQVNDSUk4NURlY29kZSAvRmxhdGVEZWNvZGUgXSAvTGVuZ3RoIDIwNTIKPj4Kc3RyZWFtCkdhdTEvYkF1Q0gmci0vUCdZUjFcKjE0NyJnIkNAZS5USk5kYj5yZj46YE8vZUtMPSQuM0tqKC9Cb29oXTRnJCZOUSlxOWVxOjA7JyIhPHNARSUoNDYwQWk2RF50VGZRSURwYUZcQEReRVIiQ2ZDcHV1RDIkNnVZI15wbTdNMFlrWCdHcyhHWjdnJytiKy1CITohKigoZkNYKjgxTjwhX3NlJUR1KkYrZUlcNStYZlpGVCNJam1FaWEoX3NGNz1pVDpaXHEvLidIZk1ZOU45SjY/cS5GLCc7IihJMm0+REQzalJEMFw/PGlmN2EzWlJlUHEvQzwlbS5TZDdyQihTRyJOVUBcX1UlZlJuKSVFVTU6NSRsZSNCQz9eO3A3a0tWZ3JgW3InYUI6R2IkYFwyRycrLSswWmNZXE8scV89XW4tKTZaSElfLSJ1VGNKYzpuPGpBQTUyRyJvXUwxc2w1LF1SJEReIlEiWCRFOXQ1UXBkLU1RX2Q8SU9YTSNBOF5oP1JwXW1TX2F0aTRgRVdBc044PVdRQ0cuTTRtZCNyKHIwR0NPPkdHOWEtUlUrSzJXI18taTUxdDNQcS1wNGloPlFkMF0sYVdOSVYjbFleV2I1cDxrNTtuJFg4MzMzTztXKUFXW0xASVEnKXJjZHFSQnI7USlpVFc0QWFSKTZxWTBIQStuY2tZUVQpPU1tTXBKQWJHKzBLI2hpUVhANTpOK1InRzZoIiNtcFdfc2giXWdjMV8sO2c5YlkwbzthIWo5X21mc0dKMidmWDdUZWxbJ00rR3FxW0xILjxkbWYwT05cITgrWS0qSlg8Oyg+S1AhXCc4c1VsZkFbKkNPLjVbNDxMK0htUGo5XHRoQGJiMkwhMjtnJU1BZGNrQylOLHNTTD5XYzhsYzRfT3FtVDFjOW9fajFcR1JpQ3JOTDg4PSNLNi8iK0opP1FZZjkkTjouJmxoPjpFMHVXOmsrLXJUM1pJL1hOXUdAXmIjMylbYSVKVDhLcnFncC5KJllbQjVMXkA6Vm1cZ19ybTg2c2RrSyckMjBKJ3QocnAmOlwqVmVlOU8hSlxFYDo1RzdcRUNYSmsnJWdQZ1ohTSdzInRWXytuJjlYamRQOj8nVChOLiFBJXEuVzpUV01bSUVVQykiOlktJGtfdVU0YT9oRnQpIiZDKkJBNTRfOSUlP2RHb2kjZGwkVWoiRCNPTHVkQyU6XDBZQmVwPjA8W01lWidcYUIpRVxeISZSUjkwMSs0P15BRVRjVF4jPTVaOCJERVExbVdzLFQ5QnM+JVJsXkpPQHJiYFI2UV9hU1xpaGhFQDZFKVBOOzU5cFUvYjovOS1GQkpCOFpeQ3RMNkFFK1sqaTEsRkZlVXVPSl1FbmVtJTVRVS1fQ0QpQmdcSFJAISwjLmtxNiM+KVxgMCgsTytpQShJIjxva2AmTV8wQiorQmJDZlhkNDE9UWxacXBQNSplNS8zbFI5MnA8LmNyKGpcI24ndGtOJ0xaLVFoNG9VO1dZJzhcJz4kak0kTE8qOSE/XTFDXm0tPi9UM1BPYlJWK29uYTA9OVI5UVNcYktkTG5HRmdPUi5DOWJqYmBoTSkpZVY1SCJaJFhBN2JZWjtJSjY4QGwwMTJwKmFeZFg0YShVXTJyb00xVl4hcygkbmcvMEc0UGU8b3EwQl9aJTk6SUU5b05JSC9IZGhgSmBBRzdCP15pM2dJO2dGPnBWKDRWcUYwWE9YNF8+UVsxMGNfYG8uOWooZCw2UiUuWXFGMWFOTjEpUkNfP0M2WWZ1QVdBJjBmIV9BYjhaXjFuTDYvOCRQXzMhTi8+WClNQnA2QTJcQEJ0TTFJKVdbPGAoJj83NEZ1RDRWTUJJU2hfJVVVZUphNFpMPTFMalwuaCwuPyYhakBTMSdrL1QidF5JcjtGYG9qJFowcDFCb15rMiUwZj9CLWNaYDVoYzYmYmIwL2lxcmI+KXM+ZEgkWSZQUUJwYTlIcCZzZi5saDVbQWwwZDlOSTc9KnQtKF1YaGgmSFpfN09VbzVKamwhWEI6Im1XJEM1Kz02UmFPXVwoWFlaKGM0JTVaRC4hVzVVWyFBVig+MCVaNjNeXFUxXjQlX1w6MGpQVEE6QDAkLz1bcE4hLiZzL0slIzRWMmFtQjNvQm9vO2hIQ2I9OjxBYFhJQFBbPjEqQ0NHWWBdLm1WOTAiZ1tiIWglX2pHVzw3TFs3aHQwNSNMZFc1KWpgU1coRVtlUzpHQElLKEJzaUUhTyNENF5lTWN0O2RmKyFQWVREJ244b0RLPG45RjcmM01OUjJDXywzUSwxLkFZYkIxLWBhZGg2VXAsOTVRM18nK15ibFQ3a0U7Klo/WyJtZlJJaiJiajtHR0lDKHVHITZCZTA8UmVPYG9pQj82LGojJ1xXU2VbWkBWOT5ZaVZqRmNcOiU0X2ZeNmtsImhFUEFGblJCMmRxU0w/MnFQcGJZak1KIitgXGxyLDBEdCRvWFpuPzhKMUQtKTxlXGlWOixKUWM0WUNjNWxdJWk6XjM6TFJndCpwVDkrVD4iVVgyWS5tPk4/KykiRVtZR1s/RSFyXF82W19fLCRrLm1tSVY9LyIrVjU1XVdWa1A4JyJBS09zUkBwOCVARm1xLGtzNE8iQHFvcy8kXS1oUkpQWXBgbEtGPkZDPTNrTlRzMTVwdWY1TmwwNS0qQ0UybDlrR1AxYiohKm9Tb0FyZmpPQTNVSF9IYUdBKHJ+PmVuZHN0cmVhbQplbmRvYmoKNDkgMCBvYmoKPDwKL0RBICgvSGVsdiAwIFRmIDAgZykgL0RSIDw8IC9FbmNvZGluZwo8PAovUkxBRmVuY29kaW5nCjkgMCBSCj4+Ci9Gb250IDw8IC9IZWx2IDEwIDAgUiA+Pgo+PiAvRmllbGRzIFsgMTIgMCBSIDE1IDAgUiAyMiAwIFIgMjMgMCBSIF0KPj4KZW5kb2JqCnhyZWYKMCA1MAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwNjEgMDAwMDAgbiAKMDAwMDAwMDEwMiAwMDAwMCBuIAowMDAwMDAwMjA5IDAwMDAwIG4gCjAwMDAwMDAzMjEgMDAwMDAgbiAKMDAwMDAwMDQ2OCAwMDAwMCBuIAowMDAwMDAwNjg0IDAwMDAwIG4gCjAwMDAwMDA5MTMgMDAwMDAgbiAKMDAwMDAwMTExOCAwMDAwMCBuIAowMDAwMDAxMzIzIDAwMDAwIG4gCjAwMDAwMDI2NDUgMDAwMDAgbiAKMDAwMDAwMjc0NCAwMDAwMCBuIAowMDAwMDAzMTYyIDAwMDAwIG4gCjAwMDAwMDM1MDEgMDAwMDAgbiAKMDAwMDAwMzYwMCAwMDAwMCBuIAowMDAwMDA0MDIyIDAwMDAwIG4gCjAwMDAwMDQ0MzMgMDAwMDAgbiAKMDAwMDAwNTA4NCAwMDAwMCBuIAowMDAwMDA1MzUyIDAwMDAwIG4gCjAwMDAwMDYwMDEgMDAwMDAgbiAKMDAwMDAwNjI2NSAwMDAwMCBuIAowMDAwMDA2OTEzIDAwMDAwIG4gCjAwMDAwMDcxNzUgMDAwMDAgbiAKMDAwMDAwNzU3NCAwMDAwMCBuIAowMDAwMDA3Njc5IDAwMDAwIG4gCjAwMDAwMDgwODEgMDAwMDAgbiAKMDAwMDAwODQyOCAwMDAwMCBuIAowMDAwMDA4ODMwIDAwMDAwIG4gCjAwMDAwMDkxNzUgMDAwMDAgbiAKMDAwMDAwOTU3NiAwMDAwMCBuIAowMDAwMDA5OTE5IDAwMDAwIG4gCjAwMDAwMTAyNzggMDAwMDAgbiAKMDAwMDAxMDYzMCAwMDAwMCBuIAowMDAwMDEwNzc3IDAwMDAwIG4gCjAwMDAwMTEwMzcgMDAwMDAgbiAKMDAwMDAxMTI0MyAwMDAwMCBuIAowMDAwMDExMzQ3IDAwMDAwIG4gCjAwMDAwMTE4MDEgMDAwMDAgbiAKMDAwMDAxMTg3NSAwMDAwMCBuIAowMDAwMDExOTY0IDAwMDAwIG4gCjAwMDAwMTIwODQgMDAwMDAgbiAKMDAwMDAxMjE5NCAwMDAwMCBuIAowMDAwMDEyMzE3IDAwMDAwIG4gCjAwMDAwMTI0MTkgMDAwMDAgbiAKMDAwMDAxMjUwNSAwMDAwMCBuIAowMDAwMDE0NDYzIDAwMDAwIG4gCjAwMDAwMTYxNzkgMDAwMDAgbiAKMDAwMDAxODE3MSAwMDAwMCBuIAowMDAwMDE5NDgwIDAwMDAwIG4gCjAwMDAwMjE2MjQgMDAwMDAgbiAKdHJhaWxlcgo8PAovSUQgCls8NTI5Njk4MGQ3ODhmYTUzMmFmNGIyMzQyY2RhZjQ2YTI+PDUyOTY5ODBkNzg4ZmE1MzJhZjRiMjM0MmNkYWY0NmEyPl0KJSBSZXBvcnRMYWIgZ2VuZXJhdGVkIFBERiBkb2N1bWVudCAtLSBkaWdlc3QgKG9wZW5zb3VyY2UpCgovSW5mbyAzNiAwIFIKL1Jvb3QgMzUgMCBSCi9TaXplIDUwCj4+CnN0YXJ0eHJlZgoyMTc3OAolJUVPRgo=`;
+    function base64ToUint8Array(base64) {
+      const binary = atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      fileInput: $('fileInput'), loadSampleBtn: $('loadSampleBtn'), urlInput: $('urlInput'), loadUrlBtn: $('loadUrlBtn'),
+      topStatus: $('topStatus'), sourceName: $('sourceName'), sourceDetail: $('sourceDetail'), pageCountPill: $('pageCountPill'),
+      progressWrap: $('progressWrap'), progressBar: $('progressBar'), progressText: $('progressText'),
+      thumbList: $('thumbList'), outlineTree: $('outlineTree'), searchInput: $('searchInput'), searchPrevBtn: $('searchPrevBtn'), searchNextBtn: $('searchNextBtn'), searchMeta: $('searchMeta'), searchResults: $('searchResults'), bookmarkList: $('bookmarkList'),
+      pdfViewer: $('pdfViewer'), firstBtn: $('firstBtn'), prevBtn: $('prevBtn'), pageInput: $('pageInput'), pageTotal: $('pageTotal'), nextBtn: $('nextBtn'), lastBtn: $('lastBtn'),
+      zoomOutBtn: $('zoomOutBtn'), zoomInBtn: $('zoomInBtn'), zoomReadout: $('zoomReadout'), zoomPreset: $('zoomPreset'), rotateBtn: $('rotateBtn'), viewMode: $('viewMode'), bookmarkBtn: $('bookmarkBtn'),
+      copyTextBtn: $('copyTextBtn'), exportTextBtn: $('exportTextBtn'), exportPngBtn: $('exportPngBtn'), downloadBtn: $('downloadBtn'), printBtn: $('printBtn'), fullBtn: $('fullBtn'), themeBtn: $('themeBtn'), helpBtn: $('helpBtn'),
+      docInfo: $('docInfo'), structureInfo: $('structureInfo'), layerList: $('layerList'), attachmentList: $('attachmentList'), eventLog: $('eventLog'), clearLogBtn: $('clearLogBtn'), refreshInfoBtn: $('refreshInfoBtn'),
+      notice: $('notice'), helpDialog: $('helpDialog'), closeHelpBtn: $('closeHelpBtn')
+    };
+
+    const state = {
+      pdfjsLib: null,
+      loadingTask: null,
+      pdf: null,
+      originalData: null,
+      sourceName: '',
+      sourceType: '',
+      currentPage: 1,
+      scale: 1.25,
+      rotation: 0,
+      mode: 'continuous',
+      pageLabels: null,
+      pageTexts: new Map(),
+      annotationValues: new Map(),
+      bookmarks: new Set(),
+      bookmarkKey: '',
+      searchQuery: '',
+      searchResults: [],
+      searchIndex: -1,
+      pageObserver: null,
+      renderToken: 0,
+      optionalContentConfig: null,
+      logLines: []
+    };
+
+    function now() { return new Date().toLocaleTimeString('ko-KR', { hour12:false }); }
+    function log(message) {
+      state.logLines.unshift(`[${now()}] ${message}`);
+      state.logLines = state.logLines.slice(0, 50);
+      els.eventLog.textContent = state.logLines.join('\n');
+    }
+    function notify(message) {
+      els.notice.textContent = message;
+      els.notice.classList.add('show');
+      clearTimeout(notify.timer);
+      notify.timer = setTimeout(() => els.notice.classList.remove('show'), 2400);
+    }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+    function basename(value) { return String(value || 'document.pdf').split('/').pop().split('?')[0] || 'document.pdf'; }
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return '-';
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes/1024).toFixed(1)} KB`;
+      return `${(bytes/(1024*1024)).toFixed(2)} MB`;
+    }
+    function sanitizeFilename(name, fallback='document') {
+      return String(name || fallback).replace(/\.pdf$/i, '').replace(/[^\w\-.가-힣]+/g, '_').slice(0, 80) || fallback;
+    }
+    function setBusy(busy, label='') {
+      const targets = [els.loadSampleBtn, els.loadUrlBtn, els.firstBtn, els.prevBtn, els.nextBtn, els.lastBtn, els.zoomOutBtn, els.zoomInBtn, els.rotateBtn, els.bookmarkBtn, els.copyTextBtn, els.exportTextBtn, els.exportPngBtn, els.downloadBtn, els.printBtn];
+      targets.forEach(el => el.disabled = busy);
+      els.topStatus.textContent = busy ? label || '문서 처리 중' : (state.pdf ? `PDF.js ${state.pdfjsLib?.version || PDFJS_VERSION} / ${state.pdf.numPages} pages` : `PDF.js ${state.pdfjsLib?.version || PDFJS_VERSION}`);
+    }
+    function setProgress(loaded, total) {
+      if (!total) { els.progressWrap.style.display='block'; els.progressBar.style.width='45%'; els.progressText.textContent='문서 데이터 수신 중'; return; }
+      const pct = Math.min(100, Math.round(loaded / total * 100));
+      els.progressWrap.style.display='block';
+      els.progressBar.style.width = `${pct}%`;
+      els.progressText.textContent = `${pct}% / ${formatBytes(loaded)} of ${formatBytes(total)}`;
+    }
+    function hideProgress() { setTimeout(() => { els.progressWrap.style.display='none'; }, 500); }
+    function empty(node, html='') { node.innerHTML = html; }
+    function pageLabel(pageNo) { return state.pageLabels?.[pageNo - 1] || String(pageNo); }
+    function currentPageCanvas() { return els.pdfViewer.querySelector(`.page-wrap[data-page="${state.currentPage}"] canvas`); }
+
+    async function initPdfJs() {
+      try {
+        els.topStatus.textContent = 'PDF.js 모듈 로드 중';
+        state.pdfjsLib = await import(PDFJS_MODULE_URL);
+        state.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+        log(`PDF.js ${state.pdfjsLib.version || PDFJS_VERSION} 모듈 로드 완료`);
+        setBusy(false);
+        els.topStatus.textContent = `PDF.js ${state.pdfjsLib.version || PDFJS_VERSION} 준비 완료`;
+        await loadSample();
+      } catch (error) {
+        console.error(error);
+        const msg = `PDF.js 모듈을 불러오지 못했습니다. 네트워크 또는 CDN 접근을 확인하거나 index.html의 USE_LOCAL_PDFJS를 true로 바꾸세요. (${error.message})`;
+        els.topStatus.textContent = 'PDF.js 로드 실패';
+        els.pdfViewer.innerHTML = `<div class="empty-state"><strong>PDF.js 모듈을 로드할 수 없습니다.</strong><div>${escapeHtml(msg)}</div></div>`;
+        log(`오류: ${error.message}`);
+      }
+    }
+
+    async function cleanupDocument() {
+      state.renderToken++;
+      if (state.pageObserver) { state.pageObserver.disconnect(); state.pageObserver = null; }
+      try { await state.loadingTask?.destroy?.(); } catch (_) {}
+      try { state.pdf?.cleanup?.(); } catch (_) {}
+      state.loadingTask = null; state.pdf = null; state.pageTexts.clear(); state.annotationValues.clear(); state.searchResults = []; state.searchIndex = -1; state.searchQuery=''; state.optionalContentConfig=null;
+    }
+
+    async function loadSample() {
+      const bytes = base64ToUint8Array(SAMPLE_PDF_BASE64);
+      await loadDocument({
+        data: bytes,
+        cMapUrl: `${PDFJS_ASSET_BASE}cmaps/`, cMapPacked: true,
+        standardFontDataUrl: `${PDFJS_ASSET_BASE}standard_fonts/`,
+        wasmUrl: `${PDFJS_ASSET_BASE}wasm/`,
+        enableHWA: true
+      }, 'embedded-sample.pdf (HTML 내장)', 'embedded', bytes.slice());
+    }
+    async function loadFromFile(file) {
+      if (!file) return;
+      if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { notify('PDF 파일만 열 수 있습니다.'); return; }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await loadDocument({ data: bytes }, file.name, 'local', bytes.slice());
+    }
+    async function loadFromUrl(url, friendlyName = null) {
+      const trimmed = String(url || '').trim();
+      if (!trimmed) { notify('불러올 PDF URL을 입력하세요.'); return; }
+      await loadDocument({
+        url: trimmed,
+        cMapUrl: `${PDFJS_ASSET_BASE}cmaps/`, cMapPacked: true,
+        standardFontDataUrl: `${PDFJS_ASSET_BASE}standard_fonts/`,
+        wasmUrl: `${PDFJS_ASSET_BASE}wasm/`,
+        enableHWA: true
+      }, friendlyName || basename(trimmed), 'url', null);
+    }
+
+    async function loadDocument(params, sourceName, sourceType, originalData) {
+      if (!state.pdfjsLib) return;
+      await cleanupDocument();
+      setBusy(true, 'PDF 로드 중');
+      els.progressWrap.style.display='block';
+      els.progressBar.style.width='2%';
+      els.progressText.textContent='PDF.js getDocument() 시작';
+      els.sourceName.textContent = sourceName;
+      els.sourceDetail.textContent = sourceType === 'local' ? '브라우저 로컬 파일 읽기' : (sourceType === 'embedded' ? 'HTML 내부 Base64 샘플 PDF' : 'URL / 서버 CORS 정책 적용');
+      els.pdfViewer.innerHTML = `<div class="empty-state"><strong>문서를 해석하고 있습니다.</strong><div>PDF.js worker가 페이지 구조, 텍스트, 주석을 준비 중입니다.</div></div>`;
+      try {
+        const task = state.pdfjsLib.getDocument(params);
+        state.loadingTask = task;
+        task.onProgress = ({loaded, total}) => setProgress(loaded, total);
+        task.onPassword = (updatePassword, reason) => {
+          const reasonText = reason === state.pdfjsLib.PasswordResponses?.INCORRECT ? '암호가 올바르지 않습니다.' : '암호로 보호된 PDF입니다.';
+          const password = window.prompt(`${reasonText}\n문서 암호를 입력하세요.`);
+          if (password === null) { task.destroy(); return; }
+          updatePassword(password);
+        };
+        const pdf = await task.promise;
+        state.pdf = pdf;
+        state.sourceName = sourceName; state.sourceType = sourceType; state.originalData = originalData || await pdf.getData();
+        state.currentPage = 1; state.rotation = 0; state.scale = 1.25; state.mode = els.viewMode.value;
+        state.pageLabels = await pdf.getPageLabels().catch(() => null);
+        state.bookmarkKey = `pdfjs-feature-lab:${pdf.fingerprints?.[0] || sourceName}`;
+        state.bookmarks = new Set(JSON.parse(localStorage.getItem(state.bookmarkKey) || '[]'));
+        els.pageCountPill.textContent = `${pdf.numPages} pages`;
+        els.pageInput.max = String(pdf.numPages); els.pageInput.value = '1'; els.pageTotal.textContent = `/ ${pdf.numPages}`;
+        if (sourceType === 'url') els.urlInput.value = params.url;
+        els.zoomPreset.value = '1.25';
+        log(`문서 로드 완료: ${sourceName} / ${pdf.numPages} pages`);
+        await Promise.all([renderOutline(), renderDocumentInfo(), renderStructureInfo(), renderAttachments(), renderLayers(), renderBookmarks(), renderThumbnails()]);
+        await renderView();
+        hideProgress(); setBusy(false);
+        notify(`${pdf.numPages}쪽 문서를 불러왔습니다.`);
+      } catch (error) {
+        console.error(error);
+        hideProgress(); setBusy(false);
+        const message = explainPdfError(error);
+        els.pdfViewer.innerHTML = `<div class="empty-state"><strong>문서를 열 수 없습니다.</strong><div>${escapeHtml(message)}</div></div>`;
+        els.docInfo.innerHTML = `<dt>상태</dt><dd>${escapeHtml(message)}</dd>`;
+        log(`로드 실패: ${error.name || 'Error'} / ${error.message}`);
+        notify('PDF 로드 실패');
+      }
+    }
+
+    function explainPdfError(error) {
+      if (error?.name === 'MissingPDFException') return 'PDF 파일을 찾을 수 없습니다. start_server.bat로 로컬 서버를 실행했는지와 URL 경로를 확인하세요.';
+      if (error?.name === 'InvalidPDFException') return '유효한 PDF로 해석할 수 없습니다. 파일이 손상되었거나 실제 PDF가 아닐 수 있습니다.';
+      if (error?.name === 'PasswordException') return '암호 처리 중 오류가 발생했습니다.';
+      if (/CORS|fetch|Failed to fetch/i.test(error?.message || '')) return 'URL의 CORS 정책 때문에 브라우저가 PDF를 가져올 수 없습니다. 파일을 직접 선택하거나, 해당 서버가 CORS를 허용하는지 확인하세요.';
+      return error?.message || '알 수 없는 오류가 발생했습니다.';
+    }
+
+    async function renderDocumentInfo() {
+      if (!state.pdf) return;
+      const pdf = state.pdf;
+      const [metadataResult, permissions, markInfo] = await Promise.all([
+        pdf.getMetadata().catch(() => ({})), pdf.getPermissions().catch(() => null), pdf.getMarkInfo().catch(() => null)
+      ]);
+      const info = metadataResult.info || {};
+      const meta = metadataResult.metadata;
+      const fields = Object.entries(info).filter(([k,v]) => v !== undefined && v !== null && v !== '');
+      const rows = [
+        ['상태', '로드 완료'], ['쪽 수', `${pdf.numPages} / 라벨 ${state.pageLabels ? '있음' : '없음'}`], ['파일 크기', formatBytes(state.originalData?.byteLength)], ['Fingerprint', pdf.fingerprints?.[0] || '-'],
+        ['제목', info.Title || meta?.get?.('dc:title') || '-'], ['작성자', info.Author || meta?.get?.('dc:creator') || '-'], ['주제', info.Subject || '-'], ['생성 도구', info.Producer || info.Creator || '-'],
+        ['PDF 포맷', info.PDFFormatVersion || '-'], ['암호화', info.IsEncrypted ? '예' : '아니오'], ['태그 PDF', markInfo?.Marked ? '예' : '알 수 없음'], ['권한', permissions ? `${permissions.length}개 권한 값` : '제한 정보 없음']
+      ];
+      els.docInfo.innerHTML = rows.map(([k,v]) => `<dt>${escapeHtml(k)}</dt><dd title="${escapeHtml(v)}">${escapeHtml(v)}</dd>`).join('');
+      if (fields.length) log(`메타데이터 확인: ${fields.length}개 정보 항목`);
+    }
+
+    async function renderStructureInfo() {
+      if (!state.pdf) return;
+      let linkCount = 0, widgetCount = 0;
+      for (let p = 1; p <= state.pdf.numPages; p++) {
+        const anns = await state.pdf.getPage(p).then(page => page.getAnnotations({intent:'display'})).catch(() => []);
+        linkCount += anns.filter(a => a.subtype === 'Link').length;
+        widgetCount += anns.filter(a => a.subtype === 'Widget').length;
+      }
+      const [outline, attachments, destinations, fieldObjects, jsActions] = await Promise.all([
+        state.pdf.getOutline().catch(() => null), state.pdf.getAttachments().catch(() => null), state.pdf.getDestinations().catch(() => null), state.pdf.getFieldObjects?.().catch(() => null), state.pdf.getJSActions?.().catch(() => null)
+      ]);
+      const html = [
+        `<div><b>목차</b> ${outline?.length || 0}개 최상위 항목</div>`,
+        `<div><b>링크 주석</b> ${linkCount}개</div>`, `<div><b>양식 위젯</b> ${widgetCount}개</div>`,
+        `<div><b>첨부 파일</b> ${attachments ? Object.keys(attachments).length : 0}개</div>`, `<div><b>명명 목적지</b> ${destinations ? Object.keys(destinations).length : 0}개</div>`,
+        `<div><b>필드 객체</b> ${fieldObjects ? Object.keys(fieldObjects).length : 0}개</div>`, `<div><b>문서 JavaScript</b> ${jsActions ? Object.keys(jsActions).length : 0}개</div>`
+      ];
+      els.structureInfo.innerHTML = html.join('');
+    }
+
+    async function renderOutline() {
+      if (!state.pdf) return;
+      const outline = await state.pdf.getOutline().catch(() => null);
+      if (!outline?.length) { els.outlineTree.innerHTML = '<p class="tiny">이 PDF에는 내장 목차가 없습니다.</p>'; return; }
+      const makeItems = (items) => {
+        const container = document.createElement('div');
+        for (const item of items) {
+          const btn = document.createElement('button');
+          btn.className = 'outline-node';
+          btn.textContent = item.title || '(제목 없음)';
+          btn.title = item.title || '';
+          btn.addEventListener('click', () => {
+            if (item.dest) goToDestination(item.dest);
+            else if (item.url) window.open(item.url, '_blank', 'noopener');
+          });
+          container.appendChild(btn);
+          if (item.items?.length) { const child = makeItems(item.items); child.className = 'outline-indent'; container.appendChild(child); }
+        }
+        return container;
+      };
+      els.outlineTree.replaceChildren(makeItems(outline));
+    }
+
+    async function renderAttachments() {
+      if (!state.pdf) return;
+      const attachments = await state.pdf.getAttachments().catch(() => null);
+      if (!attachments || !Object.keys(attachments).length) { els.attachmentList.innerHTML = '<p class="tiny">첨부 파일 없음</p>'; return; }
+      els.attachmentList.innerHTML = '';
+      for (const [name, attachment] of Object.entries(attachments)) {
+        const row = document.createElement('div'); row.className = 'bookmark-item';
+        const nameEl = document.createElement('span'); nameEl.textContent = name;
+        const btn = document.createElement('button'); btn.textContent = '저장';
+        btn.onclick = () => downloadBlob(new Blob([attachment.content]), attachment.filename || name, attachment.contentType || 'application/octet-stream');
+        row.append(nameEl, btn); els.attachmentList.appendChild(row);
+      }
+    }
+
+    async function renderLayers() {
+      if (!state.pdf) return;
+      try {
+        const config = await state.pdf.getOptionalContentConfig({ intent: 'display' });
+        state.optionalContentConfig = config;
+        const groupsObj = config.getGroups?.() || {};
+        const groups = Object.values(groupsObj);
+        if (!groups.length) { els.layerList.innerHTML = '<p class="tiny">선택적 콘텐츠 그룹(레이어)이 없습니다.</p>'; return; }
+        els.layerList.innerHTML = '';
+        for (const group of groups) {
+          const label = document.createElement('label'); label.className='bookmark-item';
+          const text = document.createElement('span'); text.textContent = group.name || group.id;
+          const input = document.createElement('input'); input.type='checkbox'; input.checked = config.isVisible(group.id);
+          input.onchange = async () => { config.setVisibility(group.id, input.checked); log(`레이어 ${group.name || group.id}: ${input.checked ? '표시' : '숨김'}`); await renderView(); };
+          label.append(text, input); els.layerList.appendChild(label);
+        }
+      } catch (error) { els.layerList.innerHTML = '<p class="tiny">레이어 정보를 읽을 수 없습니다.</p>'; }
+    }
+
+    async function renderThumbnails() {
+      if (!state.pdf) return;
+      els.thumbList.innerHTML = '';
+      const token = state.renderToken;
+      for (let pageNo=1; pageNo<=state.pdf.numPages; pageNo++) {
+        if (token !== state.renderToken || !state.pdf) return;
+        const thumb = document.createElement('button'); thumb.className='thumb'; thumb.dataset.page=String(pageNo); thumb.title=`${pageLabel(pageNo)}쪽으로 이동`;
+        const canvas = document.createElement('canvas'); const label = document.createElement('span'); label.className='thumb-label'; label.textContent=pageLabel(pageNo); thumb.append(canvas,label);
+        thumb.onclick = () => goToPage(pageNo);
+        els.thumbList.appendChild(thumb);
+        try {
+          const page = await state.pdf.getPage(pageNo); const base = page.getViewport({scale:1, rotation:state.rotation}); const scale = Math.min(0.25, 172 / base.width); const viewport = page.getViewport({scale, rotation:state.rotation});
+          const ctx = canvas.getContext('2d', {alpha:false}); canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height); await page.render({canvasContext:ctx, viewport, annotationMode: state.pdfjsLib.AnnotationMode.ENABLE_FORMS, optionalContentConfigPromise: Promise.resolve(state.optionalContentConfig)}).promise;
+        } catch (error) { log(`미리보기 ${pageNo} 실패: ${error.message}`); }
+      }
+      updateThumbSelection();
+    }
+
+    function updateThumbSelection() {
+      els.thumbList.querySelectorAll('.thumb').forEach(el => el.classList.toggle('active', Number(el.dataset.page)===state.currentPage));
+      els.bookmarkBtn.textContent = state.bookmarks.has(state.currentPage) ? '저장됨' : '저장';
+    }
+
+    function clearViewerWithLoading(message) {
+      els.pdfViewer.innerHTML = `<div class="empty-state"><strong>${escapeHtml(message)}</strong><div>페이지 canvas, text layer, annotation overlay를 다시 구성하고 있습니다.</div></div>`;
+    }
+
+    async function renderView() {
+      if (!state.pdf) return;
+      const token = ++state.renderToken;
+      setBusy(true, '페이지 렌더링 중');
+      clearViewerWithLoading(state.mode === 'single' ? '현재 페이지 렌더링 중' : '페이지 렌더링 중');
+      const root = document.createDocumentFragment();
+      const pages = state.mode === 'single' ? [state.currentPage] : Array.from({length: state.pdf.numPages}, (_, i)=>i+1);
+      for (const pageNo of pages) {
+        if (token !== state.renderToken || !state.pdf) return;
+        const wrap = await renderPage(pageNo, token);
+        if (wrap) root.appendChild(wrap);
+      }
+      if (token !== state.renderToken) return;
+      els.pdfViewer.replaceChildren(root);
+      installPageObserver();
+      applySearchHighlights();
+      updatePageControls(); updateThumbSelection();
+      setBusy(false);
+      if (state.mode === 'continuous') { const target = els.pdfViewer.querySelector(`.page-wrap[data-page="${state.currentPage}"]`); target?.scrollIntoView({block:'center'}); }
+      log(`${pages.length}개 페이지 렌더링 완료 / ${Math.round(state.scale*100)}% / ${state.rotation}°`);
+    }
+
+    async function renderPage(pageNo, token) {
+      const page = await state.pdf.getPage(pageNo);
+      if (token !== state.renderToken) return null;
+      const viewport = page.getViewport({scale:state.scale, rotation:state.rotation});
+      const outputScale = Math.min(window.devicePixelRatio || 1, 2);
+      const wrap = document.createElement('section'); wrap.className='page-wrap'; wrap.dataset.page=String(pageNo); wrap.style.width=`${Math.ceil(viewport.width)}px`; wrap.style.height=`${Math.ceil(viewport.height)}px`;
+      if (pageNo===state.currentPage) wrap.classList.add('current');
+      const label = document.createElement('span'); label.className='page-label'; label.textContent=`${pageLabel(pageNo)} / ${state.pdf.numPages}`;
+      const canvas = document.createElement('canvas'); canvas.className='pdf-canvas'; canvas.width=Math.floor(viewport.width*outputScale); canvas.height=Math.floor(viewport.height*outputScale); canvas.style.width=`${Math.floor(viewport.width)}px`; canvas.style.height=`${Math.floor(viewport.height)}px`;
+      const textLayer = document.createElement('div'); textLayer.className='textLayer'; textLayer.style.width=`${viewport.width}px`; textLayer.style.height=`${viewport.height}px`;
+      const annotationLayer = document.createElement('div'); annotationLayer.className='annotationLayer'; annotationLayer.style.width=`${viewport.width}px`; annotationLayer.style.height=`${viewport.height}px`;
+      wrap.append(canvas, textLayer, annotationLayer, label);
+      const ctx = canvas.getContext('2d', {alpha:false});
+      try {
+        const renderParams = { canvasContext:ctx, viewport, transform: outputScale !== 1 ? [outputScale,0,0,outputScale,0,0] : null, annotationMode: state.pdfjsLib.AnnotationMode.ENABLE_FORMS };
+        if (state.optionalContentConfig) renderParams.optionalContentConfigPromise = Promise.resolve(state.optionalContentConfig);
+        await page.render(renderParams).promise;
+      } catch (error) { log(`페이지 ${pageNo} canvas 오류: ${error.message}`); }
+      if (token !== state.renderToken) return null;
+      const textRecord = await getPageText(pageNo, page);
+      try {
+        if (state.pdfjsLib.TextLayer) {
+          const layer = new state.pdfjsLib.TextLayer({textContentSource:textRecord.textContent, container:textLayer, viewport});
+          await layer.render();
+        } else {
+          textLayer.textContent = textRecord.text;
+          textLayer.style.cssText += ';position:absolute;opacity:.001;';
+        }
+      } catch (error) { log(`페이지 ${pageNo} text layer 오류: ${error.message}`); }
+      try { await renderAnnotationOverlay(pageNo, page, viewport, annotationLayer); } catch (error) { log(`페이지 ${pageNo} annotation 오류: ${error.message}`); }
+      return wrap;
+    }
+
+    async function getPageText(pageNo, page=null) {
+      if (state.pageTexts.has(pageNo)) return state.pageTexts.get(pageNo);
+      const targetPage = page || await state.pdf.getPage(pageNo);
+      const textContent = await targetPage.getTextContent({includeMarkedContent:true});
+      const strings = textContent.items.filter(item => typeof item.str === 'string').map(item => item.str);
+      const record = { textContent, text: strings.join(' '), strings };
+      state.pageTexts.set(pageNo, record);
+      return record;
+    }
+
+    function viewportRect(viewport, rect) {
+      const [x1, y1, x2, y2] = viewport.convertToViewportRectangle(rect);
+      return { left:Math.min(x1,x2), top:Math.min(y1,y2), width:Math.abs(x2-x1), height:Math.abs(y2-y1) };
+    }
+
+    async function renderAnnotationOverlay(pageNo, page, viewport, container) {
+      const annotations = await page.getAnnotations({intent:'display'});
+      for (const annotation of annotations) {
+        if (!annotation.rect || annotation.rect.every(v=>v===0)) continue;
+        const r = viewportRect(viewport, annotation.rect);
+        if (!Number.isFinite(r.left+r.top+r.width+r.height) || r.width < 1 || r.height < 1) continue;
+        if (annotation.subtype === 'Link') {
+          const link = document.createElement('a'); link.className='pdf-link'; link.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
+          link.title = annotation.url || annotation.unsafeUrl || (annotation.dest ? 'PDF 내부 링크' : '링크');
+          if (annotation.url || annotation.unsafeUrl) { link.href=annotation.url || annotation.unsafeUrl; link.target='_blank'; link.rel='noopener noreferrer'; }
+          else if (annotation.dest) { link.href='#'; link.onclick=(e)=>{ e.preventDefault(); goToDestination(annotation.dest); }; }
+          container.appendChild(link); continue;
+        }
+        if (annotation.subtype !== 'Widget') continue;
+        const value = state.annotationValues.has(annotation.id) ? state.annotationValues.get(annotation.id) : annotation.fieldValue;
+        let control;
+        if (annotation.fieldType === 'Btn') {
+          control=document.createElement('input'); control.type=annotation.radioButton?'radio':'checkbox'; control.name=annotation.fieldName || annotation.id;
+          control.checked=annotation.radioButton ? value===annotation.buttonValue || annotation.fieldValue===annotation.buttonValue : Boolean(value && value !== 'Off');
+          control.addEventListener('change', () => {
+            if (control.type==='radio' && !control.checked) return;
+            const next=control.type==='checkbox' ? (control.checked ? annotation.exportValue || true : 'Off') : annotation.buttonValue;
+            state.annotationValues.set(annotation.id,next); syncAnnotationStorage(annotation.id,next);
+          });
+        } else if (annotation.fieldType === 'Ch') {
+          control=document.createElement('select');
+          for (const opt of annotation.options || []) { const option=document.createElement('option'); option.value=opt.exportValue || opt.displayValue; option.textContent=opt.displayValue || opt.exportValue; option.selected=String(value)===String(option.value); control.appendChild(option); }
+          control.addEventListener('change',()=>{state.annotationValues.set(annotation.id,control.value); syncAnnotationStorage(annotation.id,control.value);});
+        } else {
+          control=document.createElement(annotation.multiLine ? 'textarea' : 'input'); if (control.tagName==='INPUT') control.type='text'; control.value=value || ''; control.addEventListener('input',()=>{state.annotationValues.set(annotation.id,control.value); syncAnnotationStorage(annotation.id,control.value);});
+        }
+        control.className='pdf-widget'; control.title=annotation.fieldName || annotation.alternativeText || 'PDF form field'; control.style.left=`${r.left}px`; control.style.top=`${r.top}px`; control.style.width=`${r.width}px`; control.style.height=`${r.height}px`;
+        container.appendChild(control);
+      }
+    }
+    function syncAnnotationStorage(id, value) {
+      try { state.pdf.annotationStorage?.setValue?.(id, {value}); } catch (_) {}
+    }
+
+    function installPageObserver() {
+      state.pageObserver?.disconnect();
+      if (state.mode !== 'continuous') return;
+      state.pageObserver = new IntersectionObserver(entries => {
+        const visible = entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+        if (visible && visible.intersectionRatio > .32) {
+          const page=Number(visible.target.dataset.page); if (page !== state.currentPage) { state.currentPage=page; updatePageControls(); updateThumbSelection(); }
+        }
+      }, {root:els.pdfViewer, threshold:[.35,.55,.75]});
+      els.pdfViewer.querySelectorAll('.page-wrap').forEach(page=>state.pageObserver.observe(page));
+    }
+
+    async function goToPage(value, behavior='smooth') {
+      if (!state.pdf) return;
+      const page = Math.max(1, Math.min(state.pdf.numPages, Number(value)||1));
+      state.currentPage = page;
+      updatePageControls(); updateThumbSelection();
+      if (state.mode === 'single') { await renderView(); }
+      else { const target = els.pdfViewer.querySelector(`.page-wrap[data-page="${page}"]`); target?.scrollIntoView({behavior, block:'center'}); els.pdfViewer.querySelectorAll('.page-wrap').forEach(el=>el.classList.toggle('current',Number(el.dataset.page)===page)); }
+    }
+
+    async function goToDestination(dest) {
+      if (!state.pdf || !dest) return;
+      try {
+        const resolved = typeof dest === 'string' ? await state.pdf.getDestination(dest) : dest;
+        if (!Array.isArray(resolved)) { notify('이 목적지는 해석할 수 없습니다.'); return; }
+        let pageNo;
+        if (typeof resolved[0] === 'number') pageNo = resolved[0]+1;
+        else pageNo = await state.pdf.getPageIndex(resolved[0]) + 1;
+        log(`내부 목적지 이동: page ${pageNo}`); await goToPage(pageNo);
+      } catch (error) { notify('내부 링크 목적지를 해석하지 못했습니다.'); log(`목적지 오류: ${error.message}`); }
+    }
+
+    function updatePageControls() {
+      const count=state.pdf?.numPages || 0;
+      els.pageInput.value=String(state.currentPage); els.pageInput.max=String(count); els.pageTotal.textContent=`/ ${count}`; els.zoomReadout.textContent=`${Math.round(state.scale*100)}%`;
+      els.firstBtn.disabled=!state.pdf || state.currentPage<=1; els.prevBtn.disabled=!state.pdf || state.currentPage<=1; els.nextBtn.disabled=!state.pdf || state.currentPage>=count; els.lastBtn.disabled=!state.pdf || state.currentPage>=count;
+    }
+
+    async function setScale(value) {
+      if (!state.pdf) return;
+      let next=value;
+      const first=await state.pdf.getPage(state.currentPage);
+      const raw=first.getViewport({scale:1, rotation:state.rotation});
+      if (value==='fit-width') next=Math.max(.35, (els.pdfViewer.clientWidth-88)/raw.width);
+      if (value==='fit-page') next=Math.max(.35, Math.min((els.pdfViewer.clientWidth-88)/raw.width, (els.pdfViewer.clientHeight-80)/raw.height));
+      state.scale=Math.max(.25,Math.min(4,Number(next)||1));
+      if (typeof value==='number') els.zoomPreset.value=String(value); else els.zoomPreset.value=value;
+      await renderView();
+    }
+
+    async function rotate() { if (!state.pdf) return; state.rotation=(state.rotation+90)%360; await renderView(); await renderThumbnails(); }
+
+    async function getAllText() {
+      if (!state.pdf) return '';
+      const chunks=[];
+      for (let p=1; p<=state.pdf.numPages; p++) { const record=await getPageText(p); chunks.push(`--- ${pageLabel(p)}쪽 ---\n${record.text}`); }
+      return chunks.join('\n\n');
+    }
+    async function copyAllText() {
+      if (!state.pdf) return;
+      setBusy(true,'텍스트 추출 중');
+      try { const text=await getAllText(); await navigator.clipboard.writeText(text); notify(`${text.length.toLocaleString()}자를 클립보드에 복사했습니다.`); log('문서 전체 텍스트를 클립보드에 복사'); }
+      catch (error) { const ta=document.createElement('textarea'); ta.value=await getAllText(); document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); notify('텍스트를 복사했습니다.'); }
+      finally { setBusy(false); }
+    }
+    async function exportText() { if (!state.pdf) return; const text=await getAllText(); downloadBlob(new Blob([text],{type:'text/plain;charset=utf-8'}), `${sanitizeFilename(state.sourceName)}.txt`, 'text/plain'); log('TXT 내보내기'); }
+    function canvasToBlob(canvas, type='image/png') { return new Promise(resolve=>canvas.toBlob(resolve,type)); }
+    async function exportCurrentPng() { const canvas=currentPageCanvas(); if (!canvas) { notify('현재 페이지 canvas가 없습니다.'); return; } const blob=await canvasToBlob(canvas); downloadBlob(blob, `${sanitizeFilename(state.sourceName)}_page-${pageLabel(state.currentPage)}.png`, 'image/png'); log(`PNG 저장: page ${state.currentPage}`); }
+    async function downloadOriginal() { if (!state.pdf) return; const data=state.originalData || await state.pdf.getData(); downloadBlob(new Blob([data],{type:'application/pdf'}), state.sourceName || 'document.pdf', 'application/pdf'); log('원본 PDF 저장'); }
+    function downloadBlob(blob, filename) { const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1500); }
+
+    async function executeSearch(delta=0) {
+      if (!state.pdf) return;
+      const query=els.searchInput.value.trim();
+      if (!query) { state.searchResults=[]; state.searchIndex=-1; state.searchQuery=''; els.searchResults.innerHTML=''; els.searchMeta.textContent='검색어를 입력한 뒤 Enter를 누르세요.'; applySearchHighlights(); return; }
+      const normalized=query.toLocaleLowerCase();
+      if (normalized !== state.searchQuery) {
+        setBusy(true, '문서 검색 중'); state.searchQuery=normalized; state.searchResults=[]; state.searchIndex=-1;
+        for (let p=1; p<=state.pdf.numPages; p++) {
+          const record=await getPageText(p); const text=record.text; const lower=text.toLocaleLowerCase(); let at=0;
+          while ((at=lower.indexOf(normalized,at))!==-1) { const excerpt=text.slice(Math.max(0,at-45), Math.min(text.length,at+query.length+65)).replace(/\s+/g,' '); state.searchResults.push({page:p,at,excerpt}); at+=Math.max(1,normalized.length); }
+        }
+        setBusy(false); renderSearchResults(); applySearchHighlights();
+        if (!state.searchResults.length) { els.searchMeta.textContent=`"${query}" 검색 결과 없음`; notify('검색 결과가 없습니다.'); return; }
+      }
+      if (!state.searchResults.length) return;
+      state.searchIndex = (state.searchIndex + (delta || 1) + state.searchResults.length) % state.searchResults.length;
+      renderSearchResults(); const hit=state.searchResults[state.searchIndex]; await goToPage(hit.page); applySearchHighlights();
+    }
+    function renderSearchResults() {
+      const query=els.searchInput.value.trim();
+      const total=state.searchResults.length; els.searchMeta.textContent = total ? `"${query}" ${total}건 / ${state.searchIndex>=0?state.searchIndex+1:0}번째 선택` : '검색 결과 없음';
+      els.searchResults.innerHTML='';
+      state.searchResults.forEach((result,index)=> { const item=document.createElement('button'); item.className=`search-result${index===state.searchIndex?' active':''}`; item.innerHTML=`<span class="search-page">${escapeHtml(pageLabel(result.page))}쪽</span>${escapeHtml(result.excerpt)}`; item.onclick=async()=>{state.searchIndex=index;renderSearchResults();await goToPage(result.page);applySearchHighlights();}; els.searchResults.appendChild(item); });
+    }
+    function applySearchHighlights() {
+      const query=state.searchQuery; els.pdfViewer.querySelectorAll('.textLayer span').forEach(span=>span.classList.toggle('search-hit', Boolean(query && span.textContent.toLocaleLowerCase().includes(query))));
+    }
+
+    function renderBookmarks() {
+      els.bookmarkList.innerHTML='';
+      if (!state.bookmarks.size) { els.bookmarkList.innerHTML='<p class="tiny">저장한 페이지가 없습니다.</p>'; return; }
+      [...state.bookmarks].sort((a,b)=>a-b).forEach(page=>{ const row=document.createElement('div'); row.className='bookmark-item'; const go=document.createElement('button'); go.textContent=`${pageLabel(page)}쪽`; go.onclick=()=>goToPage(page); const del=document.createElement('button'); del.textContent='삭제'; del.onclick=()=>{state.bookmarks.delete(page); persistBookmarks(); renderBookmarks(); updateThumbSelection();}; row.append(go,del); els.bookmarkList.appendChild(row); });
+    }
+    function persistBookmarks() { localStorage.setItem(state.bookmarkKey, JSON.stringify([...state.bookmarks])); }
+    function toggleBookmark() { if (!state.pdf) return; if (state.bookmarks.has(state.currentPage)) { state.bookmarks.delete(state.currentPage); notify('현재 페이지 저장을 해제했습니다.'); } else { state.bookmarks.add(state.currentPage); notify('현재 페이지를 저장했습니다.'); } persistBookmarks(); renderBookmarks(); updateThumbSelection(); }
+
+    function activateTab(name) { document.querySelectorAll('.tab').forEach(btn=>btn.classList.toggle('active',btn.dataset.tab===name)); document.querySelectorAll('.tab-panel').forEach(panel=>panel.classList.toggle('active',panel.id===`panel-${name}`)); }
+
+    // Input and command binding
+    els.fileInput.addEventListener('change', e=>loadFromFile(e.target.files[0]));
+    els.loadSampleBtn.onclick=loadSample;
+    els.loadUrlBtn.onclick=()=>loadFromUrl(els.urlInput.value);
+    els.urlInput.addEventListener('keydown',e=>{if(e.key==='Enter')loadFromUrl(els.urlInput.value);});
+    document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>activateTab(btn.dataset.tab));
+    els.firstBtn.onclick=()=>goToPage(1); els.prevBtn.onclick=()=>goToPage(state.currentPage-1); els.nextBtn.onclick=()=>goToPage(state.currentPage+1); els.lastBtn.onclick=()=>goToPage(state.pdf?.numPages||1);
+    els.pageInput.addEventListener('change',()=>goToPage(els.pageInput.value)); els.pageInput.addEventListener('keydown',e=>{if(e.key==='Enter')goToPage(els.pageInput.value);});
+    els.zoomOutBtn.onclick=()=>setScale(Math.max(.25,state.scale-.25)); els.zoomInBtn.onclick=()=>setScale(Math.min(4,state.scale+.25)); els.zoomPreset.onchange=()=>setScale(els.zoomPreset.value==='fit-width'||els.zoomPreset.value==='fit-page'?els.zoomPreset.value:Number(els.zoomPreset.value));
+    els.rotateBtn.onclick=rotate; els.viewMode.onchange=async()=>{state.mode=els.viewMode.value;await renderView();}; els.bookmarkBtn.onclick=toggleBookmark;
+    els.copyTextBtn.onclick=copyAllText; els.exportTextBtn.onclick=exportText; els.exportPngBtn.onclick=exportCurrentPng; els.downloadBtn.onclick=downloadOriginal; els.printBtn.onclick=()=>window.print();
+    els.fullBtn.onclick=()=>document.fullscreenElement?document.exitFullscreen():els.pdfViewer.requestFullscreen(); els.themeBtn.onclick=()=>document.body.classList.toggle('theme-dark');
+    els.helpBtn.onclick=()=>els.helpDialog.showModal(); els.closeHelpBtn.onclick=()=>els.helpDialog.close(); els.clearLogBtn.onclick=()=>{state.logLines=[];els.eventLog.textContent='로그를 지웠습니다.';}; els.refreshInfoBtn.onclick=async()=>{await renderDocumentInfo();await renderStructureInfo();};
+    els.searchInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();executeSearch(e.shiftKey?-1:1);}}); els.searchNextBtn.onclick=()=>executeSearch(1); els.searchPrevBtn.onclick=()=>executeSearch(-1);
+    els.pdfViewer.addEventListener('dragover',e=>{e.preventDefault();els.pdfViewer.classList.add('drop-target');}); els.pdfViewer.addEventListener('dragleave',()=>els.pdfViewer.classList.remove('drop-target')); els.pdfViewer.addEventListener('drop',e=>{e.preventDefault();els.pdfViewer.classList.remove('drop-target');loadFromFile(e.dataTransfer.files?.[0]);});
+    window.addEventListener('resize',()=>{if(els.zoomPreset.value==='fit-width'||els.zoomPreset.value==='fit-page')setScale(els.zoomPreset.value);});
+    window.addEventListener('keydown',e=>{
+      if (e.ctrlKey || e.metaKey) { if (e.key.toLowerCase()==='f') { e.preventDefault(); activateTab('search'); els.searchInput.focus(); } return; }
+      const tag=document.activeElement?.tagName; if (['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+      if (e.key==='ArrowLeft') goToPage(state.currentPage-1); else if (e.key==='ArrowRight') goToPage(state.currentPage+1); else if (e.key==='+'||e.key==='=') setScale(Math.min(4,state.scale+.25)); else if(e.key==='-')setScale(Math.max(.25,state.scale-.25)); else if(e.key.toLowerCase()==='r')rotate(); else if(e.key.toLowerCase()==='b')toggleBookmark();
+    });
+
+    log('PDF.js Feature Lab 시작');
+    initPdfJs();
+  </script>
+</body>
+</html>
