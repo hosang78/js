@@ -52,6 +52,10 @@ ChatGPT/Codex는 이 저장소에 직접 push할 권한이 없다. 그래서 사
 1. `pages/<라이브러리-slug>/` 폴더 생성 (이미 있으면 재사용)
    - `meta.json`: `{ "name", "description", "entry": "index.html", "category" }` — 이미 있으면 그대로 둠
    - `index.html`: 위 "폴더 구조" 절 참고 — `templates/page-shell.html`을 그대로 복사 (이미 있으면 그대로 둠)
+   - `chatgpt/` 폴더를 **항상 같이 만든다** (빈 폴더, `.gitkeep` 하나만 넣음). git이 빈 디렉터리를 추적하지
+     못하므로 `.gitkeep`으로 폴더 존재만 유지 — 나중에 사용자가 GitHub에서 이 폴더로 바로 들어가
+     "Upload files"만 누르면 되도록 미리 준비해두는 것. 이 폴더 안에 Claude가 직접 데모를 작성하지는
+     않는다(=ChatGPT 전용 구역).
    - `category`는 좌측 메뉴 그룹핑에 쓰이며 아래 값 중 라이브러리 성격에 가장 맞는 것 하나를 고른다 (없으면 `server.js`의 `CATEGORY_ORDER`에 새 그룹을 추가할지 검토):
      - `chart` 차트 · 시각화
      - `diagram` 다이어그램 · 그래프 구조
