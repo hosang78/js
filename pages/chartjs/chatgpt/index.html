@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Chart.js 핵심 차트 유형, 상호작용, 플러그인, 대용량 최적화를 한 페이지에서 체험하는 종합 샘플" />
+  <title>Chart.js 기능 종합 샘플</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-solid: #ffffff;
+      --surface-2: #eef3f9;
+      --text: #132238;
+      --muted: #65758b;
+      --border: #dce5f0;
+      --primary: #1359c5;
+      --primary-2: #0a7f83;
+      --accent: #e77817;
+      --danger: #c93d4c;
+      --success: #188358;
+      --shadow: 0 18px 45px rgba(29, 52, 84, 0.10);
+      --radius: 22px;
+      --chart-grid: rgba(80, 103, 132, 0.13);
+      --chart-text: #52647a;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #08111f;
+      --surface: rgba(15, 27, 45, 0.88);
+      --surface-solid: #0f1b2d;
+      --surface-2: #16243a;
+      --text: #edf5ff;
+      --muted: #9cafc6;
+      --border: #263952;
+      --primary: #75a8ff;
+      --primary-2: #65d7cf;
+      --accent: #ffad5b;
+      --danger: #ff8490;
+      --success: #61d29e;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+      --chart-grid: rgba(189, 211, 236, 0.12);
+      --chart-text: #b6c7db;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(19, 89, 197, 0.14), transparent 32%),
+        radial-gradient(circle at 94% 10%, rgba(10, 127, 131, 0.11), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      transition: background .25s ease, color .25s ease;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .app-shell { width: min(1560px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 64px; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 34px;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      background: linear-gradient(135deg, var(--surface-solid), var(--surface));
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      right: -90px;
+      bottom: -160px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(19, 89, 197, .22), rgba(10, 127, 131, .08));
+      pointer-events: none;
+    }
+
+    .hero-top { display: flex; gap: 24px; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1; }
+    .eyebrow { color: var(--primary); font-size: 13px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(32px, 5vw, 58px); line-height: 1.08; letter-spacing: -.04em; }
+    .hero p { max-width: 850px; margin: 0; color: var(--muted); font-size: 16px; }
+
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn {
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 14px;
+      background: var(--surface-solid);
+      color: var(--text);
+      font-weight: 750;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--primary); }
+    .btn.primary { background: var(--primary); color: #fff; border-color: transparent; }
+    .btn.ghost { background: transparent; }
+    .btn.small { min-height: 34px; padding: 6px 10px; border-radius: 10px; font-size: 12px; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 26px; position: relative; z-index: 1; }
+    .stat { padding: 15px 16px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--border); }
+    .stat strong { display: block; font-size: 24px; line-height: 1.1; }
+    .stat span { color: var(--muted); font-size: 12px; }
+
+    .toolbar {
+      position: sticky;
+      top: 10px;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin: 18px 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(29, 52, 84, .08);
+    }
+
+    .search-wrap { position: relative; }
+    .search-wrap input {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 16px 0 42px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-solid);
+      color: var(--text);
+      outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(19,89,197,.12); }
+    .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .toolbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
+    .filter-chip {
+      border: 1px solid var(--border);
+      background: var(--surface-solid);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 8px 13px;
+      font-size: 13px;
+      font-weight: 750;
+    }
+    .filter-chip.active { background: var(--text); color: var(--surface-solid); border-color: transparent; }
+
+    .notice {
+      display: none;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--danger) 8%, var(--surface-solid));
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .dashboard { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+
+    .chart-card {
+      grid-column: span 6;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-solid);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform .2s ease, opacity .2s ease, border-color .2s ease;
+    }
+    .chart-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 45%, var(--border)); }
+    .chart-card.wide { grid-column: span 12; }
+    .chart-card.hidden { display: none; }
+
+    .card-head { display: flex; justify-content: space-between; gap: 16px; padding: 20px 20px 12px; }
+    .card-title-wrap { min-width: 0; }
+    .card-index { color: var(--primary); font-size: 11px; font-weight: 900; letter-spacing: .12em; }
+    .card-head h2 { margin: 5px 0 6px; font-size: 20px; letter-spacing: -.02em; }
+    .card-head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .badge { padding: 4px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 800; }
+    .badge.plugin { color: var(--primary-2); }
+
+    .card-actions { display: flex; gap: 6px; align-items: flex-start; flex-shrink: 0; }
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-weight: 900;
+    }
+    .icon-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    .chart-stage { position: relative; height: 330px; padding: 8px 18px 18px; }
+    .wide .chart-stage { height: 380px; }
+    canvas { max-width: 100%; }
+
+    .card-foot {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px 18px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .control-label { color: var(--muted); font-size: 12px; font-weight: 750; }
+    .range { accent-color: var(--primary); }
+    select {
+      min-height: 34px;
+      padding: 5px 28px 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .event-log {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface-solid);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .event-log strong { color: var(--text); }
+
+    .feature-table-wrap { margin-top: 18px; overflow: auto; border: 1px solid var(--border); border-radius: 18px; background: var(--surface-solid); }
+    .feature-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    .feature-table th, .feature-table td { padding: 13px 15px; border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; }
+    .feature-table th { background: var(--surface-2); color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+    .feature-table tr:last-child td { border-bottom: 0; }
+
+    .footer { margin-top: 28px; text-align: center; color: var(--muted); font-size: 12px; }
+
+    .external-tooltip {
+      position: absolute;
+      z-index: 20;
+      min-width: 150px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(10, 20, 34, .92);
+      color: #fff;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -115%);
+      transition: opacity .08s ease;
+      box-shadow: 0 12px 24px rgba(0,0,0,.25);
+      font-size: 12px;
+    }
+    .external-tooltip b { display: block; margin-bottom: 4px; }
+
+    .empty-state { display: none; padding: 60px 20px; text-align: center; color: var(--muted); grid-column: 1 / -1; }
+    .empty-state.visible { display: block; }
+
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--success); }
+    .status-dot.off { background: var(--danger); }
+
+    @media (max-width: 980px) {
+      .chart-card { grid-column: span 12; }
+      .hero-top { flex-direction: column; }
+      .hero-actions { justify-content: flex-start; }
+      .toolbar { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      .app-shell { width: min(100% - 18px, 1560px); padding-top: 10px; }
+      .hero { padding: 24px 20px; border-radius: 22px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat strong { font-size: 20px; }
+      .toolbar { top: 5px; padding: 10px; }
+      .toolbar-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .toolbar-actions .btn { width: 100%; }
+      .card-head { padding: 17px 15px 10px; }
+      .card-head { flex-direction: column; }
+      .card-actions { align-self: flex-end; margin-top: -44px; }
+      .chart-stage, .wide .chart-stage { height: 300px; padding: 6px 8px 14px; }
+      .card-foot { padding: 10px 12px 15px; }
+    }
+
+    @media print {
+      .toolbar, .filters, .hero-actions, .card-actions, .card-foot, .event-log { display: none !important; }
+      body { background: #fff; }
+      .app-shell { width: 100%; }
+      .chart-card { break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Interactive Feature Lab</div>
+          <h1>Chart.js 기능 종합 샘플</h1>
+          <p>기본 차트부터 혼합·다중축·시간축·로그축·동적 갱신·커스텀 툴팁·데이터 라벨·주석·확대/이동·대용량 데이터 감축까지 한 화면에서 직접 조작할 수 있는 실습 페이지입니다.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn primary" id="randomizeAll">전체 데이터 갱신</button>
+          <button class="btn" id="themeToggle">다크 모드</button>
+          <button class="btn" id="printPage">인쇄 / PDF</button>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong id="visibleCount">20</strong><span>현재 표시 예제</span></div>
+        <div class="stat"><strong>12+</strong><span>차트 표현 유형</span></div>
+        <div class="stat"><strong>4</strong><span>추가·커스텀 플러그인</span></div>
+        <div class="stat"><strong>5,000</strong><span>대용량 샘플 포인트</span></div>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="차트 검색 및 전역 제어">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input id="searchInput" type="search" placeholder="예: 원형, 주석, 확대, 시간축, 대용량" aria-label="차트 검색" />
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn small" id="toggleAnimation">애니메이션 끄기</button>
+        <button class="btn small" id="resetAll">전체 초기화</button>
+        <button class="btn small" id="exportVisible">표시 차트 PNG 저장</button>
+        <button class="btn small ghost" id="scrollTable">기능표 보기</button>
+      </div>
+    </section>
+
+    <nav class="filters" aria-label="차트 유형 필터">
+      <button class="filter-chip active" data-filter="all">전체</button>
+      <button class="filter-chip" data-filter="cartesian">직교 좌표</button>
+      <button class="filter-chip" data-filter="radial">원형·방사형</button>
+      <button class="filter-chip" data-filter="advanced">고급 기능</button>
+      <button class="filter-chip" data-filter="plugin">플러그인</button>
+      <button class="filter-chip" data-filter="performance">성능</button>
+    </nav>
+
+    <div class="notice" id="loadError" role="alert">
+      Chart.js 또는 플러그인을 불러오지 못했습니다. 이 파일은 CDN 연결형이므로 인터넷 연결과 보안망의 jsDelivr 허용 여부를 확인하세요.
+    </div>
+
+    <section class="dashboard" id="dashboard">
+      <article class="chart-card" data-category="cartesian" data-keywords="line 선형 추세 곡선 영역 포인트">
+        <header class="card-head">
+          <div class="card-title-wrap">
+            <div class="card-index">EXAMPLE 01</div>
+            <h2>기본 선형 차트</h2>
+            <p>부드러운 곡선, 영역 채움, 포인트 스타일, 범례·툴팁</p>
+            <div class="badges"><span class="badge">Line</span><span class="badge">Fill</span><span class="badge">Interaction</span></div>
+          </div>
+          <div class="card-actions"><button class="icon-btn" data-export="lineChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="lineChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="lineChart" aria-label="월별 위판액과 계획 선형 차트"></canvas></div>
+        <footer class="card-foot"><span class="control-label">곡선 강도</span><input class="range" id="lineTension" type="range" min="0" max="0.5" step="0.05" value="0.35" /><button class="btn small" id="toggleLineFill">영역 채움 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian" data-keywords="bar 막대 그룹 부서 비교">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 02</div><h2>그룹 막대 차트</h2><p>여러 데이터셋의 범주별 실적 비교</p><div class="badges"><span class="badge">Bar</span><span class="badge">Grouped</span><span class="badge plugin">Data labels</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="groupedBarChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="groupedBarChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="groupedBarChart" aria-label="부서별 실적 그룹 막대 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="toggleBarLabels">값 라벨 표시 전환</button><button class="btn small" id="toggleBarBorder">둥근 모서리 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="stacked bar 누적 막대 구성">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 03</div><h2>누적 막대 차트</h2><p>월별 접수 건수를 업무 유형별로 누적 표시</p><div class="badges"><span class="badge">Stacked</span><span class="badge">Bar</span><span class="badge">Percentage</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="stackedBarChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="stackedBarChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="stackedBarChart" aria-label="민원 유형별 누적 막대 차트"></canvas></div>
+        <footer class="card-foot"><label class="control-label" for="stackMode">표현 방식</label><select id="stackMode"><option value="normal">건수</option><option value="percent">100% 비율</option></select></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian" data-keywords="horizontal bar 가로 막대 순위 ranking">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 04</div><h2>가로 막대 순위</h2><p>긴 항목명과 순위 비교에 적합한 indexAxis 활용</p><div class="badges"><span class="badge">Horizontal</span><span class="badge">Ranking</span><span class="badge">Scriptable</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="horizontalBarChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="horizontalBarChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="horizontalBarChart" aria-label="업무 자동화 후보 순위 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="sortHorizontal">높은 값 순 정렬</button></footer>
+      </article>
+
+      <article class="chart-card wide" data-category="cartesian advanced" data-keywords="mixed 혼합 bar line dual axis 다중축 콤보">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 05</div><h2>혼합 차트 + 이중 Y축</h2><p>막대형 거래액과 선형 증감률을 서로 다른 축 단위로 결합</p><div class="badges"><span class="badge">Mixed</span><span class="badge">Dual axis</span><span class="badge">Bar + Line</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="mixedChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="mixedChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="mixedChart" aria-label="거래액과 증감률 혼합 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="toggleSecondAxis">증감률 축 표시 전환</button><button class="btn small" id="toggleMixedType">거래액 차트 유형 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="radial plugin" data-keywords="doughnut 도넛 center text datalabels 점유율">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 06</div><h2>도넛 + 중앙 합계</h2><p>커스텀 플러그인 중앙 텍스트와 데이터 라벨</p><div class="badges"><span class="badge">Doughnut</span><span class="badge plugin">Custom plugin</span><span class="badge plugin">Data labels</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="doughnutChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="doughnutChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="doughnutChart" aria-label="사업별 예산 배분 도넛 차트"></canvas></div>
+        <footer class="card-foot"><label class="control-label" for="cutoutRange">도넛 두께</label><input class="range" id="cutoutRange" type="range" min="40" max="80" value="66" /></footer>
+      </article>
+
+      <article class="chart-card" data-category="radial" data-keywords="pie 파이 원형 구성비 legend">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 07</div><h2>파이 차트</h2><p>단일 시점 구성비와 범례 클릭 필터링</p><div class="badges"><span class="badge">Pie</span><span class="badge">Composition</span><span class="badge">Legend toggle</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="pieChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="pieChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="pieChart" aria-label="민원 채널 구성비 파이 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="rotatePie">90° 회전</button><button class="btn small" id="togglePieLegend">범례 위치 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="radial" data-keywords="polar area polar 방사형 크기 비교">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 08</div><h2>폴라 영역 차트</h2><p>각 범주의 크기를 각도와 반지름으로 비교</p><div class="badges"><span class="badge">Polar area</span><span class="badge">Radial scale</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="polarChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="polarChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="polarChart" aria-label="위험 요인별 점수 폴라 영역 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="togglePolarAnimation">회전 애니메이션 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="radial" data-keywords="radar 레이더 역량 비교 다차원">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 09</div><h2>레이더 역량 비교</h2><p>두 조직의 다차원 역량 프로필 비교</p><div class="badges"><span class="badge">Radar</span><span class="badge">Multi dataset</span><span class="badge">Point style</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="radarChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="radarChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="radarChart" aria-label="조직 역량 레이더 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="toggleRadarShape">원형·다각형 격자 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="scatter 산점도 correlation 관계 tooltip">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 10</div><h2>산점도</h2><p>처리시간과 만족도의 관계 및 포인트별 툴팁</p><div class="badges"><span class="badge">Scatter</span><span class="badge">Linear scale</span><span class="badge">Point styling</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="scatterChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="scatterChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="scatterChart" aria-label="처리시간과 만족도 산점도"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="addScatterPoint">관측값 추가</button><button class="btn small" id="removeScatterPoint">마지막 값 제거</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="bubble 버블 3차원 변수 크기">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 11</div><h2>버블 차트</h2><p>X·Y 좌표에 버블 크기를 더한 3개 변수 표현</p><div class="badges"><span class="badge">Bubble</span><span class="badge">Radius</span><span class="badge">3 variables</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="bubbleChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="bubbleChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="bubbleChart" aria-label="효과와 난이도 및 비용 버블 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="scaleBubbles">버블 크기 확대</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="stepped line 계단선 interpolation segment">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 12</div><h2>계단선 + 구간 스타일</h2><p>상태 변화 시점과 증감 방향별 선 색상을 구분</p><div class="badges"><span class="badge">Stepped line</span><span class="badge">Segment</span><span class="badge">Scriptable</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="steppedChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="steppedChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="steppedChart" aria-label="시스템 처리량 계단선 차트"></canvas></div>
+        <footer class="card-foot"><label class="control-label" for="stepMode">계단 기준</label><select id="stepMode"><option value="before">before</option><option value="middle" selected>middle</option><option value="after">after</option></select></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="area stacked line 누적 영역 filler">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 13</div><h2>누적 영역 차트</h2><p>여러 채널의 누적 추세와 Filler 기능</p><div class="badges"><span class="badge">Area</span><span class="badge">Stacked</span><span class="badge">Filler</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="areaChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="areaChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="areaChart" aria-label="채널별 누적 이용량 영역 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="toggleAreaStack">누적 전환</button><button class="btn small" id="toggleAreaFill">영역 채움 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="floating bar range 범위 막대 최소 최대">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 14</div><h2>범위형 부동 막대</h2><p>[최소, 최대] 배열로 일정·범위 구간 표현</p><div class="badges"><span class="badge">Floating bar</span><span class="badge">Range</span><span class="badge">Array data</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="floatingBarChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="floatingBarChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="floatingBarChart" aria-label="업무별 예상 소요일 범위 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="toggleFloatingAxis">가로·세로 전환</button></footer>
+      </article>
+
+      <article class="chart-card" data-category="cartesian advanced" data-keywords="log logarithmic scale 로그 축 큰 값">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 15</div><h2>로그 스케일</h2><p>차이가 매우 큰 수치를 로그 축으로 비교</p><div class="badges"><span class="badge">Logarithmic</span><span class="badge">Scale</span><span class="badge">Large range</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="logChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="logChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="logChart" aria-label="데이터 규모 로그 스케일 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="toggleLogScale">로그·선형 축 전환</button></footer>
+      </article>
+
+      <article class="chart-card wide" data-category="cartesian advanced" data-keywords="time timeseries date 시간 날짜 축 adapter">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 16</div><h2>시간축 시계열</h2><p>날짜 기반 TimeScale, 단위 전환, 불규칙 간격 데이터</p><div class="badges"><span class="badge">Time scale</span><span class="badge plugin">date-fns adapter</span><span class="badge">Irregular interval</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="timeChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="timeChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="timeChart" aria-label="날짜별 어가 데이터 시계열 차트"></canvas></div>
+        <footer class="card-foot"><label class="control-label" for="timeUnit">시간 단위</label><select id="timeUnit"><option value="day">일</option><option value="week">주</option><option value="month" selected>월</option><option value="quarter">분기</option></select></footer>
+      </article>
+
+      <article class="chart-card" data-category="plugin advanced" data-keywords="annotation 주석 기준선 박스 라벨 임계값">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 17</div><h2>주석 플러그인</h2><p>기준선, 경고 구역, 강조 라벨을 차트 위에 표시</p><div class="badges"><span class="badge plugin">Annotation</span><span class="badge">Line</span><span class="badge">Box</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="annotationChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="annotationChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="annotationChart" aria-label="주석이 포함된 경보 지수 차트"></canvas></div>
+        <footer class="card-foot"><label class="control-label" for="thresholdRange">경보 기준</label><input class="range" id="thresholdRange" type="range" min="40" max="90" value="70" /><span id="thresholdValue" class="control-label">70</span></footer>
+      </article>
+
+      <article class="chart-card" data-category="plugin advanced" data-keywords="external html tooltip 커스텀 툴팁 interaction nearest">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 18</div><h2>외부 HTML 툴팁</h2><p>Canvas 기본 툴팁 대신 DOM 요소로 완전 커스텀</p><div class="badges"><span class="badge plugin">External tooltip</span><span class="badge">HTML</span><span class="badge">Nearest</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="tooltipChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="tooltipChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage" id="tooltipStage"><canvas id="tooltipChart" aria-label="외부 HTML 툴팁 차트"></canvas><div class="external-tooltip" id="htmlTooltip"></div></div>
+        <footer class="card-foot"><label class="control-label" for="interactionMode">상호작용 모드</label><select id="interactionMode"><option value="nearest">nearest</option><option value="index">index</option><option value="dataset">dataset</option><option value="point">point</option></select></footer>
+      </article>
+
+      <article class="chart-card wide" data-category="plugin performance advanced" data-keywords="zoom pan decimation large 대용량 확대 이동 성능 5000">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 19</div><h2>5,000포인트 · 감축 · 확대/이동</h2><p>내장 Decimation으로 렌더링 부담을 낮추고 마우스 휠 확대, 드래그 이동 지원</p><div class="badges"><span class="badge">Decimation</span><span class="badge plugin">Zoom / Pan</span><span class="badge">5,000 points</span><span class="badge">parsing:false</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="performanceChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="performanceChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="performanceChart" aria-label="대용량 데이터 감축과 확대 이동 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small" id="resetZoom">확대 초기화</button><label class="control-label" for="decimationMode">감축 방식</label><select id="decimationMode"><option value="lttb">LTTB</option><option value="min-max">Min-Max</option><option value="off">사용 안 함</option></select><span class="control-label" id="perfStatus">원본 5,000개</span></footer>
+      </article>
+
+      <article class="chart-card wide" data-category="advanced" data-keywords="dynamic realtime 실시간 update animation add remove data">
+        <header class="card-head">
+          <div class="card-title-wrap"><div class="card-index">EXAMPLE 20</div><h2>동적 데이터 갱신</h2><p>데이터 추가·삭제, 실시간 스트리밍 형태, update() 애니메이션</p><div class="badges"><span class="badge">Dynamic</span><span class="badge">Realtime-like</span><span class="badge">update()</span></div></div>
+          <div class="card-actions"><button class="icon-btn" data-export="dynamicChart" title="PNG 저장">⇩</button><button class="icon-btn" data-random="dynamicChart" title="데이터 갱신">↻</button></div>
+        </header>
+        <div class="chart-stage"><canvas id="dynamicChart" aria-label="동적 데이터 갱신 차트"></canvas></div>
+        <footer class="card-foot"><button class="btn small primary" id="streamToggle">자동 갱신 시작</button><button class="btn small" id="addDynamic">데이터 추가</button><button class="btn small" id="removeDynamic">데이터 삭제</button><label class="control-label" for="streamSpeed">주기</label><select id="streamSpeed"><option value="500">0.5초</option><option value="1000" selected>1초</option><option value="2000">2초</option></select></footer>
+      </article>
+
+      <div class="empty-state" id="emptyState">검색 조건에 맞는 차트가 없습니다.</div>
+    </section>
+
+    <section class="event-log" aria-live="polite">
+      <div><span class="status-dot" id="statusDot"></span><strong>상호작용 로그:</strong> <span id="eventMessage">차트의 데이터 요소를 클릭하면 상세값이 표시됩니다.</span></div>
+      <button class="btn small" id="clearLog">로그 지우기</button>
+    </section>
+
+    <section class="feature-table-wrap" id="featureTableSection">
+      <table class="feature-table">
+        <thead><tr><th>기능 영역</th><th>샘플</th><th>핵심 옵션·API</th><th>활용 예</th></tr></thead>
+        <tbody>
+          <tr><td>기본 유형</td><td>선·막대·파이·도넛·폴라·레이더</td><td>type, data, datasets, scales</td><td>실적, 구성비, 역량 비교</td></tr>
+          <tr><td>복합 표현</td><td>혼합 차트·이중축·누적·범위형</td><td>dataset.type, yAxisID, stacked, [min,max]</td><td>금액+증감률, 일정 범위</td></tr>
+          <tr><td>상호작용</td><td>툴팁·범례·클릭·확대·이동</td><td>interaction, onClick, getElementsAtEventForMode</td><td>탐색형 대시보드</td></tr>
+          <tr><td>고급 축</td><td>시간·로그·선형·방사형</td><td>scales.x.type, scales.y.type</td><td>시계열·대규모 편차</td></tr>
+          <tr><td>스타일링</td><td>스크립터블 색상·구간 스타일·그래디언트</td><td>scriptable options, segment, CanvasGradient</td><td>임계값·증감 방향 강조</td></tr>
+          <tr><td>플러그인</td><td>데이터 라벨·주석·Zoom/Pan·커스텀 플러그인</td><td>Chart.register(), options.plugins</td><td>보고서형 시각화</td></tr>
+          <tr><td>성능</td><td>5,000포인트 감축</td><td>decimation, parsing:false, normalized:true</td><td>센서·로그·거래 데이터</td></tr>
+          <tr><td>출력</td><td>PNG·인쇄/PDF</td><td>toBase64Image(), beforeDraw</td><td>보고서 첨부·공유</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="footer">
+      Chart.js 4.5.1 기반 · MIT License · CDN 연결형 샘플<br />
+      추가 플러그인: chartjs-plugin-datalabels, chartjs-plugin-annotation, chartjs-plugin-zoom, chartjs-adapter-date-fns
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+      const charts = {};
+      const initialConfigs = {};
+      let animationsEnabled = true;
+      let streamTimer = null;
+      let selectedFilter = 'all';
+      const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const formatNumber = (value) => new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 }).format(value);
+
+      if (!window.Chart) {
+        $('#loadError').style.display = 'block';
+        $('#statusDot').classList.add('off');
+        $('#eventMessage').textContent = '라이브러리 로드 실패';
+        return;
+      }
+
+      const maybeRegister = (plugin) => {
+        if (!plugin || !plugin.id) return;
+        try {
+          if (!Chart.registry.plugins.get(plugin.id)) Chart.register(plugin);
+        } catch (_) {
+          Chart.register(plugin);
+        }
+      };
+
+      maybeRegister(window.ChartDataLabels);
+      maybeRegister(window.ChartAnnotation);
+      maybeRegister(window.ChartZoom);
+
+      const centerTextPlugin = {
+        id: 'centerText',
+        afterDraw(chart, _args, options) {
+          if (!options || options.display === false || chart.config.type !== 'doughnut') return;
+          const { ctx, chartArea } = chart;
+          if (!chartArea) return;
+          const total = chart.data.datasets[0].data.reduce((sum, value, index) => chart.getDataVisibility(index) ? sum + Number(value) : sum, 0);
+          const x = (chartArea.left + chartArea.right) / 2;
+          const y = (chartArea.top + chartArea.bottom) / 2;
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = css('--muted');
+          ctx.font = '700 12px system-ui';
+          ctx.fillText(options.label || '합계', x, y - 12);
+          ctx.fillStyle = css('--text');
+          ctx.font = '800 25px system-ui';
+          ctx.fillText(formatNumber(total), x, y + 12);
+          ctx.restore();
+        }
+      };
+
+      const canvasBackgroundPlugin = {
+        id: 'canvasBackground',
+        beforeDraw(chart, _args, options) {
+          if (!options || options.enabled === false) return;
+          const { ctx, width, height } = chart;
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = options.color || css('--surface-solid');
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore();
+        }
+      };
+
+      Chart.register(centerTextPlugin, canvasBackgroundPlugin);
+      Chart.defaults.font.family = 'Pretendard, "Noto Sans KR", system-ui, sans-serif';
+      Chart.defaults.color = css('--chart-text');
+      Chart.defaults.borderColor = css('--chart-grid');
+      Chart.defaults.plugins.legend.labels.usePointStyle = true;
+      Chart.defaults.plugins.legend.labels.boxWidth = 9;
+      Chart.defaults.plugins.legend.labels.padding = 16;
+      Chart.defaults.plugins.tooltip.padding = 11;
+      Chart.defaults.plugins.tooltip.cornerRadius = 10;
+      Chart.defaults.plugins.tooltip.displayColors = true;
+      if (Chart.defaults.plugins.datalabels) Chart.defaults.plugins.datalabels.display = false;
+
+      const palette = {
+        blue: '#2878d0', teal: '#18a39b', orange: '#ed8a32', red: '#d95261',
+        purple: '#7f69c8', yellow: '#d6a719', green: '#38a169', sky: '#5da8df',
+        navy: '#31527a', pink: '#db6b9a'
+      };
+      const alpha = (hex, opacity) => {
+        const value = hex.replace('#', '');
+        const r = parseInt(value.slice(0, 2), 16);
+        const g = parseInt(value.slice(2, 4), 16);
+        const b = parseInt(value.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      };
+      const colors = Object.values(palette);
+      const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      const rnd = (min, max) => Math.round(Math.random() * (max - min) + min);
+      const baseOptions = (extra = {}) => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 650, easing: 'easeOutQuart' },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: {
+            callbacks: {
+              label(context) {
+                const label = context.dataset.label ? `${context.dataset.label}: ` : '';
+                const raw = context.raw;
+                if (raw && typeof raw === 'object' && 'r' in raw) return `${label}X ${raw.x}, Y ${raw.y}, 크기 ${raw.r}`;
+                if (Array.isArray(raw)) return `${label}${raw[0]} ~ ${raw[1]}`;
+                return `${label}${formatNumber(context.parsed.y ?? context.parsed ?? raw)}`;
+              }
+            }
+          },
+          canvasBackground: { enabled: true, color: css('--surface-solid') }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: css('--chart-text') }, border: { color: css('--chart-grid') } },
+          y: { beginAtZero: true, grid: { color: css('--chart-grid') }, ticks: { color: css('--chart-text') }, border: { display: false } }
+        },
+        ...extra
+      });
+
+      function createChart(id, config) {
+        const canvas = document.getElementById(id);
+        if (!canvas) return null;
+        try {
+          charts[id] = new Chart(canvas, config);
+          initialConfigs[id] = config;
+          canvas.addEventListener('click', (event) => logChartClick(charts[id], event));
+          return charts[id];
+        } catch (error) {
+          console.error(`Chart creation failed: ${id}`, error);
+          canvas.parentElement.innerHTML = `<div style="padding:40px;color:var(--danger);text-align:center">차트 생성 오류: ${error.message}</div>`;
+          return null;
+        }
+      }
+
+      function lineGradient(ctx, area, color) {
+        const gradient = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+        gradient.addColorStop(0, alpha(color, .32));
+        gradient.addColorStop(1, alpha(color, .02));
+        return gradient;
+      }
+
+      createChart('lineChart', {
+        type: 'line',
+        data: {
+          labels: months.slice(0, 8),
+          datasets: [
+            { label: '위판액', data: [48,52,57,55,64,70,76,82], borderColor: palette.blue, backgroundColor(context) { const area = context.chart.chartArea; return area ? lineGradient(context.chart.ctx, area, palette.blue) : alpha(palette.blue,.2); }, fill: true, tension: .35, pointRadius: 4, pointHoverRadius: 7, pointBackgroundColor: '#fff', pointBorderWidth: 2 },
+            { label: '계획', data: [45,50,54,59,63,68,72,77], borderColor: palette.orange, borderDash: [7,5], pointStyle: 'rectRot', pointRadius: 4, tension: .2 }
+          ]
+        },
+        options: baseOptions({ plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: false, suggestedMin: 35, grid: { color: css('--chart-grid') }, title: { display: true, text: '억원' } } } })
+      });
+
+      createChart('groupedBarChart', {
+        type: 'bar',
+        data: { labels: ['기획','회원지원','어업양식','공제보험','ICT'], datasets: [
+          { label: '목표', data: [82,74,88,78,90], backgroundColor: alpha(palette.navy,.38), borderColor: palette.navy, borderWidth: 1, borderRadius: 8 },
+          { label: '실적', data: [91,79,84,86,94], backgroundColor: alpha(palette.blue,.78), borderColor: palette.blue, borderWidth: 1, borderRadius: 8 }
+        ]},
+        options: baseOptions({ plugins: { legend: { position: 'top' }, datalabels: { display: true, anchor: 'end', align: 'end', color: css('--chart-text'), font: { weight: '700', size: 10 }, formatter: Math.round }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, suggestedMax: 110, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('stackedBarChart', {
+        type: 'bar',
+        data: { labels: months.slice(0, 6), datasets: [
+          { label: '보험금', data: [34,42,38,47,51,44], backgroundColor: palette.blue, borderRadius: 5 },
+          { label: '계약변경', data: [22,25,29,20,31,27], backgroundColor: palette.teal, borderRadius: 5 },
+          { label: '서류보완', data: [18,15,21,24,19,23], backgroundColor: palette.orange, borderRadius: 5 }
+        ]},
+        options: baseOptions({ scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('horizontalBarChart', {
+        type: 'bar',
+        data: { labels: ['반복 자료취합','민원 초안작성','보고서 요약','이상거래 탐지','회의록 정리','문서 분류'], datasets: [{ label: '자동화 적합도', data: [96,87,83,78,74,68], backgroundColor(context) { const value = context.raw || 0; return value >= 85 ? palette.blue : value >= 75 ? palette.teal : palette.orange; }, borderRadius: 8 }] },
+        options: baseOptions({ indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `적합도 ${ctx.parsed.x}점` } }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { beginAtZero: true, max: 100, grid: { color: css('--chart-grid') } }, y: { grid: { display: false } } } })
+      });
+
+      createChart('mixedChart', {
+        data: { labels: months.slice(0, 8), datasets: [
+          { type: 'bar', label: '거래액', data: [108,116,121,118,134,142,151,158], backgroundColor: alpha(palette.blue,.72), borderRadius: 7, yAxisID: 'y' },
+          { type: 'line', label: '전년동월 증감률', data: [2.4,3.1,1.8,-1.2,4.6,5.1,6.3,4.8], borderColor: palette.orange, backgroundColor: palette.orange, pointRadius: 4, tension: .3, yAxisID: 'y1' }
+        ]},
+        options: baseOptions({ scales: { x: { grid: { display: false } }, y: { beginAtZero: true, position: 'left', title: { display: true, text: '거래액(억원)' }, grid: { color: css('--chart-grid') } }, y1: { position: 'right', title: { display: true, text: '증감률(%)' }, grid: { drawOnChartArea: false }, ticks: { callback: (v) => `${v}%` } } } })
+      });
+
+      createChart('doughnutChart', {
+        type: 'doughnut',
+        data: { labels: ['회원지원','어업양식','유통','디지털','안전'], datasets: [{ data: [32,26,18,14,10], backgroundColor: colors.slice(0,5), borderColor: css('--surface-solid'), borderWidth: 3, hoverOffset: 10 }] },
+        options: baseOptions({ cutout: '66%', plugins: { legend: { position: 'bottom' }, centerText: { display: true, label: '예산 합계' }, datalabels: { display: true, color: '#fff', font: { weight: '800', size: 11 }, formatter: (v) => `${v}%` }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: {} })
+      });
+
+      createChart('pieChart', {
+        type: 'pie',
+        data: { labels: ['전화','모바일','웹','방문'], datasets: [{ data: [46,28,18,8], backgroundColor: [palette.blue,palette.teal,palette.orange,palette.purple], borderColor: css('--surface-solid'), borderWidth: 3 }] },
+        options: baseOptions({ rotation: 0, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}%` } }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: {} })
+      });
+
+      createChart('polarChart', {
+        type: 'polarArea',
+        data: { labels: ['기상','조업','장비','인력','통신'], datasets: [{ data: [72,58,45,66,39], backgroundColor: colors.slice(0,5).map(c => alpha(c,.68)), borderColor: colors.slice(0,5), borderWidth: 1 }] },
+        options: baseOptions({ animation: { animateRotate: true, animateScale: true, duration: 850 }, plugins: { legend: { position: 'bottom' }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { r: { beginAtZero: true, max: 100, grid: { color: css('--chart-grid') }, ticks: { backdropColor: 'transparent', color: css('--chart-text') } } } })
+      });
+
+      createChart('radarChart', {
+        type: 'radar',
+        data: { labels: ['데이터','업무표준','AI활용','보안','협업','현장적용'], datasets: [
+          { label: '현재', data: [62,70,58,82,67,55], borderColor: palette.blue, backgroundColor: alpha(palette.blue,.18), pointBackgroundColor: palette.blue, pointStyle: 'circle' },
+          { label: '목표', data: [85,88,82,90,86,80], borderColor: palette.orange, backgroundColor: alpha(palette.orange,.10), pointBackgroundColor: palette.orange, borderDash: [6,4], pointStyle: 'rectRot' }
+        ]},
+        options: baseOptions({ scales: { r: { beginAtZero: true, max: 100, grid: { circular: false, color: css('--chart-grid') }, angleLines: { color: css('--chart-grid') }, pointLabels: { color: css('--chart-text'), font: { weight: '700' } }, ticks: { display: false } } } })
+      });
+
+      createChart('scatterChart', {
+        type: 'scatter',
+        data: { datasets: [{ label: '민원 사례', data: Array.from({length: 24}, (_,i) => ({ x: rnd(2,25), y: Math.max(45, Math.min(98, 99-rnd(1,25)*1.7+rnd(-8,8))), case: `사례 ${i+1}` })), backgroundColor: alpha(palette.blue,.72), borderColor: palette.blue, pointRadius: 5, pointHoverRadius: 8 }] },
+        options: baseOptions({ interaction: { mode: 'nearest', intersect: true }, plugins: { tooltip: { callbacks: { title: (items) => items[0]?.raw.case || '', label: (ctx) => `처리 ${ctx.raw.x}분 · 만족도 ${Math.round(ctx.raw.y)}점` } }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { beginAtZero: true, title: { display: true, text: '처리시간(분)' }, grid: { color: css('--chart-grid') } }, y: { min: 40, max: 100, title: { display: true, text: '만족도' }, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('bubbleChart', {
+        type: 'bubble',
+        data: { datasets: [
+          { label: '단기 과제', data: [{x:85,y:30,r:14},{x:78,y:42,r:10},{x:90,y:55,r:17},{x:68,y:35,r:9}], backgroundColor: alpha(palette.teal,.62), borderColor: palette.teal },
+          { label: '중장기 과제', data: [{x:76,y:78,r:18},{x:88,y:85,r:22},{x:62,y:70,r:12},{x:72,y:88,r:15}], backgroundColor: alpha(palette.orange,.56), borderColor: palette.orange }
+        ]},
+        options: baseOptions({ interaction: { mode: 'nearest', intersect: true }, scales: { x: { min: 50, max: 100, title: { display: true, text: '기대효과' }, grid: { color: css('--chart-grid') } }, y: { min: 20, max: 100, title: { display: true, text: '구현 난이도' }, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('steppedChart', {
+        type: 'line',
+        data: { labels: ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'], datasets: [{ label: '처리량', data: [18,24,21,36,42,39,51,47], stepped: 'middle', borderWidth: 3, pointRadius: 4, fill: false, segment: { borderColor: (ctx) => ctx.p1.parsed.y >= ctx.p0.parsed.y ? palette.teal : palette.red }, borderColor: palette.blue }] },
+        options: baseOptions({ scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('areaChart', {
+        type: 'line',
+        data: { labels: months.slice(0,8), datasets: [
+          { label: '웹', data: [18,22,25,28,30,35,39,43], borderColor: palette.blue, backgroundColor: alpha(palette.blue,.28), fill: true, tension: .35 },
+          { label: '모바일', data: [12,16,19,24,28,31,34,38], borderColor: palette.teal, backgroundColor: alpha(palette.teal,.28), fill: true, tension: .35 },
+          { label: '내부망', data: [8,9,12,13,15,18,20,22], borderColor: palette.orange, backgroundColor: alpha(palette.orange,.24), fill: true, tension: .35 }
+        ]},
+        options: baseOptions({ scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('floatingBarChart', {
+        type: 'bar',
+        data: { labels: ['요구분석','설계','개발','검증','교육','전환'], datasets: [{ label: '예상 소요일', data: [[1,3],[3,6],[5,12],[10,15],[13,17],[16,20]], backgroundColor: alpha(palette.purple,.72), borderColor: palette.purple, borderWidth: 1, borderRadius: 7, borderSkipped: false }] },
+        options: baseOptions({ indexAxis: 'y', plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.raw[0]}일 ~ ${ctx.raw[1]}일` } }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { beginAtZero: true, title: { display: true, text: '프로젝트 경과일' }, grid: { color: css('--chart-grid') } }, y: { grid: { display: false } } } })
+      });
+
+      createChart('logChart', {
+        type: 'bar',
+        data: { labels: ['설정정보','민원기록','거래내역','센서로그','이미지'], datasets: [{ label: '데이터 건수', data: [120,4200,85000,1200000,9800000], backgroundColor: [palette.sky,palette.teal,palette.blue,palette.purple,palette.orange], borderRadius: 7 }] },
+        options: baseOptions({ plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${formatNumber(ctx.raw)}건` } }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { grid: { display: false } }, y: { type: 'logarithmic', title: { display: true, text: '건수(로그)' }, grid: { color: css('--chart-grid') }, ticks: { callback: (value) => [10,100,1000,10000,100000,1000000,10000000].includes(Number(value)) ? formatNumber(value) : '' } } } })
+      });
+
+      createChart('timeChart', {
+        type: 'line',
+        data: { datasets: [
+          { label: '평균 위판가격', data: [
+            {x:'2026-01-03',y:112},{x:'2026-01-18',y:118},{x:'2026-02-07',y:115},{x:'2026-02-25',y:126},{x:'2026-03-12',y:132},{x:'2026-04-02',y:128},{x:'2026-04-28',y:139},{x:'2026-05-14',y:145},{x:'2026-06-09',y:141},{x:'2026-07-01',y:152}
+          ], borderColor: palette.blue, backgroundColor: alpha(palette.blue,.15), fill: true, tension: .25, pointRadius: 4 }
+        ]},
+        options: baseOptions({ parsing: true, scales: { x: { type: 'time', time: { unit: 'month', tooltipFormat: 'yyyy년 M월 d일', displayFormats: { day: 'M/d', week: 'M/d', month: 'yyyy.MM', quarter: 'yyyy QQQ' } }, grid: { display: false }, title: { display: true, text: '날짜' } }, y: { beginAtZero: false, suggestedMin: 100, title: { display: true, text: '가격지수' }, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('annotationChart', {
+        type: 'line',
+        data: { labels: months.slice(0,8), datasets: [{ label: '경보 지수', data: [44,51,48,63,58,72,81,67], borderColor: palette.red, backgroundColor: alpha(palette.red,.12), fill: true, tension: .28, pointRadius: 4 }] },
+        options: baseOptions({ scales: { x: { grid: { display: false } }, y: { min: 0, max: 100, grid: { color: css('--chart-grid') } } }, plugins: { legend: { position: 'top' }, annotation: { annotations: { dangerBox: { type: 'box', yMin: 70, yMax: 100, backgroundColor: alpha(palette.red,.08), borderWidth: 0, label: { display: true, content: '주의 구간', position: 'start', color: palette.red, font: { weight: '700' } } }, threshold: { type: 'line', yMin: 70, yMax: 70, borderColor: palette.red, borderWidth: 2, borderDash: [7,5], label: { display: true, content: '경보 기준 70', position: 'end', backgroundColor: palette.red, color: '#fff', padding: 5 } } } }, canvasBackground: { enabled: true, color: css('--surface-solid') } } })
+      });
+
+      const externalTooltipHandler = (context) => {
+        const { chart, tooltip } = context;
+        const el = $('#htmlTooltip');
+        if (!tooltip || tooltip.opacity === 0) { el.style.opacity = 0; return; }
+        const item = tooltip.dataPoints?.[0];
+        if (!item) return;
+        el.innerHTML = `<b>${item.label}</b><span>${item.dataset.label}: ${formatNumber(item.raw)}건</span>`;
+        const stageRect = $('#tooltipStage').getBoundingClientRect();
+        const canvasRect = chart.canvas.getBoundingClientRect();
+        el.style.left = `${canvasRect.left - stageRect.left + tooltip.caretX}px`;
+        el.style.top = `${canvasRect.top - stageRect.top + tooltip.caretY}px`;
+        el.style.opacity = 1;
+      };
+
+      createChart('tooltipChart', {
+        type: 'bar',
+        data: { labels: ['보험금','약관','해지환급','계약변경','서류보완'], datasets: [{ label: '처리 건수', data: [128,86,74,69,55], backgroundColor: colors.slice(0,5).map(c => alpha(c,.75)), borderRadius: 8 }] },
+        options: baseOptions({ interaction: { mode: 'nearest', intersect: false }, plugins: { legend: { display: false }, tooltip: { enabled: false, external: externalTooltipHandler }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: css('--chart-grid') } } } })
+      });
+
+      const generatePerformanceData = () => {
+        let value = 100;
+        return Array.from({length: 5000}, (_,i) => {
+          value += (Math.random() - .49) * 3 + Math.sin(i/80) * .15;
+          return { x: i, y: Number(value.toFixed(2)) };
+        });
+      };
+
+      createChart('performanceChart', {
+        type: 'line',
+        data: { datasets: [{ label: '센서 시계열', data: generatePerformanceData(), borderColor: palette.blue, borderWidth: 1.2, pointRadius: 0, tension: 0 }] },
+        options: baseOptions({ parsing: false, normalized: true, animation: false, interaction: { mode: 'nearest', intersect: false, axis: 'x' }, plugins: { legend: { display: false }, decimation: { enabled: true, algorithm: 'lttb', samples: 600 }, zoom: { pan: { enabled: true, mode: 'x', modifierKey: 'shift' }, zoom: { wheel: { enabled: true, speed: .08 }, pinch: { enabled: true }, mode: 'x' }, limits: { x: { min: 0, max: 4999, minRange: 50 } } }, tooltip: { callbacks: { title: (items) => `포인트 ${items[0].raw.x}`, label: (ctx) => `값 ${ctx.raw.y}` } }, canvasBackground: { enabled: true, color: css('--surface-solid') } }, scales: { x: { type: 'linear', min: 0, max: 4999, title: { display: true, text: '수집 순번 · 휠 확대 / Shift+드래그 이동' }, grid: { color: css('--chart-grid') } }, y: { beginAtZero: false, grid: { color: css('--chart-grid') } } } })
+      });
+
+      createChart('dynamicChart', {
+        type: 'line',
+        data: { labels: Array.from({length:12}, (_,i) => `${i+1}초`), datasets: [{ label: '실시간 처리량', data: Array.from({length:12}, () => rnd(35,75)), borderColor: palette.teal, backgroundColor: alpha(palette.teal,.18), fill: true, tension: .3, pointRadius: 3 }] },
+        options: baseOptions({ animation: { duration: 350 }, scales: { x: { grid: { display: false } }, y: { min: 0, max: 100, grid: { color: css('--chart-grid') } } } })
+      });
+
+      function logChartClick(chart, event) {
+        const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        if (!points.length) return;
+        const point = points[0];
+        const dataset = chart.data.datasets[point.datasetIndex];
+        const label = chart.data.labels?.[point.index] ?? dataset.data[point.index]?.x ?? point.index;
+        const raw = dataset.data[point.index];
+        const value = typeof raw === 'object' ? JSON.stringify(raw) : Array.isArray(raw) ? `${raw[0]} ~ ${raw[1]}` : raw;
+        $('#eventMessage').textContent = `${chart.canvas.closest('.chart-card').querySelector('h2').textContent} · ${dataset.label || '데이터'} · ${label}: ${value}`;
+      }
+
+      function randomizeChart(id) {
+        const chart = charts[id];
+        if (!chart) return;
+        if (id === 'performanceChart') {
+          chart.data.datasets[0].data = generatePerformanceData();
+          chart.resetZoom?.();
+        } else if (id === 'timeChart') {
+          chart.data.datasets[0].data.forEach(point => point.y = rnd(108,158));
+        } else if (id === 'scatterChart') {
+          chart.data.datasets[0].data.forEach(point => { point.x = rnd(2,25); point.y = rnd(48,98); });
+        } else if (id === 'bubbleChart') {
+          chart.data.datasets.forEach(dataset => dataset.data.forEach(point => { point.x = rnd(55,95); point.y = rnd(25,95); point.r = rnd(8,22); }));
+        } else if (id === 'floatingBarChart') {
+          chart.data.datasets[0].data = chart.data.datasets[0].data.map((_,i) => { const start = i * 3 + rnd(0,2); return [start, start + rnd(2,7)]; });
+        } else {
+          chart.data.datasets.forEach(dataset => {
+            dataset.data = dataset.data.map(value => {
+              if (Array.isArray(value)) { const start = rnd(0,16); return [start, start + rnd(2,7)]; }
+              if (typeof value === 'number') return Math.max(1, Math.round(value * (0.75 + Math.random() * .5)));
+              return value;
+            });
+          });
+        }
+        chart.update(animationsEnabled ? undefined : 'none');
+      }
+
+      function downloadChart(id) {
+        const chart = charts[id];
+        if (!chart) return;
+        chart.update('none');
+        const link = document.createElement('a');
+        link.download = `${id}_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = chart.toBase64Image('image/png', 1);
+        link.click();
+      }
+
+      function refreshTheme() {
+        Chart.defaults.color = css('--chart-text');
+        Chart.defaults.borderColor = css('--chart-grid');
+        Object.values(charts).forEach(chart => {
+          if (!chart) return;
+          chart.options.plugins.canvasBackground = { enabled: true, color: css('--surface-solid') };
+          if (chart.options.scales) {
+            Object.values(chart.options.scales).forEach(scale => {
+              if (!scale) return;
+              scale.ticks = { ...(scale.ticks || {}), color: css('--chart-text') };
+              if (scale.grid) scale.grid.color = scale.grid.display === false ? scale.grid.color : css('--chart-grid');
+              if (scale.pointLabels) scale.pointLabels.color = css('--chart-text');
+              if (scale.angleLines) scale.angleLines.color = css('--chart-grid');
+            });
+          }
+          if (chart.options.plugins.datalabels?.display) chart.options.plugins.datalabels.color = css('--chart-text');
+          chart.update('none');
+        });
+      }
+
+      function filterCards() {
+        const query = $('#searchInput').value.trim().toLowerCase();
+        let visible = 0;
+        $$('.chart-card').forEach(card => {
+          const categoryMatch = selectedFilter === 'all' || card.dataset.category.split(' ').includes(selectedFilter);
+          const text = `${card.textContent} ${card.dataset.keywords || ''}`.toLowerCase();
+          const searchMatch = !query || text.includes(query);
+          const show = categoryMatch && searchMatch;
+          card.classList.toggle('hidden', !show);
+          if (show) visible++;
+        });
+        $('#visibleCount').textContent = visible;
+        $('#emptyState').classList.toggle('visible', visible === 0);
+      }
+
+      function setAnimation(enabled) {
+        animationsEnabled = enabled;
+        Object.values(charts).forEach(chart => {
+          if (!chart || chart.canvas.id === 'performanceChart') return;
+          chart.options.animation = enabled ? { duration: 650, easing: 'easeOutQuart' } : false;
+          chart.update('none');
+        });
+        $('#toggleAnimation').textContent = enabled ? '애니메이션 끄기' : '애니메이션 켜기';
+      }
+
+      function addDynamicPoint() {
+        const chart = charts.dynamicChart;
+        const next = (parseInt(chart.data.labels.at(-1)) || chart.data.labels.length) + 1;
+        chart.data.labels.push(`${next}초`);
+        chart.data.datasets[0].data.push(rnd(30,85));
+        if (chart.data.labels.length > 24) {
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.shift();
+        }
+        chart.update(animationsEnabled ? undefined : 'none');
+      }
+
+      function stopStream() {
+        if (streamTimer) clearInterval(streamTimer);
+        streamTimer = null;
+        $('#streamToggle').textContent = '자동 갱신 시작';
+      }
+
+      function startStream() {
+        stopStream();
+        const interval = Number($('#streamSpeed').value);
+        streamTimer = setInterval(addDynamicPoint, interval);
+        $('#streamToggle').textContent = '자동 갱신 중지';
+      }
+
+      $$('[data-export]').forEach(button => button.addEventListener('click', () => downloadChart(button.dataset.export)));
+      $$('[data-random]').forEach(button => button.addEventListener('click', () => randomizeChart(button.dataset.random)));
+      $$('.filter-chip').forEach(button => button.addEventListener('click', () => {
+        $$('.filter-chip').forEach(item => item.classList.remove('active'));
+        button.classList.add('active');
+        selectedFilter = button.dataset.filter;
+        filterCards();
+      }));
+      $('#searchInput').addEventListener('input', filterCards);
+
+      $('#themeToggle').addEventListener('click', () => {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+        $('#themeToggle').textContent = dark ? '다크 모드' : '라이트 모드';
+        localStorage.setItem('chart-sample-theme', dark ? 'light' : 'dark');
+        refreshTheme();
+      });
+
+      $('#randomizeAll').addEventListener('click', () => Object.keys(charts).forEach(randomizeChart));
+      $('#toggleAnimation').addEventListener('click', () => setAnimation(!animationsEnabled));
+      $('#printPage').addEventListener('click', () => window.print());
+      $('#scrollTable').addEventListener('click', () => $('#featureTableSection').scrollIntoView({ behavior: 'smooth' }));
+      $('#clearLog').addEventListener('click', () => $('#eventMessage').textContent = '차트의 데이터 요소를 클릭하면 상세값이 표시됩니다.');
+      $('#exportVisible').addEventListener('click', () => {
+        $$('.chart-card:not(.hidden) canvas').forEach((canvas, index) => setTimeout(() => downloadChart(canvas.id), index * 180));
+      });
+      $('#resetAll').addEventListener('click', () => location.reload());
+
+      $('#lineTension').addEventListener('input', (event) => {
+        charts.lineChart.data.datasets.forEach(dataset => dataset.tension = Number(event.target.value));
+        charts.lineChart.update('none');
+      });
+      $('#toggleLineFill').addEventListener('click', () => {
+        const ds = charts.lineChart.data.datasets[0];
+        ds.fill = !ds.fill;
+        charts.lineChart.update();
+      });
+      $('#toggleBarLabels').addEventListener('click', () => {
+        const opts = charts.groupedBarChart.options.plugins.datalabels;
+        opts.display = !opts.display;
+        charts.groupedBarChart.update();
+      });
+      $('#toggleBarBorder').addEventListener('click', () => {
+        charts.groupedBarChart.data.datasets.forEach(ds => ds.borderRadius = ds.borderRadius ? 0 : 8);
+        charts.groupedBarChart.update();
+      });
+      $('#stackMode').addEventListener('change', (event) => {
+        const chart = charts.stackedBarChart;
+        if (event.target.value === 'percent') {
+          if (!chart.$rawStackData) chart.$rawStackData = chart.data.datasets.map(ds => [...ds.data]);
+          chart.data.labels.forEach((_,i) => {
+            const total = chart.$rawStackData.reduce((sum, data) => sum + data[i], 0);
+            chart.data.datasets.forEach((ds,j) => ds.data[i] = Number((chart.$rawStackData[j][i] / total * 100).toFixed(1)));
+          });
+          chart.options.scales.y.max = 100;
+          chart.options.scales.y.ticks.callback = (v) => `${v}%`;
+        } else if (chart.$rawStackData) {
+          chart.data.datasets.forEach((ds,j) => ds.data = [...chart.$rawStackData[j]]);
+          delete chart.options.scales.y.max;
+          delete chart.options.scales.y.ticks.callback;
+        }
+        chart.update();
+      });
+      $('#sortHorizontal').addEventListener('click', () => {
+        const chart = charts.horizontalBarChart;
+        const pairs = chart.data.labels.map((label,i) => ({label, value: chart.data.datasets[0].data[i]})).sort((a,b) => b.value-a.value);
+        chart.data.labels = pairs.map(p => p.label);
+        chart.data.datasets[0].data = pairs.map(p => p.value);
+        chart.update();
+      });
+      $('#toggleSecondAxis').addEventListener('click', () => {
+        const chart = charts.mixedChart;
+        chart.options.scales.y1.display = chart.options.scales.y1.display === false;
+        chart.data.datasets[1].hidden = chart.options.scales.y1.display === false;
+        chart.update();
+      });
+      $('#toggleMixedType').addEventListener('click', () => {
+        const ds = charts.mixedChart.data.datasets[0];
+        ds.type = ds.type === 'bar' ? 'line' : 'bar';
+        ds.fill = ds.type === 'line';
+        ds.tension = .3;
+        charts.mixedChart.update();
+      });
+      $('#cutoutRange').addEventListener('input', (event) => { charts.doughnutChart.options.cutout = `${event.target.value}%`; charts.doughnutChart.update('none'); });
+      $('#rotatePie').addEventListener('click', () => { charts.pieChart.options.rotation = (charts.pieChart.options.rotation || 0) + 90; charts.pieChart.update(); });
+      $('#togglePieLegend').addEventListener('click', () => { const legend = charts.pieChart.options.plugins.legend; legend.position = legend.position === 'right' ? 'bottom' : 'right'; charts.pieChart.update(); });
+      $('#togglePolarAnimation').addEventListener('click', () => { const a = charts.polarChart.options.animation; a.animateRotate = !a.animateRotate; a.animateScale = !a.animateScale; charts.polarChart.update(); });
+      $('#toggleRadarShape').addEventListener('click', () => { const grid = charts.radarChart.options.scales.r.grid; grid.circular = !grid.circular; charts.radarChart.update(); });
+      $('#addScatterPoint').addEventListener('click', () => { const data = charts.scatterChart.data.datasets[0].data; data.push({x:rnd(2,25),y:rnd(48,98),case:`사례 ${data.length+1}`}); charts.scatterChart.update(); });
+      $('#removeScatterPoint').addEventListener('click', () => { charts.scatterChart.data.datasets[0].data.pop(); charts.scatterChart.update(); });
+      $('#scaleBubbles').addEventListener('click', (event) => { const chart = charts.bubbleChart; const enlarged = event.currentTarget.dataset.enlarged === 'true'; chart.data.datasets.forEach(ds => ds.data.forEach(p => p.r = enlarged ? Math.max(5,p.r/1.5) : p.r*1.5)); event.currentTarget.dataset.enlarged = String(!enlarged); event.currentTarget.textContent = enlarged ? '버블 크기 확대' : '버블 크기 축소'; chart.update(); });
+      $('#stepMode').addEventListener('change', (event) => { charts.steppedChart.data.datasets[0].stepped = event.target.value; charts.steppedChart.update(); });
+      $('#toggleAreaStack').addEventListener('click', () => { const x = charts.areaChart.options.scales.x; const y = charts.areaChart.options.scales.y; x.stacked = !x.stacked; y.stacked = !y.stacked; charts.areaChart.update(); });
+      $('#toggleAreaFill').addEventListener('click', () => { const chart = charts.areaChart; const next = !chart.data.datasets[0].fill; chart.data.datasets.forEach(ds => ds.fill = next); chart.update(); });
+      $('#toggleFloatingAxis').addEventListener('click', () => { const chart = charts.floatingBarChart; chart.options.indexAxis = chart.options.indexAxis === 'y' ? 'x' : 'y'; chart.update(); });
+      $('#toggleLogScale').addEventListener('click', (event) => { const chart = charts.logChart; chart.options.scales.y.type = chart.options.scales.y.type === 'logarithmic' ? 'linear' : 'logarithmic'; chart.options.scales.y.title.text = chart.options.scales.y.type === 'logarithmic' ? '건수(로그)' : '건수(선형)'; event.currentTarget.textContent = chart.options.scales.y.type === 'logarithmic' ? '로그·선형 축 전환' : '선형·로그 축 전환'; chart.update(); });
+      $('#timeUnit').addEventListener('change', (event) => { charts.timeChart.options.scales.x.time.unit = event.target.value; charts.timeChart.update(); });
+      $('#thresholdRange').addEventListener('input', (event) => { const value = Number(event.target.value); const annotations = charts.annotationChart.options.plugins.annotation.annotations; annotations.dangerBox.yMin = value; annotations.threshold.yMin = value; annotations.threshold.yMax = value; annotations.threshold.label.content = `경보 기준 ${value}`; $('#thresholdValue').textContent = value; charts.annotationChart.update('none'); });
+      $('#interactionMode').addEventListener('change', (event) => { charts.tooltipChart.options.interaction.mode = event.target.value; charts.tooltipChart.update('none'); });
+      $('#resetZoom').addEventListener('click', () => charts.performanceChart.resetZoom?.());
+      $('#decimationMode').addEventListener('change', (event) => { const chart = charts.performanceChart; const mode = event.target.value; chart.options.plugins.decimation.enabled = mode !== 'off'; if (mode !== 'off') chart.options.plugins.decimation.algorithm = mode; chart.update('none'); $('#perfStatus').textContent = mode === 'off' ? '감축 없음 · 원본 5,000개' : `${mode.toUpperCase()} 감축 · 원본 5,000개`; });
+      $('#streamToggle').addEventListener('click', () => streamTimer ? stopStream() : startStream());
+      $('#streamSpeed').addEventListener('change', () => { if (streamTimer) startStream(); });
+      $('#addDynamic').addEventListener('click', addDynamicPoint);
+      $('#removeDynamic').addEventListener('click', () => { const chart = charts.dynamicChart; if (chart.data.labels.length > 2) { chart.data.labels.pop(); chart.data.datasets[0].data.pop(); chart.update(); } });
+
+      const savedTheme = localStorage.getItem('chart-sample-theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        $('#themeToggle').textContent = '라이트 모드';
+        refreshTheme();
+      }
+
+      window.addEventListener('beforeunload', stopStream);
+      $('#eventMessage').textContent = `Chart.js ${Chart.version} 로드 완료 · 데이터 요소를 클릭해 보세요.`;
+    })();
+  </script>
+</body>
+</html>
