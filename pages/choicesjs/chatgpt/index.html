@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Choices.js 기능 실험실</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@11.2.3/public/assets/styles/choices.min.css" />
+  <style>
+    :root {
+      --bg: #f5f8fc;
+      --panel: #ffffff;
+      --ink: #142033;
+      --muted: #69758a;
+      --line: #e2e8f0;
+      --primary: #1267d6;
+      --primary-soft: #e8f1ff;
+      --success: #067647;
+      --warning: #a15c00;
+      --danger: #b42318;
+      --shadow: 0 12px 32px rgba(23, 47, 82, .08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    button, select, input { font: inherit; }
+    .shell { max-width: 1480px; margin: 0 auto; padding: 26px 20px 80px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 34px;
+      color: #fff;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #0d2a57 0%, #1267d6 58%, #58a1f3 100%);
+      box-shadow: 0 18px 44px rgba(13, 42, 87, .22);
+    }
+    .hero:after {
+      content: ""; position: absolute; width: 450px; height: 450px; right: -110px; top: -270px;
+      border: 70px solid rgba(255,255,255,.09); border-radius: 50%;
+    }
+    .eyebrow { margin: 0 0 8px; font-weight: 800; font-size: 12px; letter-spacing: .12em; opacity: .78; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 46px); letter-spacing: -.045em; }
+    .hero p { max-width: 780px; margin: 14px 0 0; font-size: 16px; color: rgba(255,255,255,.86); }
+    .hero-meta { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 22px; }
+    .chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    .hero .chip { color: #eff7ff; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.22); }
+    .toolbar {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+      padding: 18px 0 10px;
+    }
+    .nav-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .nav-pills a, .button {
+      appearance: none; border: 1px solid var(--line); background: #fff; color: #334155; cursor: pointer;
+      padding: 9px 12px; border-radius: 10px; font-size: 13px; font-weight: 800; text-decoration: none;
+      transition: .18s ease;
+    }
+    .nav-pills a:hover, .button:hover { border-color: #9fc2f1; color: var(--primary); transform: translateY(-1px); }
+    .button.primary { color: #fff; border-color: var(--primary); background: var(--primary); }
+    .button.danger { color: var(--danger); }
+    .button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .overview {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; margin: 16px 0 26px;
+    }
+    .stat { padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 4px 16px rgba(23,47,82,.04); }
+    .stat strong { display: block; margin-bottom: 2px; font-size: 20px; color: #0f3e81; }
+    .stat span { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 20px; align-items: start; }
+    .main-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .card {
+      scroll-margin-top: 14px; padding: 22px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow);
+    }
+    .card.wide { grid-column: span 2; }
+    .card-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .card-title h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .card-title p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .index { flex: 0 0 auto; color: var(--primary); background: var(--primary-soft); border-radius: 10px; padding: 5px 7px; font-size: 11px; font-weight: 900; }
+    label { display: inline-block; margin-bottom: 8px; color: #42526a; font-size: 13px; font-weight: 800; }
+    .field + .field { margin-top: 16px; }
+    .hint { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .divider { height: 1px; background: var(--line); margin: 20px 0; }
+    .mini-code {
+      overflow: auto; margin: 14px 0 0; padding: 12px; border-radius: 12px; color: #b9d5ff; background: #102441;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.65; white-space: pre-wrap;
+    }
+    .side { position: sticky; top: 14px; display: grid; gap: 20px; }
+    .log-card { min-height: 460px; display: flex; flex-direction: column; }
+    #eventLog {
+      flex: 1; overflow: auto; min-height: 320px; max-height: 520px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: #0d1b2d;
+      color: #d6e6fa; font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .log-line { padding: 8px 8px 7px; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .log-time { color: #75b5ff; } .log-event { color: #82f2bd; font-weight: 800; } .log-meta { color: #cad8ea; }
+    .empty-log { color: #91a4ba; padding: 12px; }
+    .state-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .state-value { overflow: auto; margin: 0; padding: 10px; color: #175194; border-radius: 10px; background: #f0f6ff; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .notice { padding: 13px; border: 1px solid #c9ddfb; border-radius: 12px; background: #f2f7ff; color: #29527d; font-size: 12px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; color: var(--success); border: 1px solid #bcebd4; border-radius: 999px; background: #eefbf4; font-size: 11px; font-weight: 900; }
+    .status.loading { color: var(--warning); border-color: #f3d2a5; background: #fff8ea; }
+    .status.error { color: var(--danger); border-color: #f2c6c3; background: #fff3f2; }
+    .item-with-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .choice-meta { color: #6c7a91; font-size: 11px; font-weight: 700; }
+    .inline-select { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .file-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .form-result { min-height: 20px; margin-top: 10px; font-size: 12px; font-weight: 800; }
+    .form-result.ok { color: var(--success); } .form-result.bad { color: var(--danger); }
+    .rtl-box { direction: rtl; padding: 15px; border: 1px dashed #b8c9df; border-radius: 12px; background: #fafcff; }
+    .config-table { overflow-x: auto; }
+    .config-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .config-table th, .config-table td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; vertical-align: top; }
+    .config-table th { color: #53647b; font-size: 11px; letter-spacing: .03em; text-transform: uppercase; }
+    .config-table code { color: #0f4b9b; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .choices { margin-bottom: 0; }
+    .choices__inner { min-height: 47px; padding: 7px 9px 3px; border: 1px solid #bdcbe0; border-radius: 11px; background: #fff; }
+    .is-focused .choices__inner, .is-open .choices__inner { border-color: var(--primary); }
+    .choices__list--multiple .choices__item { margin: 0 4px 4px 0; padding: 4px 7px; color: #0c4388; border: 1px solid #b9d5fa; background: #eaf3ff; border-radius: 7px; font-size: 12px; font-weight: 800; }
+    .choices__list--dropdown { z-index: 30; border-color: #b7c7de; }
+    .choices__list--dropdown .choices__item--selectable.is-highlighted { background: #eaf3ff; }
+    .choices__input { background: transparent; }
+    .choices__list--single { padding: 4px 16px 4px 4px; }
+    .custom-choice { padding: 10px 12px !important; }
+    .custom-choice .choice-meta { display: block; margin-top: 2px; }
+    .theme-dark { --bg: #101827; --panel: #162134; --ink: #e8edf6; --muted: #a8b3c5; --line: #2b3a52; --primary-soft: #16365f; --shadow: 0 12px 32px rgba(0,0,0,.22); }
+    .theme-dark .stat, .theme-dark .nav-pills a, .theme-dark .button:not(.primary), .theme-dark .choices__inner { background: #162134; color: #e8edf6; }
+    .theme-dark .choices__list--dropdown { color: #e8edf6; background: #162134; }
+    .theme-dark .choices__list--dropdown .choices__item--selectable.is-highlighted { background: #223c63; }
+    .theme-dark .rtl-box { background: #111d30; }
+    .theme-dark .state-value { color: #bbd7ff; background: #142a48; }
+    .theme-dark .notice { color: #c8ddfb; background: #152b48; border-color: #2b5689; }
+    @media (max-width: 1120px) { .layout { grid-template-columns: 1fr; } .side { position: static; grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 760px) { .shell { padding: 15px 13px 48px; } .hero { padding: 24px; border-radius: 18px; } .overview { grid-template-columns: repeat(2, minmax(0,1fr)); } .main-grid { grid-template-columns: 1fr; } .card.wide { grid-column: auto; } .side { grid-template-columns: 1fr; } .inline-select, .state-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero" aria-labelledby="pageTitle">
+      <p class="eyebrow">VANILLA JAVASCRIPT · SELECT / MULTI SELECT / TAGS</p>
+      <h1 id="pageTitle">Choices.js 기능 실험실</h1>
+      <p>검색 가능한 셀렉트, 태그 입력, 옵트그룹, 사용자 템플릿, 비동기 선택지, 연동 필드, DOM 이벤트와 인스턴스 API를 한 페이지에서 점검하는 실습용 샘플입니다.</p>
+      <div class="hero-meta">
+        <span class="chip">Choices.js 11.2.3</span>
+        <span class="chip">jQuery 의존성 없음</span>
+        <span class="chip">단일 HTML 데모</span>
+        <span class="chip">키보드 조작 지원</span>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <nav class="nav-pills" aria-label="기능 영역 바로가기">
+        <a href="#single">단일 선택</a><a href="#multi">다중 선택</a><a href="#text">태그</a><a href="#async">비동기</a><a href="#api">API</a><a href="#form">폼</a>
+      </nav>
+      <div class="button-row">
+        <button class="button" id="themeToggle" type="button">다크 모드</button>
+        <button class="button" id="exportState" type="button">현재 값 보기</button>
+        <button class="button danger" id="clearLog" type="button">이벤트 로그 비우기</button>
+      </div>
+    </div>
+
+    <section class="overview" aria-label="구성 현황">
+      <div class="stat"><strong id="widgetCount">0</strong><span>초기화된 Choices 인스턴스</span></div>
+      <div class="stat"><strong>12+</strong><span>주요 옵션·메서드 예시</span></div>
+      <div class="stat"><strong id="eventCount">0</strong><span>캡처된 DOM 이벤트</span></div>
+      <div class="stat"><strong>0 npm</strong><span>브라우저 CDN 직접 로딩</span></div>
+    </section>
+
+    <div class="layout">
+      <section class="main-grid">
+        <article class="card" id="single">
+          <div class="card-title"><div><h2>단일 선택 · 검색 · 플레이스홀더</h2><p>검색, 선택 해제 버튼, 비활성 선택지와 정렬 비활성화를 함께 확인합니다.</p></div><span class="index">01</span></div>
+          <div class="field">
+            <label for="singleSelect">관심 업무 분야</label>
+            <select id="singleSelect">
+              <option value="">업무 분야를 선택하세요</option>
+              <option value="strategy">전략·기획</option>
+              <option value="finance">재무·회계</option>
+              <option value="customer">고객·민원</option>
+              <option value="data">데이터 분석</option>
+              <option value="security" disabled>정보보호 (선택 불가)</option>
+              <option value="ai" selected>AI 업무혁신</option>
+            </select>
+            <span class="hint">`searchEnabled`, `removeItemButton`, `shouldSort: false`, `placeholderValue`</span>
+          </div>
+          <pre class="mini-code">new Choices('#singleSelect', {
+  searchEnabled: true,
+  removeItemButton: true,
+  shouldSort: false
+});</pre>
+        </article>
+
+        <article class="card" id="multi">
+          <div class="card-title"><div><h2>다중 선택 · 최대 개수 · 선택 유지</h2><p>최대 4개 선택, 태그별 삭제 버튼, 드롭다운 내 선택 항목 표시를 제공합니다.</p></div><span class="index">02</span></div>
+          <div class="field">
+            <label for="multiSelect">필요 기능 선택</label>
+            <select id="multiSelect" multiple>
+              <option value="search" selected>통합 검색</option>
+              <option value="dashboard">대시보드</option>
+              <option value="workflow" selected>업무 워크플로</option>
+              <option value="notice">알림 관리</option>
+              <option value="report">보고서 자동화</option>
+              <option value="mobile">모바일 화면</option>
+              <option value="admin">관리자 설정</option>
+            </select>
+            <span class="hint">`maxItemCount: 4`, `renderSelectedChoices: 'always'`, `removeItemButton`</span>
+          </div>
+          <div class="button-row" style="margin-top:14px">
+            <button class="button" type="button" data-action="multi-all">전체 선택</button>
+            <button class="button" type="button" data-action="multi-clear">선택 해제</button>
+            <button class="button" type="button" data-action="multi-highlight">선택 태그 강조</button>
+          </div>
+        </article>
+
+        <article class="card" id="groups">
+          <div class="card-title"><div><h2>옵트그룹 · 사용자 속성 검색</h2><p>그룹화된 선택지와 `customProperties`로 추가한 설명 정보를 커스텀 템플릿에 표시합니다.</p></div><span class="index">03</span></div>
+          <div class="field">
+            <label for="groupedSelect">지역 및 센터</label>
+            <select id="groupedSelect">
+              <option value="">센터를 선택하세요</option>
+              <optgroup label="수도권">
+                <option value="seoul" data-custom-properties='{"code":"SEO","type":"본부"}'>서울 본부</option>
+                <option value="incheon" data-custom-properties='{"code":"INC","type":"지원센터"}'>인천 지원센터</option>
+              </optgroup>
+              <optgroup label="남부권">
+                <option value="busan" data-custom-properties='{"code":"BUS","type":"지역본부"}'>부산 지역본부</option>
+                <option value="jeju" data-custom-properties='{"code":"CJU","type":"현장센터"}'>제주 현장센터</option>
+              </optgroup>
+            </select>
+            <span class="hint">`<optgroup>`, `data-custom-properties`, `callbackOnCreateTemplates`</span>
+          </div>
+        </article>
+
+        <article class="card" id="text">
+          <div class="card-title"><div><h2>텍스트 태그 · 이메일 검증</h2><p>Enter 또는 쉼표로 태그를 추가합니다. 중복 입력을 막고 이메일 형식만 허용합니다.</p></div><span class="index">04</span></div>
+          <div class="field">
+            <label for="emailTags">공유 대상 이메일</label>
+            <input id="emailTags" type="text" value="team@example.com, manager@example.com" />
+            <span class="hint">`duplicateItemsAllowed: false`, `addItemFilter`, `delimiter`, `paste: false`</span>
+          </div>
+          <div class="button-row" style="margin-top:14px">
+            <button class="button" id="addEmail" type="button">이메일 예시 추가</button>
+            <button class="button" id="clearEmailInput" type="button">입력 중 텍스트 지우기</button>
+          </div>
+        </article>
+
+        <article class="card" id="async">
+          <div class="card-title"><div><h2>비동기 선택지 · Promise 기반 로딩</h2><p>외부 API 대신 지연된 Promise를 사용해 `setChoices()`의 비동기 흐름과 로딩 상태를 재현합니다.</p></div><span class="index">05</span></div>
+          <div class="field">
+            <label for="asyncSelect">데이터셋 선택</label>
+            <select id="asyncSelect"><option value="">아래 버튼으로 데이터를 불러오세요</option></select>
+            <span class="hint">`setChoices(async () => choices)`, `loadingText`, `replaceChoices`</span>
+          </div>
+          <div class="button-row" style="margin-top:14px">
+            <button class="button primary" id="loadAsync" type="button">비동기 데이터 불러오기</button>
+            <span id="asyncStatus" class="status">대기 중</span>
+          </div>
+        </article>
+
+        <article class="card" id="dependent">
+          <div class="card-title"><div><h2>연동 셀렉트 · 선택값 기반 재구성</h2><p>도시를 고르면 해당 지역의 세부 조직 선택지가 `setChoices()`로 교체됩니다.</p></div><span class="index">06</span></div>
+          <div class="inline-select">
+            <div class="field"><label for="citySelect">도시</label><select id="citySelect"><option value="">도시 선택</option><option value="seoul">서울</option><option value="busan">부산</option><option value="jeju">제주</option></select></div>
+            <div class="field"><label for="stationSelect">세부 조직</label><select id="stationSelect" disabled><option value="">먼저 도시를 선택하세요</option></select></div>
+          </div>
+        </article>
+
+        <article class="card wide" id="api">
+          <div class="card-title"><div><h2>인스턴스 API 제어 패널</h2><p>실제 `Choices` 인스턴스의 메서드를 실행하고 바로 옆의 이벤트 로그 및 상태 JSON에서 결과를 확인합니다.</p></div><span class="index">07</span></div>
+          <div class="button-row">
+            <button class="button primary" id="apiSetValue" type="button">AI 업무혁신으로 설정</button>
+            <button class="button" id="apiAddChoice" type="button">새 선택지 추가</button>
+            <button class="button" id="apiShow" type="button">드롭다운 열기</button>
+            <button class="button" id="apiHide" type="button">드롭다운 닫기</button>
+            <button class="button" id="apiDisable" type="button">비활성화</button>
+            <button class="button" id="apiEnable" type="button">활성화</button>
+            <button class="button" id="apiDestroy" type="button">인스턴스 파기</button>
+            <button class="button" id="apiReinit" type="button">다시 초기화</button>
+          </div>
+          <div class="divider"></div>
+          <div class="state-grid">
+            <div><label>단일 선택의 `getValue(true)`</label><pre class="state-value" id="singleState">-</pre></div>
+            <div><label>다중 선택의 `getValue(true)`</label><pre class="state-value" id="multiState">-</pre></div>
+          </div>
+        </article>
+
+        <article class="card" id="rtl">
+          <div class="card-title"><div><h2>RTL · 사용자 안내 문구</h2><p>오른쪽에서 왼쪽으로 읽는 UI 및 현지화용 상태 문구를 예시로 구성했습니다.</p></div><span class="index">08</span></div>
+          <div class="rtl-box" lang="ar">
+            <label for="rtlSelect">اختر المنطقة</label>
+            <select id="rtlSelect"><option value="">يرجى الاختيار</option><option value="asia">آسيا</option><option value="europe">أوروبا</option><option value="africa">أفريقيا</option></select>
+          </div>
+        </article>
+
+        <article class="card" id="form">
+          <div class="card-title"><div><h2>폼 제출 · 기본 유효성 검증 · reset</h2><p>Choices가 원본 `<select>` 요소를 유지하므로 HTML 폼의 `required` 및 reset 흐름과 함께 사용할 수 있습니다.</p></div><span class="index">09</span></div>
+          <form id="demoForm">
+            <div class="field">
+              <label for="requiredSelect">필수 분류</label>
+              <select id="requiredSelect" required>
+                <option value="">필수로 하나를 선택하세요</option>
+                <option value="service">서비스 기획</option>
+                <option value="system">시스템 구축</option>
+                <option value="analysis">데이터 분석</option>
+              </select>
+            </div>
+            <div class="button-row" style="margin-top:14px">
+              <button class="button primary" type="submit">폼 제출 테스트</button>
+              <button class="button" type="reset">초기값으로 reset</button>
+            </div>
+            <div id="formResult" class="form-result" role="status"></div>
+          </form>
+        </article>
+
+        <article class="card wide" id="reference">
+          <div class="card-title"><div><h2>이 페이지에 포함한 핵심 기능 목록</h2><p>각 카드의 코드와 버튼은 독립적으로 조작할 수 있으며, 원본 선택 요소에 이벤트가 발생합니다.</p></div><span class="index">10</span></div>
+          <div class="config-table">
+            <table>
+              <thead><tr><th>분류</th><th>포함 기능</th><th>주요 API / 옵션</th></tr></thead>
+              <tbody>
+                <tr><td>입력 유형</td><td>단일 선택, 다중 선택, 텍스트 태그 입력</td><td><code>select-one</code>, <code>select-multiple</code>, <code>text</code></td></tr>
+                <tr><td>검색·표시</td><td>검색, 플레이스홀더, 정렬 끄기, 선택 항목 유지, 항목 삭제</td><td><code>searchEnabled</code>, <code>shouldSort</code>, <code>renderSelectedChoices</code></td></tr>
+                <tr><td>제약</td><td>최대 선택 개수, 중복 금지, 이메일 형식 검증, 비활성 선택지</td><td><code>maxItemCount</code>, <code>duplicateItemsAllowed</code>, <code>addItemFilter</code></td></tr>
+                <tr><td>데이터</td><td>옵트그룹, custom properties, 비동기 Promise 데이터, 연동 선택지</td><td><code>setChoices()</code>, <code>customProperties</code></td></tr>
+                <tr><td>제어</td><td>값 설정, 선택지 추가, 열기/닫기, 활성화/비활성화, destroy/init</td><td><code>setChoiceByValue()</code>, <code>setChoices()</code>, <code>disable()</code>, <code>destroy()</code></td></tr>
+                <tr><td>관찰</td><td>추가·제거·변경·검색·드롭다운 이벤트 로그, 현재 값 JSON</td><td><code>addItem</code>, <code>removeItem</code>, <code>change</code>, <code>search</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="notice" style="margin-top:16px">이 샘플은 Choices.js 파일을 jsDelivr CDN에서 불러옵니다. 인터넷이 차단된 환경에서는 CSS와 JS 파일을 내려받아 `assets/choices/`에 저장한 뒤, 상단의 CDN 경로를 로컬 경로로 교체하면 됩니다.</div>
+        </article>
+      </section>
+
+      <aside class="side">
+        <section class="card log-card" aria-label="Choices 이벤트 로그">
+          <div class="card-title"><div><h2>실시간 이벤트 로그</h2><p>원본 요소에서 수신한 표준 DOM 이벤트의 `event.detail` 요약입니다.</p></div><span class="index">LOG</span></div>
+          <div id="eventLog"><div class="empty-log">아직 수신된 이벤트가 없습니다. 선택지를 고르거나 태그를 추가해 보세요.</div></div>
+        </section>
+        <section class="card" aria-label="현재 페이지 상태">
+          <div class="card-title"><div><h2>현재 페이지 상태</h2><p>선택값을 추출해 제출 또는 저장 전 검증에 활용할 수 있습니다.</p></div><span class="index">STATE</span></div>
+          <pre class="state-value" id="allState">{}</pre>
+          <div class="button-row" style="margin-top:12px"><button class="button" id="copyState" type="button">JSON 복사</button></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/choices.js@11.2.3/public/assets/scripts/choices.min.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      const $ = (selector) => document.querySelector(selector);
+      const widgetRegistry = new Map();
+      let eventCounter = 0;
+      const allEventNames = ['addItem', 'removeItem', 'change', 'search', 'showDropdown', 'hideDropdown', 'highlightChoice'];
+      const remoteDataset = [
+        { value: 'fisheries', label: '수산 유통 데이터', customProperties: { group: '산업', updated: '2026-07' } },
+        { value: 'finance', label: '상호금융 지표', customProperties: { group: '금융', updated: '2026-06' } },
+        { value: 'safety', label: '어선 안전 리포트', customProperties: { group: '안전', updated: '2026-07' } },
+        { value: 'policy', label: '정책보험 통계', customProperties: { group: '보험', updated: '2026-05' } },
+        { value: 'market', label: '수산물 시세 데이터', customProperties: { group: '유통', updated: '2026-07' } }
+      ];
+      const stationMap = {
+        seoul: [
+          { value: 'hq', label: '중앙 본부' }, { value: 'research', label: '디지털 연구실' }, { value: 'support', label: '업무지원센터' }
+        ],
+        busan: [
+          { value: 'port', label: '항만 협력센터' }, { value: 'market', label: '수산시장 지원센터' }, { value: 'export', label: '수출 지원실' }
+        ],
+        jeju: [
+          { value: 'vessel', label: '어선 안전센터' }, { value: 'aquaculture', label: '양식 지원실' }, { value: 'marine', label: '해양환경팀' }
+        ]
+      };
+
+      function now() { return new Date().toLocaleTimeString('ko-KR', { hour12: false }); }
+      function escapeHTML(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[c]));
+      }
+      function simplifyDetail(detail) {
+        if (!detail) return {};
+        const keys = ['id', 'value', 'label', 'groupValue', 'highlighted', 'keyCode', 'query', 'resultCount'];
+        const out = {};
+        keys.forEach((key) => { if (detail[key] !== undefined) out[key] = detail[key]; });
+        if (detail.customProperties) out.customProperties = detail.customProperties;
+        return out;
+      }
+      function logEvent(eventName, detail, sourceId) {
+        const log = $('#eventLog');
+        const empty = log.querySelector('.empty-log');
+        if (empty) empty.remove();
+        eventCounter += 1;
+        $('#eventCount').textContent = eventCounter;
+        const row = document.createElement('div');
+        row.className = 'log-line';
+        row.innerHTML = '<span class="log-time">' + now() + '</span> '
+          + '<span class="log-event">' + escapeHTML(eventName) + '</span> '
+          + '<span class="log-meta">#' + escapeHTML(sourceId) + ' ' + escapeHTML(JSON.stringify(simplifyDetail(detail))) + '</span>';
+        log.prepend(row);
+        while (log.children.length > 70) log.removeChild(log.lastChild);
+      }
+      function watchElement(element) {
+        allEventNames.forEach((eventName) => {
+          element.addEventListener(eventName, (event) => {
+            logEvent(eventName, event.detail, element.id || element.name || 'unknown');
+            updateStates();
+          });
+        });
+      }
+      function createChoices(id, options) {
+        const element = typeof id === 'string' ? document.getElementById(id) : id;
+        if (!element || typeof Choices === 'undefined') return null;
+        const instance = new Choices(element, options);
+        widgetRegistry.set(element.id, instance);
+        watchElement(element);
+        $('#widgetCount').textContent = widgetRegistry.size;
+        return instance;
+      }
+
+      if (typeof window.Choices === 'undefined') {
+        const log = $('#eventLog');
+        if (log) log.innerHTML = '<div class="empty-log">Choices.js 파일을 불러오지 못했습니다. 인터넷 연결 또는 상단의 CDN 경로를 확인하세요.</div>';
+        return;
+      }
+
+      function initSingle() {
+        return createChoices('singleSelect', {
+          allowHTML: false,
+          searchEnabled: true,
+          searchPlaceholderValue: '업무 분야 검색',
+          placeholderValue: '업무 분야를 선택하세요',
+          removeItemButton: true,
+          shouldSort: false,
+          itemSelectText: 'Enter 또는 클릭으로 선택',
+          noResultsText: '검색 결과가 없습니다',
+          noChoicesText: '선택지가 없습니다'
+        });
+      }
+
+      const single = initSingle();
+      const multi = createChoices('multiSelect', {
+        allowHTML: false,
+        searchEnabled: true,
+        searchPlaceholderValue: '기능 검색',
+        removeItemButton: true,
+        maxItemCount: 4,
+        maxItemText: (maxItemCount) => '최대 ' + maxItemCount + '개까지 선택할 수 있습니다',
+        renderSelectedChoices: 'always',
+        shouldSort: false,
+        itemSelectText: '선택',
+        noResultsText: '검색 결과가 없습니다'
+      });
+      const grouped = createChoices('groupedSelect', {
+        allowHTML: false,
+        searchEnabled: true,
+        searchFields: ['label', 'value', 'customProperties'],
+        searchPlaceholderValue: '센터명 또는 코드 검색',
+        shouldSort: false,
+        callbackOnCreateTemplates: function(strToEl, escapeForTemplate, getClassNames) {
+          const baseChoice = Choices.defaults.templates.choice;
+          return {
+            choice: (...args) => {
+              const base = baseChoice.call(this, ...args);
+              const data = args[1];
+              const props = data.customProperties || {};
+              if (props.code) {
+                base.classList.add('custom-choice');
+                const meta = document.createElement('span');
+                meta.className = 'choice-meta';
+                meta.textContent = props.code + ' · ' + (props.type || '센터');
+                base.appendChild(meta);
+              }
+              return base;
+            }
+          };
+        }
+      });
+      const email = createChoices('emailTags', {
+        allowHTML: false,
+        duplicateItemsAllowed: false,
+        removeItemButton: true,
+        editItems: true,
+        delimiter: ',',
+        paste: false,
+        addItemFilter: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+        addItemText: (value) => 'Enter를 눌러 이메일 "' + value + '" 추가',
+        customAddItemText: '올바른 이메일 형식만 추가할 수 있습니다',
+        uniqueItemText: '중복 이메일은 추가할 수 없습니다',
+        placeholderValue: '이메일 입력 후 Enter 또는 쉼표'
+      });
+      const asyncChoice = createChoices('asyncSelect', {
+        allowHTML: false,
+        searchEnabled: true,
+        shouldSort: false,
+        placeholderValue: '데이터를 불러오세요',
+        loadingText: '데이터를 불러오는 중입니다…',
+        noChoicesText: '불러온 데이터가 없습니다',
+        noResultsText: '검색 결과가 없습니다'
+      });
+      const city = createChoices('citySelect', { allowHTML: false, searchEnabled: false, shouldSort: false, placeholderValue: '도시 선택' });
+      const station = createChoices('stationSelect', { allowHTML: false, searchEnabled: true, shouldSort: false, placeholderValue: '먼저 도시를 선택하세요' });
+      station.disable();
+      const rtl = createChoices('rtlSelect', {
+        allowHTML: false,
+        searchEnabled: false,
+        shouldSort: false,
+        itemSelectText: 'اختر',
+        noChoicesText: 'لا توجد خيارات'
+      });
+      const required = createChoices('requiredSelect', {
+        allowHTML: false,
+        searchEnabled: false,
+        shouldSort: false,
+        placeholderValue: '필수로 하나를 선택하세요'
+      });
+
+      function updateStates() {
+        const safeValue = (instance) => {
+          try { return instance ? instance.getValue(true) : null; } catch { return null; }
+        };
+        const state = {
+          single: safeValue(widgetRegistry.get('singleSelect')),
+          multi: safeValue(widgetRegistry.get('multiSelect')),
+          emails: safeValue(widgetRegistry.get('emailTags')),
+          asyncData: safeValue(widgetRegistry.get('asyncSelect')),
+          city: safeValue(widgetRegistry.get('citySelect')),
+          station: safeValue(widgetRegistry.get('stationSelect')),
+          required: safeValue(widgetRegistry.get('requiredSelect'))
+        };
+        $('#singleState').textContent = JSON.stringify(state.single, null, 2);
+        $('#multiState').textContent = JSON.stringify(state.multi, null, 2);
+        $('#allState').textContent = JSON.stringify(state, null, 2);
+        return state;
+      }
+
+      $('#clearLog').addEventListener('click', () => {
+        $('#eventLog').innerHTML = '<div class="empty-log">로그를 비웠습니다.</div>';
+        eventCounter = 0;
+        $('#eventCount').textContent = '0';
+      });
+      $('#themeToggle').addEventListener('click', (event) => {
+        document.body.classList.toggle('theme-dark');
+        event.currentTarget.textContent = document.body.classList.contains('theme-dark') ? '라이트 모드' : '다크 모드';
+      });
+      $('#exportState').addEventListener('click', () => {
+        const state = updateStates();
+        logEvent('exportState', { value: JSON.stringify(state) }, 'page');
+      });
+      $('#copyState').addEventListener('click', async () => {
+        const text = $('#allState').textContent;
+        try { await navigator.clipboard.writeText(text); logEvent('copyState', { value: 'clipboard' }, 'page'); }
+        catch { logEvent('copyState', { value: 'clipboard blocked' }, 'page'); }
+      });
+
+      document.querySelector('[data-action="multi-all"]').addEventListener('click', () => {
+        multi.setChoiceByValue(['search', 'dashboard', 'workflow', 'notice']); updateStates();
+      });
+      document.querySelector('[data-action="multi-clear"]').addEventListener('click', () => { multi.removeActiveItems(); updateStates(); });
+      document.querySelector('[data-action="multi-highlight"]').addEventListener('click', () => { multi.highlightAll(); logEvent('highlightAll', {}, 'multiSelect'); });
+      $('#addEmail').addEventListener('click', () => { email.setValue(['new.member@example.com']); updateStates(); });
+      $('#clearEmailInput').addEventListener('click', () => { email.clearInput(); logEvent('clearInput', {}, 'emailTags'); });
+
+      $('#loadAsync').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const status = $('#asyncStatus');
+        button.disabled = true;
+        status.textContent = '로딩 중…'; status.className = 'status loading';
+        try {
+          await asyncChoice.setChoices(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 900));
+            return remoteDataset;
+          }, 'value', 'label', true, true, true);
+          status.textContent = remoteDataset.length + '건 로딩 완료'; status.className = 'status';
+          logEvent('setChoices(async)', { value: remoteDataset.length + ' choices' }, 'asyncSelect');
+        } catch (error) {
+          status.textContent = '로딩 실패'; status.className = 'status error';
+          logEvent('asyncError', { value: error.message || 'unknown' }, 'asyncSelect');
+        } finally { button.disabled = false; updateStates(); }
+      });
+
+      $('#citySelect').addEventListener('change', (event) => {
+        const next = stationMap[event.detail.value] || [];
+        station.clearChoices(true, true);
+        if (next.length) {
+          station.enable();
+          station.setChoices(next, 'value', 'label', true, true, true);
+        } else {
+          station.disable();
+          station.setChoices([{ value: '', label: '먼저 도시를 선택하세요', placeholder: true }], 'value', 'label', true, true, true);
+        }
+        updateStates();
+      });
+
+      let singleDestroyed = false;
+      $('#apiSetValue').addEventListener('click', () => { if (!singleDestroyed) { widgetRegistry.get('singleSelect').setChoiceByValue('ai'); updateStates(); } });
+      $('#apiAddChoice').addEventListener('click', () => {
+        if (singleDestroyed) return;
+        const exists = Array.from($('#singleSelect').options).some(o => o.value === 'new-feature');
+        if (!exists) widgetRegistry.get('singleSelect').setChoices([{ value: 'new-feature', label: '새로 추가된 선택지' }], 'value', 'label', false);
+        widgetRegistry.get('singleSelect').setChoiceByValue('new-feature'); updateStates();
+      });
+      $('#apiShow').addEventListener('click', () => { if (!singleDestroyed) widgetRegistry.get('singleSelect').showDropdown(); });
+      $('#apiHide').addEventListener('click', () => { if (!singleDestroyed) widgetRegistry.get('singleSelect').hideDropdown(); });
+      $('#apiDisable').addEventListener('click', () => { if (!singleDestroyed) { widgetRegistry.get('singleSelect').disable(); logEvent('disable()', {}, 'singleSelect'); } });
+      $('#apiEnable').addEventListener('click', () => { if (!singleDestroyed) { widgetRegistry.get('singleSelect').enable(); logEvent('enable()', {}, 'singleSelect'); } });
+      $('#apiDestroy').addEventListener('click', () => {
+        if (!singleDestroyed) {
+          widgetRegistry.get('singleSelect').destroy(); widgetRegistry.delete('singleSelect'); singleDestroyed = true;
+          $('#widgetCount').textContent = widgetRegistry.size; logEvent('destroy()', {}, 'singleSelect'); updateStates();
+        }
+      });
+      $('#apiReinit').addEventListener('click', () => {
+        if (singleDestroyed) {
+          initSingle(); singleDestroyed = false;
+          logEvent('init()', {}, 'singleSelect'); updateStates();
+        }
+      });
+
+      $('#demoForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const result = $('#formResult');
+        if (!form.checkValidity()) {
+          result.textContent = '필수 분류를 선택해 주세요.'; result.className = 'form-result bad';
+          form.reportValidity(); return;
+        }
+        result.textContent = '제출 성공: ' + JSON.stringify({ category: required.getValue(true) }); result.className = 'form-result ok';
+        logEvent('formSubmit', { value: required.getValue(true) }, 'demoForm');
+      });
+      $('#demoForm').addEventListener('reset', () => {
+        setTimeout(() => { required.refresh(); $('#formResult').textContent = '초기값으로 되돌렸습니다.'; $('#formResult').className = 'form-result'; updateStates(); }, 0);
+      });
+
+      updateStates();
+      logEvent('ready', { value: 'Choices.js feature lab initialized' }, 'page');
+    })();
+  </script>
+</body>
+</html>
