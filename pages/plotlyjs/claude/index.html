@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Plotly.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap { width: 100%; max-width: 760px; }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.active { background: #205fb0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Plotly.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Plotly.js</strong>는 차트를 SVG/WebGL로 그려주는 선언적(declarative) 시각화
+    라이브러리입니다. 데이터와 레이아웃을 객체로 넘기기만 하면, 확대/축소·팬·호버 툴팁·이미지
+    저장 같은 인터랙션이 모드바(mode bar)와 함께 기본으로 딸려옵니다.
+    <ul>
+      <li><code class="inline">Plotly.newPlot(el, data, layout)</code> 하나로 완성되는 선언적 API</li>
+      <li>확대/축소·팬·박스 선택·리셋을 제공하는 <strong>기본 내장 모드바</strong></li>
+      <li><code class="inline">layout.grid</code>로 만드는 <strong>서브플롯 그리드</strong></li>
+      <li>같은 API로 그대로 그려지는 <strong>WebGL 기반 3D 차트</strong></li>
+      <li><code class="inline">Plotly.extendTraces()</code>로 데이터만 이어붙이는 실시간 스트리밍 갱신</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판량·시세·수온 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. Plotly.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 선언적 API로 그리는 다중 계열 그래프 + 기본 인터랙션</h2>
+    <div class="desc">
+      4개 위판장의 최근 12주 평균 시세를 한 차트에 그렸습니다. 그래프 위에 마우스를 올리면 통합
+      호버 툴팁이, 우측 상단에는 확대/축소·팬·박스 선택·리셋 아이콘이 담긴 <strong>모드바</strong>가
+      자동으로 나타납니다. 아래 버튼으로 드래그 동작(확대 ↔ 이동)도 바꿔볼 수 있습니다.
+    </div>
+    <div class="controls">
+      <button id="s1-zoom" class="active">드래그 = 확대</button>
+      <button id="s1-pan">드래그 = 이동(팬)</button>
+    </div>
+    <div class="chart-wrap" id="chart1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Plotly.newPlot('chart1', [
+  { x: weeks, y: priceA, name: 'A위판장', mode: 'lines+markers', line: { color: '#2a78d6' } },
+  { x: weeks, y: priceB, name: 'B위판장', mode: 'lines+markers', line: { color: '#1baf7a' } },
+  { x: weeks, y: priceC, name: 'C위판장', mode: 'lines+markers', line: { color: '#eda100' } },
+  { x: weeks, y: priceD, name: 'D위판장', mode: 'lines+markers', line: { color: '#008300' } },
+], {
+  hovermode: 'x unified',
+  yaxis: { title: '평균 시세(원/kg)' },
+});
+
+// 모드바를 코드로 직접 조작하지 않고, dragmode만 바꿔도 확대/이동 동작이 즉시 전환된다
+Plotly.relayout('chart1', { dragmode: 'pan' });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 서브플롯(subplot) 그리드</h2>
+    <div class="desc">
+      <code class="inline">layout.grid</code>에 행/열 수만 지정하면, 위판장별 월간 위판량을 2×2
+      격자에 나란히 배치할 수 있습니다. 각 차트는 독립적으로 확대/축소됩니다.
+    </div>
+    <div class="chart-wrap" id="chart2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Plotly.newPlot('chart2', [
+  { x: months, y: volA, type: 'bar', name: 'A위판장', marker: { color: '#2a78d6' }, xaxis: 'x', yaxis: 'y' },
+  { x: months, y: volB, type: 'bar', name: 'B위판장', marker: { color: '#1baf7a' }, xaxis: 'x2', yaxis: 'y2' },
+  { x: months, y: volC, type: 'bar', name: 'C위판장', marker: { color: '#eda100' }, xaxis: 'x3', yaxis: 'y3' },
+  { x: months, y: volD, type: 'bar', name: 'D위판장', marker: { color: '#008300' }, xaxis: 'x4', yaxis: 'y4' },
+], {
+  grid: { rows: 2, columns: 2, pattern: 'independent' },
+  showlegend: false,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. WebGL 3D 산점도</h2>
+    <div class="desc">
+      <code class="inline">type: 'scatter3d'</code>만 지정하면 같은 API로 GPU 가속 3D 차트를 그립니다.
+      가상의 조사 지점별 수온 · 수심 · 어획량 관계를 표시했으며, 점 색은 어획량(연속값)을 밝은
+      파랑 → 짙은 파랑 순서로 나타냅니다. 마우스로 드래그하면 시점을 회전할 수 있습니다.
+    </div>
+    <div class="chart-wrap" id="chart3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Plotly.newPlot('chart3', [{
+  type: 'scatter3d',
+  mode: 'markers',
+  x: waterTemp, y: depth, z: catchAmount,
+  marker: {
+    size: 5,
+    color: catchAmount,                              // 값 기준 그라데이션(연속형)
+    colorscale: [[0, '#eaf2fc'], [0.5, '#5c94dd'], [1, '#154a8f']],
+    colorbar: { title: '어획량(kg)' },
+  },
+}], {
+  scene: {
+    xaxis: { title: '수온(℃)' },
+    yaxis: { title: '수심(m)' },
+    zaxis: { title: '어획량(kg)' },
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 실시간 스트리밍 갱신</h2>
+    <div class="desc">
+      1초마다 A위판장의 새 시세 한 개를 <code class="inline">extendTraces()</code>로
+      이어붙이고, 가장 오래된 값은 <code class="inline">Plotly.relayout</code>의 범위 조정으로
+      화면에서 밀어냅니다. 차트를 처음부터 다시 그리지 않고 데이터만 추가하므로 가볍습니다.
+    </div>
+    <div class="controls">
+      <button id="s4-toggle">일시정지</button>
+    </div>
+    <div class="chart-wrap" id="chart4"></div>
+    <div class="stat-box" id="s4-stat">스트리밍 대기 중...</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const MAX_POINTS = 30;
+setInterval(() => {
+  const t = new Date();
+  const price = lastPrice + (Math.random() - 0.5) * 60;
+  Plotly.extendTraces('chart4', { x: [[t]], y: [[price]] }, [0], MAX_POINTS);
+  lastPrice = price;
+}, 1000);</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@3.7.0/plotly.min.js"></script>
+<script>
+const COLORS = { A: '#2a78d6', B: '#1baf7a', C: '#eda100', D: '#008300' };
+
+// ---- 섹션 1: 다중 계열 라인 + 확대/팬 전환 ----
+(function section1() {
+  const weeks = Array.from({ length: 12 }, (_, i) => `${i + 1}주`);
+  function series(base, amp) {
+    return weeks.map((_, i) => Math.round(base + Math.sin(i / 2) * amp + (Math.random() - 0.5) * amp * 0.4));
+  }
+  const priceA = series(6200, 300);
+  const priceB = series(5400, 250);
+  const priceC = series(7100, 400);
+  const priceD = series(4800, 200);
+
+  Plotly.newPlot('chart1', [
+    { x: weeks, y: priceA, name: 'A위판장', mode: 'lines+markers', line: { color: COLORS.A } },
+    { x: weeks, y: priceB, name: 'B위판장', mode: 'lines+markers', line: { color: COLORS.B } },
+    { x: weeks, y: priceC, name: 'C위판장', mode: 'lines+markers', line: { color: COLORS.C } },
+    { x: weeks, y: priceD, name: 'D위판장', mode: 'lines+markers', line: { color: COLORS.D } },
+  ], {
+    margin: { t: 20, r: 20, b: 40, l: 60 },
+    hovermode: 'x unified',
+    yaxis: { title: '평균 시세(원/kg)' },
+    legend: { orientation: 'h', y: -0.2 },
+  }, { responsive: true });
+
+  const zoomBtn = document.getElementById('s1-zoom');
+  const panBtn = document.getElementById('s1-pan');
+  zoomBtn.addEventListener('click', () => {
+    Plotly.relayout('chart1', { dragmode: 'zoom' });
+    zoomBtn.classList.add('active');
+    panBtn.classList.remove('active');
+  });
+  panBtn.addEventListener('click', () => {
+    Plotly.relayout('chart1', { dragmode: 'pan' });
+    panBtn.classList.add('active');
+    zoomBtn.classList.remove('active');
+  });
+})();
+
+// ---- 섹션 2: 서브플롯 그리드 ----
+(function section2() {
+  const months = ['1월', '2월', '3월', '4월', '5월', '6월'];
+  function volumes(base, amp) {
+    return months.map((_, i) => Math.round(base + Math.sin(i / 1.5 + 1) * amp + (Math.random() - 0.5) * amp * 0.3));
+  }
+
+  Plotly.newPlot('chart2', [
+    { x: months, y: volumes(4200, 700), type: 'bar', name: 'A위판장', marker: { color: COLORS.A }, xaxis: 'x', yaxis: 'y' },
+    { x: months, y: volumes(3100, 500), type: 'bar', name: 'B위판장', marker: { color: COLORS.B }, xaxis: 'x2', yaxis: 'y2' },
+    { x: months, y: volumes(5300, 900), type: 'bar', name: 'C위판장', marker: { color: COLORS.C }, xaxis: 'x3', yaxis: 'y3' },
+    { x: months, y: volumes(2600, 400), type: 'bar', name: 'D위판장', marker: { color: COLORS.D }, xaxis: 'x4', yaxis: 'y4' },
+  ], {
+    margin: { t: 30, r: 20, b: 30, l: 45 },
+    grid: { rows: 2, columns: 2, pattern: 'independent' },
+    showlegend: false,
+    annotations: [
+      { text: 'A위판장', showarrow: false, x: 0.5, y: 1.12, xref: 'x domain', yref: 'y domain', font: { size: 12, color: '#555' } },
+      { text: 'B위판장', showarrow: false, x: 0.5, y: 1.12, xref: 'x2 domain', yref: 'y2 domain', font: { size: 12, color: '#555' } },
+      { text: 'C위판장', showarrow: false, x: 0.5, y: 1.12, xref: 'x3 domain', yref: 'y3 domain', font: { size: 12, color: '#555' } },
+      { text: 'D위판장', showarrow: false, x: 0.5, y: 1.12, xref: 'x4 domain', yref: 'y4 domain', font: { size: 12, color: '#555' } },
+    ],
+  }, { responsive: true });
+})();
+
+// ---- 섹션 3: 3D 산점도 ----
+(function section3() {
+  const n = 60;
+  const waterTemp = [], depth = [], catchAmount = [];
+  for (let i = 0; i < n; i++) {
+    const t = 8 + Math.random() * 14;
+    const d = 10 + Math.random() * 190;
+    const amount = Math.max(10, 300 - d * 1.1 + (t - 12) * 8 + (Math.random() - 0.5) * 60);
+    waterTemp.push(Number(t.toFixed(1)));
+    depth.push(Math.round(d));
+    catchAmount.push(Math.round(amount));
+  }
+
+  Plotly.newPlot('chart3', [{
+    type: 'scatter3d',
+    mode: 'markers',
+    x: waterTemp, y: depth, z: catchAmount,
+    marker: {
+      size: 5,
+      color: catchAmount,
+      colorscale: [[0, '#eaf2fc'], [0.5, '#5c94dd'], [1, '#154a8f']],
+      colorbar: { title: '어획량(kg)', thickness: 14 },
+    },
+  }], {
+    margin: { t: 10, r: 0, b: 0, l: 0 },
+    scene: {
+      xaxis: { title: '수온(℃)' },
+      yaxis: { title: '수심(m)' },
+      zaxis: { title: '어획량(kg)' },
+    },
+  }, { responsive: true });
+})();
+
+// ---- 섹션 4: 실시간 스트리밍 갱신 ----
+(function section4() {
+  const MAX_POINTS = 30;
+  let lastPrice = 6200;
+  let paused = false;
+  let tickCount = 0;
+
+  const start = new Date();
+  Plotly.newPlot('chart4', [{
+    x: [start], y: [lastPrice], mode: 'lines+markers', name: 'A위판장', line: { color: COLORS.A },
+  }], {
+    margin: { t: 20, r: 20, b: 40, l: 60 },
+    yaxis: { title: '실시간 시세(원/kg)' },
+    xaxis: { title: '시각' },
+    showlegend: false,
+  }, { responsive: true });
+
+  const statEl = document.getElementById('s4-stat');
+  const timer = setInterval(() => {
+    if (paused) return;
+    const t = new Date();
+    lastPrice = Math.max(3000, lastPrice + (Math.random() - 0.5) * 60);
+    Plotly.extendTraces('chart4', { x: [[t]], y: [[Math.round(lastPrice)]] }, [0], MAX_POINTS);
+    tickCount++;
+    statEl.innerHTML = `<strong>${tickCount}</strong>번째 갱신 · 현재 시세 <strong>${Math.round(lastPrice).toLocaleString()}원/kg</strong>`;
+  }, 1000);
+
+  document.getElementById('s4-toggle').addEventListener('click', (e) => {
+    paused = !paused;
+    e.target.textContent = paused ? '재개' : '일시정지';
+  });
+
+  window.addEventListener('beforeunload', () => clearInterval(timer));
+})();
+</script>
+</body>
+</html>
