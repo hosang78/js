@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Fuse.js Feature Lab — Fuzzy Search Playground</title>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.4.2" defer onerror="this.onerror=null;this.src='https://unpkg.com/fuse.js@7.4.2'"></script>
+  <style>
+    :root{--bg:#0a1020;--panel:#101a32;--panel-2:#121f3e;--line:#26385f;--text:#f3f7ff;--muted:#9fb0cd;--subtle:#7585a6;--accent:#58d6ff;--violet:#9d8cff;--green:#75e0a5;--amber:#ffcb70;--danger:#ff7d9a;--shadow:0 16px 42px rgba(0,0,0,.28)}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:radial-gradient(circle at 12% -10%,#1a3568 0,transparent 30%),radial-gradient(circle at 88% 4%,#2a1f65 0,transparent 25%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.45}
+    button,input,select,textarea{font:inherit} button{cursor:pointer} code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+    .shell{max-width:1540px;margin:0 auto;padding:28px 22px 52px}.hero{position:relative;overflow:hidden;border:1px solid rgba(126,163,255,.25);border-radius:24px;padding:28px;background:linear-gradient(130deg,rgba(29,53,104,.86),rgba(18,23,60,.9));box-shadow:var(--shadow)}
+    .hero:before{content:"";position:absolute;right:-70px;top:-90px;width:360px;height:360px;background:radial-gradient(circle,#58d6ff2c 0,transparent 66%);pointer-events:none}.eyebrow{display:flex;align-items:center;gap:8px;color:#b8c9ef;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px #75e0a51d}.hero h1{position:relative;margin:10px 0 8px;font-size:clamp(28px,4vw,44px);line-height:1.08;letter-spacing:-.045em}.hero h1 span{color:var(--accent)}.hero p{position:relative;max-width:860px;margin:0;color:#c1cce4;font-size:15px}.hero-bottom{position:relative;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:22px}.pill-row{display:flex;gap:8px;flex-wrap:wrap}.pill{border:1px solid #45628f;background:#0f1a32cc;color:#c8d7f2;border-radius:999px;padding:6px 10px;font-size:12px}.status{display:flex;align-items:center;gap:8px;font-size:12px;color:#c8d7f2}.status b{color:var(--green)}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}.stat{border:1px solid var(--line);border-radius:16px;background:#0e1830c9;padding:14px 16px;box-shadow:0 6px 18px #00000016}.stat .n{font-size:23px;font-weight:800;letter-spacing:-.04em}.stat .l{margin-top:2px;color:var(--muted);font-size:12px}
+    .tabs{display:flex;gap:8px;overflow:auto;padding:10px 0 4px;scrollbar-width:thin}.tab{white-space:nowrap;border:1px solid var(--line);background:#101a31;color:#aebfdd;border-radius:10px;padding:9px 12px;font-weight:700}.tab.active{border-color:#55c9f7;background:#12365a;color:#e9fbff;box-shadow:inset 0 0 0 1px #58d6ff36}.view{display:none}.view.active{display:block}
+    .layout{display:grid;grid-template-columns:348px minmax(0,1fr);gap:16px;margin-top:12px}.panel{border:1px solid var(--line);border-radius:18px;background:linear-gradient(155deg,rgba(18,31,62,.94),rgba(12,21,43,.94));box-shadow:var(--shadow)}.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 17px 13px;border-bottom:1px solid var(--line)}.panel-head h2{margin:0;font-size:15px;letter-spacing:-.02em}.panel-head p{margin:3px 0 0;color:var(--muted);font-size:12px}.panel-body{padding:16px}.section-title{margin:15px 0 7px;color:#dce8ff;font-size:12px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.section-title:first-child{margin-top:0}.hint{color:var(--muted);font-size:12px}.field{margin:10px 0}.field label{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;color:#c2d0ea;font-size:12px;font-weight:700}.field label span{color:var(--subtle);font-weight:500}.input,select,textarea{width:100%;border:1px solid #344b77;background:#091329;color:#e8f1ff;border-radius:10px;padding:10px 11px;outline:none}.input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #58d6ff1c}.input.big{font-size:17px;padding:13px 14px}.range-row{display:grid;grid-template-columns:1fr 55px;gap:8px;align-items:center}.range-row output{border:1px solid #314b78;background:#0b1730;border-radius:8px;padding:6px;text-align:center;color:#bfefff;font-size:12px}.switch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0;color:#c6d4eb;font-size:12px}.switch input{accent-color:var(--accent);width:17px;height:17px}.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 11px}.check{display:flex;align-items:center;gap:7px;color:#bfd0ea;font-size:12px}.check input{accent-color:var(--accent)}
+    .key-row{display:grid;grid-template-columns:1fr 70px;gap:8px;margin-bottom:8px}.key-row .input{padding:8px 9px}.icon-btn,.btn{border:1px solid #385787;background:#122545;color:#dcf4ff;border-radius:9px;padding:8px 10px;font-weight:750}.icon-btn:hover,.btn:hover{filter:brightness(1.12)}.btn.primary{border-color:#4dcef8;background:linear-gradient(135deg,#15648d,#334bc1);color:#fff}.btn.green{border-color:#4dae85;background:#113d32;color:#d8ffeb}.btn.ghost{background:#0d1830;color:#bfd1ef}.btn.danger{border-color:#7f3c5c;background:#371a2c;color:#ffdce6}.button-row{display:flex;flex-wrap:wrap;gap:8px}.button-row .btn{flex:1;min-width:110px}
+    .search-card{padding:16px}.search-top{display:flex;gap:10px;align-items:center}.search-top .input{flex:1}.search-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:12px}.quick-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.quick{border:1px solid #2e527a;background:#0d1c35;color:#b8d5f3;border-radius:999px;padding:6px 10px;font-size:12px}.quick:hover{border-color:var(--accent);color:#effbff}.result-area{padding:0 16px 16px}.result-list{display:grid;gap:10px}.result{position:relative;border:1px solid #293e66;background:linear-gradient(145deg,#11203e,#0d1830);border-radius:14px;padding:14px;overflow:hidden}.result:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}.result-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.result-title{font-weight:850;font-size:16px;letter-spacing:-.02em}.result-code{margin-top:3px;color:#8fa4c7;font-size:11px}.score{white-space:nowrap;border:1px solid #355078;background:#0a162b;color:#baf2ff;border-radius:999px;padding:4px 8px;font:700 11px "SFMono-Regular",Consolas,monospace}.result p{margin:9px 0;color:#b7c4dc;font-size:13px}.tag-row{display:flex;gap:5px;flex-wrap:wrap}.tag{border:1px solid #34517b;background:#0a1730;color:#a9c7e8;border-radius:7px;padding:3px 6px;font-size:11px}.tag.priority-높음{border-color:#7e4862;color:#ffd0df;background:#351b2a}.tag.priority-보통{border-color:#806c43;color:#ffe4a1;background:#382e1d}.tag.priority-낮음{border-color:#39756b;color:#b8f3e4;background:#123229}mark{background:#ffdd84;color:#172135;padding:0 1px;border-radius:2px}.match-strip{margin-top:9px;border-top:1px dashed #314563;padding-top:8px;color:#89a0c1;font-size:11px}.match-strip b{color:#c1d6f4}.empty{padding:42px 20px;text-align:center;color:#9fb0cd}.empty strong{display:block;color:#eaf3ff;margin-bottom:4px;font-size:15px}.notice{border:1px solid #4a3f7d;background:#2c2552;padding:11px 12px;border-radius:10px;color:#dcd4ff;font-size:12px}.notice.warn{border-color:#775a2b;background:#352914;color:#ffe2a4}.notice.error{border-color:#833f56;background:#391b29;color:#ffd3df}.codebox{margin:0;max-height:310px;overflow:auto;border:1px solid #293f67;background:#081226;border-radius:12px;padding:13px;color:#bed4f7;font-size:11px;line-height:1.55;white-space:pre-wrap;word-break:break-word}.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.feature{border:1px solid #293e65;border-radius:14px;background:#0c1830;padding:14px}.feature h3{margin:0 0 5px;font-size:13px}.feature p{margin:0;color:var(--muted);font-size:12px}.feature .mini{margin-top:9px;color:#b4c7e7;font:11px "SFMono-Regular",Consolas,monospace}.advanced-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.editor{min-height:200px;resize:vertical;font:12px/1.55 "SFMono-Regular",Consolas,monospace}.callout{margin:12px 0 0;border:1px solid #2e5473;background:#0c2338;border-radius:12px;padding:11px 12px;color:#bfe8ff;font-size:12px}.small{font-size:11px}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.metric{border:1px solid #2b4168;background:#0a1529;border-radius:10px;padding:9px}.metric b{display:block;font-size:17px}.metric span{color:var(--muted);font-size:11px}.footer-note{margin-top:16px;color:#7e93b6;text-align:center;font-size:11px}.modal{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;background:#020713a8}.modal.open{display:flex}.modal-card{width:min(760px,100%);max-height:90vh;overflow:auto;border:1px solid #3f6091;border-radius:20px;background:#0b152c;box-shadow:0 30px 80px #000}.modal-card .panel-head{position:sticky;top:0;background:#0b152c;z-index:1}.modal-card .panel-body{padding:18px}.toast{position:fixed;right:22px;bottom:22px;z-index:30;transform:translateY(90px);opacity:0;transition:.22s ease;border:1px solid #4d77a6;background:#10264a;color:#e1f6ff;border-radius:12px;padding:10px 13px;box-shadow:var(--shadow);font-size:13px}.toast.show{transform:translateY(0);opacity:1}
+    @media(max-width:1060px){.layout{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(3,1fr)}.advanced-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}} @media(max-width:680px){.shell{padding:16px 12px 35px}.hero{padding:21px}.stats{grid-template-columns:1fr 1fr;gap:8px}.stat{padding:11px}.feature-grid{grid-template-columns:1fr}.two-col,.check-grid{grid-template-columns:1fr}.panel-head{padding:14px}.search-top{align-items:stretch;flex-direction:column}.search-top .btn{width:100%}.button-row .btn{flex:auto}.result-top{gap:7px}.result-title{font-size:14px}}
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header class="hero">
+    <div class="eyebrow"><span class="dot"></span> Interactive Library Demo / v7.4.2</div>
+    <h1><span>Fuse.js</span> Feature Lab</h1>
+    <p>오타 허용 검색부터 가중치 키, 하이라이트, 확장 검색, 논리 쿼리, 인덱스·컬렉션 조작까지 한 페이지에서 직접 비교하는 실험형 샘플이다.</p>
+    <div class="hero-bottom">
+      <div class="pill-row"><span class="pill">Fuzzy / Bitap</span><span class="pill">Token Search</span><span class="pill">Extended Search</span><span class="pill">Logical Query</span><span class="pill">Index API</span></div>
+      <div class="status" id="libraryStatus"><span class="dot"></span><span>라이브러리 상태 확인 중…</span></div>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="현재 검색 상태">
+    <div class="stat"><div class="n" id="statDocs">12</div><div class="l">현재 컬렉션 문서</div></div>
+    <div class="stat"><div class="n" id="statResults">12</div><div class="l">표시 결과</div></div>
+    <div class="stat"><div class="n" id="statTime">0.00 ms</div><div class="l">직전 검색 시간</div></div>
+    <div class="stat"><div class="n" id="statIndex">—</div><div class="l">생성 인덱스 레코드</div></div>
+  </section>
+
+  <nav class="tabs" aria-label="기능 탭">
+    <button class="tab active" data-view="playground">검색 플레이그라운드</button>
+    <button class="tab" data-view="extended">확장 검색 문법</button>
+    <button class="tab" data-view="logical">논리 쿼리 빌더</button>
+    <button class="tab" data-view="collection">컬렉션 · 인덱스 API</button>
+    <button class="tab" data-view="data">데이터 · 결과 JSON</button>
+    <button class="tab" data-view="guide">기능 요약</button>
+  </nav>
+
+  <main>
+    <section class="view active" id="playground">
+      <div class="layout">
+        <aside class="panel">
+          <div class="panel-head"><div><h2>검색 구성</h2><p>옵션 변경 시 Fuse 인스턴스를 다시 생성한다.</p></div><button class="icon-btn" id="resetOptions" title="옵션 초기화">초기화</button></div>
+          <div class="panel-body">
+            <div class="section-title">검색 키와 가중치</div>
+            <div id="keyEditor"></div>
+            <button class="btn ghost small" id="addKey">+ 검색 키 추가</button>
+            <div class="section-title">Fuzzy matching</div>
+            <div class="field"><label for="threshold">threshold <span>낮을수록 엄격</span></label><div class="range-row"><input id="threshold" type="range" min="0" max="1" step="0.05" value="0.35"><output id="thresholdOut">0.35</output></div></div>
+            <div class="field"><label for="distance">distance <span>위치 허용 범위</span></label><div class="range-row"><input id="distance" type="range" min="0" max="1000" step="10" value="120"><output id="distanceOut">120</output></div></div>
+            <div class="field"><label for="location">location <span>예상 시작 위치</span></label><div class="range-row"><input id="location" type="range" min="0" max="100" step="1" value="0"><output id="locationOut">0</output></div></div>
+            <div class="switch"><span>ignoreLocation</span><input id="ignoreLocation" type="checkbox"></div>
+            <div class="section-title">기본 · 고급 옵션</div>
+            <div class="check-grid">
+              <label class="check"><input id="shouldSort" type="checkbox" checked> 점수 정렬</label>
+              <label class="check"><input id="findAllMatches" type="checkbox"> 모든 일치 탐색</label>
+              <label class="check"><input id="ignoreFieldNorm" type="checkbox"> 필드 길이 무시</label>
+              <label class="check"><input id="useTokenSearch" type="checkbox"> 토큰 검색</label>
+              <label class="check"><input id="caseSensitive" type="checkbox"> 대소문자 구분</label>
+              <label class="check"><input id="ignoreDiacritics" type="checkbox"> 악센트 무시</label>
+            </div>
+            <div class="field"><label for="minMatch">minMatchCharLength</label><select id="minMatch"><option value="1">1자 이상</option><option value="2">2자 이상</option><option value="3">3자 이상</option><option value="4">4자 이상</option></select></div>
+            <div class="field"><label for="fieldNormWeight">fieldNormWeight</label><div class="range-row"><input id="fieldNormWeight" type="range" min="0" max="2" step="0.1" value="1"><output id="fieldNormWeightOut">1.0</output></div></div>
+            <div class="section-title">표시 방식</div>
+            <div class="field"><label for="limit">결과 최대 개수</label><select id="limit"><option value="5">5개</option><option value="10" selected>10개</option><option value="25">25개</option><option value="999">제한 없음</option></select></div>
+            <div class="field"><label for="clientSort">화면 정렬</label><select id="clientSort"><option value="fuse">Fuse 점수</option><option value="title">제목 가나다순</option><option value="priority">우선순위</option><option value="date">최근 업데이트</option></select></div>
+            <div class="notice">결과에는 <b>score</b>와 <b>matches</b>를 항상 포함하여 점수와 하이라이트 인덱스를 확인할 수 있게 했다.</div>
+          </div>
+        </aside>
+        <section class="panel">
+          <div class="search-card">
+            <div class="search-top"><input class="input big" id="query" placeholder="검색어 입력 — 예: javscript, 어선 안전, 수산 시장, 정첵보험" autocomplete="off"><button class="btn primary" id="runSearch">검색 실행</button></div>
+            <div class="quick-row" id="quickQueries"></div>
+            <div class="search-meta"><span id="searchSummary">검색어를 입력하거나 예시를 선택해 보세요.</span><span class="mono" id="optionSummary">threshold 0.35 · 5 keys</span></div>
+          </div>
+          <div class="result-area"><div class="result-list" id="results"></div></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="extended">
+      <div class="advanced-grid" style="margin-top:12px">
+        <section class="panel"><div class="panel-head"><div><h2>확장 검색 실행</h2><p><code>useExtendedSearch: true</code>로 전환하여 정밀 검색 문법을 사용한다.</p></div></div><div class="panel-body">
+          <div class="field"><label for="extendedQuery">확장 검색식</label><input class="input big mono" id="extendedQuery" value="'수산 | ^JavaScript" autocomplete="off"></div>
+          <div class="button-row" id="extendedPresets"></div>
+          <div class="callout"><b>공백</b>은 AND, <b>|</b>는 OR로 작동한다. 본 탭에서는 기본 옵션에 <code>useExtendedSearch</code>만 추가해 같은 키·가중치로 실행한다.</div>
+          <div class="button-row" style="margin-top:12px"><button class="btn primary" id="runExtended">확장 검색 실행</button><button class="btn ghost" id="copyExtended">검색식 복사</button></div>
+          <div class="section-title">실행 결과</div><div id="extendedResult"></div>
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h2>연산자 치트시트</h2><p>문법 버튼을 눌러 입력창에 적용한다.</p></div></div><div class="panel-body" id="operatorCards"></div></section>
+      </div>
+    </section>
+
+    <section class="view" id="logical">
+      <div class="advanced-grid" style="margin-top:12px">
+        <section class="panel"><div class="panel-head"><div><h2>논리 쿼리 빌더</h2><p><code>$and</code> · <code>$or</code> 및 키 경로별 조건을 객체로 검색한다.</p></div></div><div class="panel-body">
+          <div class="two-col"><div class="field"><label for="logicMode">상위 연산자</label><select id="logicMode"><option value="$and">$and — 모든 조건</option><option value="$or">$or — 하나 이상</option></select></div><div class="field"><label for="logicPreset">프리셋</label><select id="logicPreset"><option value="">직접 편집</option><option value="policy">정책보험 + 고객지원</option><option value="market">수산시장 또는 데이터</option><option value="high">우선순위 높음</option></select></div></div>
+          <div id="logicRows"></div><button class="btn ghost small" id="addLogic">+ 조건 추가</button>
+          <div class="button-row" style="margin-top:14px"><button class="btn primary" id="runLogical">논리 쿼리 실행</button><button class="btn ghost" id="loadLogicJson">JSON 보기</button></div>
+          <div class="section-title">생성된 query object</div><pre class="codebox" id="logicJson"></pre>
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h2>논리 검색 결과</h2><p>키별 조건은 구조화된 데이터 필터링에 적합하다.</p></div></div><div class="panel-body" id="logicalResult"></div></section>
+      </div>
+    </section>
+
+    <section class="view" id="collection">
+      <div class="advanced-grid" style="margin-top:12px">
+        <section class="panel"><div class="panel-head"><div><h2>컬렉션 API</h2><p><code>add</code>, <code>remove</code>, <code>removeAt</code>, <code>setCollection</code>을 직접 호출한다.</p></div></div><div class="panel-body">
+          <div class="metric-grid"><div class="metric"><b id="collectionDocs">12</b><span>collection length</span></div><div class="metric"><b id="collectionIndex">12</b><span>getIndex().size()</span></div><div class="metric"><b id="collectionMode">Live</b><span>index source</span></div></div>
+          <div class="button-row"><button class="btn green" id="addDemo">+ 데모 문서 추가</button><button class="btn danger" id="removeDemo">제목에 “데모” 포함 삭제</button></div>
+          <div class="button-row" style="margin-top:8px"><button class="btn ghost" id="removeAt">마지막 문서 삭제</button><button class="btn ghost" id="restoreData">원본 데이터 복원</button></div>
+          <div class="section-title">사전 생성 인덱스</div>
+          <div class="notice">현재 키로 <code>Fuse.createIndex()</code> → <code>Fuse.parseIndex()</code>를 거쳐 새 Fuse 인스턴스를 만들 수 있다.</div>
+          <div class="button-row" style="margin-top:10px"><button class="btn primary" id="buildPrebuilt">사전 인덱스 생성·적용</button><button class="btn ghost" id="disablePrebuilt">일반 인덱스 복귀</button></div>
+          <div class="section-title">인덱스 내보내기</div>
+          <div class="button-row"><button class="btn ghost" id="downloadIndex">getIndex().toJSON() 다운로드</button><button class="btn ghost" id="showIndex">인덱스 JSON 미리보기</button></div>
+          <pre class="codebox" id="indexPreview">인덱스 API를 실행하면 이 영역에 요약이 표시된다.</pre>
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h2>API 작업 로그</h2><p>각 동작 후 컬렉션과 인덱스 상태를 갱신한다.</p></div><button class="icon-btn" id="clearLog">로그 지우기</button></div><div class="panel-body"><pre class="codebox" id="apiLog"></pre></div></section>
+      </div>
+    </section>
+
+    <section class="view" id="data">
+      <div class="advanced-grid" style="margin-top:12px">
+        <section class="panel"><div class="panel-head"><div><h2>데이터셋 편집</h2><p>JSON 배열을 붙여 넣으면 <code>setCollection()</code>으로 교체한다.</p></div></div><div class="panel-body">
+          <textarea class="input editor" id="dataEditor" spellcheck="false"></textarea>
+          <div class="button-row" style="margin-top:10px"><button class="btn primary" id="applyData">JSON 적용</button><button class="btn ghost" id="refreshData">현재 데이터 불러오기</button><button class="btn ghost" id="formatData">예쁘게 정렬</button></div>
+          <div class="callout">중첩 키 예시: <code>owner.team</code>, 배열 키 예시: <code>tags</code>, 배열 객체 키 예시: <code>references.name</code></div>
+        </div></section>
+        <section class="panel"><div class="panel-head"><div><h2>검색 결과 원본</h2><p>Fuse가 반환한 <code>item</code>, <code>refIndex</code>, <code>score</code>, <code>matches</code></p></div><button class="icon-btn" id="copyResultJson">복사</button></div><div class="panel-body"><pre class="codebox" id="resultJson">검색하면 결과 JSON이 표시된다.</pre></div></section>
+      </div>
+    </section>
+
+    <section class="view" id="guide">
+      <div class="panel" style="margin-top:12px"><div class="panel-head"><div><h2>이 페이지에서 확인할 수 있는 Fuse.js 기능</h2><p>각 카드를 눌러 해당 기능 탭으로 이동할 수 있다.</p></div></div><div class="panel-body"><div class="feature-grid" id="featureGrid"></div><div class="footer-note">이 예제는 브라우저에서만 실행되며 입력한 데이터는 외부로 전송하지 않는다. 단, CDN에서 Fuse.js를 불러오기 위해 최초 실행 시 인터넷 연결이 필요하다.</div></div></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="addModal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle"><div class="modal-card"><div class="panel-head"><div><h2 id="addModalTitle">데모 문서 추가</h2><p>추가 후 검색·인덱스 갱신을 즉시 확인할 수 있다.</p></div><button class="icon-btn" id="closeModal">닫기</button></div><div class="panel-body"><div class="two-col"><div class="field"><label>제목</label><input class="input" id="newTitle" value="데모: 현장 안전 점검 모바일 앱"></div><div class="field"><label>카테고리</label><input class="input" id="newCategory" value="현장운영"></div></div><div class="field"><label>요약</label><textarea class="input" id="newSummary">어선 안전 점검 결과를 현장에서 등록하고 위험 항목을 즉시 공유하는 모바일 업무 도구입니다.</textarea></div><div class="two-col"><div class="field"><label>태그 (쉼표 구분)</label><input class="input" id="newTags" value="어선, 안전, 모바일"></div><div class="field"><label>우선순위</label><select id="newPriority"><option>높음</option><option selected>보통</option><option>낮음</option></select></div></div><div class="button-row"><button class="btn primary" id="confirmAdd">문서 추가</button><button class="btn ghost" id="cancelAdd">취소</button></div></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const ORIGINAL_DATA = [
+    {id:'UX-101',title:'JavaScript 검색 UX 가이드',summary:'오타 허용 검색, 자동완성, 키보드 탐색, 검색어 하이라이트를 포함한 웹 검색 경험 설계 가이드입니다.',category:'개발가이드',tags:['JavaScript','검색','UX','접근성'],owner:{name:'민준',team:'디지털전략팀'},priority:'높음',updated:'2026-06-28',references:[{name:'Fuse.js API',type:'문서'},{name:'검색 UX 체크리스트',type:'내부'}]},
+    {id:'ENG-214',title:'React 상태 관리 패턴',summary:'React 컴포넌트 상태, 서버 상태, 전역 상태를 구분하고 팀 규모에 맞춰 관리 도구를 선정하는 실무 패턴입니다.',category:'프론트엔드',tags:['React','상태관리','TypeScript'],owner:{name:'수진',team:'플랫폼개발팀'},priority:'보통',updated:'2026-06-25',references:[{name:'React Docs',type:'문서'}]},
+    {id:'MAR-330',title:'노량진 수산시장 시세 API',summary:'수산물 품목별 경매 시세를 수집해 날짜·품목·원산지 기준으로 조회하는 데이터 연계 설계안입니다.',category:'데이터',tags:['수산시장','시세','API','데이터'],owner:{name:'지훈',team:'유통데이터팀'},priority:'높음',updated:'2026-06-27',references:[{name:'시세 수집 명세',type:'내부'},{name:'Open Data',type:'외부'}]},
+    {id:'INS-087',title:'정책보험 상담 지식베이스',summary:'어업인 정책보험 가입·보장·청구 절차를 상담 시나리오와 쉬운 문장으로 정리한 지식베이스입니다.',category:'고객지원',tags:['정책보험','어업인','상담','지식베이스'],owner:{name:'하늘',team:'보험지원팀'},priority:'높음',updated:'2026-06-29',references:[{name:'정책보험 FAQ',type:'문서'}]},
+    {id:'SAFE-451',title:'해양 안전 알림 센터',summary:'기상 특보, 조업 구역 위험도, 사고 대응 매뉴얼을 한 화면에서 확인하는 어선 안전 알림 서비스입니다.',category:'안전',tags:['해양','어선','안전','알림'],owner:{name:'도윤',team:'어선안전조업부'},priority:'높음',updated:'2026-06-30',references:[{name:'어선 사고 대응',type:'매뉴얼'}]},
+    {id:'WEB-061',title:'GitHub Pages 정적 포털',summary:'서버 없이 HTML·CSS·JavaScript만으로 배포하는 안내 포털 구현 방법과 공개 데이터 보안 유의사항입니다.',category:'개발가이드',tags:['GitHub','정적사이트','HTML','보안'],owner:{name:'예린',team:'ICT전략실'},priority:'보통',updated:'2026-06-18',references:[{name:'배포 체크리스트',type:'문서'}]},
+    {id:'FIN-202',title:'SQLite 비용정산 대시보드',summary:'가벼운 로컬 데이터베이스와 단일 페이지를 활용한 지출 등록, 월별 집계, 증빙 관리 예시입니다.',category:'업무자동화',tags:['SQLite','정산','대시보드','자동화'],owner:{name:'태현',team:'기획조정실'},priority:'보통',updated:'2026-06-21',references:[{name:'SQLite schema',type:'코드'}]},
+    {id:'AI-019',title:'AI 업무도우미 프롬프트 라이브러리',summary:'보고서 초안, 회의록 정리, 엑셀 오류 분석, 민원 응대 등 업무 목적별 재사용 프롬프트 모음입니다.',category:'AI활용',tags:['AI','프롬프트','보고서','업무도우미'],owner:{name:'서연',team:'ICT전략실'},priority:'높음',updated:'2026-06-26',references:[{name:'프롬프트 표준',type:'내부'}]},
+    {id:'GLO-511',title:'외국어 수산시장 브리핑',summary:'해외 수산시장 동향을 한국어·영어·프랑스어 핵심 문장으로 요약하고 용어를 관리하는 브리핑 도구입니다.',category:'국제업무',tags:['수산','프랑스어','번역','시장동향'],owner:{name:'유진',team:'무역사업부'},priority:'낮음',updated:'2026-06-17',references:[{name:'프랑스 시장 메모',type:'문서'}]},
+    {id:'SEC-099',title:'개인정보 처리 체크리스트',summary:'외부 서비스 활용 전 개인정보·회사 중요정보·비공개 자료의 입력 가능 여부를 점검하는 보안 체크리스트입니다.',category:'보안',tags:['개인정보','보안','검토','외부서비스'],owner:{name:'준서',team:'정보보호본부'},priority:'높음',updated:'2026-06-24',references:[{name:'보안 가이드',type:'규정'}]},
+    {id:'A11Y-162',title:'웹 접근성 점검 목록',summary:'색 대비, 키보드 조작, 대체텍스트, 폼 레이블, 오류 안내를 빠르게 검토하기 위한 웹 접근성 점검 목록입니다.',category:'개발가이드',tags:['접근성','웹','점검','UX'],owner:{name:'은우',team:'플랫폼개발팀'},priority:'보통',updated:'2026-06-16',references:[{name:'WCAG 체크',type:'문서'}]},
+    {id:'DAT-703',title:'수산물 위판 데이터 분석',summary:'위판량과 단가 변동을 품목·산지·기간별로 비교해 계절성, 이상 거래, 유통 흐름을 분석하는 대시보드입니다.',category:'데이터',tags:['위판','수산물','분석','대시보드'],owner:{name:'가온',team:'수산경제연구원'},priority:'높음',updated:'2026-06-30',references:[{name:'위판 분석 지표',type:'문서'}]}
+  ];
+  let DATA = structuredClone(ORIGINAL_DATA);
+  let fuse = null, rawResults = [], lastQuery = '', prebuilt = false, apiLog = [];
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const state = {keys:[{name:'title',weight:0.42},{name:'summary',weight:0.22},{name:'tags',weight:0.16},{name:'category',weight:0.10},{name:'owner.team',weight:0.10}]};
+  const defaults = {threshold:.35,distance:120,location:0,ignoreLocation:false,shouldSort:true,findAllMatches:false,ignoreFieldNorm:false,useTokenSearch:false,caseSensitive:false,ignoreDiacritics:false,minMatch:1,fieldNormWeight:1,limit:10,clientSort:'fuse'};
+  const quicks = ['javscript','정첵보험','수산 시장','어선 안전','sqlite 자동화','프랑스어','개인정보'];
+  const extPresets = [
+    {label:"'수산",value:"'수산",note:'수산을 포함'}, {label:'^JavaScript',value:'^JavaScript',note:'JavaScript로 시작'}, {label:'!보안',value:'!보안',note:'보안을 포함하지 않음'}, {label:'분석$',value:'분석$',note:'분석으로 끝남'}, {label:"'어선 '안전",value:"'어선 '안전",note:'어선 AND 안전'}, {label:"'수산 | '보험",value:"'수산 | '보험",note:'수산 OR 보험'}
+  ];
+  const operatorInfo = [
+    ['fuzzy','javscript','오타 허용 근사 검색'],['exact','=검색','정확 일치'],['include',"'수산",'포함 검색'],['inverse','!보안','포함하지 않음'],['prefix','^JavaScript','접두 일치'],['suffix','분석$','접미 일치'],['AND',"'어선 '안전",'공백으로 모두 일치'],['OR',"'수산 | '보험",'파이프로 하나 이상 일치']
+  ];
+  const features = [
+    ['playground','Fuzzy Search','오타·누락·가까운 문자열을 점수화해 정렬','threshold · distance · location'],['playground','Weighted Keys','title·summary·tags 등 키별 비중을 직접 조정','nested key: owner.team'],['playground','Match Highlight','includeMatches 결과 인덱스로 제목·요약·태그를 강조','score 0 = 완전 일치'],['playground','Token Search','여러 단어를 토큰으로 나눠 개별 매칭','useTokenSearch'],['extended','Extended Search','exact / include / inverse / prefix / suffix 조합','useExtendedSearch'],['logical','Logical Query','구조화된 $and / $or 식을 객체로 전달','nested logical query'],['collection','Collection API','add · remove · removeAt · setCollection 테스트','live collection'],['collection','Index API','createIndex · parseIndex · getIndex · toJSON 확인','prebuilt index'],['data','Data Playground','중첩 객체·배열 객체를 포함한 JSON 데이터 교체','references.name']
+  ];
+
+  function esc(v){return String(v ?? '').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+  function pathGet(obj,path){ return String(path).split('.').reduce((a,k)=>a==null?undefined:a[k],obj); }
+  function flatten(value){ if(Array.isArray(value)) return value.flatMap(flatten).join(' · '); if(value && typeof value==='object') return Object.values(value).flatMap(flatten).join(' · '); return String(value ?? ''); }
+  function timeNow(){ return performance && performance.now ? performance.now() : Date.now(); }
+  function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(showToast._timer); showToast._timer=setTimeout(()=>t.classList.remove('show'),2300); }
+  function log(action,detail=''){ const stamp=new Date().toLocaleTimeString('ko-KR',{hour12:false}); apiLog.unshift(`[${stamp}] ${action}${detail ? `\n  └ ${detail}` : ''}`); $('#apiLog').textContent=apiLog.join('\n\n') || '아직 API 작업이 없습니다.'; }
+  function copyText(value){ if(navigator.clipboard && window.isSecureContext){navigator.clipboard.writeText(value).then(()=>showToast('클립보드에 복사했습니다.')).catch(()=>fallbackCopy(value));} else fallbackCopy(value); }
+  function fallbackCopy(value){ const a=document.createElement('textarea'); a.value=value; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); showToast('클립보드에 복사했습니다.'); }
+  function download(filename,text){ const blob=new Blob([text],{type:'application/json;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); }
+  function getInputs(){ return {threshold:+$('#threshold').value,distance:+$('#distance').value,location:+$('#location').value,ignoreLocation:$('#ignoreLocation').checked,shouldSort:$('#shouldSort').checked,findAllMatches:$('#findAllMatches').checked,ignoreFieldNorm:$('#ignoreFieldNorm').checked,useTokenSearch:$('#useTokenSearch').checked,isCaseSensitive:$('#caseSensitive').checked,ignoreDiacritics:$('#ignoreDiacritics').checked,minMatchCharLength:+$('#minMatch').value,fieldNormWeight:+$('#fieldNormWeight').value,includeScore:true,includeMatches:true,keys:state.keys.filter(k=>k.name.trim()).map(k=>({name:k.name.trim(),weight:Math.max(.01,+k.weight||.01)}))}; }
+  function renderKeys(){ const root=$('#keyEditor'); root.innerHTML=state.keys.map((k,i)=>`<div class="key-row"><input class="input key-name" data-i="${i}" value="${esc(k.name)}" aria-label="검색 키"><input class="input key-weight" data-i="${i}" type="number" min="0.01" max="1" step="0.01" value="${k.weight}" aria-label="가중치"><button class="icon-btn remove-key" data-i="${i}" title="키 삭제">×</button></div>`).join(''); $$('.key-name').forEach(el=>el.addEventListener('input',e=>{state.keys[+e.target.dataset.i].name=e.target.value; rebuildAndSearch();})); $$('.key-weight').forEach(el=>el.addEventListener('input',e=>{state.keys[+e.target.dataset.i].weight=+e.target.value; rebuildAndSearch();})); $$('.remove-key').forEach(el=>el.addEventListener('click',e=>{if(state.keys.length>1){state.keys.splice(+e.currentTarget.dataset.i,1);renderKeys();rebuildAndSearch();}})); }
+  function buildFuse(){
+    const options=getInputs();
+    try {
+      if(!window.Fuse) throw new Error('Fuse.js CDN을 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근을 확인하세요.');
+      if(prebuilt){ const index = Fuse.createIndex(options.keys,DATA); const parsed = Fuse.parseIndex(index.toJSON()); fuse=new Fuse(DATA,options,parsed); } else fuse=new Fuse(DATA,options);
+      const s=$('#libraryStatus'); s.innerHTML='<span class="dot"></span><span><b>Fuse.js 로드됨</b> · 실제 라이브러리로 검색 중</span>'; s.style.color='';
+      $('#statIndex').textContent=fuse.getIndex().size(); $('#collectionIndex').textContent=fuse.getIndex().size(); $('#collectionMode').textContent=prebuilt?'Prebuilt':'Live'; $('#collectionDocs').textContent=DATA.length; return true;
+    } catch(err){
+      const s=$('#libraryStatus'); s.innerHTML='<span style="width:8px;height:8px;border-radius:50%;background:#ff7d9a"></span><span><b style="color:#ffb4c5">Fuse.js 미로드</b> · '+esc(err.message)+'</span>'; s.style.color='#ffd3df'; fuse=null; return false;
+    }
+  }
+  function mergeRanges(ranges){ const a=(ranges||[]).filter(r=>Array.isArray(r)&&r.length===2).sort((x,y)=>x[0]-y[0]); const out=[]; for(const r of a){if(!out.length||r[0]>out[out.length-1][1]+1)out.push([...r]);else out[out.length-1][1]=Math.max(out[out.length-1][1],r[1]);} return out; }
+  function highlight(text,ranges){ const s=String(text??''); const rr=mergeRanges(ranges); if(!rr.length)return esc(s); let pos=0,out=''; for(const [a,b] of rr){out+=esc(s.slice(pos,a));out+='<mark>'+esc(s.slice(a,b+1))+'</mark>';pos=b+1;} return out+esc(s.slice(pos)); }
+  function matchRanges(result,key,valueIndex=0){ const m=(result.matches||[]).filter(x=>x.key===key); if(!m.length) return []; const all=[]; for(const x of m){ const idx=x.refIndex ?? x.arrayIndex; if(idx===undefined||idx===valueIndex) all.push(...(x.indices||[])); } return all; }
+  function tagHtml(item,result){return item.tags.map((t,i)=>`<span class="tag">${highlight(t,matchRanges(result,'tags',i))}</span>`).join('')+`<span class="tag priority-${esc(item.priority)}">우선순위 ${esc(item.priority)}</span>`;}
+  function resultCard(r){ const it=r.item; const refs=it.references.map(x=>x.name).join(' · '); const matched=(r.matches||[]).map(m=>`${m.key}${m.refIndex!==undefined?`[${m.refIndex}]`:''}`).filter((v,i,a)=>a.indexOf(v)===i).join(', ') || '—'; return `<article class="result"><div class="result-top"><div><div class="result-title">${highlight(it.title,matchRanges(r,'title'))}</div><div class="result-code mono">${esc(it.id)} · ${highlight(it.category,matchRanges(r,'category'))} · ${esc(it.owner.team)} · ${esc(it.updated)}</div></div><span class="score">${(r.score??0).toFixed(4)}</span></div><p>${highlight(it.summary,matchRanges(r,'summary'))}</p><div class="tag-row">${tagHtml(it,r)}</div><div class="match-strip"><b>matched keys</b> ${esc(matched)} &nbsp;·&nbsp; refs: ${esc(refs)}</div></article>`; }
+  function clientSort(results){ const mode=$('#clientSort').value; const clone=[...results]; if(mode==='title')clone.sort((a,b)=>a.item.title.localeCompare(b.item.title,'ko')); if(mode==='priority'){const p={높음:0,보통:1,낮음:2};clone.sort((a,b)=>p[a.item.priority]-p[b.item.priority]||a.item.title.localeCompare(b.item.title,'ko'));} if(mode==='date')clone.sort((a,b)=>b.item.updated.localeCompare(a.item.updated));return clone; }
+  function renderResults(results,target='#results',emptyTitle='결과가 없습니다.',emptyDesc='검색어 또는 옵션을 조정해 보세요.'){ const root=$(target); if(!results.length){root.innerHTML=`<div class="empty"><strong>${emptyTitle}</strong>${emptyDesc}</div>`;return;} root.innerHTML=results.map(resultCard).join(''); }
+  function runSearch(q=$('#query').value,overrideOptions=null,target='#results'){
+    lastQuery=q; if(!buildFuse()){renderResults([],target,'Fuse.js를 불러오지 못했습니다.','이 파일은 CDN 기반 실제 Fuse.js를 사용합니다.');return [];} const start=timeNow(); let results=[]; try{results=q.trim()?fuse.search(q, {limit:+$('#limit').value}):DATA.slice(0,+$('#limit').value===999?DATA.length:+$('#limit').value).map((item,refIndex)=>({item,refIndex,score:0,matches:[]}));}catch(err){renderResults([],target,'검색식 해석 오류',esc(err.message));showToast('검색식 또는 옵션을 확인하세요.');return [];} const elapsed=timeNow()-start; if(target==='#results'){rawResults=results; const visual=clientSort(results);renderResults(visual,target);$('#statResults').textContent=results.length;$('#statTime').textContent=elapsed.toFixed(2)+' ms';$('#searchSummary').textContent=q.trim()?`“${q}” 검색 결과 ${results.length}건`:`검색어 없음 · 컬렉션 상위 ${results.length}건 표시`;$('#optionSummary').textContent=`threshold ${$('#threshold').value} · ${getInputs().keys.length} keys · ${prebuilt?'prebuilt':'live'} index`;$('#resultJson').textContent=JSON.stringify(results,null,2);}else renderResults(results,target); return results;
+  }
+  function rebuildAndSearch(){ buildFuse();runSearch(); }
+  function updateRange(id,out,fmt=v=>v){ const i=$('#'+id),o=$('#'+out); const f=()=>{o.value=fmt(i.value); rebuildAndSearch();}; i.addEventListener('input',f); }
+  function setDefaults(){Object.entries(defaults).forEach(([k,v])=>{const el=$('#'+k);if(!el)return;if(el.type==='checkbox')el.checked=v;else el.value=v;});state.keys=[{name:'title',weight:.42},{name:'summary',weight:.22},{name:'tags',weight:.16},{name:'category',weight:.10},{name:'owner.team',weight:.10}];renderKeys();['threshold','distance','location','fieldNormWeight'].forEach(id=>$('#'+id).dispatchEvent(new Event('input')));rebuildAndSearch();showToast('검색 옵션을 초기화했습니다.');}
+  function switchView(view){$$('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));$$('.view').forEach(v=>v.classList.toggle('active',v.id===view));window.scrollTo({top:0,behavior:'smooth'});}
+  function logicRow(field='category',value=''){ const id='lr'+Math.random().toString(36).slice(2); return `<div class="two-col logic-row" id="${id}" style="margin:8px 0"><select class="logic-field"><option value="title" ${field==='title'?'selected':''}>title</option><option value="summary" ${field==='summary'?'selected':''}>summary</option><option value="category" ${field==='category'?'selected':''}>category</option><option value="tags" ${field==='tags'?'selected':''}>tags</option><option value="owner.team" ${field==='owner.team'?'selected':''}>owner.team</option><option value="priority" ${field==='priority'?'selected':''}>priority</option></select><div style="display:grid;grid-template-columns:1fr 42px;gap:7px"><input class="input logic-value" value="${esc(value)}" placeholder="값 또는 확장 문법"><button class="icon-btn remove-logic" data-id="${id}">×</button></div></div>`; }
+  function bindLogicRemovers(){ $$('.remove-logic').forEach(btn=>btn.onclick=()=>{const rows=$$('.logic-row');if(rows.length>1)$('#'+btn.dataset.id).remove();updateLogicJson();}); }
+  function makeLogicQuery(){ const clauses=$$('.logic-row').map(row=>{const f=$('.logic-field',row).value,v=$('.logic-value',row).value.trim(); return v?{[f]:v}:null;}).filter(Boolean); return {[ $('#logicMode').value ]:clauses}; }
+  function updateLogicJson(){ $('#logicJson').textContent=JSON.stringify(makeLogicQuery(),null,2); }
+  function setLogicPreset(v){ const root=$('#logicRows'); const presets={policy:[['category','고객지원'],['tags',"'정책보험"]],market:[['title',"'수산"],['category','데이터']],high:[['priority','높음']]}; if(!presets[v])return; $('#logicMode').value=v==='market'?'$or':'$and';root.innerHTML=presets[v].map(x=>logicRow(x[0],x[1])).join('');bindLogicRemovers();updateLogicJson(); }
+  function runLogical(){if(!buildFuse())return; const query=makeLogicQuery();updateLogicJson();try{const start=timeNow();const res=fuse.search(query,{limit:+$('#limit').value});renderResults(res,'#logicalResult','논리 조건과 일치하는 문서가 없습니다.');$('#statTime').textContent=(timeNow()-start).toFixed(2)+' ms';showToast(`논리 쿼리 결과 ${res.length}건`);}catch(err){$('#logicalResult').innerHTML=`<div class="notice error">${esc(err.message)}</div>`;}}
+  function runExtended(){if(!buildFuse())return;const q=$('#extendedQuery').value.trim(); if(!q){$('#extendedResult').innerHTML='<div class="notice warn">확장 검색식을 입력하세요.</div>';return;}try{const options={...getInputs(),useExtendedSearch:true};const fx=new Fuse(DATA,options,prebuilt?Fuse.parseIndex(Fuse.createIndex(options.keys,DATA).toJSON()):undefined);const start=timeNow();const res=fx.search(q,{limit:+$('#limit').value});renderResults(res,'#extendedResult','확장 검색 결과가 없습니다.','연산자나 검색식을 조정해 보세요.');$('#statTime').textContent=(timeNow()-start).toFixed(2)+' ms';showToast(`확장 검색 결과 ${res.length}건`);}catch(err){$('#extendedResult').innerHTML=`<div class="notice error"><b>검색식 해석 오류</b><br>${esc(err.message)}</div>`;}}
+  function updateDatasetEditor(){ $('#dataEditor').value=JSON.stringify(DATA,null,2); }
+  function refreshAll(){ buildFuse();runSearch();updateDatasetEditor();$('#statDocs').textContent=DATA.length;$('#collectionDocs').textContent=DATA.length; }
+  function addDemoDoc(){ $('#addModal').classList.add('open'); }
+  function confirmAdd(){ const item={id:'DEMO-'+String(Date.now()).slice(-5),title:$('#newTitle').value.trim()||'데모 문서',summary:$('#newSummary').value.trim(),category:$('#newCategory').value.trim()||'기타',tags:$('#newTags').value.split(',').map(s=>s.trim()).filter(Boolean),owner:{name:'실험자',team:'Feature Lab'},priority:$('#newPriority').value,updated:new Date().toISOString().slice(0,10),references:[{name:'사용자 추가',type:'데모'}]};DATA.push(item);$('#addModal').classList.remove('open');prebuilt=false;log('fuse.add(item)',`${item.id} · ${item.title}`);refreshAll();showToast('데모 문서를 추가했습니다.'); }
+  function removeDemo(){if(!buildFuse())return; const removed=fuse.remove(doc=>/데모/.test(doc.title)); DATA=fuse.getCollection?fuse.getCollection():DATA.filter(d=>!removed.includes(d)); if(!Array.isArray(DATA)||DATA.length===0) DATA=structuredClone(ORIGINAL_DATA);prebuilt=false;log('fuse.remove(predicate)',`${removed.length}개 문서 제거`);refreshAll();showToast(`${removed.length}개 문서를 제거했습니다.`);}
+  function removeLast(){if(!buildFuse())return;if(!DATA.length)return; const last=DATA[DATA.length-1];fuse.removeAt(DATA.length-1);DATA=DATA.slice(0,-1);prebuilt=false;log('fuse.removeAt(index)',`${last.id} · ${last.title}`);refreshAll();showToast('마지막 문서를 삭제했습니다.');}
+  function restore(){DATA=structuredClone(ORIGINAL_DATA);prebuilt=false;log('fuse.setCollection(originalData)',`${DATA.length}개 원본 문서 복원`);refreshAll();showToast('원본 데이터로 복원했습니다.');}
+  function prebuild(){if(!window.Fuse){buildFuse();return;}prebuilt=true;const opts=getInputs();const ix=Fuse.createIndex(opts.keys,DATA);log('Fuse.createIndex(keys, collection)',`index.size() = ${ix.size()} → Fuse.parseIndex() 적용`);buildFuse();runSearch();$('#indexPreview').textContent=JSON.stringify(ix.toJSON(),null,2).slice(0,5500)+(JSON.stringify(ix.toJSON()).length>5500?'\n… (미리보기 생략)':'');showToast('사전 생성 인덱스를 적용했습니다.');}
+  function disablePrebuilt(){prebuilt=false;log('new Fuse(collection, options)','일반 인덱스 모드로 복귀');refreshAll();showToast('일반 인덱스로 복귀했습니다.');}
+  function showIndex(){if(!buildFuse())return;const json=fuse.getIndex().toJSON();$('#indexPreview').textContent=JSON.stringify(json,null,2).slice(0,9000)+(JSON.stringify(json).length>9000?'\n… (미리보기 생략)':'');showToast('현재 인덱스를 표시했습니다.');}
+  function downloadIndex(){if(!buildFuse())return;download('fuse-index.json',JSON.stringify(fuse.getIndex().toJSON(),null,2));log('fuse.getIndex().toJSON()','fuse-index.json 다운로드');showToast('인덱스 JSON을 다운로드했습니다.');}
+
+  function init(){
+    renderKeys(); $('#quickQueries').innerHTML=quicks.map(q=>`<button class="quick" data-q="${esc(q)}">${esc(q)}</button>`).join(''); $$('.quick').forEach(b=>b.addEventListener('click',()=>{$('#query').value=b.dataset.q;runSearch();}));
+    $('#extendedPresets').innerHTML=extPresets.map(p=>`<button class="btn ghost small ext-preset" data-v="${esc(p.value)}" title="${esc(p.note)}">${esc(p.label)}</button>`).join(''); $$('.ext-preset').forEach(b=>b.addEventListener('click',()=>{$('#extendedQuery').value=b.dataset.v;runExtended();}));
+    $('#operatorCards').innerHTML=operatorInfo.map(([t,q,d])=>`<button class="feature" style="width:100%;text-align:left;margin-bottom:8px;cursor:pointer" data-op="${esc(q)}"><h3>${esc(t)} <span class="mono" style="color:#75e0a5">${esc(q)}</span></h3><p>${esc(d)}</p></button>`).join(''); $$('#operatorCards [data-op]').forEach(b=>b.addEventListener('click',()=>{$('#extendedQuery').value=b.dataset.op;runExtended();}));
+    $('#featureGrid').innerHTML=features.map(f=>`<button class="feature" data-go="${f[0]}" style="text-align:left;cursor:pointer"><h3>${esc(f[1])}</h3><p>${esc(f[2])}</p><div class="mini">${esc(f[3])}</div></button>`).join(''); $$('#featureGrid [data-go]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.go)));
+    $('#logicRows').innerHTML=logicRow('category','개발가이드')+logicRow('tags',"'검색"); bindLogicRemovers();updateLogicJson();
+    $$('.tab').forEach(t=>t.addEventListener('click',()=>switchView(t.dataset.view)));
+    updateRange('threshold','thresholdOut',v=>Number(v).toFixed(2)); updateRange('distance','distanceOut'); updateRange('location','locationOut'); updateRange('fieldNormWeight','fieldNormWeightOut',v=>Number(v).toFixed(1));
+    ['ignoreLocation','shouldSort','findAllMatches','ignoreFieldNorm','useTokenSearch','caseSensitive','ignoreDiacritics','minMatch','limit','clientSort'].forEach(id=>$('#'+id).addEventListener('change',rebuildAndSearch));
+    $('#query').addEventListener('input',()=>runSearch()); $('#query').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();}); $('#runSearch').addEventListener('click',()=>runSearch()); $('#resetOptions').addEventListener('click',setDefaults); $('#addKey').addEventListener('click',()=>{state.keys.push({name:'references.name',weight:.08});renderKeys();rebuildAndSearch();});
+    $('#runExtended').addEventListener('click',runExtended); $('#extendedQuery').addEventListener('keydown',e=>{if(e.key==='Enter')runExtended();}); $('#copyExtended').addEventListener('click',()=>copyText($('#extendedQuery').value));
+    $('#addLogic').addEventListener('click',()=>{$('#logicRows').insertAdjacentHTML('beforeend',logicRow('title',''));bindLogicRemovers();updateLogicJson();}); $('#logicMode').addEventListener('change',updateLogicJson);$('#logicRows').addEventListener('input',updateLogicJson);$('#logicPreset').addEventListener('change',e=>setLogicPreset(e.target.value)); $('#runLogical').addEventListener('click',runLogical);$('#loadLogicJson').addEventListener('click',updateLogicJson);
+    $('#addDemo').addEventListener('click',addDemoDoc); $('#closeModal').addEventListener('click',()=>$('#addModal').classList.remove('open')); $('#cancelAdd').addEventListener('click',()=>$('#addModal').classList.remove('open')); $('#confirmAdd').addEventListener('click',confirmAdd); $('#addModal').addEventListener('click',e=>{if(e.target===$('#addModal'))$('#addModal').classList.remove('open');});$('#removeDemo').addEventListener('click',removeDemo);$('#removeAt').addEventListener('click',removeLast);$('#restoreData').addEventListener('click',restore);$('#buildPrebuilt').addEventListener('click',prebuild);$('#disablePrebuilt').addEventListener('click',disablePrebuilt);$('#showIndex').addEventListener('click',showIndex);$('#downloadIndex').addEventListener('click',downloadIndex);$('#clearLog').addEventListener('click',()=>{apiLog=[];$('#apiLog').textContent='로그를 지웠습니다.';});
+    $('#applyData').addEventListener('click',()=>{try{const parsed=JSON.parse($('#dataEditor').value);if(!Array.isArray(parsed))throw new Error('최상위 값은 JSON 배열이어야 합니다.');DATA=parsed;prebuilt=false;log('fuse.setCollection(parsedData)',`${DATA.length}개 문서 적용`);refreshAll();showToast('JSON 데이터셋을 적용했습니다.');}catch(err){showToast('JSON 오류: '+err.message);}});$('#refreshData').addEventListener('click',updateDatasetEditor);$('#formatData').addEventListener('click',()=>{try{$('#dataEditor').value=JSON.stringify(JSON.parse($('#dataEditor').value),null,2);}catch(err){showToast('JSON 문법을 먼저 수정하세요.');}});$('#copyResultJson').addEventListener('click',()=>copyText($('#resultJson').textContent));
+    updateDatasetEditor();log('new Fuse(collection, options)',`${DATA.length}개 샘플 데이터로 초기화`);window.addEventListener('load',()=>{buildFuse();runSearch();},{once:true});
+  }
+  init();
+})();
+</script>
+</body>
+</html>
