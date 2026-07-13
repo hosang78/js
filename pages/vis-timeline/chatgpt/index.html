@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>vis-timeline 종합 기능 실험실</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link id="visCss" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-timeline@8.5.1/styles/vis-timeline-graph2d.min.css" />
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --line: #dce3ed;
+      --line-strong: #c9d3e1;
+      --text: #172033;
+      --muted: #667085;
+      --primary: #3157d5;
+      --primary-soft: #edf1ff;
+      --success: #16835d;
+      --warning: #b36a00;
+      --danger: #c63b49;
+      --violet: #7558cc;
+      --shadow: 0 14px 34px rgba(24, 39, 75, .08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 6% -8%, rgba(49, 87, 213, .12), transparent 30%),
+        radial-gradient(circle at 94% 0%, rgba(22, 131, 93, .09), transparent 26%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button, select, input[type="checkbox"] { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(49, 87, 213, .2);
+      outline-offset: 2px;
+    }
+
+    .app { max-width: 1780px; margin: 0 auto; padding: 22px; }
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 9px;
+      border: 1px solid #cfd8ff;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .8);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: .03em;
+    }
+    h1 { margin: 8px 0 4px; font-size: clamp(24px, 3vw, 38px); line-height: 1.15; letter-spacing: -.04em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 14px; }
+    .top-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      padding: 8px 11px;
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 700;
+      transition: .18s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #aebbd0; box-shadow: 0 5px 12px rgba(20, 35, 70, .08); }
+    .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn.soft { background: var(--primary-soft); border-color: #d7dfff; color: var(--primary); }
+    .btn.danger { color: var(--danger); }
+    .btn.small { min-height: 30px; padding: 5px 8px; font-size: 12px; }
+    .btn.active { background: #172033; color: #fff; border-color: #172033; }
+    .btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, .88);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      box-shadow: 0 5px 16px rgba(24, 39, 75, .04);
+    }
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .stat-value { margin-top: 2px; font-size: 19px; font-weight: 850; letter-spacing: -.02em; }
+    .stat-value.range { font-size: 13px; font-weight: 750; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 11px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fff, #fbfcfe);
+    }
+    .toolbar .sep { width: 1px; height: 27px; background: var(--line); margin: 0 2px; }
+    .toolbar .grow { flex: 1 1 auto; }
+    .search-wrap { position: relative; min-width: 240px; max-width: 360px; flex: 1 1 270px; }
+    .search-wrap input {
+      width: 100%;
+      height: 36px;
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      padding: 0 34px 0 34px;
+      color: var(--text);
+      background: #fff;
+    }
+    .search-icon { position: absolute; left: 11px; top: 8px; color: var(--muted); }
+    .search-count { position: absolute; right: 9px; top: 7px; min-width: 21px; height: 21px; padding: 0 5px; display: grid; place-items: center; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 800; }
+
+    .filterbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 11px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+    .filterbar select {
+      min-height: 32px;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      padding: 5px 28px 5px 9px;
+      background: #fff;
+      color: var(--text);
+    }
+    .filter-label { color: var(--muted); font-weight: 700; font-size: 12px; }
+    .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-left: auto; color: var(--muted); font-size: 11px; }
+    .legend i { width: 9px; height: 9px; display: inline-block; border-radius: 50%; margin-right: 4px; }
+    .legend .planned { background: #7382a6; }
+    .legend .active { background: var(--primary); }
+    .legend .done { background: var(--success); }
+    .legend .risk { background: var(--danger); }
+
+    #timelineWrap { position: relative; min-height: 600px; background: #fff; }
+    #timeline { height: 600px; }
+    .loading, .load-error {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      text-align: center;
+      background: rgba(255, 255, 255, .96);
+    }
+    .loading-box, .error-box { max-width: 650px; }
+    .spinner { width: 34px; height: 34px; margin: 0 auto 13px; border: 3px solid #dfe5f2; border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-error { display: none; }
+    .load-error code { display: block; margin: 12px 0; padding: 10px; border-radius: 9px; background: #f4f6fa; word-break: break-all; text-align: left; }
+
+    .timeline-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 9px 12px;
+      border-top: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .timeline-footer strong { color: var(--text); }
+    .footer-hint { margin-left: auto; }
+
+    .side { display: grid; gap: 12px; position: sticky; top: 12px; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(24, 39, 75, .06); overflow: hidden; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 13px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+    .panel-head h2 { margin: 0; font-size: 14px; }
+    .panel-body { padding: 12px; }
+    .empty { color: var(--muted); padding: 14px 4px; text-align: center; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .field { display: grid; gap: 4px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: var(--muted); font-size: 11px; font-weight: 750; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 7px 8px;
+      background: #fff;
+      color: var(--text);
+    }
+    .field textarea { min-height: 62px; resize: vertical; }
+    .editor-actions { display: flex; gap: 7px; margin-top: 10px; }
+
+    details { border-bottom: 1px solid var(--line); }
+    details:last-child { border-bottom: 0; }
+    details > summary { list-style: none; cursor: pointer; padding: 10px 13px; font-weight: 800; display: flex; align-items: center; justify-content: space-between; }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::after { content: "+"; color: var(--muted); font-size: 18px; }
+    details[open] > summary::after { content: "−"; }
+    .option-list { padding: 0 12px 12px; display: grid; gap: 8px; }
+    .option-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 29px; }
+    .option-row label { color: #354056; font-size: 12px; }
+    .option-row select { max-width: 130px; border: 1px solid var(--line-strong); border-radius: 7px; padding: 4px 6px; background: #fff; }
+    .switch { position: relative; width: 36px; height: 20px; flex: 0 0 36px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch span { position: absolute; inset: 0; border-radius: 12px; background: #c8d0dc; transition: .18s; }
+    .switch span::after { content: ""; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.22); transition: .18s; }
+    .switch input:checked + span { background: var(--primary); }
+    .switch input:checked + span::after { transform: translateX(16px); }
+
+    .drag-palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .drag-card { border: 1px dashed #aebbd0; border-radius: 9px; padding: 8px 5px; background: #fbfcff; text-align: center; font-size: 11px; font-weight: 800; user-select: none; cursor: grab; }
+    .drag-card:active { cursor: grabbing; }
+
+    .event-log { max-height: 220px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .log-entry { display: grid; grid-template-columns: 55px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #e5e9f0; }
+    .log-entry:last-child { border: 0; }
+    .log-time { color: #8a94a6; }
+    .log-name { color: var(--primary); font-weight: 800; }
+    .log-detail { color: #515d73; overflow-wrap: anywhere; }
+
+    .context-menu { position: fixed; z-index: 100; display: none; min-width: 190px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: 0 16px 40px rgba(16, 24, 40, .18); }
+    .context-menu button { width: 100%; border: 0; border-radius: 7px; padding: 8px 9px; text-align: left; background: transparent; color: var(--text); }
+    .context-menu button:hover { background: var(--surface-2); }
+
+    .toast-stack { position: fixed; right: 20px; bottom: 20px; z-index: 200; display: grid; gap: 8px; }
+    .toast { min-width: 240px; max-width: 420px; padding: 11px 13px; border-radius: 10px; background: #172033; color: #fff; box-shadow: 0 14px 30px rgba(16, 24, 40, .22); animation: toastIn .2s ease; }
+    @keyframes toastIn { from { transform: translateY(8px); opacity: 0; } }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 150; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15, 23, 42, .46); }
+    .modal { width: min(760px, 100%); max-height: 86vh; display: flex; flex-direction: column; background: #fff; border-radius: 14px; box-shadow: 0 25px 80px rgba(0,0,0,.28); overflow: hidden; }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 15px; border-bottom: 1px solid var(--line); }
+    .modal-head h2 { margin: 0; font-size: 16px; }
+    .modal-body { padding: 14px; overflow: auto; }
+    .modal textarea { width: 100%; min-height: 390px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 10px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.55; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+
+    /* vis-timeline customization */
+    .vis-timeline { border: 0; font-family: inherit; }
+    .vis-panel.vis-left { border-right-color: #d9e0eb; background: #fafbfd; }
+    .vis-panel.vis-center, .vis-panel.vis-top, .vis-panel.vis-bottom { border-color: #d9e0eb; }
+    .vis-time-axis .vis-text { color: #5b6578; font-size: 11px; }
+    .vis-time-axis .vis-text.vis-major { color: #28334a; font-weight: 850; }
+    .vis-time-axis .vis-grid.vis-minor { border-color: #edf0f5; }
+    .vis-time-axis .vis-grid.vis-major { border-color: #dfe5ee; }
+    .vis-labelset .vis-label { color: #2a354b; border-bottom-color: #e4e8ef; }
+    .vis-labelset .vis-label .vis-inner { padding: 8px 10px; }
+    .vis-foreground .vis-group { border-bottom-color: #e8ecf2; }
+    .vis-item { border-width: 1px; border-radius: 8px; font-size: 11px; color: #28334a; box-shadow: 0 3px 8px rgba(35, 53, 92, .07); }
+    .vis-item.vis-box { padding: 2px 0; }
+    .vis-item.vis-range { border-radius: 8px; }
+    .vis-item.vis-point { background: transparent; border-color: transparent; box-shadow: none; }
+    .vis-item.vis-point .vis-dot { border-width: 5px; }
+    .vis-item.vis-selected { border-color: #172033 !important; box-shadow: 0 0 0 2px rgba(23, 32, 51, .15), 0 8px 16px rgba(35, 53, 92, .15); }
+    .vis-item.status-planned { background: #eef1f6; border-color: #aab4c7; }
+    .vis-item.status-active { background: #e8edff; border-color: #6f87e9; }
+    .vis-item.status-done { background: #e7f6ef; border-color: #65b497; }
+    .vis-item.status-risk { background: #fdecee; border-color: #df8790; }
+    .vis-item.status-cluster { background: #f1edff; border-color: #a995e8; }
+    .vis-item.readonly { border-style: dashed; opacity: .82; }
+    .vis-item.search-dim { opacity: .15; filter: grayscale(.8); }
+    .vis-item.search-match { box-shadow: 0 0 0 3px rgba(255, 181, 46, .35), 0 5px 12px rgba(35,53,92,.12); }
+    .vis-item.phase-bg { background: rgba(49, 87, 213, .055); border-color: transparent; box-shadow: none; }
+    .vis-item.weekend-bg { background: rgba(198, 59, 73, .035); border-color: transparent; box-shadow: none; }
+    .vis-current-time { background-color: #e14655; width: 2px; }
+    .vis-custom-time.baseline { background-color: #ef9f1a; width: 2px; }
+    .vis-custom-time.target { background-color: var(--success); width: 2px; }
+    .vis-custom-time .vis-custom-time-marker { border-radius: 6px; padding: 3px 6px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .vis-custom-time.baseline .vis-custom-time-marker { background: #fff1d7; color: #8a5100; }
+    .vis-custom-time.target .vis-custom-time-marker { background: #dbf3e9; color: #126146; }
+    .vis-item .vis-delete { top: -8px; right: -8px; }
+    .vis-item.vis-background { border-radius: 0; }
+    .vis-cluster { background: #272e42 !important; border-color: #272e42 !important; color: #fff !important; }
+    .vis-item-content { overflow: visible; }
+
+    .item-template { min-width: 62px; padding: 2px 5px 3px; }
+    .item-line { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .item-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px; background: currentColor; opacity: .75; }
+    .item-title { max-width: 170px; overflow: hidden; text-overflow: ellipsis; font-weight: 800; }
+    .item-meta { margin-top: 2px; color: #667085; font-size: 9px; white-space: nowrap; }
+    .item-progress { display: block; height: 3px; margin-top: 4px; border-radius: 2px; background: rgba(23, 32, 51, .12); overflow: hidden; }
+    .item-progress i { display: block; height: 100%; background: currentColor; opacity: .65; }
+    .p0 { width: 0%; } .p10 { width: 10%; } .p20 { width: 20%; } .p30 { width: 30%; } .p40 { width: 40%; }
+    .p50 { width: 50%; } .p60 { width: 60%; } .p70 { width: 70%; } .p80 { width: 80%; } .p90 { width: 90%; } .p100 { width: 100%; }
+
+    .group-template { min-width: 160px; display: flex; align-items: center; gap: 9px; }
+    .group-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: #edf1ff; color: var(--primary); font-size: 15px; }
+    .group-name { font-size: 12px; font-weight: 850; white-space: nowrap; }
+    .group-meta { color: #8992a3; font-size: 9px; white-space: nowrap; }
+    .parent-group .group-icon { background: #172033; color: #fff; }
+    .parent-group .group-name { font-size: 13px; }
+
+    .vis-saturday, .vis-sunday { background: rgba(198, 59, 73, .025); }
+    .vis-today { background: rgba(49, 87, 213, .035); }
+
+    @media (max-width: 1120px) {
+      .workspace { grid-template-columns: 1fr; }
+      .side { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .side .panel:last-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 760px) {
+      .app { padding: 12px; }
+      .topbar { display: block; }
+      .top-actions { margin-top: 12px; justify-content: flex-start; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .side { grid-template-columns: 1fr; }
+      .side .panel:last-child { grid-column: auto; }
+      .legend { width: 100%; margin-left: 0; }
+      .toolbar .sep { display: none; }
+      .footer-hint { width: 100%; margin-left: 0; }
+      #timeline { height: 520px; }
+      #timelineWrap { min-height: 520px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">VIS-TIMELINE 8.5.1 · INTERACTIVE LAB</span>
+        <h1>vis-timeline 종합 기능 실험실</h1>
+        <p class="subtitle">그룹·중첩 그룹·항목 유형·편집·클러스터·마커·이벤트·검색·JSON 입출력을 한 페이지에서 실험하는 샘플</p>
+      </div>
+      <div class="top-actions">
+        <button class="btn soft" id="btnGuide">사용법</button>
+        <button class="btn" id="btnSaveLocal">브라우저 저장</button>
+        <button class="btn" id="btnJson">JSON 입출력</button>
+        <button class="btn danger" id="btnReset">초기화</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="타임라인 통계">
+      <div class="stat"><div class="stat-label">전체 항목</div><div class="stat-value" id="statItems">0</div></div>
+      <div class="stat"><div class="stat-label">현재 보이는 항목</div><div class="stat-value" id="statVisible">0</div></div>
+      <div class="stat"><div class="stat-label">선택 항목</div><div class="stat-value" id="statSelected">0</div></div>
+      <div class="stat"><div class="stat-label">표시 구간</div><div class="stat-value range" id="statRange">-</div></div>
+    </section>
+
+    <section class="workspace">
+      <div class="card">
+        <div class="toolbar">
+          <button class="btn small primary" id="btnFit" title="모든 항목 맞춤 (F)">전체 맞춤</button>
+          <button class="btn small" id="btnToday" title="오늘로 이동 (T)">오늘</button>
+          <button class="btn small" id="btnPrev" title="이전 구간">←</button>
+          <button class="btn small" id="btnNext" title="다음 구간">→</button>
+          <button class="btn small" id="btnZoomIn" title="확대 (+)">＋</button>
+          <button class="btn small" id="btnZoomOut" title="축소 (-)">－</button>
+          <button class="btn small" id="btnFocus" title="선택 항목으로 이동">선택 집중</button>
+          <span class="sep"></span>
+          <button class="btn small" id="btnAdd">항목 추가</button>
+          <button class="btn small" id="btnDuplicate">복제</button>
+          <button class="btn small danger" id="btnDelete">삭제</button>
+          <div class="grow"></div>
+          <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+            <input id="searchInput" type="search" placeholder="제목·담당자·메모 검색" autocomplete="off" />
+            <span class="search-count" id="searchCount">0</span>
+          </div>
+        </div>
+
+        <div class="filterbar">
+          <span class="filter-label">필터</span>
+          <select id="groupFilter"><option value="all">모든 그룹</option></select>
+          <select id="statusFilter">
+            <option value="all">모든 상태</option>
+            <option value="planned">계획</option>
+            <option value="active">진행</option>
+            <option value="done">완료</option>
+            <option value="risk">위험</option>
+          </select>
+          <button class="btn small" id="btnClearFilter">필터 해제</button>
+          <div class="legend">
+            <span><i class="planned"></i>계획</span>
+            <span><i class="active"></i>진행</span>
+            <span><i class="done"></i>완료</span>
+            <span><i class="risk"></i>위험</span>
+          </div>
+        </div>
+
+        <div id="timelineWrap">
+          <div id="timeline" aria-label="vis-timeline 데모"></div>
+          <div class="loading" id="loading">
+            <div class="loading-box"><div class="spinner"></div><strong>vis-timeline 라이브러리 로딩 중</strong><div style="color:#667085;margin-top:5px">인터넷 연결 또는 로컬 라이브러리 파일을 확인한다.</div></div>
+          </div>
+          <div class="load-error" id="loadError">
+            <div class="error-box">
+              <h2>라이브러리를 불러오지 못했다.</h2>
+              <p>외부망이 차단된 환경에서는 아래 두 파일을 HTML과 같은 폴더에 저장하면 자동으로 다시 시도한다.</p>
+              <code>vis-timeline-graph2d.min.js<br>vis-timeline-graph2d.min.css</code>
+              <button class="btn primary" onclick="location.reload()">다시 불러오기</button>
+            </div>
+          </div>
+        </div>
+        <div class="timeline-footer">
+          <span>마우스 드래그: <strong>이동</strong></span>
+          <span>휠: <strong>확대·축소</strong></span>
+          <span>Ctrl/Shift+클릭: <strong>다중 선택</strong></span>
+          <span>빈 공간 더블클릭: <strong>추가</strong></span>
+          <span>항목 더블클릭: <strong>수정</strong></span>
+          <span class="footer-hint" id="lastEvent">마지막 이벤트: 초기화</span>
+        </div>
+      </div>
+
+      <aside class="side">
+        <section class="panel">
+          <div class="panel-head"><h2>선택 항목 편집</h2><span id="selectedBadge">0개</span></div>
+          <div class="panel-body" id="editorEmpty"><div class="empty">타임라인 항목을 선택하면 상세 편집기가 표시된다.</div></div>
+          <div class="panel-body" id="editorForm" hidden>
+            <div class="form-grid">
+              <div class="field full"><label for="edContent">제목</label><input id="edContent" /></div>
+              <div class="field"><label for="edStart">시작</label><input id="edStart" type="datetime-local" /></div>
+              <div class="field"><label for="edEnd">종료</label><input id="edEnd" type="datetime-local" /></div>
+              <div class="field"><label for="edGroup">그룹</label><select id="edGroup"></select></div>
+              <div class="field"><label for="edType">유형</label><select id="edType"><option>range</option><option>box</option><option>point</option><option>background</option></select></div>
+              <div class="field"><label for="edStatus">상태</label><select id="edStatus"><option value="planned">계획</option><option value="active">진행</option><option value="done">완료</option><option value="risk">위험</option></select></div>
+              <div class="field"><label for="edProgress">진척률(%)</label><input id="edProgress" type="number" min="0" max="100" step="10" /></div>
+              <div class="field full"><label for="edOwner">담당자</label><input id="edOwner" /></div>
+              <div class="field full"><label for="edNote">메모</label><textarea id="edNote"></textarea></div>
+            </div>
+            <div class="editor-actions">
+              <button class="btn small primary" id="btnEditorSave">변경 저장</button>
+              <button class="btn small" id="btnEditorFocus">화면 중앙</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>기능 옵션</h2><span>실시간 반영</span></div>
+          <details open>
+            <summary>표시·축 설정</summary>
+            <div class="option-list">
+              <div class="option-row"><label>축 위치</label><select id="optOrientation"><option value="bottom">아래</option><option value="top">위</option><option value="both">양쪽</option><option value="none">숨김</option></select></div>
+              <div class="option-row"><label>그룹 높이</label><select id="optGroupHeight"><option value="auto">자동</option><option value="fitItems">항목 맞춤</option><option value="fixed">고정</option></select></div>
+              <div class="option-row"><label>현재 시각선</label><label class="switch"><input id="optCurrentTime" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>주 번호 표시</label><label class="switch"><input id="optWeekScale" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>주말 숨김</label><label class="switch"><input id="optHideWeekend" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>RTL 방향</label><label class="switch"><input id="optRtl" type="checkbox"><span></span></label></div>
+            </div>
+          </details>
+          <details open>
+            <summary>배치·탐색 설정</summary>
+            <div class="option-list">
+              <div class="option-row"><label>항목 쌓기</label><label class="switch"><input id="optStack" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>중첩 항목 클러스터</label><label class="switch"><input id="optCluster" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>세로 스크롤</label><label class="switch"><input id="optVerticalScroll" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>가로 스크롤</label><label class="switch"><input id="optHorizontalScroll" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>15분 단위 스냅</label><label class="switch"><input id="optSnap" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>롤링 모드</label><label class="switch"><input id="optRolling" type="checkbox"><span></span></label></div>
+            </div>
+          </details>
+          <details>
+            <summary>선택·편집 설정</summary>
+            <div class="option-list">
+              <div class="option-row"><label>항목 편집</label><label class="switch"><input id="optEditable" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>항상 드래그</label><label class="switch"><input id="optAlwaysDrag" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>순차 다중 선택</label><label class="switch"><input id="optSequential" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>그룹 내 다중 선택</label><label class="switch"><input id="optMultiGroup" type="checkbox"><span></span></label></div>
+              <div class="option-row"><label>그룹 순서 드래그</label><label class="switch"><input id="optGroupReorder" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>클릭 후 활성화</label><label class="switch"><input id="optClickUse" type="checkbox"><span></span></label></div>
+            </div>
+          </details>
+          <details>
+            <summary>툴팁·고급 설정</summary>
+            <div class="option-list">
+              <div class="option-row"><label>마우스 추적 툴팁</label><label class="switch"><input id="optFollowTooltip" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>대축 라벨</label><label class="switch"><input id="optMajorLabels" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>소축 라벨</label><label class="switch"><input id="optMinorLabels" type="checkbox" checked><span></span></label></div>
+              <div class="option-row"><label>내장 설정기</label><label class="switch"><input id="optConfigure" type="checkbox"><span></span></label></div>
+            </div>
+          </details>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>외부 항목 드래그</h2><span>타임라인에 놓기</span></div>
+          <div class="panel-body">
+            <div class="drag-palette">
+              <div class="drag-card" draggable="true" data-kind="task">업무</div>
+              <div class="drag-card" draggable="true" data-kind="milestone">마일스톤</div>
+              <div class="drag-card" draggable="true" data-kind="risk">위험</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>이벤트 로그</h2><button class="btn small" id="btnClearLog">지우기</button></div>
+          <div class="panel-body event-log" id="eventLog"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <div class="context-menu" id="contextMenu">
+    <button data-action="addPoint">이 위치에 포인트 추가</button>
+    <button data-action="addRange">이 위치에 2일 업무 추가</button>
+    <button data-action="inspect">이벤트 속성 보기</button>
+  </div>
+
+  <div class="toast-stack" id="toastStack"></div>
+
+  <div class="modal-backdrop" id="jsonModal" role="dialog" aria-modal="true" aria-labelledby="jsonTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 id="jsonTitle">JSON 데이터 입출력</h2><button class="btn small" data-close-modal>닫기</button></div>
+      <div class="modal-body"><textarea id="jsonText" spellcheck="false"></textarea></div>
+      <div class="modal-foot">
+        <button class="btn" id="btnJsonCopy">복사</button>
+        <button class="btn" id="btnJsonDownload">파일 저장</button>
+        <button class="btn primary" id="btnJsonApply">JSON 적용</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 id="guideTitle">샘플 사용법</h2><button class="btn small" data-close-modal>닫기</button></div>
+      <div class="modal-body">
+        <h3>직접 확인할 수 있는 기능</h3>
+        <p>항목 유형(box·point·range·background), 그룹·중첩 그룹·서브그룹, 드래그 이동·그룹 변경·범위 조절, 다중 선택, 그룹 순서 변경, 클러스터, 숨김 날짜, 커스텀 시간선, 툴팁·템플릿, 검색 강조, 이벤트 로그, JSON 입출력, localStorage 저장 기능을 포함한다.</p>
+        <h3>추천 실험 순서</h3>
+        <ol>
+          <li>전체 맞춤 후 확대·축소와 화면 이동을 시험한다.</li>
+          <li>항목을 선택해 오른쪽 편집기에서 제목·기간·그룹·상태를 바꾼다.</li>
+          <li>클러스터를 켜고 ‘클러스터 실험’ 그룹의 밀집 항목이 묶이는지 확인한다.</li>
+          <li>주말 숨김, 축 위치, 쌓기, 롤링 모드 등 옵션을 바꾼다.</li>
+          <li>외부 항목 카드를 원하는 날짜·그룹으로 끌어 놓는다.</li>
+          <li>JSON 입출력에서 현재 데이터를 백업하거나 수정된 JSON을 다시 적용한다.</li>
+        </ol>
+        <p><strong>키보드:</strong> F 전체 맞춤, T 오늘, + 확대, - 축소, N 새 항목, Delete 선택 삭제</p>
+      </div>
+      <div class="modal-foot"><button class="btn primary" data-close-modal>확인</button></div>
+    </div>
+  </div>
+
+  <script>
+    // CDN 실패 시 같은 폴더의 로컬 파일로 자동 대체
+    (function loadVisLibrary() {
+      const candidates = [
+        'https://cdn.jsdelivr.net/npm/vis-timeline@8.5.1/standalone/umd/vis-timeline-graph2d.min.js',
+        'https://unpkg.com/vis-timeline@8.5.1/standalone/umd/vis-timeline-graph2d.min.js',
+        './vis-timeline-graph2d.min.js'
+      ];
+      let index = 0;
+      function tryNext() {
+        if (index >= candidates.length) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('loadError').style.display = 'grid';
+          return;
+        }
+        const src = candidates[index++];
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = function () {
+          if (window.vis && window.vis.Timeline && window.vis.DataSet) {
+            window.dispatchEvent(new Event('vis-ready'));
+          } else {
+            script.remove();
+            tryNext();
+          }
+        };
+        script.onerror = function () { script.remove(); tryNext(); };
+        document.head.appendChild(script);
+      }
+      const css = document.getElementById('visCss');
+      const cssCandidates = [
+        'https://unpkg.com/vis-timeline@8.5.1/styles/vis-timeline-graph2d.min.css',
+        './vis-timeline-graph2d.min.css'
+      ];
+      let cssIndex = 0;
+      css.addEventListener('error', function () {
+        if (cssIndex < cssCandidates.length) css.href = cssCandidates[cssIndex++];
+      });
+      tryNext();
+    })();
+  </script>
+
+  <script>
+    window.addEventListener('vis-ready', initApp, { once: true });
+
+    function initApp() {
+      'use strict';
+      document.getElementById('loading').style.display = 'none';
+
+      const DAY = 24 * 60 * 60 * 1000;
+      const HOUR = 60 * 60 * 1000;
+      const now = new Date();
+      const base = startOfDay(addDays(now, -12));
+      let idSeed = 1000;
+      let lastContextProps = null;
+      let selectedIds = [];
+      let rollingEnabled = false;
+      let activeFilter = { group: 'all', status: 'all', query: '' };
+
+      const $ = (id) => document.getElementById(id);
+      const statusLabel = { planned: '계획', active: '진행', done: '완료', risk: '위험', cluster: '밀집' };
+
+      function addDays(date, amount) { return new Date(date.getTime() + amount * DAY); }
+      function addHours(date, amount) { return new Date(date.getTime() + amount * HOUR); }
+      function startOfDay(date) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d; }
+      function clamp(value, min, max) { return Math.max(min, Math.min(max, Number(value) || 0)); }
+      function esc(value) { return String(value ?? '').replace(/[&<>'"]/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[ch])); }
+      function nativeDate(value) {
+        if (value instanceof Date) return value;
+        if (value && typeof value.toDate === 'function') return value.toDate();
+        return new Date(value);
+      }
+      function fmtDate(value, withTime = false) {
+        const d = nativeDate(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        const opt = withTime
+          ? { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }
+          : { year:'numeric', month:'2-digit', day:'2-digit' };
+        return new Intl.DateTimeFormat('ko-KR', opt).format(d);
+      }
+      function toInputDate(value) {
+        if (!value) return '';
+        const d = nativeDate(value);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+      function roundProgress(value) { return Math.round(clamp(value, 0, 100) / 10) * 10; }
+      function baseClassFor(item) {
+        const arr = [`status-${item.status || 'planned'}`];
+        if (item.readonly) arr.push('readonly');
+        if (item.type === 'background') arr.push(item.bgClass || 'phase-bg');
+        return arr.join(' ');
+      }
+      function normalizeItem(item) {
+        const copy = { ...item };
+        copy.id = copy.id ?? `item-${++idSeed}`;
+        copy.content = copy.content || '새 항목';
+        copy.start = nativeDate(copy.start || new Date());
+        if (copy.end) copy.end = nativeDate(copy.end);
+        copy.status = copy.status || 'planned';
+        copy.progress = clamp(copy.progress, 0, 100);
+        copy.owner = copy.owner || '미정';
+        copy.note = copy.note || '';
+        copy.type = copy.type || (copy.end ? 'range' : 'box');
+        copy.baseClass = copy.baseClass || baseClassFor(copy);
+        copy.className = copy.className || copy.baseClass;
+        return copy;
+      }
+
+      const groupSeed = [
+        { id:'digital', content:'디지털 전환', order:1, icon:'◆', meta:'상위 그룹', nestedGroups:['strategy','automation','data'], showNested:true, className:'parent-group' },
+        { id:'strategy', content:'전략·기획', order:2, icon:'◎', meta:'5개 업무' },
+        { id:'automation', content:'업무 자동화', order:3, icon:'↻', meta:'서브그룹 적용', subgroupOrder:(a,b) => String(a).localeCompare(String(b)), subgroupStack:true },
+        { id:'data', content:'데이터·분석', order:4, icon:'▦', meta:'분석 및 품질' },
+        { id:'field', content:'현장 혁신', order:5, icon:'◇', meta:'상위 그룹', nestedGroups:['aquaculture','member'], showNested:true, className:'parent-group' },
+        { id:'aquaculture', content:'어업·양식 현장', order:6, icon:'≈', meta:'현장 실증' },
+        { id:'member', content:'회원조합 지원', order:7, icon:'⌂', meta:'교육·확산' },
+        { id:'shared', content:'공통 일정', order:8, icon:'☆', meta:'회의·보고' },
+        { id:'cluster-lab', content:'클러스터 실험', order:9, icon:'✣', meta:'밀집 포인트 48개' }
+      ];
+
+      const itemSeed = [
+        { id:'phase-1', content:'1단계 배경', start:addDays(base,0), end:addDays(base,12), group:'strategy', type:'background', status:'planned', bgClass:'phase-bg', editable:false },
+        { id:'phase-2', content:'2단계 배경', start:addDays(base,12), end:addDays(base,25), group:'data', type:'background', status:'planned', bgClass:'phase-bg', editable:false },
+        { id:1, content:'AI 활용과제 수요조사', start:addDays(base,1), end:addDays(base,6), group:'strategy', status:'done', progress:100, owner:'기획팀', note:'부서별 후보과제 취합 완료', priority:2 },
+        { id:2, content:'도입전략 초안', start:addDays(base,5), end:addDays(base,12), group:'strategy', status:'active', progress:70, owner:'전략팀', note:'단계별 로드맵 작성', priority:1 },
+        { id:3, content:'의사결정 보고', start:addDays(base,13), group:'strategy', type:'point', status:'planned', progress:0, owner:'실장', note:'경영진 보고 마일스톤', priority:1 },
+        { id:4, content:'업무 프로세스 분석', start:addDays(base,2), end:addDays(base,8), group:'automation', subgroup:'01-plan', status:'done', progress:100, owner:'자동화팀', note:'AS-IS 및 병목 구간 분석', priority:2 },
+        { id:5, content:'민원 분류 자동화', start:addDays(base,7), end:addDays(base,16), group:'automation', subgroup:'02-build', status:'active', progress:55, owner:'개발팀', note:'규칙 기반 + AI 분류 비교', priority:1 },
+        { id:6, content:'엑셀 취합 자동화', start:addDays(base,9), end:addDays(base,15), group:'automation', subgroup:'02-build', status:'active', progress:80, owner:'개발팀', note:'오류 검증 및 로그 포함', priority:2 },
+        { id:7, content:'사용자 검증', start:addDays(base,16), end:addDays(base,20), group:'automation', subgroup:'03-test', status:'planned', progress:10, owner:'현업 검증반', note:'대표 업무 5종 테스트', priority:2 },
+        { id:8, content:'데이터 표준 정의', start:addDays(base,1), end:addDays(base,10), group:'data', status:'active', progress:65, owner:'데이터팀', note:'코드·용어·품질 기준', priority:1 },
+        { id:9, content:'대시보드 시제품', start:addDays(base,8), end:addDays(base,18), group:'data', status:'active', progress:40, owner:'분석팀', note:'실시간 지표 시각화', priority:2 },
+        { id:10, content:'품질점검 기준 확정', start:addDays(base,20), group:'data', type:'box', status:'planned', progress:0, owner:'데이터팀', note:'읽기 전용 예시', readonly:true, editable:false, priority:1 },
+        { id:11, content:'양식장 센서 연계', start:addDays(base,3), end:addDays(base,14), group:'aquaculture', status:'active', progress:45, owner:'현장지원팀', note:'수온·용존산소 데이터 연계', priority:1 },
+        { id:12, content:'어선 안전 알림 실증', start:addDays(base,10), end:addDays(base,22), group:'aquaculture', status:'risk', progress:30, owner:'안전팀', note:'통신 음영지역 대응 필요', priority:1 },
+        { id:13, content:'현장 설명회', start:addDays(base,23), group:'aquaculture', type:'point', status:'planned', progress:0, owner:'현장지원팀', note:'어업인 대상 시연', priority:3 },
+        { id:14, content:'회원조합 교육과정 설계', start:addDays(base,4), end:addDays(base,11), group:'member', status:'done', progress:100, owner:'회원지원팀', note:'기초·실무 2단계', priority:2 },
+        { id:15, content:'권역별 교육', start:addDays(base,14), end:addDays(base,25), group:'member', status:'planned', progress:20, owner:'교육운영팀', note:'5개 권역 순회', priority:2 },
+        { id:16, content:'주간 점검회의', start:addDays(base,2), group:'shared', type:'box', status:'done', progress:100, owner:'PMO', note:'주간 이슈 점검', priority:3 },
+        { id:17, content:'중간보고', start:addDays(base,12), group:'shared', type:'point', status:'planned', progress:0, owner:'PMO', note:'중간 성과 및 이슈', priority:1 },
+        { id:18, content:'최종 성과공유', start:addDays(base,26), group:'shared', type:'box', status:'planned', progress:0, owner:'PMO', note:'성과·후속과제 공유', priority:1 }
+      ];
+
+      // 클러스터 확인용 밀집 포인트
+      for (let i = 0; i < 48; i++) {
+        itemSeed.push({
+          id:`dense-${i+1}`,
+          content:`이벤트 ${i+1}`,
+          start:addHours(addDays(base, 8 + (i % 4)), (i * 3) % 20),
+          group:'cluster-lab',
+          type:'point',
+          status:'cluster',
+          progress:0,
+          owner:'센서',
+          note:'클러스터 옵션 확인용 밀집 데이터',
+          priority:4
+        });
+      }
+
+      const groups = new vis.DataSet(groupSeed);
+      const items = new vis.DataSet(itemSeed.map(normalizeItem));
+
+      const options = {
+        width: '100%',
+        height: '600px',
+        minHeight: '480px',
+        maxHeight: '600px',
+        start: addDays(base, -1),
+        end: addDays(base, 29),
+        min: addDays(base, -120),
+        max: addDays(base, 365),
+        orientation: { axis:'bottom', item:'bottom' },
+        stack: true,
+        stackSubgroups: true,
+        groupHeightMode: 'auto',
+        verticalScroll: true,
+        horizontalScroll: false,
+        zoomKey: '',
+        zoomMin: 6 * HOUR,
+        zoomMax: 540 * DAY,
+        zoomFriction: 6,
+        moveable: true,
+        zoomable: true,
+        selectable: true,
+        multiselect: true,
+        multiselectPerGroup: false,
+        sequentialSelection: false,
+        editable: { add:true, updateTime:true, updateGroup:true, remove:true, overrideItems:false },
+        groupEditable: { add:false, remove:false, order:true },
+        groupOrder: 'order',
+        itemsAlwaysDraggable: { item:false, range:false },
+        showCurrentTime: true,
+        showMajorLabels: true,
+        showMinorLabels: true,
+        showWeekScale: false,
+        margin: { item:{ horizontal:7, vertical:8 }, axis:14 },
+        dataAttributes: ['status','owner','progress'],
+        tooltip: {
+          followMouse: true,
+          overflowMethod: 'cap',
+          delay: 180,
+          template: function (item) {
+            if (!item) return '';
+            const duration = item.end ? `${fmtDate(item.start)} ~ ${fmtDate(item.end)}` : fmtDate(item.start, true);
+            return `<div style="min-width:190px;padding:3px"><strong>${esc(item.content)}</strong><div style="margin-top:5px;color:#667085">${esc(duration)}</div><div style="margin-top:3px">담당 ${esc(item.owner || '미정')} · ${esc(statusLabel[item.status] || item.status)}</div><div style="margin-top:3px">진척 ${clamp(item.progress,0,100)}%</div>${item.note ? `<div style="margin-top:6px;color:#667085">${esc(item.note)}</div>` : ''}</div>`;
+          }
+        },
+        tooltipOnItemUpdateTime: {
+          template: function (item) { return `<strong>${esc(item.content)}</strong><br>${fmtDate(item.start, true)}${item.end ? ` ~ ${fmtDate(item.end, true)}` : ''}`; }
+        },
+        snap: snap15Minutes,
+        cluster: false,
+        rollingMode: { follow:false, offset:.5 },
+        format: {
+          minorLabels: function (date, scale) {
+            const d = nativeDate(date);
+            if (scale === 'hour' || scale === 'minute') return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            if (scale === 'day' || scale === 'weekday') return `${d.getDate()}일`;
+            if (scale === 'month') return `${d.getMonth()+1}월`;
+            if (scale === 'year') return `${d.getFullYear()}년`;
+            return fmtDate(d, true);
+          },
+          majorLabels: function (date, scale) {
+            const d = nativeDate(date);
+            if (scale === 'hour' || scale === 'minute') return `${d.getMonth()+1}월 ${d.getDate()}일`;
+            if (scale === 'day' || scale === 'weekday' || scale === 'week') return `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+            if (scale === 'month') return `${d.getFullYear()}년`;
+            return '';
+          }
+        },
+        template: itemTemplate,
+        visibleFrameTemplate: function (item) {
+          if (item.type !== 'range' || !item.progress) return '';
+          return `<span style="position:absolute;right:4px;top:2px;font-size:9px;font-weight:800;opacity:.65">${clamp(item.progress,0,100)}%</span>`;
+        },
+        groupTemplate: groupTemplate,
+        order: function (a, b) { return (a.priority || 99) - (b.priority || 99); },
+        onInitialDrawComplete: function () { logEvent('initialDraw', '초기 렌더링 완료'); },
+        onAdd: function (item, callback) {
+          const content = prompt('새 항목 제목', item.content || '새 업무');
+          if (content === null) return callback(null);
+          const added = normalizeItem({ ...item, id:`item-${++idSeed}`, content, status:'planned', progress:0, owner:'미정', note:'빈 공간 더블클릭으로 추가' });
+          callback(added);
+          toast('새 항목을 추가했다.');
+        },
+        onUpdate: function (item, callback) {
+          if (item.readonly) { toast('읽기 전용 항목이다.'); return callback(null); }
+          const content = prompt('항목 제목 수정', item.content);
+          if (content === null) return callback(null);
+          callback({ ...item, content });
+        },
+        onMove: function (item, callback) {
+          if (item.readonly) { toast('읽기 전용 항목은 이동할 수 없다.'); return callback(null); }
+          callback(item);
+          logEvent('onMove', `${item.content} → ${fmtDate(item.start, true)}`);
+        },
+        onMoving: function (item, callback) {
+          // 샘플 검증: 범위 항목 종료일이 시작일보다 앞서지 않도록 보정
+          if (item.end && nativeDate(item.end) < nativeDate(item.start)) item.end = addHours(nativeDate(item.start), 1);
+          callback(item);
+        },
+        onRemove: function (item, callback) {
+          if (item.readonly) { toast('읽기 전용 항목은 삭제할 수 없다.'); return callback(null); }
+          callback(confirm(`“${item.content}” 항목을 삭제할까?`) ? item : null);
+        }
+      };
+
+      const timeline = new vis.Timeline($('timeline'), items, groups, options);
+      addCustomTimes();
+      fillGroupSelects();
+      bindTimelineEvents();
+      bindControls();
+      bindOptionControls();
+      bindDragPalette();
+      $('searchCount').textContent = items.get({ filter:item => item.type !== 'background' }).length;
+      updateStats();
+      logEvent('ready', `항목 ${items.length}개 · 그룹 ${groups.length}개`);
+
+      function snap15Minutes(date) {
+        const step = 15 * 60 * 1000;
+        return Math.round(nativeDate(date).getTime() / step) * step;
+      }
+
+      function itemTemplate(item) {
+        if (item.type === 'background') return '';
+        const progress = roundProgress(item.progress || 0);
+        const meta = item.type === 'point'
+          ? `${esc(item.owner || '')}`
+          : `${esc(item.owner || '')} · ${clamp(item.progress,0,100)}%`;
+        return `<div class="item-template"><div class="item-line"><span class="item-dot"></span><span class="item-title">${esc(item.content)}</span></div><div class="item-meta">${meta}</div>${item.type === 'range' ? `<span class="item-progress"><i class="p${progress}"></i></span>` : ''}</div>`;
+      }
+
+      function groupTemplate(group) {
+        return `<div class="group-template"><span class="group-icon">${esc(group.icon || '•')}</span><span><span class="group-name">${esc(group.content || group.id)}</span><span class="group-meta">${esc(group.meta || '')}</span></span></div>`;
+      }
+
+      function addCustomTimes() {
+        try {
+          timeline.addCustomTime(addDays(base, 7), 'baseline');
+          timeline.setCustomTimeMarker('기준일 · 드래그 가능', 'baseline', true);
+          timeline.setCustomTimeTitle('프로젝트 기준일', 'baseline');
+          timeline.addCustomTime(addDays(base, 21), 'target');
+          timeline.setCustomTimeMarker('목표일', 'target', false);
+          timeline.setCustomTimeTitle('목표 완료일', 'target');
+        } catch (error) {
+          logEvent('customTimeError', error.message);
+        }
+      }
+
+      function fillGroupSelects() {
+        const childGroups = groups.get({ filter:g => !g.nestedGroups });
+        const optionsHtml = childGroups.map(g => `<option value="${esc(g.id)}">${esc(g.content)}</option>`).join('');
+        $('edGroup').innerHTML = optionsHtml;
+        $('groupFilter').innerHTML = `<option value="all">모든 그룹</option>${groups.get().map(g => `<option value="${esc(g.id)}">${esc(g.content)}</option>`).join('')}`;
+      }
+
+      function bindTimelineEvents() {
+        timeline.on('select', function (props) {
+          selectedIds = props.items || [];
+          renderEditor();
+          updateStats();
+          logEvent('select', selectedIds.length ? selectedIds.join(', ') : '선택 해제');
+        });
+        timeline.on('rangechange', throttle(function () { updateStats(); }, 120));
+        timeline.on('rangechanged', function (props) {
+          updateStats();
+          logEvent('rangechanged', `${fmtDate(props.start)} ~ ${fmtDate(props.end)}${props.byUser ? ' · 사용자 조작' : ''}`);
+        });
+        timeline.on('click', function (props) {
+          $('lastEvent').textContent = `마지막 이벤트: click · ${props.what || '빈 공간'} · ${fmtDate(props.time, true)}`;
+        });
+        timeline.on('doubleClick', function (props) { logEvent('doubleClick', `${props.what || '빈 공간'} · ${fmtDate(props.time, true)}`); });
+        timeline.on('itemover', function (props) { $('lastEvent').textContent = `마지막 이벤트: itemover · ${props.item}`; });
+        timeline.on('timechange', throttle(function (props) { $('lastEvent').textContent = `마커 이동 중: ${props.id} · ${fmtDate(props.time, true)}`; }, 100));
+        timeline.on('timechanged', function (props) { logEvent('timechanged', `${props.id} · ${fmtDate(props.time, true)}`); });
+        timeline.on('markerchanged', function (props) { logEvent('markerchanged', `${props.id} · ${props.title}`); });
+        timeline.on('groupDragged', function (groupId) { logEvent('groupDragged', groupId); });
+        timeline.on('contextmenu', function (props) {
+          props.event.preventDefault();
+          lastContextProps = props;
+          const menu = $('contextMenu');
+          menu.style.left = `${Math.min(props.pageX, window.innerWidth - 210)}px`;
+          menu.style.top = `${Math.min(props.pageY, window.innerHeight - 150)}px`;
+          menu.style.display = 'block';
+          logEvent('contextmenu', `${props.what || '빈 공간'} · ${fmtDate(props.time, true)}`);
+        });
+        timeline.on('drop', function (props) {
+          try {
+            const raw = props.event.dataTransfer && props.event.dataTransfer.getData('application/x-vis-demo');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            addDroppedItem(data, props);
+          } catch (error) { logEvent('dropError', error.message); }
+        });
+        timeline.on('changed', throttle(updateStats, 250));
+        items.on('*', function (event, properties) {
+          updateStats();
+          if (event !== 'update') logEvent(`DataSet:${event}`, (properties.items || []).join(', '));
+        });
+        groups.on('update', function () { fillGroupSelects(); });
+      }
+
+      function bindControls() {
+        $('btnFit').onclick = () => timeline.fit({ animation:{ duration:500, easingFunction:'easeInOutQuad' } });
+        $('btnToday').onclick = () => timeline.moveTo(new Date(), { animation:{ duration:500, easingFunction:'easeInOutCubic' } });
+        $('btnZoomIn').onclick = () => timeline.zoomIn(.35, { animation:true });
+        $('btnZoomOut').onclick = () => timeline.zoomOut(.35, { animation:true });
+        $('btnPrev').onclick = () => shiftWindow(-.6);
+        $('btnNext').onclick = () => shiftWindow(.6);
+        $('btnFocus').onclick = focusSelected;
+        $('btnAdd').onclick = addManualItem;
+        $('btnDuplicate').onclick = duplicateSelected;
+        $('btnDelete').onclick = deleteSelected;
+        $('btnClearFilter').onclick = clearFilters;
+        $('btnReset').onclick = resetAll;
+        $('btnSaveLocal').onclick = saveLocal;
+        $('btnJson').onclick = openJsonModal;
+        $('btnGuide').onclick = () => openModal('guideModal');
+        $('btnClearLog').onclick = () => { $('eventLog').innerHTML = ''; logEvent('log', '로그 초기화'); };
+        $('btnEditorSave').onclick = saveEditor;
+        $('btnEditorFocus').onclick = focusSelected;
+        $('searchInput').addEventListener('input', debounce(applyFilters, 180));
+        $('groupFilter').onchange = applyFilters;
+        $('statusFilter').onchange = applyFilters;
+
+        $('contextMenu').addEventListener('click', function (event) {
+          const action = event.target.dataset.action;
+          if (!action || !lastContextProps) return;
+          if (action === 'addPoint') addAtContext('point');
+          if (action === 'addRange') addAtContext('range');
+          if (action === 'inspect') alert(JSON.stringify(simplifyEventProps(lastContextProps), null, 2));
+          $('contextMenu').style.display = 'none';
+        });
+        document.addEventListener('click', (event) => { if (!event.target.closest('#contextMenu')) $('contextMenu').style.display = 'none'; });
+
+        document.querySelectorAll('[data-close-modal]').forEach(btn => btn.onclick = () => btn.closest('.modal-backdrop').style.display = 'none');
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.style.display = 'none'; }));
+        $('btnJsonCopy').onclick = async () => { await navigator.clipboard.writeText($('jsonText').value); toast('JSON을 클립보드에 복사했다.'); };
+        $('btnJsonApply').onclick = applyJson;
+        $('btnJsonDownload').onclick = downloadJson;
+
+        document.addEventListener('keydown', function (event) {
+          const tag = document.activeElement && document.activeElement.tagName;
+          if (['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+          if (event.key.toLowerCase() === 'f') { event.preventDefault(); $('btnFit').click(); }
+          if (event.key.toLowerCase() === 't') { event.preventDefault(); $('btnToday').click(); }
+          if (event.key.toLowerCase() === 'n') { event.preventDefault(); addManualItem(); }
+          if (event.key === '+' || event.key === '=') { event.preventDefault(); $('btnZoomIn').click(); }
+          if (event.key === '-' || event.key === '_') { event.preventDefault(); $('btnZoomOut').click(); }
+          if (event.key === 'Delete') { event.preventDefault(); deleteSelected(); }
+          if (event.key === 'Escape') document.querySelectorAll('.modal-backdrop').forEach(el => el.style.display = 'none');
+        });
+      }
+
+      function bindOptionControls() {
+        $('optOrientation').onchange = e => timeline.setOptions({ orientation:{ axis:e.target.value, item:e.target.value === 'top' ? 'top' : 'bottom' } });
+        $('optGroupHeight').onchange = e => timeline.setOptions({ groupHeightMode:e.target.value });
+        bindCheck('optCurrentTime', value => timeline.setOptions({ showCurrentTime:value }));
+        bindCheck('optWeekScale', value => timeline.setOptions({ showWeekScale:value }));
+        bindCheck('optHideWeekend', value => timeline.setOptions({ hiddenDates:value ? [{ start:'2020-01-04 00:00:00', end:'2020-01-06 00:00:00', repeat:'weekly' }] : [] }));
+        bindCheck('optRtl', value => timeline.setOptions({ rtl:value }));
+        bindCheck('optStack', value => timeline.setOptions({ stack:value, stackSubgroups:value }));
+        bindCheck('optCluster', value => timeline.setOptions({ cluster:value ? { maxItems:2, titleTemplate:'{count}개 항목', showStipes:true, fitOnDoubleClick:true } : false }));
+        bindCheck('optVerticalScroll', value => timeline.setOptions({ verticalScroll:value }));
+        bindCheck('optHorizontalScroll', value => timeline.setOptions({ horizontalScroll:value, horizontalScrollKey:value ? 'shiftKey' : '', zoomKey:value ? 'ctrlKey' : '' }));
+        bindCheck('optSnap', value => timeline.setOptions({ snap:value ? snap15Minutes : null }));
+        bindCheck('optRolling', value => { if (rollingEnabled !== value) { timeline.toggleRollingMode(); rollingEnabled = value; } });
+        bindCheck('optEditable', value => timeline.setOptions({ editable:value ? { add:true, updateTime:true, updateGroup:true, remove:true, overrideItems:false } : false }));
+        bindCheck('optAlwaysDrag', value => timeline.setOptions({ itemsAlwaysDraggable:{ item:value, range:value } }));
+        bindCheck('optSequential', value => timeline.setOptions({ sequentialSelection:value }));
+        bindCheck('optMultiGroup', value => timeline.setOptions({ multiselectPerGroup:value }));
+        bindCheck('optGroupReorder', value => timeline.setOptions({ groupEditable:{ add:false, remove:false, order:value } }));
+        bindCheck('optClickUse', value => timeline.setOptions({ clickToUse:value }));
+        bindCheck('optFollowTooltip', value => timeline.setOptions({ tooltip:{ ...options.tooltip, followMouse:value } }));
+        bindCheck('optMajorLabels', value => timeline.setOptions({ showMajorLabels:value }));
+        bindCheck('optMinorLabels', value => timeline.setOptions({ showMinorLabels:value }));
+        bindCheck('optConfigure', value => timeline.setOptions({ configure:value }));
+      }
+
+      function bindCheck(id, handler) {
+        $(id).addEventListener('change', function () { handler(this.checked); logEvent('option', `${id}=${this.checked}`); });
+      }
+
+      function bindDragPalette() {
+        document.querySelectorAll('.drag-card').forEach(card => {
+          card.addEventListener('dragstart', function (event) {
+            const kind = this.dataset.kind;
+            const data = kind === 'milestone'
+              ? { kind, content:'외부 마일스톤', type:'point', status:'planned', duration:0 }
+              : kind === 'risk'
+                ? { kind, content:'외부 위험 항목', type:'range', status:'risk', duration:3 }
+                : { kind, content:'외부 업무 항목', type:'range', status:'active', duration:2 };
+            event.dataTransfer.setData('application/x-vis-demo', JSON.stringify(data));
+            event.dataTransfer.effectAllowed = 'copy';
+          });
+        });
+      }
+
+      function addDroppedItem(data, props) {
+        const start = nativeDate(props.time || new Date());
+        const group = props.group || 'shared';
+        const item = normalizeItem({
+          id:`item-${++idSeed}`,
+          content:data.content,
+          start,
+          end:data.type === 'range' ? addDays(start, data.duration || 2) : undefined,
+          group,
+          type:data.type,
+          status:data.status,
+          progress:data.status === 'active' ? 20 : 0,
+          owner:'드래그 입력',
+          note:'외부 팔레트에서 드롭해 생성'
+        });
+        items.add(item);
+        timeline.setSelection(item.id, { focus:true, animation:true });
+        selectedIds = [item.id];
+        renderEditor();
+        toast('외부 항목을 타임라인에 추가했다.');
+        logEvent('drop', `${item.content} · ${group} · ${fmtDate(start, true)}`);
+      }
+
+      function shiftWindow(ratio) {
+        const win = timeline.getWindow();
+        const span = win.end.getTime() - win.start.getTime();
+        timeline.setWindow(new Date(win.start.getTime() + span * ratio), new Date(win.end.getTime() + span * ratio), { animation:{ duration:350, easingFunction:'easeInOutQuad' } });
+      }
+
+      function addManualItem() {
+        const win = timeline.getWindow();
+        const start = new Date((win.start.getTime() + win.end.getTime()) / 2);
+        const item = normalizeItem({ id:`item-${++idSeed}`, content:'새 업무', start, end:addDays(start,3), group:'shared', type:'range', status:'planned', owner:'미정', note:'상단 버튼으로 추가' });
+        items.add(item);
+        timeline.setSelection(item.id, { focus:true, animation:true });
+        selectedIds = [item.id];
+        renderEditor();
+      }
+
+      function addAtContext(type) {
+        const start = nativeDate(lastContextProps.time);
+        const item = normalizeItem({
+          id:`item-${++idSeed}`,
+          content:type === 'point' ? '새 포인트' : '새 범위 업무',
+          start,
+          end:type === 'range' ? addDays(start,2) : undefined,
+          group:lastContextProps.group || 'shared',
+          type,
+          status:'planned',
+          owner:'미정',
+          note:'우클릭 메뉴로 추가'
+        });
+        items.add(item);
+        timeline.setSelection(item.id, { focus:true, animation:true });
+        selectedIds = [item.id];
+        renderEditor();
+      }
+
+      function duplicateSelected() {
+        if (!selectedIds.length) return toast('복제할 항목을 먼저 선택한다.');
+        const clones = selectedIds.map(id => items.get(id)).filter(Boolean).filter(item => item.type !== 'background').map(item => normalizeItem({ ...item, id:`item-${++idSeed}`, content:`${item.content} 복사본`, start:addDays(nativeDate(item.start),1), end:item.end ? addDays(nativeDate(item.end),1) : undefined, readonly:false, editable:true, baseClass:null, className:null }));
+        if (!clones.length) return;
+        items.add(clones);
+        const ids = clones.map(x => x.id);
+        timeline.setSelection(ids, { focus:true, animation:true });
+        selectedIds = ids;
+        renderEditor();
+        toast(`${ids.length}개 항목을 복제했다.`);
+      }
+
+      function deleteSelected() {
+        if (!selectedIds.length) return toast('삭제할 항목을 먼저 선택한다.');
+        const removable = selectedIds.filter(id => { const item = items.get(id); return item && !item.readonly && item.type !== 'background'; });
+        if (!removable.length) return toast('선택 항목은 삭제할 수 없다.');
+        if (!confirm(`${removable.length}개 항목을 삭제할까?`)) return;
+        items.remove(removable);
+        selectedIds = [];
+        timeline.setSelection([]);
+        renderEditor();
+      }
+
+      function focusSelected() {
+        const ids = timeline.getSelection();
+        if (!ids.length) return toast('집중할 항목을 선택한다.');
+        timeline.focus(ids, { animation:{ duration:500, easingFunction:'easeInOutCubic' }, zoom:true });
+      }
+
+      function renderEditor() {
+        const selected = selectedIds.map(id => items.get(id)).filter(Boolean);
+        $('selectedBadge').textContent = `${selected.length}개`;
+        $('statSelected').textContent = selected.length;
+        if (selected.length !== 1) {
+          $('editorEmpty').hidden = false;
+          $('editorForm').hidden = true;
+          $('editorEmpty').innerHTML = `<div class="empty">${selected.length > 1 ? '여러 항목이 선택됐다. 단일 항목을 선택하면 상세 편집이 가능하다.' : '타임라인 항목을 선택하면 상세 편집기가 표시된다.'}</div>`;
+          return;
+        }
+        const item = selected[0];
+        $('editorEmpty').hidden = true;
+        $('editorForm').hidden = false;
+        $('edContent').value = item.content || '';
+        $('edStart').value = toInputDate(item.start);
+        $('edEnd').value = item.end ? toInputDate(item.end) : '';
+        $('edGroup').value = item.group || 'shared';
+        $('edType').value = item.type || (item.end ? 'range' : 'box');
+        $('edStatus').value = item.status || 'planned';
+        $('edProgress').value = clamp(item.progress,0,100);
+        $('edOwner').value = item.owner || '';
+        $('edNote').value = item.note || '';
+        const disabled = item.readonly || item.type === 'background';
+        $('btnEditorSave').disabled = disabled;
+      }
+
+      function saveEditor() {
+        if (selectedIds.length !== 1) return;
+        const id = selectedIds[0];
+        const old = items.get(id);
+        if (!old || old.readonly) return toast('읽기 전용 항목이다.');
+        const type = $('edType').value;
+        const start = nativeDate($('edStart').value);
+        let end = $('edEnd').value ? nativeDate($('edEnd').value) : undefined;
+        if ((type === 'range' || type === 'background') && !end) end = addDays(start,1);
+        if ((type === 'box' || type === 'point') && end) end = undefined;
+        if (end && end < start) return toast('종료 시각은 시작 시각 이후여야 한다.');
+        const updated = {
+          ...old,
+          content:$('edContent').value.trim() || '제목 없음',
+          start,
+          end,
+          group:$('edGroup').value,
+          type,
+          status:$('edStatus').value,
+          progress:clamp($('edProgress').value,0,100),
+          owner:$('edOwner').value.trim() || '미정',
+          note:$('edNote').value.trim()
+        };
+        updated.baseClass = baseClassFor(updated);
+        updated.className = updated.baseClass;
+        items.update(updated);
+        applyFilters();
+        toast('항목 변경사항을 저장했다.');
+      }
+
+      function applyFilters() {
+        activeFilter = { group:$('groupFilter').value, status:$('statusFilter').value, query:$('searchInput').value.trim().toLowerCase() };
+        const allGroups = groups.get();
+        const selectedGroup = activeFilter.group === 'all' ? null : groups.get(activeFilter.group);
+        const selectedChildren = selectedGroup && Array.isArray(selectedGroup.nestedGroups) ? selectedGroup.nestedGroups : [];
+        allGroups.forEach(group => {
+          let visible = true;
+          if (activeFilter.group !== 'all') {
+            visible = group.id === activeFilter.group
+              || selectedChildren.includes(group.id)
+              || (Array.isArray(group.nestedGroups) && group.nestedGroups.includes(activeFilter.group));
+          }
+          groups.update({ id:group.id, visible });
+        });
+        let matches = 0;
+        items.get().forEach(item => {
+          if (item.type === 'background') return;
+          const hay = `${item.content || ''} ${item.owner || ''} ${item.note || ''}`.toLowerCase();
+          const queryMatch = !activeFilter.query || hay.includes(activeFilter.query);
+          const statusMatch = activeFilter.status === 'all' || item.status === activeFilter.status;
+          const groupMatch = activeFilter.group === 'all' || item.group === activeFilter.group || selectedChildren.includes(item.group);
+          const match = queryMatch && statusMatch && groupMatch;
+          if (match) matches++;
+          let cls = item.baseClass || baseClassFor(item);
+          if (activeFilter.query || activeFilter.status !== 'all') cls += match ? ' search-match' : ' search-dim';
+          items.update({ id:item.id, className:cls });
+        });
+        $('searchCount').textContent = matches;
+        updateStats();
+      }
+
+      function clearFilters() {
+        $('searchInput').value = '';
+        $('groupFilter').value = 'all';
+        $('statusFilter').value = 'all';
+        activeFilter = { group:'all', status:'all', query:'' };
+        groups.get().forEach(g => groups.update({ id:g.id, visible:true }));
+        items.get().forEach(item => items.update({ id:item.id, className:item.baseClass || baseClassFor(item) }));
+        $('searchCount').textContent = items.get({ filter:i => i.type !== 'background' }).length;
+        updateStats();
+      }
+
+      function updateStats() {
+        $('statItems').textContent = items.length;
+        let visible = 0;
+        try { visible = timeline.getVisibleItems().length; } catch (_) {}
+        $('statVisible').textContent = visible;
+        $('statSelected').textContent = timeline.getSelection().length;
+        try {
+          const win = timeline.getWindow();
+          $('statRange').textContent = `${fmtDate(win.start)} ~ ${fmtDate(win.end)}`;
+        } catch (_) {}
+      }
+
+      function openJsonModal() {
+        $('jsonText').value = JSON.stringify({
+          version:'vis-timeline-demo-1.0',
+          exportedAt:new Date().toISOString(),
+          groups:groups.get(),
+          items:items.get().map(item => ({ ...item, start:nativeDate(item.start).toISOString(), end:item.end ? nativeDate(item.end).toISOString() : undefined }))
+        }, null, 2);
+        openModal('jsonModal');
+      }
+
+      function applyJson() {
+        try {
+          const parsed = JSON.parse($('jsonText').value);
+          if (!Array.isArray(parsed.groups) || !Array.isArray(parsed.items)) throw new Error('groups와 items 배열이 필요하다.');
+          groups.clear();
+          groups.add(parsed.groups);
+          items.clear();
+          items.add(parsed.items.map(normalizeItem));
+          timeline.setData({ groups, items });
+          fillGroupSelects();
+          clearFilters();
+          timeline.fit({ animation:true });
+          $('jsonModal').style.display = 'none';
+          toast('JSON 데이터를 적용했다.');
+        } catch (error) { toast(`JSON 오류: ${error.message}`); }
+      }
+
+      function downloadJson() {
+        const blob = new Blob([$('jsonText').value], { type:'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `vis-timeline-data-${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function saveLocal() {
+        const payload = {
+          savedAt:new Date().toISOString(),
+          groups:groups.get(),
+          items:items.get().map(item => ({ ...item, start:nativeDate(item.start).toISOString(), end:item.end ? nativeDate(item.end).toISOString() : undefined }))
+        };
+        localStorage.setItem('vis-timeline-comprehensive-demo', JSON.stringify(payload));
+        toast('현재 데이터를 브라우저에 저장했다.');
+      }
+
+      function resetAll() {
+        if (!confirm('모든 변경사항을 버리고 초기 샘플로 되돌릴까?')) return;
+        localStorage.removeItem('vis-timeline-comprehensive-demo');
+        groups.clear(); groups.add(groupSeed);
+        items.clear(); items.add(itemSeed.map(normalizeItem));
+        timeline.setData({ groups, items });
+        clearFilters();
+        timeline.setWindow(addDays(base,-1), addDays(base,29), { animation:true });
+        selectedIds = [];
+        renderEditor();
+        toast('초기 샘플로 복원했다.');
+      }
+
+      function loadLocalIfExists() {
+        const raw = localStorage.getItem('vis-timeline-comprehensive-demo');
+        if (!raw) return;
+        try {
+          const saved = JSON.parse(raw);
+          if (Array.isArray(saved.groups) && Array.isArray(saved.items) && confirm(`브라우저에 저장된 데이터가 있다.\n저장 시각: ${fmtDate(saved.savedAt, true)}\n불러올까?`)) {
+            groups.clear(); groups.add(saved.groups);
+            items.clear(); items.add(saved.items.map(normalizeItem));
+            timeline.setData({ groups, items });
+            fillGroupSelects();
+            timeline.fit({ animation:false });
+            toast('저장 데이터를 불러왔다.');
+          }
+        } catch (error) { logEvent('localLoadError', error.message); }
+      }
+      setTimeout(loadLocalIfExists, 250);
+
+      function downloadText(name, text, type) {
+        const blob = new Blob([text], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+      }
+
+      function simplifyEventProps(props) {
+        return { what:props.what, item:props.item, group:props.group, customTime:props.customTime, time:props.time && nativeDate(props.time).toISOString(), snappedTime:props.snappedTime && nativeDate(props.snappedTime).toISOString(), x:props.x, y:props.y };
+      }
+
+      function logEvent(name, detail) {
+        const time = new Intl.DateTimeFormat('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(new Date());
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<span class="log-time">${esc(time)}</span><span><span class="log-name">${esc(name)}</span><div class="log-detail">${esc(typeof detail === 'string' ? detail : JSON.stringify(detail))}</div></span>`;
+        $('eventLog').prepend(entry);
+        while ($('eventLog').children.length > 70) $('eventLog').lastChild.remove();
+        $('lastEvent').textContent = `마지막 이벤트: ${name}`;
+      }
+
+      function toast(message) {
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.textContent = message;
+        $('toastStack').appendChild(el);
+        setTimeout(() => el.remove(), 2700);
+      }
+
+      function openModal(id) { $(id).style.display = 'flex'; }
+      function debounce(fn, wait) { let timer; return function (...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this,args), wait); }; }
+      function throttle(fn, wait) { let last=0, timer; return function (...args) { const now=Date.now(); const remain=wait-(now-last); if (remain<=0) { clearTimeout(timer); last=now; fn.apply(this,args); } else if (!timer) timer=setTimeout(() => { last=Date.now(); timer=null; fn.apply(this,args); },remain); }; }
+    }
+  </script>
+</body>
+</html>
