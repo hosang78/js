@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="diff-match-patch의 Diff, Match, Patch, Cleanup, Delta, 동기화 및 성능 기능을 한 페이지에서 실험하는 종합 샘플">
+  <title>diff-match-patch 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #eef3f8;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dbe3ee;
+      --primary: #3157d5;
+      --primary-strong: #2445b8;
+      --primary-soft: #e8edff;
+      --insert: #087443;
+      --insert-bg: #dff7e9;
+      --delete: #b42318;
+      --delete-bg: #ffe4e1;
+      --equal-bg: transparent;
+      --warning: #b54708;
+      --warning-bg: #fff3df;
+      --info: #175cd3;
+      --info-bg: #e9f2ff;
+      --shadow: 0 12px 35px rgba(18, 38, 75, .08);
+      --radius: 18px;
+      --radius-sm: 11px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0e1420;
+      --surface: #161e2c;
+      --surface-2: #1c2636;
+      --surface-3: #253145;
+      --text: #f2f5fa;
+      --muted: #a9b4c6;
+      --line: #344056;
+      --primary: #8ea6ff;
+      --primary-strong: #afbeff;
+      --primary-soft: #27345f;
+      --insert: #60d394;
+      --insert-bg: #123b2c;
+      --delete: #ff8a80;
+      --delete-bg: #49231f;
+      --warning: #ffc36d;
+      --warning-bg: #422f17;
+      --info: #8eb8ff;
+      --info-bg: #1b3151;
+      --shadow: 0 18px 45px rgba(0, 0, 0, .25);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% -10%, rgba(49, 87, 213, .14), transparent 28rem),
+        radial-gradient(circle at 95% 4%, rgba(8, 116, 67, .08), transparent 22rem),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.55;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: var(--primary); }
+    code, pre { font-family: var(--mono); }
+
+    .app-shell { min-height: 100vh; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--surface) 85%, transparent);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+    }
+    .topbar-inner {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: grid; place-items: center;
+      color: white; font-weight: 900; letter-spacing: -.04em;
+      background: linear-gradient(145deg, #3157d5, #6b82e6);
+      box-shadow: 0 8px 22px rgba(49, 87, 213, .28);
+    }
+    .brand-title { font-weight: 850; letter-spacing: -.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand-sub { color: var(--muted); font-size: 12px; margin-top: -2px; }
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+
+    .page {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 26px 0 64px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(320px, .7fr);
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+    .hero-main, .hero-side, .panel, .mini-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-main {
+      padding: 30px;
+      overflow: hidden;
+      position: relative;
+      background:
+        linear-gradient(120deg, color-mix(in srgb, var(--primary-soft) 55%, var(--surface)), var(--surface) 55%);
+    }
+    .hero-main::after {
+      content: "±";
+      position: absolute; right: 22px; top: -70px;
+      font-size: 240px; line-height: 1; font-weight: 900;
+      color: color-mix(in srgb, var(--primary) 9%, transparent);
+      pointer-events: none;
+    }
+    .eyebrow { color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(30px, 4vw, 52px); line-height: 1.08; letter-spacing: -.055em; }
+    .hero-copy { max-width: 760px; color: var(--muted); font-size: 16px; margin: 0; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 10px; border-radius: 999px;
+      background: var(--surface); border: 1px solid var(--line);
+      font-size: 12px; font-weight: 700; color: var(--muted);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .hero-side { padding: 20px; display: grid; gap: 11px; }
+    .status-card {
+      padding: 13px 14px; border-radius: 13px;
+      background: var(--surface-2); border: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .status-card strong { font-size: 13px; }
+    .status-card small { color: var(--muted); display: block; }
+    .status-pill { white-space: nowrap; padding: 5px 9px; border-radius: 999px; font-weight: 800; font-size: 11px; }
+    .status-pill.waiting { color: var(--warning); background: var(--warning-bg); }
+    .status-pill.ok { color: var(--insert); background: var(--insert-bg); }
+    .status-pill.fail { color: var(--delete); background: var(--delete-bg); }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+    .mini-card { padding: 18px; box-shadow: none; }
+    .mini-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; background: var(--primary-soft); color: var(--primary); font-weight: 900; margin-bottom: 12px; }
+    .mini-card h3 { margin: 0 0 4px; font-size: 16px; }
+    .mini-card p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .tabs {
+      position: sticky; top: 70px; z-index: 40;
+      display: flex; gap: 7px; overflow-x: auto;
+      padding: 9px;
+      margin-bottom: 16px;
+      border: 1px solid var(--line); border-radius: 15px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 8px 24px rgba(18, 38, 75, .06);
+      scrollbar-width: thin;
+    }
+    .tab-btn {
+      border: 0; background: transparent; color: var(--muted);
+      padding: 10px 13px; border-radius: 10px; white-space: nowrap; font-weight: 750; font-size: 13px;
+    }
+    .tab-btn:hover { background: var(--surface-2); color: var(--text); }
+    .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 6px 15px rgba(49, 87, 213, .22); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: reveal .18s ease; }
+    @keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .panel { margin-bottom: 16px; overflow: hidden; box-shadow: none; }
+    .panel-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+      padding: 18px 20px; border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2, .panel-head h3 { margin: 0; letter-spacing: -.025em; }
+    .panel-head h2 { font-size: 20px; }
+    .panel-head h3 { font-size: 16px; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .panel-body { padding: 20px; }
+    .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .field { min-width: 0; }
+    .field > label, .label-row label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 7px; }
+    .label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+    .label-row label { margin: 0; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      color: var(--text); background: var(--surface-2);
+      border: 1px solid var(--line); border-radius: var(--radius-sm);
+      padding: 10px 12px; outline: none;
+      transition: border-color .16s, box-shadow .16s, background .16s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent); background: var(--surface); }
+    textarea { min-height: 220px; resize: vertical; font-family: var(--mono); line-height: 1.6; tab-size: 2; }
+    textarea.compact { min-height: 125px; }
+    textarea.tall { min-height: 300px; }
+    .drop-zone.dragging { outline: 2px dashed var(--primary); outline-offset: -6px; background: var(--primary-soft); }
+    .tiny { font-size: 11px; color: var(--muted); }
+    .char-count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    .btn {
+      border: 1px solid var(--line); background: var(--surface); color: var(--text);
+      padding: 9px 12px; border-radius: 10px; font-weight: 780; font-size: 12px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      transition: transform .12s, background .12s, border-color .12s;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--primary) 50%, var(--line)); background: var(--surface-2); }
+    .btn.primary { color: white; border-color: var(--primary); background: var(--primary); }
+    .btn.primary:hover { background: var(--primary-strong); }
+    .btn.success { color: white; border-color: var(--insert); background: var(--insert); }
+    .btn.danger { color: var(--delete); border-color: color-mix(in srgb, var(--delete) 30%, var(--line)); background: var(--delete-bg); }
+    .btn.icon { width: 38px; height: 38px; padding: 0; border-radius: 11px; }
+    .btn.sm { padding: 6px 9px; font-size: 11px; }
+    .btn:disabled { cursor: not-allowed; opacity: .5; transform: none; }
+
+    .segmented { display: inline-flex; padding: 3px; background: var(--surface-3); border-radius: 10px; gap: 2px; }
+    .segmented button { border: 0; background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 800; }
+    .segmented button.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(18,38,75,.08); }
+
+    .toolbar {
+      display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px;
+      padding: 14px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line); margin-top: 14px;
+    }
+    .toolbar .field { min-width: 120px; flex: 1 1 130px; }
+    .toolbar .field.wide { flex-basis: 190px; }
+    .toggle-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .check { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .check input { accent-color: var(--primary); width: 16px; height: 16px; }
+
+    input[type="range"] { width: 100%; accent-color: var(--primary); }
+    .range-pair { display: grid; grid-template-columns: minmax(110px, 1fr) 78px; gap: 8px; align-items: center; }
+
+    .stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 15px 0; }
+    .stat { padding: 13px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; min-width: 0; }
+    .stat-label { color: var(--muted); font-size: 11px; font-weight: 750; }
+    .stat-value { font-size: 21px; line-height: 1.2; font-weight: 900; letter-spacing: -.03em; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-value.insert { color: var(--insert); }
+    .stat-value.delete { color: var(--delete); }
+
+    .result-shell { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+    .result-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
+    .result-toolbar .left, .result-toolbar .right { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+    .legend { display: inline-flex; gap: 10px; flex-wrap: wrap; color: var(--muted); font-size: 11px; }
+    .legend span { display: inline-flex; gap: 5px; align-items: center; }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .diff-output { padding: 18px; min-height: 160px; max-height: 560px; overflow: auto; font-family: var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; }
+    .diff-equal { color: var(--text); }
+    .diff-insert { color: var(--insert); background: var(--insert-bg); text-decoration: none; border-radius: 3px; }
+    .diff-delete { color: var(--delete); background: var(--delete-bg); text-decoration: line-through; border-radius: 3px; }
+    .diff-change.current { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .split-diff { display: grid; grid-template-columns: 1fr 1fr; min-width: 680px; }
+    .split-col { border-right: 1px solid var(--line); }
+    .split-col:last-child { border-right: 0; }
+    .split-title { position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--line); padding: 8px 12px; font-family: var(--sans); font-weight: 800; font-size: 11px; color: var(--muted); z-index: 2; }
+    .split-content { padding: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .placeholder { color: transparent; background: repeating-linear-gradient(-45deg, transparent, transparent 4px, color-mix(in srgb, var(--line) 35%, transparent) 4px, color-mix(in srgb, var(--line) 35%, transparent) 7px); }
+    .raw-output { margin: 0; padding: 16px; min-height: 160px; max-height: 560px; overflow: auto; color: var(--text); background: var(--surface-2); white-space: pre-wrap; }
+
+    .note { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); font-size: 12px; color: var(--muted); background: var(--surface-2); }
+    .note.info { color: var(--info); background: var(--info-bg); border-color: color-mix(in srgb, var(--info) 25%, var(--line)); }
+    .note.warning { color: var(--warning); background: var(--warning-bg); border-color: color-mix(in srgb, var(--warning) 25%, var(--line)); }
+    .note strong { color: inherit; }
+
+    .cleanup-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+    .cleanup-card h4 { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface); font-size: 13px; }
+    .cleanup-card .diff-output { min-height: 260px; max-height: 420px; }
+    .cleanup-meta { padding: 8px 14px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+
+    .match-preview { min-height: 170px; max-height: 360px; overflow: auto; padding: 18px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-2); white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); }
+    .match-hit { background: #ffe58f; color: #3b2f00; outline: 2px solid #e8b500; border-radius: 3px; }
+    [data-theme="dark"] .match-hit { background: #735d00; color: #fff4b2; }
+    .match-marker { border-left: 2px solid var(--primary); }
+
+    .patch-status { display: flex; gap: 6px; flex-wrap: wrap; min-height: 30px; }
+    .patch-chip { padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 850; }
+    .patch-chip.ok { color: var(--insert); background: var(--insert-bg); }
+    .patch-chip.fail { color: var(--delete); background: var(--delete-bg); }
+
+    .code-block { position: relative; border-radius: 13px; border: 1px solid var(--line); overflow: hidden; background: #111827; color: #d7e0ef; }
+    .code-block pre { margin: 0; padding: 18px; max-height: 390px; overflow: auto; white-space: pre; line-height: 1.65; font-size: 12px; }
+    .code-copy { position: absolute; right: 9px; top: 9px; border: 1px solid #3c475b; background: #202b3e; color: white; border-radius: 8px; padding: 6px 9px; font-size: 10px; }
+
+    .api-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 13px; }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 12px; }
+    th { position: sticky; top: 0; background: var(--surface-3); color: var(--muted); font-size: 11px; z-index: 1; }
+    tr:last-child td { border-bottom: 0; }
+    td code { color: var(--primary); font-weight: 750; }
+
+    .progress { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+    .progress > i { display: block; width: 0; height: 100%; background: var(--primary); transition: width .2s; }
+
+    .empty { display: grid; place-items: center; min-height: 150px; color: var(--muted); text-align: center; padding: 24px; }
+    .empty strong { display: block; color: var(--text); margin-bottom: 4px; }
+
+    .footer { color: var(--muted); text-align: center; font-size: 12px; padding-top: 24px; }
+    .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 100; display: grid; gap: 8px; width: min(360px, calc(100% - 36px)); }
+    .toast { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); animation: toastIn .2s ease; font-size: 12px; }
+    .toast.error { border-color: color-mix(in srgb, var(--delete) 40%, var(--line)); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
+
+    .hidden { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    @media (max-width: 1100px) {
+      .hero { grid-template-columns: 1fr; }
+      .feature-grid { grid-template-columns: 1fr 1fr 1fr; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .topbar-inner, .page { width: min(100% - 20px, 1480px); }
+      .brand-sub { display: none; }
+      .hero-main { padding: 22px; }
+      .feature-grid, .grid-2, .grid-4 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .panel-head { align-items: stretch; flex-direction: column; }
+      .panel-actions { justify-content: flex-start; }
+      .panel-body { padding: 14px; }
+      .tabs { top: 66px; }
+      .result-toolbar { align-items: flex-start; flex-direction: column; }
+      .top-actions .label-text { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">DMP</div>
+        <div>
+          <div class="brand-title">diff-match-patch 종합 기능 실험실</div>
+          <div class="brand-sub">Diff · Fuzzy Match · Patch · Delta · Sync</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn" id="loadExampleTop" type="button">예제 불러오기</button>
+        <button class="btn icon" id="themeToggle" type="button" aria-label="테마 전환" title="테마 전환">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">TEXT DIFFERENCE TOOLKIT</div>
+        <h1>텍스트 차이 탐색부터<br>안전한 패치 적용까지</h1>
+        <p class="hero-copy">문자·단어·줄 단위 비교, 정리 알고리즘, 근사 검색, 패치 직렬화, 델타 인코딩, 편집 충돌 상황의 최선 적용과 성능 측정을 한 페이지에서 직접 실험할 수 있다.</p>
+        <div class="badge-row">
+          <span class="badge"><span class="dot" style="color:var(--insert)"></span> 삽입 탐지</span>
+          <span class="badge"><span class="dot" style="color:var(--delete)"></span> 삭제 탐지</span>
+          <span class="badge"><span class="dot" style="color:var(--primary)"></span> 근사 위치 검색</span>
+          <span class="badge">Apache-2.0</span>
+          <span class="badge">브라우저 처리</span>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <div class="status-card">
+          <div><strong>라이브러리</strong><small id="librarySource">로딩 준비</small></div>
+          <span class="status-pill waiting" id="libraryStatus">확인 중</span>
+        </div>
+        <div class="status-card">
+          <div><strong>샘플 버전</strong><small>JavaScript 기능 종합판</small></div>
+          <span class="status-pill ok">v1.0</span>
+        </div>
+        <div class="status-card">
+          <div><strong>개인정보 처리</strong><small>입력 텍스트 서버 전송 없음</small></div>
+          <span class="status-pill ok">로컬</span>
+        </div>
+        <div class="note warning"><strong>구조화 데이터 주의:</strong> 이 라이브러리는 평문 기반이다. JSON·XML의 문법적 의미를 이해하는 비교기가 아니므로, 구조 단위 비교가 필요하면 별도 파서와 결합해야 한다.</div>
+      </aside>
+    </section>
+
+    <section class="feature-grid" aria-label="핵심 기능">
+      <article class="mini-card"><div class="mini-icon">D</div><h3>Diff</h3><p>두 평문을 삽입·삭제·동일 구간으로 분해하고 의미 또는 효율 기준으로 결과 정리</p></article>
+      <article class="mini-card"><div class="mini-icon">M</div><h3>Match</h3><p>예상 위치, 오타 허용 수준, 탐색 거리까지 반영하는 Bitap 기반 근사 문자열 검색</p></article>
+      <article class="mini-card"><div class="mini-icon">P</div><h3>Patch</h3><p>차이를 패치 텍스트로 직렬화하고 원문이 조금 달라져도 최선 방식으로 적용</p></article>
+    </section>
+
+    <nav class="tabs" aria-label="기능 탭">
+      <button class="tab-btn active" data-tab="diff" type="button">비교 스튜디오</button>
+      <button class="tab-btn" data-tab="cleanup" type="button">정리 알고리즘</button>
+      <button class="tab-btn" data-tab="match" type="button">유사 검색</button>
+      <button class="tab-btn" data-tab="patch" type="button">패치 생성·적용</button>
+      <button class="tab-btn" data-tab="delta" type="button">델타·직렬화</button>
+      <button class="tab-btn" data-tab="sync" type="button">동기화 시뮬레이션</button>
+      <button class="tab-btn" data-tab="benchmark" type="button">성능·API</button>
+    </nav>
+
+    <!-- DIFF TAB -->
+    <section class="tab-panel active" id="tab-diff">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>텍스트 비교 스튜디오</h2><p><code>diff_main</code>, cleanup, <code>diff_levenshtein</code>과 사용자 정의 문자·단어·줄 토큰화를 통합한 비교 도구</p></div>
+          <div class="panel-actions">
+            <button class="btn" id="presetPolicy" type="button">정책문서 예제</button>
+            <button class="btn" id="presetCode" type="button">코드 예제</button>
+            <button class="btn" id="presetJson" type="button">JSON 예제</button>
+            <button class="btn" id="swapTexts" type="button">좌우 교환</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field">
+              <div class="label-row"><label for="textA">원본 A</label><span class="char-count" id="countA">0자 · 0줄</span></div>
+              <textarea id="textA" class="drop-zone tall" spellcheck="false" placeholder="원본 텍스트를 입력하거나 파일을 끌어다 놓으세요."></textarea>
+              <div class="panel-actions" style="justify-content:flex-start;margin-top:8px">
+                <label class="btn sm" for="fileA">파일 열기</label><input class="sr-only" id="fileA" type="file" accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.csv,.log,text/*">
+                <button class="btn sm" type="button" data-copy-target="textA">복사</button>
+                <button class="btn sm danger" type="button" data-clear-target="textA">비우기</button>
+              </div>
+            </div>
+            <div class="field">
+              <div class="label-row"><label for="textB">수정본 B</label><span class="char-count" id="countB">0자 · 0줄</span></div>
+              <textarea id="textB" class="drop-zone tall" spellcheck="false" placeholder="수정된 텍스트를 입력하거나 파일을 끌어다 놓으세요."></textarea>
+              <div class="panel-actions" style="justify-content:flex-start;margin-top:8px">
+                <label class="btn sm" for="fileB">파일 열기</label><input class="sr-only" id="fileB" type="file" accept=".txt,.md,.json,.js,.ts,.css,.html,.xml,.csv,.log,text/*">
+                <button class="btn sm" type="button" data-copy-target="textB">복사</button>
+                <button class="btn sm danger" type="button" data-clear-target="textB">비우기</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <div class="field wide"><label>비교 단위</label><select id="diffGranularity"><option value="char">문자 단위</option><option value="word">단어·공백 단위</option><option value="line">줄 단위</option></select></div>
+            <div class="field wide"><label>정리 방식</label><select id="cleanupMode"><option value="semantic">의미 정리</option><option value="efficiency">효율 정리</option><option value="none">정리 없음</option></select></div>
+            <div class="field"><label for="diffTimeout">제한 시간(초)</label><input id="diffTimeout" type="number" min="0" max="60" step="0.1" value="1"></div>
+            <div class="field"><label for="editCost">EditCost</label><input id="editCost" type="number" min="1" max="100" step="1" value="4"></div>
+            <div class="field wide"><label>전처리 <span class="tiny">(샘플 기능)</span></label><div class="toggle-row"><label class="check"><input id="ignoreCase" type="checkbox"> 대소문자 무시</label><label class="check"><input id="normalizeSpace" type="checkbox"> 공백 정규화</label></div></div>
+            <div class="field wide"><label>실행 방식</label><div class="toggle-row"><label class="check"><input id="checkLines" type="checkbox" checked> 대용량 줄 최적화</label><label class="check"><input id="liveDiff" type="checkbox"> 실시간 비교</label></div></div>
+            <button class="btn primary" id="runDiff" type="button">차이 계산</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><h3>비교 결과</h3><p>변경 구간 이동, 보기 전환, 원시 배열 및 결과 보고서 내보내기 지원</p></div><div class="panel-actions"><button class="btn" id="exportDiffJson" type="button">JSON 저장</button><button class="btn" id="exportDiffHtml" type="button">HTML 보고서</button></div></div>
+        <div class="panel-body">
+          <div class="stats">
+            <div class="stat"><div class="stat-label">유사도</div><div class="stat-value" id="statSimilarity">-</div></div>
+            <div class="stat"><div class="stat-label">삽입 문자</div><div class="stat-value insert" id="statInsert">-</div></div>
+            <div class="stat"><div class="stat-label">삭제 문자</div><div class="stat-value delete" id="statDelete">-</div></div>
+            <div class="stat"><div class="stat-label">Levenshtein</div><div class="stat-value" id="statLeven">-</div></div>
+            <div class="stat"><div class="stat-label">세그먼트</div><div class="stat-value" id="statSegments">-</div></div>
+            <div class="stat"><div class="stat-label">계산 시간</div><div class="stat-value" id="statTime">-</div></div>
+          </div>
+          <div class="result-shell">
+            <div class="result-toolbar">
+              <div class="left">
+                <div class="segmented" id="viewModeGroup"><button class="active" data-view="inline" type="button">인라인</button><button data-view="split" type="button">분할</button><button data-view="raw" type="button">원시 배열</button></div>
+                <div class="legend"><span><i style="background:var(--insert-bg);border:1px solid var(--insert)"></i>삽입</span><span><i style="background:var(--delete-bg);border:1px solid var(--delete)"></i>삭제</span></div>
+              </div>
+              <div class="right"><span class="tiny" id="changeCounter">변경 0개</span><button class="btn sm" id="prevChange" type="button">이전</button><button class="btn sm" id="nextChange" type="button">다음</button><button class="btn sm" id="copyDiffText" type="button">결과 복사</button></div>
+            </div>
+            <div id="diffResult"><div class="empty"><div><strong>아직 비교하지 않았습니다.</strong>두 텍스트를 입력한 뒤 ‘차이 계산’을 누르세요.</div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLEANUP TAB -->
+    <section class="tab-panel" id="tab-cleanup">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>정리 알고리즘 비교</h2><p>동일한 원시 차이에 <code>diff_cleanupSemantic</code>과 <code>diff_cleanupEfficiency</code>를 각각 적용해 차이를 비교</p></div>
+          <div class="panel-actions"><button class="btn" id="cleanupFromMain" type="button">비교 스튜디오 내용 사용</button><button class="btn primary" id="runCleanup" type="button">3종 비교</button></div>
+        </div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label for="cleanupA">원본</label><textarea class="compact" id="cleanupA">The cat in the hat came back. Mouse and sofas are unrelated words.</textarea></div>
+            <div class="field"><label for="cleanupB">수정본</label><textarea class="compact" id="cleanupB">The fast cat with a hat has come back. Sofas and mouse can create noisy matches.</textarea></div>
+          </div>
+          <div class="toolbar">
+            <div class="field"><label for="cleanupEditCost">Efficiency EditCost</label><input id="cleanupEditCost" type="number" min="1" max="100" value="4"></div>
+            <div class="note info" style="flex:4 1 400px"><strong>의미 정리:</strong> 사람이 읽기 쉬운 경계 우선 · <strong>효율 정리:</strong> 저장·전송·후속 처리 비용을 줄이는 편집 묶음 우선</div>
+          </div>
+          <div class="grid-3" style="margin-top:14px">
+            <div class="cleanup-card"><h4>원시 결과</h4><div class="diff-output" id="cleanupRaw"></div><div class="cleanup-meta" id="cleanupRawMeta">-</div></div>
+            <div class="cleanup-card"><h4>의미 정리</h4><div class="diff-output" id="cleanupSemantic"></div><div class="cleanup-meta" id="cleanupSemanticMeta">-</div></div>
+            <div class="cleanup-card"><h4>효율 정리</h4><div class="diff-output" id="cleanupEfficiency"></div><div class="cleanup-meta" id="cleanupEfficiencyMeta">-</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MATCH TAB -->
+    <section class="tab-panel" id="tab-match">
+      <div class="panel">
+        <div class="panel-head"><div><h2>근사 문자열 검색</h2><p><code>match_main(text, pattern, loc)</code>으로 정확도와 예상 위치를 함께 평가하는 검색 실험</p></div><div class="panel-actions"><button class="btn" data-match-preset="nearTypo" type="button">가까운 오타</button><button class="btn" data-match-preset="farExact" type="button">먼 정확 일치</button><button class="btn" data-match-preset="korean" type="button">한글 예제</button></div></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label for="matchText">검색 대상 텍스트</label><textarea id="matchText">abc12345678901234567890abbc</textarea></div>
+            <div>
+              <div class="field"><label for="matchPattern">찾을 패턴</label><input id="matchPattern" type="text" value="abc"></div>
+              <div class="grid-2" style="margin-top:12px">
+                <div class="field"><label for="matchLoc">예상 위치(loc)</label><input id="matchLoc" type="number" min="0" value="26"></div>
+                <div class="field"><label for="matchDistance">탐색 거리</label><input id="matchDistance" type="number" min="0" value="1000"></div>
+              </div>
+              <div class="field" style="margin-top:12px"><label>Match Threshold <span id="thresholdLabel">0.50</span></label><div class="range-pair"><input id="matchThresholdRange" type="range" min="0" max="1" step="0.01" value="0.5"><input id="matchThreshold" type="number" min="0" max="1" step="0.01" value="0.5"></div></div>
+              <button class="btn primary" id="runMatch" type="button" style="margin-top:14px;width:100%">가장 좋은 위치 검색</button>
+              <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:0">
+                <div class="stat"><div class="stat-label">검색 위치</div><div class="stat-value" id="matchFound">-</div></div>
+                <div class="stat"><div class="stat-label">문자 오차</div><div class="stat-value" id="matchErrors">-</div></div>
+                <div class="stat"><div class="stat-label">예상 위치 거리</div><div class="stat-value" id="matchOffset">-</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:14px"><div class="label-row"><label>검색 결과 미리보기</label><span class="tiny">세로선: 예상 위치 · 강조: 선택된 일치 구간</span></div><div class="match-preview" id="matchPreview"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATCH TAB -->
+    <section class="tab-panel" id="tab-patch">
+      <div class="panel">
+        <div class="panel-head"><div><h2>패치 생성·직렬화·적용</h2><p><code>patch_make</code>, <code>patch_toText</code>, <code>patch_fromText</code>, <code>patch_apply</code> 전체 흐름</p></div><div class="panel-actions"><button class="btn" id="patchPreset" type="button">패치 예제</button><button class="btn" id="patchFromMain" type="button">비교 스튜디오 내용 사용</button></div></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label for="patchSource">기준 원문</label><textarea id="patchSource">회의는 월요일 오전 9시에 시작합니다. 준비자료는 금요일까지 제출합니다.</textarea></div>
+            <div class="field"><label for="patchTarget">목표 수정본</label><textarea id="patchTarget">회의는 화요일 오전 10시에 시작합니다. 준비자료는 월요일 오전까지 전자문서로 제출합니다.</textarea></div>
+          </div>
+          <div class="toolbar">
+            <div class="field"><label for="patchMatchThreshold">Match Threshold</label><input id="patchMatchThreshold" type="number" min="0" max="1" step="0.05" value="0.5"></div>
+            <div class="field"><label for="patchDistance">Match Distance</label><input id="patchDistance" type="number" min="0" value="1000"></div>
+            <div class="field"><label for="patchDeleteThreshold">Delete Threshold</label><input id="patchDeleteThreshold" type="number" min="0" max="1" step="0.05" value="0.5"></div>
+            <div class="field"><label for="patchMargin">Patch Margin</label><input id="patchMargin" type="number" min="0" max="32" value="4"></div>
+            <button class="btn primary" id="generatePatch" type="button">패치 생성</button>
+          </div>
+          <div class="grid-2" style="margin-top:14px">
+            <div class="field">
+              <div class="label-row"><label for="patchText">직렬화된 패치 텍스트</label><span class="tiny" id="patchMeta">-</span></div>
+              <textarea class="tall" id="patchText" spellcheck="false" placeholder="@@ ... 형식의 패치가 생성됩니다."></textarea>
+              <div class="panel-actions" style="justify-content:flex-start;margin-top:8px"><button class="btn sm" id="normalizePatch" type="button">파싱 후 정규화</button><button class="btn sm" id="copyPatch" type="button">복사</button><button class="btn sm" id="downloadPatch" type="button">.patch 저장</button></div>
+            </div>
+            <div class="field">
+              <div class="label-row"><label for="patchApplyBase">적용 대상 텍스트</label><button class="btn sm" id="makeDrift" type="button">원문 일부 변경</button></div>
+              <textarea class="compact" id="patchApplyBase">회의는 월요일 오전 9시에 시작합니다. 준비자료는 금요일까지 제출합니다.</textarea>
+              <button class="btn success" id="applyPatch" type="button" style="width:100%;margin:10px 0">현재 패치 적용</button>
+              <label class="tiny">패치별 적용 결과</label><div class="patch-status" id="patchStatus"></div>
+              <label class="tiny" style="display:block;margin-top:10px">적용 결과 텍스트</label><textarea class="compact" id="patchApplied" readonly></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DELTA TAB -->
+    <section class="tab-panel" id="tab-delta">
+      <div class="panel">
+        <div class="panel-head"><div><h2>델타 인코딩과 복원</h2><p><code>diff_toDelta</code>와 <code>diff_fromDelta</code>를 이용한 압축형 변경 정보의 생성·검증</p></div><div class="panel-actions"><button class="btn" id="deltaFromMain" type="button">비교 스튜디오 내용 사용</button><button class="btn" id="deltaPreset" type="button">짧은 예제</button></div></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label for="deltaSource">원본</label><textarea class="compact" id="deltaSource">Hello world. 오늘은 맑습니다.</textarea></div>
+            <div class="field"><label for="deltaTarget">수정본</label><textarea class="compact" id="deltaTarget">Hello brave new world. 오늘은 매우 맑습니다!</textarea></div>
+          </div>
+          <div class="panel-actions" style="justify-content:flex-start;margin:14px 0"><button class="btn primary" id="encodeDelta" type="button">델타 생성</button><button class="btn" id="decodeDelta" type="button">델타 복원 검증</button><button class="btn" id="copyDelta" type="button">델타 복사</button></div>
+          <div class="grid-2">
+            <div class="field"><div class="label-row"><label for="deltaText">델타 문자열</label><span class="tiny" id="deltaSize">-</span></div><textarea id="deltaText" class="compact" spellcheck="false"></textarea></div>
+            <div class="field"><div class="label-row"><label for="deltaDecoded">복원된 수정본</label><span class="tiny" id="deltaVerify">-</span></div><textarea id="deltaDecoded" class="compact" readonly></textarea></div>
+          </div>
+          <div class="note info" style="margin-top:14px">델타 문자열은 원본 텍스트가 있어야 복원할 수 있다. 전송·저장 시에는 원본 버전 식별자와 함께 관리하는 것이 안전하다.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SYNC TAB -->
+    <section class="tab-panel" id="tab-sync">
+      <div class="panel">
+        <div class="panel-head"><div><h2>편집 동기화 시뮬레이션</h2><p>공통 기준에서 만든 원격 패치를 로컬에서 별도로 수정된 텍스트에 적용하는 최선 적용 시나리오</p></div><div class="panel-actions"><button class="btn" data-sync-preset="clean" type="button">충돌 없음</button><button class="btn" data-sync-preset="near" type="button">인접 수정</button><button class="btn" data-sync-preset="conflict" type="button">동일 구간 수정</button></div></div>
+        <div class="panel-body">
+          <div class="grid-3">
+            <div class="field"><label for="syncBase">① 공통 기준 문서</label><textarea id="syncBase">사업계획 검토회의는 3월 10일 개최한다. 참석자는 각 부서 담당자이다. 자료는 회의 전날까지 제출한다.</textarea></div>
+            <div class="field"><label for="syncRemote">② 원격 수정본</label><textarea id="syncRemote">사업계획 최종 검토회의는 3월 12일 개최한다. 참석자는 각 부서 팀장과 담당자이다. 자료는 회의 이틀 전까지 제출한다.</textarea></div>
+            <div class="field"><label for="syncLocal">③ 별도 로컬 수정본</label><textarea id="syncLocal">2026년 사업계획 검토회의는 3월 10일 본관에서 개최한다. 참석자는 각 부서 담당자이다. 자료는 회의 전날 오후 3시까지 제출한다.</textarea></div>
+          </div>
+          <div class="panel-actions" style="justify-content:flex-start;margin:14px 0"><button class="btn primary" id="runSync" type="button">원격 변경을 로컬에 적용</button></div>
+          <div class="grid-2">
+            <div class="field"><div class="label-row"><label for="syncPatch">생성된 원격 패치</label><span class="tiny" id="syncPatchMeta">-</span></div><textarea class="compact" id="syncPatch" readonly></textarea></div>
+            <div class="field"><div class="label-row"><label for="syncResult">병합 결과</label><span class="tiny" id="syncResultMeta">-</span></div><textarea class="compact" id="syncResult" readonly></textarea></div>
+          </div>
+          <div id="syncVisual" class="result-shell" style="margin-top:14px"><div class="empty"><div><strong>시뮬레이션 대기</strong>원격 변경을 로컬에 적용해 결과와 성공 여부를 확인하세요.</div></div></div>
+          <div class="note warning" style="margin-top:14px"><strong>중요:</strong> 이는 완전한 3-way merge나 충돌 해결기가 아니다. 패치 성공 값이 참이어도 업무 의미가 올바른지 별도 검토해야 한다.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BENCHMARK TAB -->
+    <section class="tab-panel" id="tab-benchmark">
+      <div class="panel">
+        <div class="panel-head"><div><h2>성능 실험</h2><p>생성 문서 크기와 변경률을 조정해 Diff·Patch 생성 및 적용 시간을 간단히 측정</p></div><div class="panel-actions"><button class="btn primary" id="runBenchmark" type="button">벤치마크 실행</button></div></div>
+        <div class="panel-body">
+          <div class="toolbar" style="margin-top:0">
+            <div class="field"><label for="benchLines">문서 줄 수</label><select id="benchLines"><option value="100">100줄</option><option value="500" selected>500줄</option><option value="1000">1,000줄</option><option value="3000">3,000줄</option></select></div>
+            <div class="field"><label for="benchRate">변경 간격</label><select id="benchRate"><option value="5">약 20%</option><option value="10" selected>약 10%</option><option value="20">약 5%</option></select></div>
+            <div class="field"><label for="benchRepeat">반복 횟수</label><select id="benchRepeat"><option value="1">1회</option><option value="3" selected>3회</option><option value="5">5회</option></select></div>
+            <div class="field"><label for="benchTimeout">Diff Timeout</label><input id="benchTimeout" type="number" min="0" max="30" step="0.1" value="1"></div>
+          </div>
+          <div class="progress" style="margin:14px 0"><i id="benchProgress"></i></div>
+          <div class="api-table-wrap"><table><thead><tr><th>회차</th><th>원본 크기</th><th>수정본 크기</th><th>Diff 시간</th><th>세그먼트</th><th>Patch 크기</th><th>Patch 적용</th><th>전체 시간</th></tr></thead><tbody id="benchBody"><tr><td colspan="8" style="text-align:center;color:var(--muted)">아직 실행하지 않았습니다.</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><h2>주요 API 및 설정값</h2><p>이 샘플에서 직접 사용하는 공개 기능과 주요 동작 설정</p></div></div>
+        <div class="panel-body">
+          <div class="api-table-wrap">
+            <table><thead><tr><th>구분</th><th>이름</th><th>역할</th><th>기본값·반환</th></tr></thead><tbody>
+              <tr><td>Diff</td><td><code>diff_main(text1, text2, checklines)</code></td><td>두 텍스트의 삽입·삭제·동일 구간 배열 계산</td><td><code>[[op, text], ...]</code></td></tr>
+              <tr><td>Cleanup</td><td><code>diff_cleanupSemantic(diffs)</code></td><td>사람이 읽기 쉬운 편집 경계로 정리</td><td>배열 직접 변경</td></tr>
+              <tr><td>Cleanup</td><td><code>diff_cleanupEfficiency(diffs)</code></td><td>작은 편집을 묶어 처리·저장 효율 개선</td><td><code>Diff_EditCost = 4</code></td></tr>
+              <tr><td>Metric</td><td><code>diff_levenshtein(diffs)</code></td><td>삽입·삭제·치환 기반 최소 편집 거리 산출</td><td>정수</td></tr>
+              <tr><td>Display</td><td><code>diff_prettyHtml(diffs)</code></td><td>예시용 HTML 표현 생성</td><td>HTML 문자열</td></tr>
+              <tr><td>Match</td><td><code>match_main(text, pattern, loc)</code></td><td>정확도와 예상 위치 거리를 함께 반영한 근사 검색</td><td>위치 또는 <code>-1</code></td></tr>
+              <tr><td>Patch</td><td><code>patch_make(...)</code></td><td>텍스트 또는 diff 배열에서 패치 객체 생성</td><td>패치 배열</td></tr>
+              <tr><td>Patch</td><td><code>patch_toText / patch_fromText</code></td><td>패치 배열을 텍스트로 직렬화하거나 복원</td><td>문자열 ↔ 배열</td></tr>
+              <tr><td>Patch</td><td><code>patch_apply(patches, text)</code></td><td>원문이 일부 달라도 최선 방식으로 패치 적용</td><td><code>[result, boolean[]]</code></td></tr>
+              <tr><td>Delta</td><td><code>diff_toDelta / diff_fromDelta</code></td><td>원본 기반 압축형 변경 문자열 생성·복원</td><td>델타 문자열 ↔ diff</td></tr>
+              <tr><td>Option</td><td><code>Diff_Timeout</code></td><td>Diff 탐색 단계의 제한 시간. 0은 무제한</td><td><code>1.0초</code></td></tr>
+              <tr><td>Option</td><td><code>Match_Threshold</code></td><td>유효한 근사 일치의 허용 오차 기준</td><td><code>0.5</code></td></tr>
+              <tr><td>Option</td><td><code>Match_Distance</code></td><td>예상 위치에서 멀어질 때 부여되는 불이익 범위</td><td><code>1000</code></td></tr>
+              <tr><td>Option</td><td><code>Patch_DeleteThreshold</code></td><td>큰 삭제 패치에서 허용할 내용 불일치 정도</td><td><code>0.5</code></td></tr>
+              <tr><td>Option</td><td><code>Patch_Margin</code></td><td>패치 주변에 포함할 문맥 문자 수</td><td><code>4</code></td></tr>
+            </tbody></table>
+          </div>
+          <div class="grid-2" style="margin-top:14px">
+            <div class="code-block"><button class="code-copy" data-copy-code="basicCode">복사</button><pre id="basicCode">const dmp = new diff_match_patch();
+dmp.Diff_Timeout = 1.0;
+
+const diffs = dmp.diff_main(oldText, newText, true);
+dmp.diff_cleanupSemantic(diffs);
+
+const patches = dmp.patch_make(oldText, diffs);
+const patchText = dmp.patch_toText(patches);
+const [result, success] = dmp.patch_apply(patches, anotherText);</pre></div>
+            <div class="code-block"><button class="code-copy" data-copy-code="matchCode">복사</button><pre id="matchCode">const dmp = new diff_match_patch();
+dmp.Match_Threshold = 0.5;
+dmp.Match_Distance = 1000;
+
+const location = dmp.match_main(
+  'abc12345678901234567890abbc',
+  'abc',
+  26
+);</pre></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">diff-match-patch 기능 검토용 단일 HTML 샘플 · 라이브러리 Apache-2.0 · 입력 데이터는 브라우저 내부에서 처리</footer>
+  </main>
+</div>
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script>
+  // 외부망 차단 환경에서는 공식 javascript/diff_match_patch.js 파일을
+  // 이 HTML과 같은 폴더에 두면 첫 번째 로컬 경로로 동작한다.
+  const DMP_SOURCES = [
+    { url: './diff_match_patch.js', label: '로컬 diff_match_patch.js' },
+    { url: 'https://cdn.jsdelivr.net/gh/google/diff-match-patch@master/javascript/diff_match_patch.js', label: 'Google 보관 저장소 · jsDelivr' },
+    { url: 'https://unpkg.com/diff-match-patch@1.0.5/index.js', label: 'npm 1.0.5 · UNPKG', commonJs: true }
+  ];
+
+  function resolveDmpConstructor() {
+    if (typeof window.diff_match_patch === 'function') return window.diff_match_patch;
+    const exp = window.module && window.module.exports;
+    if (typeof exp === 'function') return exp;
+    if (exp && typeof exp.diff_match_patch === 'function') return exp.diff_match_patch;
+    return null;
+  }
+
+  function loadDmpLibrary(index = 0) {
+    return new Promise((resolve, reject) => {
+      const existing = resolveDmpConstructor();
+      if (existing) return resolve({ Constructor: existing, source: '이미 로드됨' });
+      if (index >= DMP_SOURCES.length) return reject(new Error('모든 라이브러리 경로 로드 실패'));
+      const source = DMP_SOURCES[index];
+      if (source.commonJs) {
+        window.module = { exports: {} };
+        window.exports = window.module.exports;
+      }
+      const script = document.createElement('script');
+      script.src = source.url;
+      script.async = true;
+      script.onload = () => {
+        const Constructor = resolveDmpConstructor();
+        if (Constructor) resolve({ Constructor, source: source.label });
+        else loadDmpLibrary(index + 1).then(resolve).catch(reject);
+      };
+      script.onerror = () => loadDmpLibrary(index + 1).then(resolve).catch(reject);
+      document.head.appendChild(script);
+    });
+  }
+</script>
+
+<script>
+(() => {
+  'use strict';
+
+  let DmpConstructor = null;
+  let dmp = null;
+  let currentDiff = [];
+  let currentDisplayDiff = [];
+  let currentProcessed = { a: '', b: '' };
+  let currentView = 'inline';
+  let changeIndex = -1;
+  let liveTimer = null;
+  let latestPatchObjects = [];
+
+  const $ = (id) => document.getElementById(id);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const numberFormat = new Intl.NumberFormat('ko-KR');
+
+  function toast(message, type = '') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = message;
+    $('toastStack').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function cloneDiffs(diffs) { return diffs.map(([op, text]) => [op, text]); }
+  function byteLength(text) { return new Blob([text]).size; }
+  function formatBytes(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  }
+  function formatMs(ms) { return ms < 1 ? `${ms.toFixed(2)}ms` : `${ms.toFixed(1)}ms`; }
+  function lineCount(text) { return text ? text.split(/\r\n|\r|\n/).length : 0; }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('클립보드에 복사했습니다.');
+    } catch (_) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      toast('클립보드에 복사했습니다.');
+    }
+  }
+
+  function downloadText(filename, content, mime = 'text/plain;charset=utf-8') {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function setStatus(ok, sourceOrError) {
+    const status = $('libraryStatus');
+    const source = $('librarySource');
+    status.className = `status-pill ${ok ? 'ok' : 'fail'}`;
+    status.textContent = ok ? '정상' : '실패';
+    source.textContent = sourceOrError;
+  }
+
+  function ensureLibrary() {
+    if (!dmp) {
+      toast('diff-match-patch 라이브러리가 아직 로드되지 않았습니다.', 'error');
+      return false;
+    }
+    return true;
+  }
+
+  function applyCoreSettings(instance = dmp) {
+    instance.Diff_Timeout = Math.max(0, Number($('diffTimeout').value) || 0);
+    instance.Diff_EditCost = Math.max(1, Number($('editCost').value) || 4);
+  }
+
+  function preprocess(text) {
+    let value = text;
+    if ($('normalizeSpace').checked) value = value.replace(/[\t ]+/g, ' ').replace(/ *\n */g, '\n');
+    if ($('ignoreCase').checked) value = value.toLocaleLowerCase('ko-KR');
+    return value;
+  }
+
+  function tokenize(text, mode) {
+    if (mode === 'line') return text.match(/[^\n]*\n|[^\n]+$/g) || [];
+    if (mode === 'word') return text.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) || [];
+    return Array.from(text);
+  }
+
+  function tokenCode(index) {
+    let code = index + 1;
+    if (code >= 0xD800) code += 0x800;
+    if (code > 0xFFFD) throw new Error('고유 토큰 수가 너무 많습니다. 문자 단위 비교를 사용하세요.');
+    return String.fromCharCode(code);
+  }
+
+  function encodeTokenPair(a, b, mode) {
+    const map = new Map();
+    const tokens = [];
+    function encode(text) {
+      let out = '';
+      for (const token of tokenize(text, mode)) {
+        let idx = map.get(token);
+        if (idx === undefined) { idx = tokens.length; tokens.push(token); map.set(token, idx); }
+        out += tokenCode(idx);
+      }
+      return out;
+    }
+    return { a: encode(a), b: encode(b), tokens };
+  }
+
+  function decodeTokenDiffs(diffs, tokens) {
+    return diffs.map(([op, encoded]) => [op, Array.from(encoded).map(ch => {
+      let code = ch.charCodeAt(0);
+      if (code >= 0xE000) code -= 0x800;
+      return tokens[code - 1] ?? '';
+    }).join('')]);
+  }
+
+  function calculateDiff(a, b, mode, cleanup, checklines) {
+    applyCoreSettings();
+    let diffs;
+    if (mode === 'char') {
+      diffs = dmp.diff_main(a, b, checklines);
+      if (cleanup === 'semantic') dmp.diff_cleanupSemantic(diffs);
+      if (cleanup === 'efficiency') dmp.diff_cleanupEfficiency(diffs);
+      return diffs;
+    }
+    const encoded = encodeTokenPair(a, b, mode);
+    diffs = dmp.diff_main(encoded.a, encoded.b, false);
+    if (cleanup === 'semantic') dmp.diff_cleanupSemantic(diffs);
+    if (cleanup === 'efficiency') dmp.diff_cleanupEfficiency(diffs);
+    return decodeTokenDiffs(diffs, encoded.tokens);
+  }
+
+  function diffStats(diffs, a, b) {
+    let inserted = 0, deleted = 0, equal = 0;
+    for (const [op, text] of diffs) {
+      if (op === 1) inserted += text.length;
+      else if (op === -1) deleted += text.length;
+      else equal += text.length;
+    }
+    const metricDiff = dmp.diff_main(a, b, false);
+    const levenshtein = dmp.diff_levenshtein(metricDiff);
+    const maxLen = Math.max(a.length, b.length, 1);
+    const similarity = Math.max(0, (1 - levenshtein / maxLen) * 100);
+    return { inserted, deleted, equal, levenshtein, similarity, segments: diffs.length };
+  }
+
+  function renderInline(diffs, withChangeClass = true) {
+    return `<div class="diff-output">${diffs.map(([op, text]) => {
+      const cls = op === 1 ? 'diff-insert' : op === -1 ? 'diff-delete' : 'diff-equal';
+      const change = op !== 0 && withChangeClass ? ' diff-change' : '';
+      return `<span class="${cls}${change}" data-op="${op}">${escapeHtml(text)}</span>`;
+    }).join('')}</div>`;
+  }
+
+  function renderSplit(diffs) {
+    const left = [], right = [];
+    for (const [op, text] of diffs) {
+      const safe = escapeHtml(text);
+      if (op === 0) { left.push(`<span class="diff-equal">${safe}</span>`); right.push(`<span class="diff-equal">${safe}</span>`); }
+      else if (op === -1) { left.push(`<span class="diff-delete diff-change" data-op="-1">${safe}</span>`); right.push(`<span class="placeholder">${safe}</span>`); }
+      else { left.push(`<span class="placeholder">${safe}</span>`); right.push(`<span class="diff-insert diff-change" data-op="1">${safe}</span>`); }
+    }
+    return `<div class="diff-output" style="padding:0"><div class="split-diff"><div class="split-col"><div class="split-title">원본 A</div><div class="split-content">${left.join('')}</div></div><div class="split-col"><div class="split-title">수정본 B</div><div class="split-content">${right.join('')}</div></div></div></div>`;
+  }
+
+  function renderCurrentDiff() {
+    if (!currentDisplayDiff.length && currentProcessed.a === currentProcessed.b) {
+      $('diffResult').innerHTML = '<div class="empty"><div><strong>두 텍스트가 같습니다.</strong>변경 구간이 없습니다.</div></div>';
+      updateChangeNavigation();
+      return;
+    }
+    if (currentView === 'inline') $('diffResult').innerHTML = renderInline(currentDisplayDiff);
+    else if (currentView === 'split') $('diffResult').innerHTML = renderSplit(currentDisplayDiff);
+    else $('diffResult').innerHTML = `<pre class="raw-output">${escapeHtml(JSON.stringify(currentDisplayDiff, null, 2))}</pre>`;
+    changeIndex = -1;
+    updateChangeNavigation();
+  }
+
+  function updateChangeNavigation() {
+    const changes = $$('.diff-change', $('diffResult'));
+    $('changeCounter').textContent = `변경 ${changes.length}개${changeIndex >= 0 ? ` · ${changeIndex + 1}/${changes.length}` : ''}`;
+    $('prevChange').disabled = !changes.length;
+    $('nextChange').disabled = !changes.length;
+  }
+
+  function moveChange(step) {
+    const changes = $$('.diff-change', $('diffResult'));
+    if (!changes.length) return;
+    changes.forEach(el => el.classList.remove('current'));
+    changeIndex = (changeIndex + step + changes.length) % changes.length;
+    changes[changeIndex].classList.add('current');
+    changes[changeIndex].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    updateChangeNavigation();
+  }
+
+  function runDiff() {
+    if (!ensureLibrary()) return;
+    const rawA = $('textA').value;
+    const rawB = $('textB').value;
+    const a = preprocess(rawA);
+    const b = preprocess(rawB);
+    const mode = $('diffGranularity').value;
+    const cleanup = $('cleanupMode').value;
+    const checklines = $('checkLines').checked;
+    const started = performance.now();
+    try {
+      currentDisplayDiff = calculateDiff(a, b, mode, cleanup, checklines);
+      currentDiff = dmp.diff_main(a, b, checklines);
+      if (cleanup === 'semantic') dmp.diff_cleanupSemantic(currentDiff);
+      if (cleanup === 'efficiency') dmp.diff_cleanupEfficiency(currentDiff);
+      currentProcessed = { a, b };
+      const elapsed = performance.now() - started;
+      const stats = diffStats(currentDisplayDiff, a, b);
+      $('statSimilarity').textContent = `${stats.similarity.toFixed(1)}%`;
+      $('statInsert').textContent = numberFormat.format(stats.inserted);
+      $('statDelete').textContent = numberFormat.format(stats.deleted);
+      $('statLeven').textContent = numberFormat.format(stats.levenshtein);
+      $('statSegments').textContent = numberFormat.format(stats.segments);
+      $('statTime').textContent = formatMs(elapsed);
+      renderCurrentDiff();
+      localStorage.setItem('dmp-text-a', rawA);
+      localStorage.setItem('dmp-text-b', rawB);
+    } catch (error) {
+      toast(`비교 실패: ${error.message}`, 'error');
+      $('diffResult').innerHTML = `<div class="empty"><div><strong>비교 중 오류가 발생했습니다.</strong>${escapeHtml(error.message)}</div></div>`;
+    }
+  }
+
+  function updateCounts() {
+    for (const suffix of ['A', 'B']) {
+      const text = $(`text${suffix}`).value;
+      $(`count${suffix}`).textContent = `${numberFormat.format(text.length)}자 · ${numberFormat.format(lineCount(text))}줄`;
+    }
+  }
+
+  function queueLiveDiff() {
+    updateCounts();
+    if (!$('liveDiff').checked || !dmp) return;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(runDiff, 280);
+  }
+
+  const PRESETS = {
+    policy: {
+      a: `제1조(목적) 이 지침은 조합 업무의 효율적 수행을 목적으로 한다.\n제2조(보고) 담당자는 매월 말일까지 실적을 보고한다.\n제3조(보관) 관련 자료는 3년간 보관한다.`,
+      b: `제1조(목적) 이 지침은 조합 업무의 안전하고 효율적인 수행을 목적으로 한다.\n제2조(보고) 담당자는 매월 25일까지 전자문서로 실적을 보고한다.\n제3조(보관) 관련 자료와 증빙은 5년간 보관한다.\n제4조(점검) 부서장은 분기별 이행 여부를 점검한다.`
+    },
+    code: {
+      a: `function calculateTotal(items) {\n  return items.reduce((sum, item) => sum + item.price, 0);\n}\n\nconsole.log(calculateTotal(cart));`,
+      b: `function calculateTotal(items, taxRate = 0) {\n  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);\n  return subtotal * (1 + taxRate);\n}\n\nconsole.log(calculateTotal(cart, 0.1));`
+    },
+    json: {
+      a: `{"name":"어선안전","year":2025,"active":true,"regions":["부산","여수"]}`,
+      b: `{"name":"어선안전 고도화","year":2026,"active":true,"regions":["부산","여수","제주"],"manager":"안전부"}`
+    }
+  };
+
+  function loadPreset(name) {
+    const preset = PRESETS[name];
+    $('textA').value = preset.a; $('textB').value = preset.b;
+    updateCounts(); runDiff();
+  }
+
+  function renderCleanupCard(id, metaId, diffs) {
+    $(id).innerHTML = diffs.map(([op, text]) => `<span class="${op === 1 ? 'diff-insert' : op === -1 ? 'diff-delete' : 'diff-equal'}">${escapeHtml(text)}</span>`).join('');
+    const changed = diffs.filter(([op]) => op !== 0).length;
+    $(metaId).textContent = `전체 ${diffs.length}개 세그먼트 · 편집 ${changed}개 · Levenshtein ${dmp.diff_levenshtein(diffs)}`;
+  }
+
+  function runCleanup() {
+    if (!ensureLibrary()) return;
+    const a = $('cleanupA').value, b = $('cleanupB').value;
+    const raw = dmp.diff_main(a, b, false);
+    const semantic = cloneDiffs(raw);
+    const efficiency = cloneDiffs(raw);
+    dmp.diff_cleanupSemantic(semantic);
+    const temp = new DmpConstructor(); temp.Diff_EditCost = Math.max(1, Number($('cleanupEditCost').value) || 4);
+    temp.diff_cleanupEfficiency(efficiency);
+    renderCleanupCard('cleanupRaw', 'cleanupRawMeta', raw);
+    renderCleanupCard('cleanupSemantic', 'cleanupSemanticMeta', semantic);
+    renderCleanupCard('cleanupEfficiency', 'cleanupEfficiencyMeta', efficiency);
+  }
+
+  function syncThreshold(source) {
+    const value = Math.min(1, Math.max(0, Number(source.value) || 0));
+    $('matchThreshold').value = value;
+    $('matchThresholdRange').value = value;
+    $('thresholdLabel').textContent = value.toFixed(2);
+  }
+
+  function runMatch() {
+    if (!ensureLibrary()) return;
+    const text = $('matchText').value, pattern = $('matchPattern').value;
+    const loc = Math.max(0, Number($('matchLoc').value) || 0);
+    dmp.Match_Threshold = Math.min(1, Math.max(0, Number($('matchThreshold').value) || 0));
+    dmp.Match_Distance = Math.max(0, Number($('matchDistance').value) || 0);
+    if (!pattern) { toast('찾을 패턴을 입력하세요.', 'error'); return; }
+    const found = dmp.match_main(text, pattern, loc);
+    $('matchFound').textContent = found;
+    if (found === -1) {
+      $('matchErrors').textContent = '-'; $('matchOffset').textContent = '-';
+      $('matchPreview').innerHTML = escapeHtml(text);
+      toast('유효한 일치를 찾지 못했습니다.');
+      return;
+    }
+    const actual = text.slice(found, found + pattern.length);
+    const diffs = dmp.diff_main(pattern, actual, false);
+    $('matchErrors').textContent = dmp.diff_levenshtein(diffs);
+    $('matchOffset').textContent = Math.abs(found - loc);
+    const positions = [
+      { pos: found, type: 'hit' },
+      { pos: Math.min(text.length, loc), type: 'loc' }
+    ].sort((x, y) => x.pos - y.pos || (x.type === 'loc' ? -1 : 1));
+    let html = '', cursor = 0;
+    for (const marker of positions) {
+      if (marker.pos < cursor) continue;
+      html += escapeHtml(text.slice(cursor, marker.pos));
+      if (marker.type === 'loc') {
+        html += '<span class="match-marker" title="예상 위치"></span>';
+        cursor = marker.pos;
+      } else {
+        html += `<mark class="match-hit">${escapeHtml(text.slice(marker.pos, marker.pos + pattern.length))}</mark>`;
+        cursor = marker.pos + pattern.length;
+      }
+    }
+    html += escapeHtml(text.slice(cursor));
+    $('matchPreview').innerHTML = html;
+  }
+
+  const MATCH_PRESETS = {
+    nearTypo: { text: 'abc12345678901234567890abbc', pattern: 'abc', loc: 26, distance: 1000, threshold: .5 },
+    farExact: { text: '정확한문장---중간에 아주 많은 설명이 이어집니다---정확한문장', pattern: '정확한문장', loc: 40, distance: 10, threshold: .5 },
+    korean: { text: '수산물 유통 혁신 사업의 세부 추진계획을 검토합니다. 수산물 유통 혁신사업 보고서는 내일까지 제출합니다.', pattern: '수산물 유통 혁신 사업', loc: 45, distance: 100, threshold: .55 }
+  };
+
+  function applyMatchPreset(name) {
+    const p = MATCH_PRESETS[name];
+    $('matchText').value = p.text; $('matchPattern').value = p.pattern; $('matchLoc').value = p.loc; $('matchDistance').value = p.distance; $('matchThreshold').value = p.threshold; syncThreshold($('matchThreshold')); runMatch();
+  }
+
+  function setPatchSettings(instance = dmp) {
+    instance.Match_Threshold = Math.min(1, Math.max(0, Number($('patchMatchThreshold').value) || .5));
+    instance.Match_Distance = Math.max(0, Number($('patchDistance').value) || 0);
+    instance.Patch_DeleteThreshold = Math.min(1, Math.max(0, Number($('patchDeleteThreshold').value) || .5));
+    instance.Patch_Margin = Math.max(0, Number($('patchMargin').value) || 4);
+  }
+
+  function generatePatch() {
+    if (!ensureLibrary()) return;
+    try {
+      setPatchSettings();
+      latestPatchObjects = dmp.patch_make($('patchSource').value, $('patchTarget').value);
+      const text = dmp.patch_toText(latestPatchObjects);
+      $('patchText').value = text;
+      $('patchApplyBase').value = $('patchSource').value;
+      $('patchMeta').textContent = `${latestPatchObjects.length}개 패치 · ${formatBytes(byteLength(text))}`;
+      $('patchStatus').innerHTML = '';
+      $('patchApplied').value = '';
+      toast('패치를 생성했습니다.');
+    } catch (error) { toast(`패치 생성 실패: ${error.message}`, 'error'); }
+  }
+
+  function parsePatch() {
+    setPatchSettings();
+    const text = $('patchText').value;
+    if (!text.trim()) throw new Error('패치 텍스트가 비어 있습니다.');
+    latestPatchObjects = dmp.patch_fromText(text);
+    return latestPatchObjects;
+  }
+
+  function applyPatch() {
+    if (!ensureLibrary()) return;
+    try {
+      const patches = parsePatch();
+      const [result, flags] = dmp.patch_apply(patches, $('patchApplyBase').value);
+      $('patchApplied').value = result;
+      $('patchStatus').innerHTML = flags.map((ok, i) => `<span class="patch-chip ${ok ? 'ok' : 'fail'}">${i + 1}: ${ok ? '성공' : '실패'}</span>`).join('');
+      const success = flags.filter(Boolean).length;
+      toast(`패치 적용: ${success}/${flags.length}개 성공${success === flags.length ? '' : ' — 결과 검토 필요'}`, success === flags.length ? '' : 'error');
+    } catch (error) { toast(`패치 적용 실패: ${error.message}`, 'error'); }
+  }
+
+  function encodeDelta() {
+    if (!ensureLibrary()) return;
+    try {
+      const source = $('deltaSource').value;
+      const target = $('deltaTarget').value;
+      const diffs = dmp.diff_main(source, target, true);
+      dmp.diff_cleanupSemantic(diffs);
+      const delta = dmp.diff_toDelta(diffs);
+      $('deltaText').value = delta;
+      $('deltaSize').textContent = `${formatBytes(byteLength(delta))} · 원문 대비 ${source.length ? ((delta.length / source.length) * 100).toFixed(1) : 0}%`;
+      $('deltaDecoded').value = '';
+      $('deltaVerify').textContent = '복원 대기';
+    } catch (error) { toast(`델타 생성 실패: ${error.message}`, 'error'); }
+  }
+
+  function decodeDelta() {
+    if (!ensureLibrary()) return;
+    try {
+      const diffs = dmp.diff_fromDelta($('deltaSource').value, $('deltaText').value);
+      const restored = diffs.filter(([op]) => op !== -1).map(([, text]) => text).join('');
+      $('deltaDecoded').value = restored;
+      const same = restored === $('deltaTarget').value;
+      $('deltaVerify').textContent = same ? '목표 수정본과 완전 일치' : '목표 수정본과 불일치';
+      $('deltaVerify').style.color = same ? 'var(--insert)' : 'var(--delete)';
+      toast(same ? '델타 복원 검증에 성공했습니다.' : '복원 결과가 목표 수정본과 다릅니다.', same ? '' : 'error');
+    } catch (error) { toast(`델타 복원 실패: ${error.message}`, 'error'); }
+  }
+
+  const SYNC_PRESETS = {
+    clean: {
+      base: '보고서는 금요일까지 제출한다. 검토자는 부서장이다. 파일명은 부서명으로 한다.',
+      remote: '보고서는 월요일 오전까지 제출한다. 검토자는 부서장과 팀장이다. 파일명은 부서명으로 한다.',
+      local: '2026년 보고서는 금요일까지 제출한다. 검토자는 부서장이다. 파일명은 부서명으로 한다.'
+    },
+    near: {
+      base: '사업계획 검토회의는 3월 10일 개최한다. 참석자는 각 부서 담당자이다. 자료는 회의 전날까지 제출한다.',
+      remote: '사업계획 최종 검토회의는 3월 12일 개최한다. 참석자는 각 부서 팀장과 담당자이다. 자료는 회의 이틀 전까지 제출한다.',
+      local: '2026년 사업계획 검토회의는 3월 10일 본관에서 개최한다. 참석자는 각 부서 담당자이다. 자료는 회의 전날 오후 3시까지 제출한다.'
+    },
+    conflict: {
+      base: '회의 일정은 7월 15일 오후 2시이며 장소는 본관 회의실이다.',
+      remote: '회의 일정은 7월 16일 오전 10시이며 장소는 본관 대회의실이다.',
+      local: '회의 일정은 7월 17일 오후 4시이며 장소는 별관 회의실이다.'
+    }
+  };
+
+  function applySyncPreset(name) {
+    const p = SYNC_PRESETS[name];
+    $('syncBase').value = p.base; $('syncRemote').value = p.remote; $('syncLocal').value = p.local;
+    $('syncPatch').value = ''; $('syncResult').value = '';
+    $('syncVisual').innerHTML = '<div class="empty"><div><strong>시나리오를 불러왔습니다.</strong>원격 변경을 로컬에 적용하세요.</div></div>';
+  }
+
+  function runSync() {
+    if (!ensureLibrary()) return;
+    try {
+      const base = $('syncBase').value, remote = $('syncRemote').value, local = $('syncLocal').value;
+      const patches = dmp.patch_make(base, remote);
+      const patchText = dmp.patch_toText(patches);
+      const [result, flags] = dmp.patch_apply(patches, local);
+      $('syncPatch').value = patchText;
+      $('syncResult').value = result;
+      $('syncPatchMeta').textContent = `${patches.length}개 패치 · ${formatBytes(byteLength(patchText))}`;
+      $('syncResultMeta').textContent = `${flags.filter(Boolean).length}/${flags.length}개 적용 성공`;
+      const localToResult = dmp.diff_main(local, result, true);
+      dmp.diff_cleanupSemantic(localToResult);
+      $('syncVisual').innerHTML = `<div class="result-toolbar"><div class="left"><strong style="font-size:12px">로컬 → 병합 결과 변경</strong></div><div class="right">${flags.map((ok, i) => `<span class="patch-chip ${ok ? 'ok' : 'fail'}">패치 ${i + 1} ${ok ? '성공' : '실패'}</span>`).join('')}</div></div>${renderInline(localToResult)}`;
+    } catch (error) { toast(`동기화 시뮬레이션 실패: ${error.message}`, 'error'); }
+  }
+
+  function generateBenchmarkTexts(lines, every) {
+    const base = [], target = [];
+    for (let i = 1; i <= lines; i++) {
+      const line = `제${i}행: 업무 처리 기준과 검토 절차를 기록하는 샘플 문장입니다. 담당번호=${String(i).padStart(5, '0')}\n`;
+      base.push(line);
+      if (i % every === 0) target.push(`제${i}행: 업무 처리 기준, 자동 검증 및 승인 절차를 기록하는 수정 문장입니다. 담당번호=${String(i + 100).padStart(5, '0')}\n`);
+      else target.push(line);
+    }
+    return { base: base.join(''), target: target.join('') };
+  }
+
+  async function runBenchmark() {
+    if (!ensureLibrary()) return;
+    const lines = Number($('benchLines').value);
+    const every = Number($('benchRate').value);
+    const repeat = Number($('benchRepeat').value);
+    const timeout = Math.max(0, Number($('benchTimeout').value) || 0);
+    const { base, target } = generateBenchmarkTexts(lines, every);
+    const rows = [];
+    $('benchBody').innerHTML = '';
+    $('runBenchmark').disabled = true;
+    try {
+      for (let i = 1; i <= repeat; i++) {
+        await new Promise(resolve => setTimeout(resolve, 30));
+        const instance = new DmpConstructor(); instance.Diff_Timeout = timeout;
+        const totalStart = performance.now();
+        const diffStart = performance.now();
+        const diffs = instance.diff_main(base, target, true);
+        instance.diff_cleanupEfficiency(diffs);
+        const diffMs = performance.now() - diffStart;
+        const patches = instance.patch_make(base, diffs);
+        const patchText = instance.patch_toText(patches);
+        const [result, flags] = instance.patch_apply(patches, base);
+        const totalMs = performance.now() - totalStart;
+        const ok = result === target && flags.every(Boolean);
+        rows.push(`<tr><td>${i}</td><td>${formatBytes(byteLength(base))}</td><td>${formatBytes(byteLength(target))}</td><td>${formatMs(diffMs)}</td><td>${numberFormat.format(diffs.length)}</td><td>${formatBytes(byteLength(patchText))}</td><td><span class="patch-chip ${ok ? 'ok' : 'fail'}">${ok ? '성공' : '검토'}</span></td><td>${formatMs(totalMs)}</td></tr>`);
+        $('benchBody').innerHTML = rows.join('');
+        $('benchProgress').style.width = `${(i / repeat) * 100}%`;
+      }
+    } catch (error) {
+      toast(`벤치마크 실패: ${error.message}`, 'error');
+    } finally {
+      $('runBenchmark').disabled = false;
+    }
+  }
+
+  function exportDiffJson() {
+    if (!currentDisplayDiff.length && currentProcessed.a !== currentProcessed.b) { toast('먼저 차이를 계산하세요.', 'error'); return; }
+    const stats = diffStats(currentDisplayDiff, currentProcessed.a, currentProcessed.b);
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      settings: { granularity: $('diffGranularity').value, cleanup: $('cleanupMode').value, timeout: Number($('diffTimeout').value), editCost: Number($('editCost').value) },
+      source: currentProcessed.a,
+      target: currentProcessed.b,
+      stats,
+      diffs: currentDisplayDiff
+    };
+    downloadText('diff-result.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+  }
+
+  function exportDiffHtml() {
+    if (!currentDisplayDiff.length && currentProcessed.a !== currentProcessed.b) { toast('먼저 차이를 계산하세요.', 'error'); return; }
+    const stats = diffStats(currentDisplayDiff, currentProcessed.a, currentProcessed.b);
+    const body = currentDisplayDiff.map(([op, text]) => `<span class="${op === 1 ? 'ins' : op === -1 ? 'del' : ''}">${escapeHtml(text)}</span>`).join('');
+    const html = `<!doctype html><html lang="ko"><meta charset="utf-8"><title>Diff 결과 보고서</title><style>body{font-family:system-ui;max-width:1100px;margin:40px auto;padding:0 20px;color:#172033}pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;border:1px solid #dbe3ee;padding:20px;border-radius:12px}.ins{background:#dff7e9;color:#087443}.del{background:#ffe4e1;color:#b42318;text-decoration:line-through}.meta{display:flex;gap:18px;flex-wrap:wrap;color:#667085}</style><h1>텍스트 비교 결과</h1><div class="meta"><span>유사도 ${stats.similarity.toFixed(1)}%</span><span>삽입 ${stats.inserted}자</span><span>삭제 ${stats.deleted}자</span><span>Levenshtein ${stats.levenshtein}</span></div><pre>${body}</pre></html>`;
+    downloadText('diff-report.html', html, 'text/html;charset=utf-8');
+  }
+
+  function bindTabs() {
+    $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+      $$('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      $$('.tab-panel').forEach(panel => panel.classList.toggle('active', panel.id === `tab-${btn.dataset.tab}`));
+    }));
+  }
+
+  function bindFileInput(inputId, targetId) {
+    $(inputId).addEventListener('change', async event => {
+      const file = event.target.files[0]; if (!file) return;
+      $(targetId).value = await file.text(); updateCounts(); queueLiveDiff();
+      event.target.value = '';
+    });
+    const zone = $(targetId);
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragging'));
+    zone.addEventListener('drop', async e => {
+      e.preventDefault(); zone.classList.remove('dragging');
+      const file = e.dataTransfer.files[0]; if (!file) return;
+      zone.value = await file.text(); updateCounts(); queueLiveDiff();
+    });
+  }
+
+  function bindEvents() {
+    bindTabs();
+    bindFileInput('fileA', 'textA'); bindFileInput('fileB', 'textB');
+    ['textA', 'textB'].forEach(id => $(id).addEventListener('input', queueLiveDiff));
+    $('runDiff').addEventListener('click', runDiff);
+    $('loadExampleTop').addEventListener('click', () => { document.querySelector('[data-tab="diff"]').click(); loadPreset('policy'); });
+    $('presetPolicy').addEventListener('click', () => loadPreset('policy'));
+    $('presetCode').addEventListener('click', () => loadPreset('code'));
+    $('presetJson').addEventListener('click', () => loadPreset('json'));
+    $('swapTexts').addEventListener('click', () => { const a = $('textA').value; $('textA').value = $('textB').value; $('textB').value = a; updateCounts(); runDiff(); });
+    $('prevChange').addEventListener('click', () => moveChange(-1));
+    $('nextChange').addEventListener('click', () => moveChange(1));
+    $('copyDiffText').addEventListener('click', () => copyText(currentDisplayDiff.map(([op, text]) => `${op === 1 ? '+' : op === -1 ? '-' : ' '} ${text}`).join('')));
+    $('exportDiffJson').addEventListener('click', exportDiffJson);
+    $('exportDiffHtml').addEventListener('click', exportDiffHtml);
+    $$('#viewModeGroup button').forEach(btn => btn.addEventListener('click', () => { $$('#viewModeGroup button').forEach(b => b.classList.toggle('active', b === btn)); currentView = btn.dataset.view; renderCurrentDiff(); }));
+    $$('[data-copy-target]').forEach(btn => btn.addEventListener('click', () => copyText($(btn.dataset.copyTarget).value)));
+    $$('[data-clear-target]').forEach(btn => btn.addEventListener('click', () => { $(btn.dataset.clearTarget).value = ''; updateCounts(); queueLiveDiff(); }));
+
+    $('cleanupFromMain').addEventListener('click', () => { $('cleanupA').value = $('textA').value; $('cleanupB').value = $('textB').value; runCleanup(); });
+    $('runCleanup').addEventListener('click', runCleanup);
+
+    $('matchThresholdRange').addEventListener('input', e => syncThreshold(e.target));
+    $('matchThreshold').addEventListener('input', e => syncThreshold(e.target));
+    $('runMatch').addEventListener('click', runMatch);
+    $$('[data-match-preset]').forEach(btn => btn.addEventListener('click', () => applyMatchPreset(btn.dataset.matchPreset)));
+
+    $('generatePatch').addEventListener('click', generatePatch);
+    $('applyPatch').addEventListener('click', applyPatch);
+    $('normalizePatch').addEventListener('click', () => { try { const p = parsePatch(); $('patchText').value = dmp.patch_toText(p); $('patchMeta').textContent = `${p.length}개 패치 · 파싱 정상`; toast('패치 텍스트를 정상적으로 파싱했습니다.'); } catch (e) { toast(`패치 파싱 실패: ${e.message}`, 'error'); } });
+    $('copyPatch').addEventListener('click', () => copyText($('patchText').value));
+    $('downloadPatch').addEventListener('click', () => downloadText('changes.patch', $('patchText').value));
+    $('makeDrift').addEventListener('click', () => { $('patchApplyBase').value = `※ 내부 검토본\n${$('patchSource').value.replace('금요일', '금요일 오후')}`; });
+    $('patchFromMain').addEventListener('click', () => { $('patchSource').value = $('textA').value; $('patchTarget').value = $('textB').value; generatePatch(); });
+    $('patchPreset').addEventListener('click', () => { $('patchSource').value = '회의는 월요일 오전 9시에 시작합니다. 준비자료는 금요일까지 제출합니다.'; $('patchTarget').value = '회의는 화요일 오전 10시에 시작합니다. 준비자료는 월요일 오전까지 전자문서로 제출합니다.'; generatePatch(); });
+
+    $('encodeDelta').addEventListener('click', encodeDelta);
+    $('decodeDelta').addEventListener('click', decodeDelta);
+    $('copyDelta').addEventListener('click', () => copyText($('deltaText').value));
+    $('deltaFromMain').addEventListener('click', () => { $('deltaSource').value = $('textA').value; $('deltaTarget').value = $('textB').value; encodeDelta(); });
+    $('deltaPreset').addEventListener('click', () => { $('deltaSource').value = 'Hello world. 오늘은 맑습니다.'; $('deltaTarget').value = 'Hello brave new world. 오늘은 매우 맑습니다!'; encodeDelta(); });
+
+    $('runSync').addEventListener('click', runSync);
+    $$('[data-sync-preset]').forEach(btn => btn.addEventListener('click', () => applySyncPreset(btn.dataset.syncPreset)));
+    $('runBenchmark').addEventListener('click', runBenchmark);
+
+    $$('[data-copy-code]').forEach(btn => btn.addEventListener('click', () => copyText($(btn.dataset.copyCode).textContent)));
+
+    $('themeToggle').addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next; localStorage.setItem('dmp-theme', next);
+    });
+
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runDiff(); }
+      if (e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); $('swapTexts').click(); }
+    });
+  }
+
+  function restoreState() {
+    const theme = localStorage.getItem('dmp-theme');
+    if (theme) document.documentElement.dataset.theme = theme;
+    const a = localStorage.getItem('dmp-text-a');
+    const b = localStorage.getItem('dmp-text-b');
+    if (a !== null && b !== null) { $('textA').value = a; $('textB').value = b; }
+    else { $('textA').value = PRESETS.policy.a; $('textB').value = PRESETS.policy.b; }
+    updateCounts();
+  }
+
+  async function init() {
+    bindEvents();
+    restoreState();
+    try {
+      const loaded = await loadDmpLibrary();
+      DmpConstructor = loaded.Constructor;
+      dmp = new DmpConstructor();
+      setStatus(true, loaded.source);
+      runDiff(); runCleanup(); runMatch(); generatePatch(); encodeDelta();
+    } catch (error) {
+      setStatus(false, '로컬 파일 또는 인터넷 연결 필요');
+      toast('라이브러리를 불러오지 못했습니다. 같은 폴더에 diff_match_patch.js를 두거나 인터넷 연결을 확인하세요.', 'error');
+      console.error(error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>
