@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="SignaturePad.js v5 기능을 한 화면에서 시험하는 샘플 페이지" />
+  <title>SignaturePad.js 기능 쇼케이스</title>
+  <style>
+    :root {
+      --ink:#132238; --muted:#66758a; --line:#dce4ee; --panel:#ffffff; --bg:#f3f6fa;
+      --brand:#1668d8; --brand-soft:#eaf2ff; --danger:#c63636; --ok:#147a4d; --shadow:0 10px 30px rgba(18,40,70,.08);
+      font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; min-width:320px; color:var(--ink); background:var(--bg); }
+    button, input, textarea, select { font:inherit; }
+    button { cursor:pointer; }
+    header { color:#fff; background:linear-gradient(126deg,#0c2a4f,#146bd3 58%,#44a1dc); padding:30px max(24px, calc((100vw - 1500px)/2)); }
+    .header-inner { max-width:1500px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:22px; }
+    h1 { margin:0 0 7px; font-size:clamp(24px,3vw,36px); letter-spacing:-.035em; }
+    .subtitle { margin:0; color:#e8f2ff; line-height:1.6; }
+    .badge { white-space:nowrap; padding:7px 11px; border:1px solid rgba(255,255,255,.45); border-radius:999px; font-size:12px; color:#fff; }
+    main { max-width:1500px; margin:0 auto; padding:24px; }
+    .notice { margin-bottom:18px; padding:12px 14px; border:1px solid #cbdcf4; border-radius:12px; color:#245b99; background:#edf5ff; font-size:13px; line-height:1.55; }
+    .layout { display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(360px, .85fr); gap:20px; align-items:start; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
+    .card h2 { margin:0; font-size:17px; letter-spacing:-.02em; }
+    .card-head { display:flex; justify-content:space-between; gap:16px; align-items:center; padding:17px 18px 14px; border-bottom:1px solid var(--line); }
+    .card-body { padding:16px 18px 18px; }
+    .signature-area { position:relative; height:450px; background:#f9fbfd; overflow:hidden; }
+    #signatureCanvas { display:block; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+    .guide { pointer-events:none; position:absolute; inset:0; display:grid; place-items:center; color:#96a4b5; font-size:15px; letter-spacing:-.02em; transition:opacity .15s; }
+    .guide span { padding:8px 12px; border:1px dashed #b7c3d0; border-radius:9px; background:rgba(255,255,255,.82); }
+    .canvas-footer { display:flex; flex-wrap:wrap; gap:9px; justify-content:space-between; padding:12px 16px; border-top:1px solid var(--line); background:#fff; }
+    .status { color:var(--muted); font-size:12px; line-height:1.55; }
+    .status strong { color:var(--ink); }
+    .action-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .btn { border:1px solid #c8d5e5; border-radius:9px; color:#26384e; padding:8px 11px; background:#fff; font-size:13px; font-weight:650; transition:.15s; }
+    .btn:hover { border-color:#8db7ed; background:#f2f7ff; }
+    .btn.primary { border-color:var(--brand); color:#fff; background:var(--brand); }
+    .btn.primary:hover { background:#0f59b9; }
+    .btn.danger { border-color:#eac7c7; color:#a42c2c; background:#fff8f8; }
+    .btn.active { box-shadow:inset 0 0 0 2px rgba(22,104,216,.15); border-color:var(--brand); color:#0d59ba; }
+    .btn:disabled { cursor:not-allowed; opacity:.46; }
+    .panel-stack { display:grid; gap:16px; }
+    .section-title { margin:0 0 11px; color:#42546a; font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+    .control-grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+    label { display:block; color:#435369; font-size:12px; font-weight:700; }
+    label .meta { float:right; color:#718298; font-weight:650; }
+    input[type="range"] { width:100%; margin:6px 0 0; accent-color:var(--brand); }
+    input[type="number"], input[type="text"], input[type="color"], select, textarea { width:100%; margin-top:6px; border:1px solid #cdd9e6; border-radius:8px; padding:8px; color:var(--ink); background:#fff; }
+    input[type="color"] { height:39px; padding:3px; }
+    textarea { min-height:132px; resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:11px; line-height:1.45; }
+    .checks { display:grid; gap:8px; margin-top:11px; }
+    .checks label { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+    .checks input { width:15px; height:15px; }
+    .small { margin:8px 0 0; color:var(--muted); font-size:11px; line-height:1.55; }
+    .preset-row, .palette { display:flex; flex-wrap:wrap; gap:7px; }
+    .preset { padding:7px 9px; border:1px solid #cfd9e7; border-radius:8px; color:#425166; background:#fff; font-size:12px; font-weight:700; }
+    .color-dot { width:27px; height:27px; padding:0; border:2px solid #fff; outline:1px solid #c4d0df; border-radius:50%; }
+    .color-dot:hover, .color-dot.selected { outline:2px solid var(--brand); }
+    .split { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .preview-wrap { min-height:180px; display:grid; place-items:center; overflow:auto; border:1px dashed #c7d5e4; border-radius:10px; background:repeating-conic-gradient(#f5f8fc 0% 25%,#fff 0% 50%) 50% / 20px 20px; }
+    #previewImage { max-width:100%; max-height:245px; object-fit:contain; display:none; }
+    #previewPlaceholder { color:#8090a4; font-size:12px; text-align:center; padding:16px; line-height:1.55; }
+    .event-log { max-height:170px; overflow:auto; padding:8px; border:1px solid #d7e1eb; border-radius:9px; color:#3f5168; background:#fbfcfe; font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .event-line { border-bottom:1px dashed #e2e8ef; padding:3px 0; }
+    .event-line:last-child { border-bottom:0; }
+    .tag { display:inline-block; margin-left:5px; padding:2px 6px; border-radius:99px; color:#155cba; background:#eaf2ff; font-size:10px; font-weight:800; }
+    .result { margin-top:10px; min-height:21px; padding:7px 9px; border-radius:8px; color:#4c6076; background:#f5f8fb; font-size:12px; line-height:1.45; }
+    .result.ok { color:#0e6d43; background:#eaf8f1; }
+    .result.warn { color:#945f00; background:#fff6df; }
+    .result.error { color:#a52e2e; background:#fff0f0; }
+    .form-demo { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .form-demo .full { grid-column:1/-1; }
+    .saved { font-size:12px; color:#4c6076; }
+    footer { max-width:1500px; margin:0 auto; padding:0 24px 28px; color:#738196; font-size:11px; line-height:1.6; }
+    .kbd { border:1px solid #cbd6e3; border-bottom-width:2px; border-radius:4px; padding:1px 4px; color:#526479; background:#fff; font-size:10px; }
+    @media (max-width:1080px) { .layout { grid-template-columns:1fr; } }
+    @media (max-width:600px) { main { padding:15px; } header { padding:22px 15px; } .header-inner { display:block; } .badge { display:inline-block; margin-top:10px; } .signature-area { height:330px; } .control-grid, .split, .form-demo { grid-template-columns:1fr; } .form-demo .full { grid-column:auto; } .card-body { padding:14px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>SignaturePad.js 기능 쇼케이스</h1>
+        <p class="subtitle">서명 입력 · 세밀한 펜 설정 · 실행취소 · PNG/JPEG/SVG/JSON · 이미지 불러오기 · 이벤트 · 로컬 저장소를 한 페이지에서 시험합니다.</p>
+      </div>
+      <span class="badge">SignaturePad.js v5.1.3</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice">
+      <strong>사용 방법</strong> — 중앙 영역에 마우스·터치·펜으로 서명한 뒤, 오른쪽 제어 패널에서 옵션을 바꾸고 각 저장·복원 기능을 시험하세요. 이 파일은 SignaturePad.js 핵심 코드와 샘플 코드가 모두 포함된 단일 HTML입니다. 별도 assets 폴더 없이 바로 실행할 수 있습니다
+    </div>
+
+    <div class="layout">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>서명 캔버스</h2>
+            <div class="small">고해상도 화면(devicePixelRatio) 보정 및 창 크기 변경 시 점 데이터 복원 적용</div>
+          </div>
+          <span id="modeTag" class="tag">입력 가능</span>
+        </div>
+        <div id="signatureArea" class="signature-area">
+          <canvas id="signatureCanvas" aria-label="서명 입력 영역"></canvas>
+          <div id="guide" class="guide"><span>이곳에 서명 또는 필기해 보세요</span></div>
+        </div>
+        <div class="canvas-footer">
+          <div id="canvasStatus" class="status">상태 확인 중…</div>
+          <div class="action-row">
+            <button id="undoBtn" class="btn" type="button">↶ 실행취소</button>
+            <button id="redoBtn" class="btn" type="button">↷ 다시 실행</button>
+            <button id="clearBtn" class="btn danger" type="button">전체 지우기</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel-stack">
+        <section class="card">
+          <div class="card-body">
+            <p class="section-title">1. 펜 및 캔버스 옵션</p>
+            <div class="preset-row" aria-label="펜 설정 프리셋">
+              <button class="preset" data-preset="natural" type="button">자연 서명</button>
+              <button class="preset" data-preset="fine" type="button">세밀 필기</button>
+              <button class="preset" data-preset="bold" type="button">굵은 마커</button>
+              <button class="preset" data-preset="mobile" type="button">모바일 반응</button>
+            </div>
+            <div style="height:12px"></div>
+            <div class="control-grid">
+              <label>펜 색상<input id="penColor" type="color" value="#132238"></label>
+              <label>배경 색상<input id="backgroundColor" type="color" value="#ffffff"></label>
+              <label>최소 선 굵기 <span id="minWidthValue" class="meta">0.8</span><input id="minWidth" type="range" min="0.1" max="8" step="0.1" value="0.8"></label>
+              <label>최대 선 굵기 <span id="maxWidthValue" class="meta">3.2</span><input id="maxWidth" type="range" min="0.5" max="16" step="0.1" value="3.2"></label>
+              <label>점 크기 <span id="dotSizeValue" class="meta">1.6</span><input id="dotSize" type="range" min="0.2" max="12" step="0.1" value="1.6"></label>
+              <label>속도 필터 <span id="velocityValue" class="meta">0.70</span><input id="velocityFilterWeight" type="range" min="0" max="1" step="0.05" value="0.7"></label>
+              <label>최소 이동거리 <span id="minDistanceValue" class="meta">4</span><input id="minDistance" type="range" min="0" max="25" step="1" value="4"></label>
+              <label>처리 간격(ms) <span id="throttleValue" class="meta">12</span><input id="throttle" type="range" min="0" max="80" step="1" value="12"></label>
+            </div>
+            <div style="height:12px"></div>
+            <p class="section-title">빠른 색상</p>
+            <div id="palette" class="palette"></div>
+            <div class="checks">
+              <label><input id="transparentBackground" type="checkbox"> 투명 배경 사용 — PNG/SVG용 권장</label>
+              <label><input id="blockNextStroke" type="checkbox"> 다음 획 1회 차단 — beginStroke의 preventDefault 시연</label>
+            </div>
+            <div class="action-row" style="margin-top:12px">
+              <button id="applyOptionsBtn" class="btn primary" type="button">옵션 적용</button>
+              <button id="toggleInputBtn" class="btn" type="button">입력 비활성화</button>
+            </div>
+            <p class="small">배경색은 초기화·다시 그리기 시 반영됩니다. JPEG는 투명 배경을 지원하지 않으므로 흰색 등 불투명 배경을 권장합니다.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-body">
+            <p class="section-title">2. 결과 파일 내보내기</p>
+            <div class="split">
+              <label>JPEG 품질 <span id="jpegQualityValue" class="meta">0.90</span><input id="jpegQuality" type="range" min="0.1" max="1" step="0.05" value="0.9"></label>
+              <label>파일명 접두어<input id="filePrefix" type="text" value="signature"></label>
+            </div>
+            <div class="action-row" style="margin-top:12px">
+              <button id="exportPngBtn" class="btn primary" type="button">PNG 저장</button>
+              <button id="exportJpegBtn" class="btn" type="button">JPEG 저장</button>
+              <button id="exportSvgBtn" class="btn" type="button">SVG 저장</button>
+              <button id="trimPngBtn" class="btn" type="button">여백 제거 PNG</button>
+            </div>
+            <div class="checks">
+              <label><input id="svgBackground" type="checkbox" checked> SVG에 배경색 포함</label>
+              <label><input id="svgIncludeImage" type="checkbox" checked> 불러온 배경 이미지도 SVG에 포함</label>
+            </div>
+            <div id="previewWrap" class="preview-wrap" style="margin-top:12px">
+              <img id="previewImage" alt="내보낸 서명 미리보기" />
+              <div id="previewPlaceholder">PNG · JPEG · SVG 저장 시<br>이 영역에 출력 미리보기가 나타납니다.</div>
+            </div>
+            <div id="exportResult" class="result">아직 내보낸 결과가 없습니다.</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-body">
+            <p class="section-title">3. 점 데이터(JSON) · 저장 · 복원</p>
+            <textarea id="dataTextarea" spellcheck="false" placeholder="[ { &quot;points&quot;: [...], &quot;penColor&quot;: &quot;#...&quot; } ]"></textarea>
+            <div class="action-row" style="margin-top:10px">
+              <button id="readDataBtn" class="btn" type="button">현재 JSON 읽기</button>
+              <button id="restoreDataBtn" class="btn primary" type="button">JSON으로 복원</button>
+              <button id="downloadJsonBtn" class="btn" type="button">JSON 파일 저장</button>
+            </div>
+            <div class="action-row" style="margin-top:8px">
+              <button id="saveLocalBtn" class="btn" type="button">브라우저 임시 저장</button>
+              <button id="loadLocalBtn" class="btn" type="button">임시 저장 불러오기</button>
+              <button id="removeLocalBtn" class="btn danger" type="button">임시 저장 삭제</button>
+            </div>
+            <div id="dataResult" class="result">점 데이터는 JSON으로 저장하면 이미지보다 편집·재렌더링에 유리합니다.</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-body">
+            <p class="section-title">4. 파일 불러오기 · 이미지 위 필기</p>
+            <div class="split">
+              <label>서명 이미지(PNG/JPEG/SVG)<input id="imageFileInput" type="file" accept="image/png,image/jpeg,image/svg+xml"></label>
+              <label>점 데이터 JSON<input id="jsonFileInput" type="file" accept="application/json,.json"></label>
+            </div>
+            <div class="action-row" style="margin-top:12px">
+              <button id="removeBaseImageBtn" class="btn" type="button">배경 이미지 제거</button>
+              <button id="redrawBtn" class="btn" type="button">redraw() 실행</button>
+              <button id="emptyCheckBtn" class="btn" type="button">isEmpty() 확인</button>
+            </div>
+            <p class="small">이미지를 <code>fromDataURL()</code>로 불러온 경우에는 그 이미지가 점 데이터에 포함되지 않습니다. 따라서 이 페이지는 이미지 URL과 점 데이터를 별도로 관리합니다.</p>
+            <div id="importResult" class="result">이미지를 불러오면 기존 서명 위에 배경으로 표시한 뒤 추가 필기가 가능합니다.</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-body">
+            <p class="section-title">5. 이벤트 · 입력 제어 · 간단한 제출 시연</p>
+            <div id="eventLog" class="event-log" aria-live="polite"></div>
+            <div class="action-row" style="margin-top:10px">
+              <button id="clearLogBtn" class="btn" type="button">이벤트 로그 지우기</button>
+              <button id="copyDataUrlBtn" class="btn" type="button">PNG Data URL 복사</button>
+            </div>
+            <div style="height:14px"></div>
+            <form id="demoForm" class="form-demo">
+              <label>성명<input id="signerName" type="text" placeholder="예: 홍길동"></label>
+              <label>문서명<input id="documentTitle" type="text" value="전자서명 기능 테스트"></label>
+              <label class="full" style="display:flex;gap:8px;align-items:center;font-size:13px"><input id="agreeCheck" type="checkbox" style="width:15px;height:15px;margin:0"> 서명 내용을 확인했으며 전송 시연에 동의합니다.</label>
+              <div class="full action-row"><button class="btn primary" type="submit">서명 제출 데이터 만들기</button><span id="formResult" class="saved"></span></div>
+            </form>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <footer>
+    <strong>단축키</strong> <span class="kbd">Ctrl</span> + <span class="kbd">Z</span> 실행취소 · <span class="kbd">Ctrl</span> + <span class="kbd">Y</span> 또는 <span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">Z</span> 다시 실행. <br>
+    본 샘플은 클라이언트에서만 동작합니다. 실제 전자서명 업무에는 본인확인, 서명 시각, 원문 해시, 감사로그, 접근통제, 장기보관 등 별도 보안·법무 요건 검토가 필요합니다.
+  </footer>
+
+
+  <script>
+  /*
+   * Signature Pad v5.1.3 inline build for this standalone demo.
+   * Source project: szimek/signature_pad, MIT License.
+   * Copyright (c) 2018 Szymon Nowak.
+   */
+  (function (global) {
+    'use strict';
+
+    function throttle(fn, wait) {
+      wait = wait == null ? 250 : wait;
+      var previous = 0;
+      var timeout = null;
+      var result;
+      var storedContext;
+      var storedArgs;
+      function later() {
+        previous = Date.now();
+        timeout = null;
+        result = fn.apply(storedContext, storedArgs);
+        if (!timeout) { storedContext = null; storedArgs = []; }
+      }
+      return function wrapper() {
+        var now = Date.now();
+        var remaining = wait - (now - previous);
+        storedContext = this;
+        storedArgs = arguments;
+        if (remaining <= 0 || remaining > wait) {
+          if (timeout) { clearTimeout(timeout); timeout = null; }
+          previous = now;
+          result = fn.apply(storedContext, storedArgs);
+          if (!timeout) { storedContext = null; storedArgs = []; }
+        } else if (!timeout) {
+          timeout = global.setTimeout(later, remaining);
+        }
+        return result;
+      };
+    }
+
+    class SignatureEventTarget {
+      constructor() {
+        try { this._et = new EventTarget(); }
+        catch (e) { this._et = document; }
+      }
+      addEventListener(type, listener, options) { this._et.addEventListener(type, listener, options); }
+      dispatchEvent(event) { return this._et.dispatchEvent(event); }
+      removeEventListener(type, callback, options) { this._et.removeEventListener(type, callback, options); }
+    }
+
+    class Point {
+      constructor(x, y, pressure, time) {
+        if (isNaN(x) || isNaN(y)) throw new Error('Point is invalid: (' + x + ', ' + y + ')');
+        this.x = +x;
+        this.y = +y;
+        this.pressure = pressure || 0;
+        this.time = time || Date.now();
+      }
+      distanceTo(start) { return Math.sqrt(Math.pow(this.x - start.x, 2) + Math.pow(this.y - start.y, 2)); }
+      equals(other) { return this.x === other.x && this.y === other.y && this.pressure === other.pressure && this.time === other.time; }
+      velocityFrom(start) { return this.time !== start.time ? this.distanceTo(start) / (this.time - start.time) : 0; }
+    }
+
+    class Bezier {
+      static fromPoints(points, widths) {
+        var c2 = this.calculateControlPoints(points[0], points[1], points[2]).c2;
+        var c3 = this.calculateControlPoints(points[1], points[2], points[3]).c1;
+        return new Bezier(points[1], c2, c3, points[2], widths.start, widths.end);
+      }
+      static calculateControlPoints(s1, s2, s3) {
+        var dx1 = s1.x - s2.x;
+        var dy1 = s1.y - s2.y;
+        var dx2 = s2.x - s3.x;
+        var dy2 = s2.y - s3.y;
+        var m1 = { x: (s1.x + s2.x) / 2.0, y: (s1.y + s2.y) / 2.0 };
+        var m2 = { x: (s2.x + s3.x) / 2.0, y: (s2.y + s3.y) / 2.0 };
+        var l1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+        var l2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        var dxm = m1.x - m2.x;
+        var dym = m1.y - m2.y;
+        var k = l1 + l2 == 0 ? 0 : l2 / (l1 + l2);
+        var cm = { x: m2.x + dxm * k, y: m2.y + dym * k };
+        var tx = s2.x - cm.x;
+        var ty = s2.y - cm.y;
+        return { c1: new Point(m1.x + tx, m1.y + ty), c2: new Point(m2.x + tx, m2.y + ty) };
+      }
+      constructor(startPoint, control2, control1, endPoint, startWidth, endWidth) {
+        this.startPoint = startPoint;
+        this.control2 = control2;
+        this.control1 = control1;
+        this.endPoint = endPoint;
+        this.startWidth = startWidth;
+        this.endWidth = endWidth;
+      }
+      length() {
+        var steps = 10;
+        var length = 0;
+        var px;
+        var py;
+        for (var i = 0; i <= steps; i += 1) {
+          var t = i / steps;
+          var cx = this.point(t, this.startPoint.x, this.control1.x, this.control2.x, this.endPoint.x);
+          var cy = this.point(t, this.startPoint.y, this.control1.y, this.control2.y, this.endPoint.y);
+          if (i > 0) {
+            var xdiff = cx - px;
+            var ydiff = cy - py;
+            length += Math.sqrt(xdiff * xdiff + ydiff * ydiff);
+          }
+          px = cx;
+          py = cy;
+        }
+        return length;
+      }
+      point(t, start, c1, c2, end) {
+        return (start * (1.0 - t) * (1.0 - t) * (1.0 - t)) +
+          (3.0 * c1 * (1.0 - t) * (1.0 - t) * t) +
+          (3.0 * c2 * (1.0 - t) * t * t) +
+          (end * t * t * t);
+      }
+    }
+
+    class SignaturePad extends SignatureEventTarget {
+      constructor(canvas, options) {
+        options = options || {};
+        super();
+        this.canvas = canvas;
+        this.velocityFilterWeight = options.velocityFilterWeight || 0.7;
+        this.minWidth = options.minWidth || 0.5;
+        this.maxWidth = options.maxWidth || 2.5;
+        this.throttle = options.throttle ?? 16;
+        this.minDistance = options.minDistance ?? 5;
+        this.dotSize = options.dotSize || 0;
+        this.penColor = options.penColor || 'black';
+        this.backgroundColor = options.backgroundColor || 'rgba(0,0,0,0)';
+        this.compositeOperation = options.compositeOperation || 'source-over';
+        this.canvasContextOptions = options.canvasContextOptions ?? {};
+        this._drawingStroke = false;
+        this._isEmpty = true;
+        this._dataUrl = undefined;
+        this._dataUrlOptions = undefined;
+        this._lastPoints = [];
+        this._data = [];
+        this._lastVelocity = 0;
+        this._lastWidth = 0;
+        this._strokePointerId = undefined;
+        this._strokeMoveUpdate = this.throttle ? throttle(SignaturePad.prototype._strokeUpdate, this.throttle) : SignaturePad.prototype._strokeUpdate;
+        this._handleMouseDown = this._handleMouseDown.bind(this);
+        this._handleMouseMove = this._handleMouseMove.bind(this);
+        this._handleMouseUp = this._handleMouseUp.bind(this);
+        this._handleTouchStart = this._handleTouchStart.bind(this);
+        this._handleTouchMove = this._handleTouchMove.bind(this);
+        this._handleTouchEnd = this._handleTouchEnd.bind(this);
+        this._handlePointerDown = this._handlePointerDown.bind(this);
+        this._handlePointerMove = this._handlePointerMove.bind(this);
+        this._handlePointerUp = this._handlePointerUp.bind(this);
+        this._handlePointerCancel = this._handlePointerCancel.bind(this);
+        this._handleTouchCancel = this._handleTouchCancel.bind(this);
+        this._ctx = canvas.getContext('2d', this.canvasContextOptions);
+        this.clear();
+        this.on();
+      }
+      clear() {
+        var ctx = this._ctx;
+        var canvas = this.canvas;
+        ctx.fillStyle = this.backgroundColor;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        this._data = [];
+        this._reset(this._getPointGroupOptions());
+        this._isEmpty = true;
+        this._dataUrl = undefined;
+        this._dataUrlOptions = undefined;
+        this._strokePointerId = undefined;
+      }
+      redraw() {
+        var data = this._data.slice();
+        var dataUrl = this._dataUrl;
+        var dataUrlOptions = this._dataUrlOptions;
+        this.clear();
+        if (dataUrl) this.fromDataURL(dataUrl, dataUrlOptions);
+        this.fromData(data, { clear: false });
+      }
+      fromDataURL(dataUrl, options) {
+        options = options || {};
+        var self = this;
+        return new Promise(function(resolve, reject) {
+          var image = new Image();
+          var ratio = options.ratio || global.devicePixelRatio || 1;
+          var width = options.width || self.canvas.width / ratio;
+          var height = options.height || self.canvas.height / ratio;
+          var xOffset = options.xOffset || 0;
+          var yOffset = options.yOffset || 0;
+          self._reset(self._getPointGroupOptions());
+          image.onload = function() {
+            self._ctx.drawImage(image, xOffset, yOffset, width, height);
+            resolve();
+          };
+          image.onerror = function(error) { reject(error); };
+          image.crossOrigin = 'anonymous';
+          image.src = dataUrl;
+          self._isEmpty = false;
+          self._dataUrl = dataUrl;
+          self._dataUrlOptions = Object.assign({}, options);
+        });
+      }
+      toDataURL(type, encoderOptions) {
+        type = type || 'image/png';
+        if (type === 'image/svg+xml') {
+          if (typeof encoderOptions !== 'object') encoderOptions = undefined;
+          return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(this.toSVG(encoderOptions))));
+        }
+        if (typeof encoderOptions !== 'number') encoderOptions = undefined;
+        return this.canvas.toDataURL(type, encoderOptions);
+      }
+      on() {
+        this.canvas.style.touchAction = 'none';
+        this.canvas.style.msTouchAction = 'none';
+        this.canvas.style.userSelect = 'none';
+        this.canvas.style.webkitUserSelect = 'none';
+        var isIOS = /Macintosh/.test(navigator.userAgent) && 'ontouchstart' in document;
+        if (global.PointerEvent && !isIOS) this._handlePointerEvents();
+        else {
+          this._handleMouseEvents();
+          if ('ontouchstart' in global) this._handleTouchEvents();
+        }
+      }
+      off() {
+        this.canvas.style.touchAction = 'auto';
+        this.canvas.style.msTouchAction = 'auto';
+        this.canvas.style.userSelect = 'auto';
+        this.canvas.style.webkitUserSelect = 'auto';
+        this.canvas.removeEventListener('pointerdown', this._handlePointerDown);
+        this.canvas.removeEventListener('mousedown', this._handleMouseDown);
+        this.canvas.removeEventListener('touchstart', this._handleTouchStart);
+        this._removeMoveUpEventListeners();
+      }
+      _getListenerFunctions() {
+        var canvasWindow = global.document === this.canvas.ownerDocument ? global : (this.canvas.ownerDocument.defaultView || this.canvas.ownerDocument);
+        return {
+          addEventListener: canvasWindow.addEventListener.bind(canvasWindow),
+          removeEventListener: canvasWindow.removeEventListener.bind(canvasWindow)
+        };
+      }
+      _removeMoveUpEventListeners() {
+        var listeners = this._getListenerFunctions();
+        listeners.removeEventListener('pointermove', this._handlePointerMove);
+        listeners.removeEventListener('pointerup', this._handlePointerUp);
+        listeners.removeEventListener('pointercancel', this._handlePointerCancel);
+        listeners.removeEventListener('mousemove', this._handleMouseMove);
+        listeners.removeEventListener('mouseup', this._handleMouseUp);
+        listeners.removeEventListener('touchmove', this._handleTouchMove);
+        listeners.removeEventListener('touchend', this._handleTouchEnd);
+        listeners.removeEventListener('touchcancel', this._handleTouchCancel);
+      }
+      isEmpty() { return this._isEmpty; }
+      fromData(pointGroups, options) {
+        options = options || {};
+        var clear = options.clear !== false;
+        if (clear) this.clear();
+        this._fromData(pointGroups, this._drawCurve.bind(this), this._drawDot.bind(this));
+        this._data = this._data.concat(JSON.parse(JSON.stringify(pointGroups)));
+      }
+      toData() { return JSON.parse(JSON.stringify(this._data)); }
+      _isLeftButtonPressed(event, only) { return only ? event.buttons === 1 : (event.buttons & 1) === 1; }
+      _pointerEventToSignatureEvent(event) {
+        return { event: event, type: event.type, x: event.clientX, y: event.clientY, pressure: ('pressure' in event ? event.pressure : 0) };
+      }
+      _touchEventToSignatureEvent(event) {
+        var touch = event.changedTouches[0];
+        return { event: event, type: event.type, x: touch.clientX, y: touch.clientY, pressure: touch.force };
+      }
+      _handleMouseDown(event) {
+        if (!this._isLeftButtonPressed(event, true) || this._drawingStroke) return;
+        this._strokeBegin(this._pointerEventToSignatureEvent(event));
+      }
+      _handleMouseMove(event) {
+        if (!this._isLeftButtonPressed(event, true) || !this._drawingStroke) {
+          this._strokeEnd(this._pointerEventToSignatureEvent(event), false);
+          return;
+        }
+        this._strokeMoveUpdate.call(this, this._pointerEventToSignatureEvent(event));
+      }
+      _handleMouseUp(event) {
+        if (this._isLeftButtonPressed(event)) return;
+        this._strokeEnd(this._pointerEventToSignatureEvent(event));
+      }
+      _handleTouchStart(event) {
+        if (event.targetTouches.length !== 1 || this._drawingStroke) return;
+        if (event.cancelable) event.preventDefault();
+        this._strokeBegin(this._touchEventToSignatureEvent(event));
+      }
+      _handleTouchMove(event) {
+        if (event.targetTouches.length !== 1) return;
+        if (event.cancelable) event.preventDefault();
+        if (!this._drawingStroke) { this._strokeEnd(this._touchEventToSignatureEvent(event), false); return; }
+        this._strokeMoveUpdate.call(this, this._touchEventToSignatureEvent(event));
+      }
+      _handleTouchEnd(event) {
+        if (event.targetTouches.length !== 0) return;
+        if (event.cancelable) event.preventDefault();
+        this._strokeEnd(this._touchEventToSignatureEvent(event));
+      }
+      _handlePointerCancel(event) {
+        if (!this._allowPointerId(event)) return;
+        event.preventDefault();
+        this._strokeEnd(this._pointerEventToSignatureEvent(event), false);
+      }
+      _handleTouchCancel(event) {
+        if (event.cancelable) event.preventDefault();
+        this._strokeEnd(this._touchEventToSignatureEvent(event), false);
+      }
+      _getPointerId(event) { return event.persistentDeviceId || event.pointerId; }
+      _allowPointerId(event, allowUndefined) {
+        if (typeof this._strokePointerId === 'undefined') return !!allowUndefined;
+        return this._getPointerId(event) === this._strokePointerId;
+      }
+      _handlePointerDown(event) {
+        if (this._drawingStroke || !this._isLeftButtonPressed(event) || !this._allowPointerId(event, true)) return;
+        this._strokePointerId = this._getPointerId(event);
+        event.preventDefault();
+        this._strokeBegin(this._pointerEventToSignatureEvent(event));
+      }
+      _handlePointerMove(event) {
+        if (!this._allowPointerId(event)) return;
+        if (!this._isLeftButtonPressed(event, true) || !this._drawingStroke) {
+          this._strokeEnd(this._pointerEventToSignatureEvent(event), false);
+          return;
+        }
+        event.preventDefault();
+        this._strokeMoveUpdate.call(this, this._pointerEventToSignatureEvent(event));
+      }
+      _handlePointerUp(event) {
+        if (this._isLeftButtonPressed(event) || !this._allowPointerId(event)) return;
+        event.preventDefault();
+        this._strokeEnd(this._pointerEventToSignatureEvent(event));
+      }
+      _getPointGroupOptions(group) {
+        return {
+          penColor: group && 'penColor' in group ? group.penColor : this.penColor,
+          dotSize: group && 'dotSize' in group ? group.dotSize : this.dotSize,
+          minWidth: group && 'minWidth' in group ? group.minWidth : this.minWidth,
+          maxWidth: group && 'maxWidth' in group ? group.maxWidth : this.maxWidth,
+          velocityFilterWeight: group && 'velocityFilterWeight' in group ? group.velocityFilterWeight : this.velocityFilterWeight,
+          compositeOperation: group && 'compositeOperation' in group ? group.compositeOperation : this.compositeOperation
+        };
+      }
+      _strokeBegin(event) {
+        var cancelled = !this.dispatchEvent(new CustomEvent('beginStroke', { detail: event, cancelable: true }));
+        if (cancelled) return;
+        var addEventListener = this._getListenerFunctions().addEventListener;
+        switch (event.event.type) {
+          case 'mousedown':
+            addEventListener('mousemove', this._handleMouseMove, { passive: false });
+            addEventListener('mouseup', this._handleMouseUp, { passive: false });
+            break;
+          case 'touchstart':
+            addEventListener('touchmove', this._handleTouchMove, { passive: false });
+            addEventListener('touchend', this._handleTouchEnd, { passive: false });
+            addEventListener('touchcancel', this._handleTouchCancel, { passive: false });
+            break;
+          case 'pointerdown':
+            addEventListener('pointermove', this._handlePointerMove, { passive: false });
+            addEventListener('pointerup', this._handlePointerUp, { passive: false });
+            addEventListener('pointercancel', this._handlePointerCancel, { passive: false });
+            break;
+        }
+        this._drawingStroke = true;
+        var pointGroupOptions = this._getPointGroupOptions();
+        var newPointGroup = Object.assign({}, pointGroupOptions, { points: [] });
+        this._data.push(newPointGroup);
+        this._reset(pointGroupOptions);
+        this._strokeUpdate(event);
+      }
+      _strokeUpdate(event) {
+        if (!this._drawingStroke) return;
+        if (this._data.length === 0) { this._strokeBegin(event); return; }
+        this.dispatchEvent(new CustomEvent('beforeUpdateStroke', { detail: event }));
+        var point = this._createPoint(event.x, event.y, event.pressure);
+        var lastPointGroup = this._data[this._data.length - 1];
+        var lastPoints = lastPointGroup.points;
+        var lastPoint = lastPoints.length > 0 && lastPoints[lastPoints.length - 1];
+        var isLastPointTooClose = lastPoint ? point.distanceTo(lastPoint) <= this.minDistance : false;
+        var pointGroupOptions = this._getPointGroupOptions(lastPointGroup);
+        if (!lastPoint || !(lastPoint && isLastPointTooClose)) {
+          var curve = this._addPoint(point, pointGroupOptions);
+          if (!lastPoint) this._drawDot(point, pointGroupOptions);
+          else if (curve) this._drawCurve(curve, pointGroupOptions);
+          lastPoints.push({ time: point.time, x: point.x, y: point.y, pressure: point.pressure });
+        }
+        this.dispatchEvent(new CustomEvent('afterUpdateStroke', { detail: event }));
+      }
+      _strokeEnd(event, shouldUpdate) {
+        if (shouldUpdate === undefined) shouldUpdate = true;
+        this._removeMoveUpEventListeners();
+        if (!this._drawingStroke) return;
+        if (shouldUpdate) this._strokeUpdate(event);
+        this._drawingStroke = false;
+        this._strokePointerId = undefined;
+        this.dispatchEvent(new CustomEvent('endStroke', { detail: event }));
+      }
+      _handlePointerEvents() { this._drawingStroke = false; this.canvas.addEventListener('pointerdown', this._handlePointerDown, { passive: false }); }
+      _handleMouseEvents() { this._drawingStroke = false; this.canvas.addEventListener('mousedown', this._handleMouseDown, { passive: false }); }
+      _handleTouchEvents() { this.canvas.addEventListener('touchstart', this._handleTouchStart, { passive: false }); }
+      _reset(options) {
+        this._lastPoints = [];
+        this._lastVelocity = 0;
+        this._lastWidth = (options.minWidth + options.maxWidth) / 2;
+        this._ctx.fillStyle = options.penColor;
+        this._ctx.globalCompositeOperation = options.compositeOperation;
+      }
+      _createPoint(x, y, pressure) {
+        var rect = this.canvas.getBoundingClientRect();
+        return new Point(x - rect.left, y - rect.top, pressure, Date.now());
+      }
+      _addPoint(point, options) {
+        var lastPoints = this._lastPoints;
+        lastPoints.push(point);
+        if (lastPoints.length > 2) {
+          if (lastPoints.length === 3) lastPoints.unshift(lastPoints[0]);
+          var widths = this._calculateCurveWidths(lastPoints[1], lastPoints[2], options);
+          var curve = Bezier.fromPoints(lastPoints, widths);
+          lastPoints.shift();
+          return curve;
+        }
+        return null;
+      }
+      _calculateCurveWidths(startPoint, endPoint, options) {
+        var velocity = options.velocityFilterWeight * endPoint.velocityFrom(startPoint) + (1 - options.velocityFilterWeight) * this._lastVelocity;
+        var newWidth = this._strokeWidth(velocity, options);
+        var widths = { end: newWidth, start: this._lastWidth };
+        this._lastVelocity = velocity;
+        this._lastWidth = newWidth;
+        return widths;
+      }
+      _strokeWidth(velocity, options) { return Math.max(options.maxWidth / (velocity + 1), options.minWidth); }
+      _drawCurveSegment(x, y, width) {
+        var ctx = this._ctx;
+        ctx.moveTo(x, y);
+        ctx.arc(x, y, width, 0, 2 * Math.PI, false);
+        this._isEmpty = false;
+      }
+      _drawCurve(curve, options) {
+        var ctx = this._ctx;
+        var widthDelta = curve.endWidth - curve.startWidth;
+        var drawSteps = Math.ceil(curve.length()) * 2;
+        ctx.beginPath();
+        ctx.fillStyle = options.penColor;
+        ctx.globalCompositeOperation = options.compositeOperation;
+        for (var i = 0; i < drawSteps; i += 1) {
+          var t = i / drawSteps;
+          var tt = t * t;
+          var ttt = tt * t;
+          var u = 1 - t;
+          var uu = u * u;
+          var uuu = uu * u;
+          var x = uuu * curve.startPoint.x;
+          x += 3 * uu * t * curve.control1.x;
+          x += 3 * u * tt * curve.control2.x;
+          x += ttt * curve.endPoint.x;
+          var y = uuu * curve.startPoint.y;
+          y += 3 * uu * t * curve.control1.y;
+          y += 3 * u * tt * curve.control2.y;
+          y += ttt * curve.endPoint.y;
+          var width = Math.min(curve.startWidth + ttt * widthDelta, options.maxWidth);
+          this._drawCurveSegment(x, y, width);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+      _drawDot(point, options) {
+        var ctx = this._ctx;
+        var width = options.dotSize > 0 ? options.dotSize : (options.minWidth + options.maxWidth) / 2;
+        ctx.beginPath();
+        ctx.globalCompositeOperation = options.compositeOperation;
+        this._drawCurveSegment(point.x, point.y, width);
+        ctx.closePath();
+        ctx.fillStyle = options.penColor;
+        ctx.fill();
+      }
+      _fromData(pointGroups, drawCurve, drawDot) {
+        for (var i = 0; i < pointGroups.length; i += 1) {
+          var group = pointGroups[i];
+          var points = group.points || [];
+          var pointGroupOptions = this._getPointGroupOptions(group);
+          if (points.length > 1) {
+            for (var j = 0; j < points.length; j += 1) {
+              var basicPoint = points[j];
+              var point = new Point(basicPoint.x, basicPoint.y, basicPoint.pressure, basicPoint.time);
+              if (j === 0) this._reset(pointGroupOptions);
+              var curve = this._addPoint(point, pointGroupOptions);
+              if (curve) drawCurve(curve, pointGroupOptions);
+            }
+          } else if (points.length === 1) {
+            this._reset(pointGroupOptions);
+            drawDot(points[0], pointGroupOptions);
+          }
+        }
+      }
+      toSVG(options) {
+        options = options || {};
+        var includeBackgroundColor = options.includeBackgroundColor || false;
+        var includeDataUrl = options.includeDataUrl || false;
+        var pointGroups = this._data;
+        var ratio = Math.max(global.devicePixelRatio || 1, 1);
+        var maxX = this.canvas.width / ratio;
+        var maxY = this.canvas.height / ratio;
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        svg.setAttribute('viewBox', '0 0 ' + maxX + ' ' + maxY);
+        svg.setAttribute('width', String(maxX));
+        svg.setAttribute('height', String(maxY));
+        if (includeBackgroundColor && this.backgroundColor) {
+          var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('width', '100%');
+          rect.setAttribute('height', '100%');
+          rect.setAttribute('fill', this.backgroundColor);
+          svg.appendChild(rect);
+        }
+        if (includeDataUrl && this._dataUrl) {
+          var dataRatio = (this._dataUrlOptions && this._dataUrlOptions.ratio) || global.devicePixelRatio || 1;
+          var width = (this._dataUrlOptions && this._dataUrlOptions.width) || this.canvas.width / dataRatio;
+          var height = (this._dataUrlOptions && this._dataUrlOptions.height) || this.canvas.height / dataRatio;
+          var xOffset = (this._dataUrlOptions && this._dataUrlOptions.xOffset) || 0;
+          var yOffset = (this._dataUrlOptions && this._dataUrlOptions.yOffset) || 0;
+          var image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+          image.setAttribute('x', String(xOffset));
+          image.setAttribute('y', String(yOffset));
+          image.setAttribute('width', String(width));
+          image.setAttribute('height', String(height));
+          image.setAttribute('preserveAspectRatio', 'none');
+          image.setAttribute('href', this._dataUrl);
+          svg.appendChild(image);
+        }
+        var self = this;
+        this._fromData(pointGroups, function(curve, groupOptions) {
+          var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          if (!isNaN(curve.control1.x) && !isNaN(curve.control1.y) && !isNaN(curve.control2.x) && !isNaN(curve.control2.y)) {
+            var attr = 'M ' + curve.startPoint.x.toFixed(3) + ',' + curve.startPoint.y.toFixed(3) + ' ' +
+              'C ' + curve.control1.x.toFixed(3) + ',' + curve.control1.y.toFixed(3) + ' ' +
+              curve.control2.x.toFixed(3) + ',' + curve.control2.y.toFixed(3) + ' ' +
+              curve.endPoint.x.toFixed(3) + ',' + curve.endPoint.y.toFixed(3);
+            path.setAttribute('d', attr);
+            path.setAttribute('stroke-width', (curve.endWidth * 2.25).toFixed(3));
+            path.setAttribute('stroke', groupOptions.penColor);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(path);
+          }
+        }, function(point, groupOptions) {
+          var circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          var size = groupOptions.dotSize > 0 ? groupOptions.dotSize : (groupOptions.minWidth + groupOptions.maxWidth) / 2;
+          circle.setAttribute('r', String(size));
+          circle.setAttribute('cx', String(point.x));
+          circle.setAttribute('cy', String(point.y));
+          circle.setAttribute('fill', groupOptions.penColor);
+          svg.appendChild(circle);
+        });
+        return svg.outerHTML;
+      }
+    }
+
+    global.SignaturePad = SignaturePad;
+  })(window);
+  </script>
+  <script>
+  (() => {
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const canvas = $('signatureCanvas');
+    const guide = $('guide');
+    const LOCAL_KEY = 'signaturepad-showcase-v1';
+    const paletteColors = ['#132238', '#1668d8', '#0a7a57', '#aa2a2a', '#7b3fa0', '#df7f00', '#505a68'];
+
+    let signaturePad;
+    let baseImageDataURL = null;
+    let inputEnabled = true;
+    let history = [];
+    let redoHistory = [];
+    let historyBusy = false;
+    let eventCounts = { begin:0, end:0, before:0, after:0 };
+    let isResizing = false;
+
+    function colorBackground() {
+      return $('transparentBackground').checked ? 'rgba(0,0,0,0)' : $('backgroundColor').value;
+    }
+    function optionValues() {
+      return {
+        penColor: $('penColor').value,
+        backgroundColor: colorBackground(),
+        minWidth: Number($('minWidth').value),
+        maxWidth: Number($('maxWidth').value),
+        dotSize: Number($('dotSize').value),
+        velocityFilterWeight: Number($('velocityFilterWeight').value),
+        minDistance: Number($('minDistance').value),
+        throttle: Number($('throttle').value)
+      };
+    }
+    function updateValueLabels() {
+      $('minWidthValue').textContent = Number($('minWidth').value).toFixed(1);
+      $('maxWidthValue').textContent = Number($('maxWidth').value).toFixed(1);
+      $('dotSizeValue').textContent = Number($('dotSize').value).toFixed(1);
+      $('velocityValue').textContent = Number($('velocityFilterWeight').value).toFixed(2);
+      $('minDistanceValue').textContent = $('minDistance').value;
+      $('throttleValue').textContent = $('throttle').value;
+      $('jpegQualityValue').textContent = Number($('jpegQuality').value).toFixed(2);
+    }
+    function setResult(id, message, type = '') {
+      const node = $(id);
+      node.textContent = message;
+      node.className = 'result' + (type ? ' ' + type : '');
+    }
+    function now() {
+      return new Intl.DateTimeFormat('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit' }).format(new Date());
+    }
+    function logEvent(message, level = '') {
+      const line = document.createElement('div');
+      line.className = 'event-line';
+      line.textContent = `[${now()}] ${message}`;
+      if (level) line.dataset.level = level;
+      const root = $('eventLog');
+      root.prepend(line);
+      while (root.children.length > 60) root.removeChild(root.lastChild);
+    }
+    function pointCount(data = signaturePad ? signaturePad.toData() : []) {
+      return data.reduce((sum, group) => sum + (group.points ? group.points.length : 0), 0);
+    }
+    function currentState() {
+      return {
+        data: signaturePad ? signaturePad.toData() : [],
+        baseImageDataURL,
+        savedAt: new Date().toISOString(),
+        settings: optionValues()
+      };
+    }
+    function stateText(state) {
+      return JSON.stringify({ data: state.data, baseImageDataURL: state.baseImageDataURL || null }, null, 2);
+    }
+    function copyState(state) {
+      return JSON.parse(JSON.stringify({ data: state.data, baseImageDataURL: state.baseImageDataURL || null }));
+    }
+    function updateUI() {
+      const data = signaturePad ? signaturePad.toData() : [];
+      const strokes = data.length;
+      const points = pointCount(data);
+      const raster = baseImageDataURL ? ' · 배경 이미지 포함' : '';
+      $('canvasStatus').innerHTML = `<strong>${inputEnabled ? '입력 가능' : '입력 중지'}</strong> · 획 ${strokes}개 · 점 ${points}개 · ${Math.round(canvas.width / Math.max(window.devicePixelRatio || 1, 1))} × ${Math.round(canvas.height / Math.max(window.devicePixelRatio || 1, 1))} CSS px${raster}`;
+      $('guide').style.opacity = (!baseImageDataURL && signaturePad && signaturePad.isEmpty()) ? '1' : '0';
+      $('undoBtn').disabled = history.length <= 1 || historyBusy;
+      $('redoBtn').disabled = redoHistory.length === 0 || historyBusy;
+      $('modeTag').textContent = inputEnabled ? '입력 가능' : '입력 중지';
+      $('modeTag').style.background = inputEnabled ? '#eaf8f1' : '#fff0f0';
+      $('modeTag').style.color = inputEnabled ? '#147a4d' : '#a52e2e';
+    }
+    function pushHistory(reason) {
+      if (historyBusy || !signaturePad) return;
+      const next = copyState(currentState());
+      const last = history[history.length - 1];
+      if (!last || stateText(last) !== stateText(next)) {
+        history.push(next);
+        if (history.length > 80) history.shift();
+        redoHistory = [];
+        logEvent(`이력 저장: ${reason}`);
+      }
+      updateUI();
+    }
+    async function restoreState(state, reason) {
+      if (!state) return;
+      historyBusy = true;
+      try {
+        signaturePad.clear();
+        baseImageDataURL = state.baseImageDataURL || null;
+        if (baseImageDataURL) await signaturePad.fromDataURL(baseImageDataURL);
+        if (Array.isArray(state.data) && state.data.length) signaturePad.fromData(state.data, { clear:false });
+        logEvent(`상태 복원: ${reason}`);
+      } catch (error) {
+        logEvent(`복원 오류: ${error.message}`, 'error');
+        setResult('dataResult', `복원 중 오류: ${error.message}`, 'error');
+      } finally {
+        historyBusy = false;
+        updateUI();
+      }
+    }
+    async function undo() {
+      if (history.length <= 1 || historyBusy) return;
+      const current = history.pop();
+      redoHistory.push(current);
+      await restoreState(history[history.length - 1], '실행취소');
+    }
+    async function redo() {
+      if (!redoHistory.length || historyBusy) return;
+      const state = redoHistory.pop();
+      history.push(state);
+      await restoreState(state, '다시 실행');
+    }
+    function bindPadEvents() {
+      signaturePad.addEventListener('beginStroke', (event) => {
+        eventCounts.begin += 1;
+        if ($('blockNextStroke').checked) {
+          event.preventDefault();
+          $('blockNextStroke').checked = false;
+          logEvent('beginStroke → preventDefault()로 다음 획 차단');
+          return;
+        }
+        logEvent(`beginStroke #${eventCounts.begin}`);
+      });
+      signaturePad.addEventListener('beforeUpdateStroke', () => { eventCounts.before += 1; });
+      signaturePad.addEventListener('afterUpdateStroke', () => { eventCounts.after += 1; });
+      signaturePad.addEventListener('endStroke', () => {
+        eventCounts.end += 1;
+        logEvent(`endStroke #${eventCounts.end} · before/after=${eventCounts.before}/${eventCounts.after}`);
+        if (!historyBusy) pushHistory('획 종료');
+        updateUI();
+      });
+    }
+    function createPad() {
+      if (typeof window.SignaturePad === 'undefined') {
+        setResult('importResult', 'SignaturePad.js 초기화에 실패했습니다. 브라우저 콘솔 오류를 확인하세요', 'error');
+        return;
+      }
+      signaturePad = new SignaturePad(canvas, optionValues());
+      bindPadEvents();
+      if (!inputEnabled) signaturePad.off();
+      logEvent('SignaturePad 인스턴스 생성');
+    }
+    async function resizeCanvas(preserve = true) {
+      if (!signaturePad || isResizing) return;
+      isResizing = true;
+      const preserved = preserve ? copyState(currentState()) : { data:[], baseImageDataURL:null };
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+      canvas.getContext('2d').scale(ratio, ratio);
+      signaturePad.clear();
+      try {
+        baseImageDataURL = preserved.baseImageDataURL || null;
+        if (baseImageDataURL) await signaturePad.fromDataURL(baseImageDataURL);
+        if (preserved.data && preserved.data.length) signaturePad.fromData(preserved.data, { clear:false });
+      } catch (error) { logEvent(`크기 변경 복원 오류: ${error.message}`, 'error'); }
+      isResizing = false;
+      updateUI();
+    }
+    function applyOptions() {
+      if (!signaturePad) return;
+      const options = optionValues();
+      Object.assign(signaturePad, options);
+      signaturePad.clear();
+      const state = history[history.length - 1] || currentState();
+      restoreState(state, '옵션 반영 후 다시 그리기');
+      logEvent(`옵션 적용 · min/max=${options.minWidth}/${options.maxWidth}, throttle=${options.throttle}ms`);
+      setResult('importResult', '펜 옵션을 적용했습니다. 기존 획은 저장된 점 데이터로 다시 렌더링되었습니다.', 'ok');
+    }
+    function makeFileName(ext) {
+      const cleaned = ($('filePrefix').value || 'signature').trim().replace(/[^a-zA-Z0-9가-힣_-]/g, '_');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      return `${cleaned}_${stamp}.${ext}`;
+    }
+    function dataUrlToBlob(dataUrl) {
+      const [meta, base64] = dataUrl.split(',');
+      const mime = (meta.match(/data:(.*?);base64/) || [])[1] || 'application/octet-stream';
+      const bytes = atob(base64);
+      const array = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i += 1) array[i] = bytes.charCodeAt(i);
+      return new Blob([array], { type:mime });
+    }
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.style.display = 'none';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    function showPreview(dataUrl, message) {
+      $('previewImage').src = dataUrl;
+      $('previewImage').style.display = 'block';
+      $('previewPlaceholder').style.display = 'none';
+      setResult('exportResult', message, 'ok');
+    }
+    function ensureHasInk() {
+      if (!signaturePad || (signaturePad.isEmpty() && !baseImageDataURL)) {
+        setResult('exportResult', '저장할 서명 또는 불러온 이미지가 없습니다.', 'warn');
+        return false;
+      }
+      return true;
+    }
+    function exportPng() {
+      if (!ensureHasInk()) return;
+      const url = signaturePad.toDataURL('image/png');
+      downloadBlob(dataUrlToBlob(url), makeFileName('png'));
+      showPreview(url, 'PNG 파일을 저장했습니다. 투명 배경 설정이면 PNG 알파 채널이 유지됩니다.');
+      logEvent('toDataURL(image/png) 실행');
+    }
+    function exportJpeg() {
+      if (!ensureHasInk()) return;
+      const quality = Number($('jpegQuality').value);
+      const url = signaturePad.toDataURL('image/jpeg', quality);
+      downloadBlob(dataUrlToBlob(url), makeFileName('jpg'));
+      showPreview(url, `JPEG 파일을 저장했습니다. 품질 ${quality.toFixed(2)} 적용.`);
+      logEvent(`toDataURL(image/jpeg, ${quality}) 실행`);
+    }
+    function exportSvg() {
+      if (!ensureHasInk()) return;
+      const svg = signaturePad.toSVG({
+        includeBackgroundColor: $('svgBackground').checked,
+        includeDataUrl: $('svgIncludeImage').checked && Boolean(baseImageDataURL)
+      });
+      const blob = new Blob([svg], { type:'image/svg+xml;charset=utf-8' });
+      downloadBlob(blob, makeFileName('svg'));
+      const url = URL.createObjectURL(blob);
+      showPreview(url, 'SVG 파일을 저장했습니다. 벡터 서명은 확대해도 선명하게 유지됩니다.');
+      logEvent('toSVG() 실행');
+    }
+    function trimmedCanvas() {
+      const source = canvas;
+      const ctx = source.getContext('2d');
+      const w = source.width, h = source.height;
+      const pixels = ctx.getImageData(0, 0, w, h).data;
+      let top = h, left = w, right = -1, bottom = -1;
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const alpha = pixels[(y * w + x) * 4 + 3];
+          if (alpha > 10) { top = Math.min(top, y); left = Math.min(left, x); right = Math.max(right, x); bottom = Math.max(bottom, y); }
+        }
+      }
+      if (right < 0) return null;
+      const pad = Math.ceil(12 * Math.max(window.devicePixelRatio || 1, 1));
+      const sx = Math.max(0, left - pad), sy = Math.max(0, top - pad);
+      const sw = Math.min(w - sx, right - left + 1 + pad * 2), sh = Math.min(h - sy, bottom - top + 1 + pad * 2);
+      const output = document.createElement('canvas'); output.width = sw; output.height = sh;
+      output.getContext('2d').drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+      return output;
+    }
+    function exportTrimmedPng() {
+      if (!ensureHasInk()) return;
+      if (!$('transparentBackground').checked) {
+        setResult('exportResult', '여백 제거는 투명 배경에서 가장 정확합니다. 현재 불투명 배경은 전체 캔버스로 인식될 수 있습니다.', 'warn');
+      }
+      const output = trimmedCanvas();
+      if (!output) { setResult('exportResult', '여백을 찾지 못했습니다.', 'warn'); return; }
+      const url = output.toDataURL('image/png');
+      downloadBlob(dataUrlToBlob(url), makeFileName('trimmed.png'));
+      showPreview(url, '투명 영역 기준으로 여백을 제거한 PNG를 저장했습니다.');
+      logEvent('trim canvas → PNG 저장');
+    }
+    function readData() {
+      const data = signaturePad.toData();
+      $('dataTextarea').value = JSON.stringify(data, null, 2);
+      setResult('dataResult', `현재 점 데이터 ${data.length}개 획 · ${pointCount(data)}개 점을 읽었습니다.`, 'ok');
+      logEvent('toData() 실행');
+    }
+    async function restoreDataFromText() {
+      let data;
+      try {
+        data = JSON.parse($('dataTextarea').value);
+        if (!Array.isArray(data)) throw new Error('최상위 값은 배열이어야 합니다.');
+      } catch (error) {
+        setResult('dataResult', `JSON 형식 오류: ${error.message}`, 'error');
+        return;
+      }
+      baseImageDataURL = null;
+      signaturePad.clear();
+      signaturePad.fromData(data);
+      pushHistory('JSON 복원');
+      setResult('dataResult', `JSON으로 ${data.length}개 획을 복원했습니다.`, 'ok');
+      updateUI();
+    }
+    function downloadJson() {
+      const data = signaturePad.toData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json;charset=utf-8' });
+      downloadBlob(blob, makeFileName('json'));
+      setResult('dataResult', '점 데이터 JSON 파일을 저장했습니다.', 'ok');
+    }
+    function saveLocal() {
+      try {
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(currentState()));
+        setResult('dataResult', '현재 서명과 배경 이미지를 브라우저 임시 저장소에 보관했습니다.', 'ok');
+        logEvent('localStorage 저장');
+      } catch (error) { setResult('dataResult', `임시 저장 실패: ${error.message}`, 'error'); }
+    }
+    async function loadLocal() {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      if (!raw) { setResult('dataResult', '임시 저장된 데이터가 없습니다.', 'warn'); return; }
+      try {
+        const state = JSON.parse(raw);
+        await restoreState(state, '브라우저 임시 저장 불러오기');
+        history = [copyState(state)]; redoHistory = [];
+        setResult('dataResult', `임시 저장 데이터를 불러왔습니다. 저장 시각: ${state.savedAt || '알 수 없음'}`, 'ok');
+      } catch (error) { setResult('dataResult', `임시 저장 복원 실패: ${error.message}`, 'error'); }
+    }
+    function removeLocal() { localStorage.removeItem(LOCAL_KEY); setResult('dataResult', '브라우저 임시 저장 데이터를 삭제했습니다.', 'ok'); }
+    function fileToDataURL(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(reader.error || new Error('파일을 읽을 수 없습니다.')); reader.readAsDataURL(file); }); }
+    async function loadImageFile(file) {
+      if (!file) return;
+      try {
+        baseImageDataURL = await fileToDataURL(file);
+        signaturePad.clear();
+        await signaturePad.fromDataURL(baseImageDataURL);
+        pushHistory(`이미지 불러오기: ${file.name}`);
+        setResult('importResult', `이미지 “${file.name}”를 배경으로 불러왔습니다. 이제 그 위에 추가로 필기할 수 있습니다.`, 'ok');
+        logEvent(`fromDataURL() 실행: ${file.name}`);
+      } catch (error) { setResult('importResult', `이미지 불러오기 실패: ${error.message}`, 'error'); }
+      updateUI();
+    }
+    async function loadJsonFile(file) {
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error('점 데이터 배열이 아닙니다.');
+        $('dataTextarea').value = JSON.stringify(data, null, 2);
+        baseImageDataURL = null;
+        signaturePad.clear(); signaturePad.fromData(data); pushHistory(`JSON 파일 불러오기: ${file.name}`);
+        setResult('importResult', `JSON “${file.name}”에서 ${data.length}개 획을 불러왔습니다.`, 'ok');
+      } catch (error) { setResult('importResult', `JSON 불러오기 실패: ${error.message}`, 'error'); }
+      updateUI();
+    }
+    async function removeBaseImage() {
+      if (!baseImageDataURL) { setResult('importResult', '현재 제거할 배경 이미지가 없습니다.', 'warn'); return; }
+      const data = signaturePad.toData();
+      baseImageDataURL = null;
+      signaturePad.clear();
+      if (data.length) signaturePad.fromData(data);
+      pushHistory('배경 이미지 제거');
+      setResult('importResult', '배경 이미지를 제거하고 점 데이터로 된 필기만 남겼습니다.', 'ok');
+      updateUI();
+    }
+    async function copyPngDataUrl() {
+      try {
+        const url = signaturePad.toDataURL('image/png');
+        await navigator.clipboard.writeText(url);
+        setResult('exportResult', 'PNG Data URL을 클립보드에 복사했습니다.', 'ok');
+        logEvent('PNG Data URL 클립보드 복사');
+      } catch (error) { setResult('exportResult', `복사 실패: ${error.message}`, 'error'); }
+    }
+    function setPreset(name) {
+      const presets = {
+        natural:{ minWidth:0.8, maxWidth:3.2, dotSize:1.6, velocityFilterWeight:0.7, minDistance:4, throttle:12, pen:'#132238' },
+        fine:{ minWidth:0.35, maxWidth:1.5, dotSize:0.8, velocityFilterWeight:0.85, minDistance:1, throttle:0, pen:'#16488e' },
+        bold:{ minWidth:2.2, maxWidth:7.5, dotSize:3.2, velocityFilterWeight:0.55, minDistance:5, throttle:16, pen:'#1f3d2d' },
+        mobile:{ minWidth:1.1, maxWidth:4.2, dotSize:2, velocityFilterWeight:0.7, minDistance:3, throttle:8, pen:'#132238' }
+      };
+      const p = presets[name]; if (!p) return;
+      $('minWidth').value = p.minWidth; $('maxWidth').value = p.maxWidth; $('dotSize').value = p.dotSize;
+      $('velocityFilterWeight').value = p.velocityFilterWeight; $('minDistance').value = p.minDistance; $('throttle').value = p.throttle; $('penColor').value = p.pen;
+      updateValueLabels(); applyOptions();
+      document.querySelectorAll('.preset').forEach((btn) => btn.classList.toggle('active', btn.dataset.preset === name));
+    }
+    function buildPalette() {
+      paletteColors.forEach((color) => {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'color-dot'; button.style.background = color; button.title = color;
+        button.addEventListener('click', () => { $('penColor').value = color; applyOptions(); document.querySelectorAll('.color-dot').forEach((n) => n.classList.remove('selected')); button.classList.add('selected'); });
+        $('palette').appendChild(button);
+      });
+    }
+    function clearAll() {
+      signaturePad.clear(); baseImageDataURL = null; pushHistory('전체 지우기');
+      setResult('importResult', '캔버스와 배경 이미지를 모두 지웠습니다.', 'ok');
+      updateUI();
+    }
+    function toggleInput() {
+      inputEnabled = !inputEnabled;
+      if (inputEnabled) signaturePad.on(); else signaturePad.off();
+      $('toggleInputBtn').textContent = inputEnabled ? '입력 비활성화' : '입력 활성화';
+      logEvent(inputEnabled ? 'signaturePad.on() 실행' : 'signaturePad.off() 실행');
+      updateUI();
+    }
+    function setFormResult(text, type = '') { const node = $('formResult'); node.textContent = text; node.style.color = type === 'error' ? '#b22e2e' : '#147a4d'; }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      buildPalette(); updateValueLabels(); createPad();
+      await resizeCanvas(false);
+      history = [copyState(currentState())];
+      updateUI();
+      logEvent('초기화 완료');
+
+      ['minWidth','maxWidth','dotSize','velocityFilterWeight','minDistance','throttle','jpegQuality'].forEach((id) => $(id).addEventListener('input', updateValueLabels));
+      document.querySelectorAll('[data-preset]').forEach((btn) => btn.addEventListener('click', () => setPreset(btn.dataset.preset)));
+      $('applyOptionsBtn').addEventListener('click', applyOptions);
+      $('toggleInputBtn').addEventListener('click', toggleInput);
+      $('undoBtn').addEventListener('click', undo); $('redoBtn').addEventListener('click', redo); $('clearBtn').addEventListener('click', clearAll);
+      $('exportPngBtn').addEventListener('click', exportPng); $('exportJpegBtn').addEventListener('click', exportJpeg); $('exportSvgBtn').addEventListener('click', exportSvg); $('trimPngBtn').addEventListener('click', exportTrimmedPng);
+      $('readDataBtn').addEventListener('click', readData); $('restoreDataBtn').addEventListener('click', restoreDataFromText); $('downloadJsonBtn').addEventListener('click', downloadJson);
+      $('saveLocalBtn').addEventListener('click', saveLocal); $('loadLocalBtn').addEventListener('click', loadLocal); $('removeLocalBtn').addEventListener('click', removeLocal);
+      $('imageFileInput').addEventListener('change', (e) => loadImageFile(e.target.files[0])); $('jsonFileInput').addEventListener('change', (e) => loadJsonFile(e.target.files[0]));
+      $('removeBaseImageBtn').addEventListener('click', removeBaseImage); $('redrawBtn').addEventListener('click', () => { signaturePad.redraw(); logEvent('redraw() 실행'); setResult('importResult', 'redraw()를 실행해 현재 점 데이터를 다시 렌더링했습니다.', 'ok'); updateUI(); });
+      $('emptyCheckBtn').addEventListener('click', () => setResult('importResult', `isEmpty() 결과: ${signaturePad.isEmpty()}`, signaturePad.isEmpty() ? 'warn' : 'ok'));
+      $('clearLogBtn').addEventListener('click', () => { $('eventLog').replaceChildren(); logEvent('이벤트 로그 초기화'); }); $('copyDataUrlBtn').addEventListener('click', copyPngDataUrl);
+      $('transparentBackground').addEventListener('change', applyOptions); $('backgroundColor').addEventListener('change', applyOptions);
+      window.addEventListener('resize', () => { clearTimeout(window.__signatureResizeTimer); window.__signatureResizeTimer = setTimeout(() => resizeCanvas(true), 140); });
+      window.addEventListener('keydown', (event) => {
+        const ctrl = event.ctrlKey || event.metaKey;
+        if (!ctrl) return;
+        if (event.key.toLowerCase() === 'z' && !event.shiftKey) { event.preventDefault(); undo(); }
+        if (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey)) { event.preventDefault(); redo(); }
+      });
+      $('demoForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!$('signerName').value.trim()) { setFormResult('성명을 입력하세요.', 'error'); return; }
+        if (!$('agreeCheck').checked) { setFormResult('동의 항목을 체크하세요.', 'error'); return; }
+        if (signaturePad.isEmpty() && !baseImageDataURL) { setFormResult('서명을 먼저 입력하세요.', 'error'); return; }
+        const payload = { name:$('signerName').value.trim(), document:$('documentTitle').value.trim(), signedAt:new Date().toISOString(), pngDataURL:signaturePad.toDataURL('image/png'), strokes:signaturePad.toData() };
+        setFormResult(`제출 데이터 생성 완료 · PNG Data URL ${Math.round(payload.pngDataURL.length/1024)}KB · ${payload.strokes.length}개 획`);
+        logEvent('제출 시연 payload 생성');
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
