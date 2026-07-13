@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lightweight Charts 기능 종합 샘플</title>
+  <script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #172033;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --line: rgba(148, 163, 184, .18);
+      --accent: #38bdf8;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --warn: #f59e0b;
+      --card-radius: 20px;
+      --shadow: 0 18px 50px rgba(0,0,0,.28);
+      --chart-bg: #0b1220;
+      --tooltip-bg: rgba(15, 23, 42, .92);
+    }
+    body.light {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #f1f5f9;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: rgba(15, 23, 42, .12);
+      --accent: #0284c7;
+      --chart-bg: #ffffff;
+      --tooltip-bg: rgba(255, 255, 255, .96);
+      --shadow: 0 18px 50px rgba(15,23,42,.10);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(56, 189, 248, .18), transparent 28%),
+        radial-gradient(circle at 85% 0%, rgba(34, 197, 94, .11), transparent 24%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 36px 20px 18px;
+    }
+    .hero {
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      padding: 28px;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero:after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -70px;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, .13);
+      filter: blur(4px);
+    }
+    h1 { margin: 0 0 10px; font-size: clamp(26px, 4vw, 46px); letter-spacing: -0.04em; }
+    h2 { margin: 0 0 14px; font-size: 20px; letter-spacing: -0.02em; }
+    p { margin: 0; color: var(--muted); }
+    .tagrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .tag {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: rgba(148, 163, 184, .10);
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+    main { max-width: 1360px; margin: 0 auto; padding: 10px 20px 40px; }
+    .grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .card {
+      border: 1px solid var(--line);
+      background: rgba(17, 24, 39, .78);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card.pad { padding: 18px; }
+    .controls { position: sticky; top: 12px; }
+    .section { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+    .section:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+    select, button, input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 11px;
+      font: inherit;
+      outline: none;
+    }
+    button { cursor: pointer; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
+    button:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 52%, var(--line)); }
+    button.primary { background: linear-gradient(135deg, #0284c7, #0891b2); border-color: transparent; color: #fff; }
+    button.danger { background: color-mix(in srgb, var(--bad) 18%, var(--panel-2)); }
+    .btnrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .btnrow.three { grid-template-columns: repeat(3, 1fr); }
+    .field { margin-top: 10px; }
+    .toggleline { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+    .toggleline input { width: 18px; height: 18px; }
+    .chartShell { padding: 14px; }
+    #mainChart { height: 600px; min-height: 420px; position: relative; background: var(--chart-bg); border-radius: 16px; overflow: hidden; }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(148, 163, 184, .06);
+      min-width: 0;
+    }
+    .metric span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+    .metric strong { font-size: 15px; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tooltip {
+      position: absolute;
+      z-index: 5;
+      pointer-events: none;
+      min-width: 190px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: var(--tooltip-bg);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      box-shadow: 0 14px 36px rgba(0,0,0,.22);
+      display: none;
+      font-size: 12px;
+    }
+    .tooltip b { display: block; margin-bottom: 5px; font-size: 13px; }
+    .tooltip .row { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); }
+    .tooltip .row strong { color: var(--text); }
+    .statusbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 14px 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: rgba(148, 163, 184, .06);
+    }
+    .miniGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+    .mini { min-height: 240px; }
+    .mini .miniHead { padding: 14px 14px 0; }
+    .mini h3 { margin: 0 0 3px; font-size: 15px; }
+    .mini p { font-size: 12px; }
+    .miniChart { height: 170px; margin: 12px 8px 8px; border-radius: 12px; overflow: hidden; background: var(--chart-bg); }
+    .tableCard { margin-top: 18px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; background: rgba(148, 163, 184, .06); }
+    td code { color: var(--accent); }
+    .notice { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    .brand { font-size: 12px; color: var(--muted); margin-top: 12px; }
+    .brand a { color: var(--accent); text-decoration: none; }
+    @media (max-width: 1050px) {
+      .grid { grid-template-columns: 1fr; }
+      .controls { position: static; }
+      .legend { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .miniGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      header, main { padding-left: 12px; padding-right: 12px; }
+      .hero { padding: 20px; border-radius: 22px; }
+      .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; }
+      #mainChart { height: 540px; }
+      .miniGrid { grid-template-columns: 1fr; }
+      .btnrow.three { grid-template-columns: 1fr; }
+      th:nth-child(3), td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <section class="hero">
+      <h1>Lightweight Charts 기능 종합 샘플</h1>
+      <p>금융 시계열 차트에 자주 쓰는 기능을 한 화면에 모은 단일 HTML 데모입니다. 차트 타입 전환, 멀티 패널, 보조지표, 가격선, 마커, 크로스헤어 툴팁, 실시간 업데이트, 테마/스케일 제어를 직접 눌러볼 수 있습니다.</p>
+      <div class="tagrow">
+        <span class="tag">Candlestick / Bar / Line / Area / Baseline / Histogram</span>
+        <span class="tag">Multi Pane</span>
+        <span class="tag">Crosshair Tooltip</span>
+        <span class="tag">Series Markers</span>
+        <span class="tag">Price Lines</span>
+        <span class="tag">Realtime Update</span>
+        <span class="tag">Screenshot Export</span>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <div class="grid">
+      <aside class="card pad controls">
+        <h2>조작 패널</h2>
+        <p>버튼을 눌러 API 동작을 확인하세요.</p>
+
+        <div class="section">
+          <div class="field">
+            <label for="seriesType">메인 시리즈 타입</label>
+            <select id="seriesType">
+              <option value="candlestick">Candlestick - OHLC 봉</option>
+              <option value="bar">Bar - OHLC 막대</option>
+              <option value="line">Line - 종가 라인</option>
+              <option value="area">Area - 면적 차트</option>
+              <option value="baseline">Baseline - 기준선</option>
+            </select>
+          </div>
+          <div class="btnrow">
+            <button id="themeBtn">라이트/다크</button>
+            <button id="fitBtn">전체 맞춤</button>
+          </div>
+          <div class="btnrow three">
+            <button data-range="30">30봉</button>
+            <button data-range="90">90봉</button>
+            <button data-range="all">전체</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="field">
+            <label for="scaleMode">가격 스케일 모드</label>
+            <select id="scaleMode">
+              <option value="Normal">Normal</option>
+              <option value="Logarithmic">Logarithmic</option>
+              <option value="Percentage">Percentage</option>
+              <option value="IndexedTo100">Indexed to 100</option>
+            </select>
+          </div>
+          <label class="toggleline"><input id="invertScale" type="checkbox" /> 오른쪽 가격축 반전</label>
+          <label class="toggleline"><input id="leftScale" type="checkbox" checked /> 왼쪽 비교축 표시</label>
+          <label class="toggleline"><input id="lockScroll" type="checkbox" /> 스크롤/줌 잠금</label>
+        </div>
+
+        <div class="section">
+          <div class="btnrow">
+            <button id="markerBtn">최근봉 마커</button>
+            <button id="priceLineBtn">가격선 추가</button>
+          </div>
+          <div class="btnrow">
+            <button id="crosshairBtn">십자선 이동</button>
+            <button id="clearBtn" class="danger">마커 초기화</button>
+          </div>
+          <div class="btnrow">
+            <button id="appendBtn">새 캔들 추가</button>
+            <button id="pngBtn">PNG 저장</button>
+          </div>
+          <button id="realtimeBtn" class="primary" style="margin-top:8px;">실시간 업데이트 시작</button>
+        </div>
+
+        <p class="notice">데이터는 기능 시연용 가상 데이터입니다. 투자 판단용 가격 데이터가 아닙니다.</p>
+        <p class="brand">TradingView Lightweight Charts™<br>Copyright (с) 2025 TradingView, Inc. <a href="https://www.tradingview.com/" target="_blank" rel="noopener">https://www.tradingview.com/</a></p>
+      </aside>
+
+      <section class="card">
+        <div class="legend" id="legend">
+          <div class="metric"><span>일자</span><strong id="lgTime">-</strong></div>
+          <div class="metric"><span>시가</span><strong id="lgOpen">-</strong></div>
+          <div class="metric"><span>고가</span><strong id="lgHigh">-</strong></div>
+          <div class="metric"><span>저가</span><strong id="lgLow">-</strong></div>
+          <div class="metric"><span>종가</span><strong id="lgClose">-</strong></div>
+          <div class="metric"><span>거래량</span><strong id="lgVolume">-</strong></div>
+        </div>
+        <div class="chartShell">
+          <div id="mainChart"><div class="tooltip" id="tooltip"></div></div>
+        </div>
+        <div class="statusbar" id="statusbar">
+          <span class="pill">메인: Candlestick</span>
+          <span class="pill">보조: SMA20 / EMA50 / Volume</span>
+          <span class="pill">좌축: 상대지수</span>
+          <span class="pill">우축: 가격</span>
+        </div>
+      </section>
+    </div>
+
+    <section class="miniGrid" id="miniGrid">
+      <article class="card mini"><div class="miniHead"><h3>Area Series</h3><p>그라데이션 영역과 가격선</p></div><div class="miniChart" id="miniArea"></div></article>
+      <article class="card mini"><div class="miniHead"><h3>Baseline Series</h3><p>기준값 위/아래 색상 분리</p></div><div class="miniChart" id="miniBaseline"></div></article>
+      <article class="card mini"><div class="miniHead"><h3>Line + Point Markers</h3><p>라인, 점 마커, 굵기 옵션</p></div><div class="miniChart" id="miniLine"></div></article>
+      <article class="card mini"><div class="miniHead"><h3>Bar Series</h3><p>OHLC 막대 표현</p></div><div class="miniChart" id="miniBar"></div></article>
+      <article class="card mini"><div class="miniHead"><h3>Histogram Series</h3><p>거래량/지표 막대</p></div><div class="miniChart" id="miniHistogram"></div></article>
+      <article class="card mini"><div class="miniHead"><h3>Two Price Scales</h3><p>왼쪽/오른쪽 축 동시 사용</p></div><div class="miniChart" id="miniDual"></div></article>
+    </section>
+
+    <section class="card tableCard">
+      <table>
+        <thead>
+          <tr><th>기능</th><th>페이지 내 구현</th><th>확인 포인트</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>시리즈 타입</td><td><code>addSeries()</code>로 6종 시리즈 구성</td><td>메인 시리즈 선택 및 하단 미니 차트</td></tr>
+          <tr><td>멀티 패널</td><td>가격 패널과 거래량 패널 분리</td><td>메인 차트 하단 Volume pane</td></tr>
+          <tr><td>가격선</td><td><code>createPriceLine()</code>로 목표/저항/임의 가격선</td><td>가격선 추가 버튼</td></tr>
+          <tr><td>시리즈 마커</td><td><code>createSeriesMarkers()</code>로 매수/매도/뉴스 표시</td><td>최근봉 마커, 마커 초기화</td></tr>
+          <tr><td>십자선/툴팁</td><td><code>subscribeCrosshairMove()</code>로 커스텀 툴팁과 상단 범례 갱신</td><td>마우스 이동 또는 십자선 이동 버튼</td></tr>
+          <tr><td>스케일 제어</td><td>Normal, Log, %, Indexed, 축 반전, 좌측 축 표시</td><td>가격 스케일 모드 선택</td></tr>
+          <tr><td>시간 범위</td><td><code>setVisibleRange()</code>, <code>fitContent()</code></td><td>30봉/90봉/전체 버튼</td></tr>
+          <tr><td>실시간 반영</td><td><code>series.update()</code>로 마지막 봉 실시간 수정</td><td>실시간 업데이트 시작/중지</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const L = window.LightweightCharts;
+      if (!L) {
+        document.body.innerHTML = '<main style="padding:24px;font-family:sans-serif"><h1>Lightweight Charts 로드 실패</h1><p>CDN을 불러올 수 없습니다. 인터넷 연결 또는 사내망 차단 여부를 확인하세요.</p></main>';
+        return;
+      }
+
+      const ColorType = L.ColorType || { Solid: 'solid' };
+      const CrosshairMode = L.CrosshairMode || { Normal: 0, Magnet: 1 };
+      const LineStyle = L.LineStyle || { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3 };
+      const PriceScaleMode = L.PriceScaleMode || { Normal: 0, Logarithmic: 1, Percentage: 2, IndexedTo100: 3 };
+
+      const state = {
+        dark: true,
+        activeType: 'candlestick',
+        realtime: null,
+        markers: [],
+        markerApi: null,
+        extraLineCount: 0,
+        data: [],
+        volume: [],
+        miniCharts: [],
+      };
+
+      const $ = id => document.getElementById(id);
+      const mainEl = $('mainChart');
+      const tooltip = $('tooltip');
+      const statusbar = $('statusbar');
+      const fmt = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 });
+      const fmt0 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 });
+
+      function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+      function toDateString(date) { return date.toISOString().slice(0, 10); }
+      function nextDateString(last) {
+        const d = new Date(last + 'T00:00:00');
+        d.setUTCDate(d.getUTCDate() + 1);
+        return toDateString(d);
+      }
+      function clamp(num, min, max) { return Math.max(min, Math.min(max, num)); }
+      function round2(v) { return Math.round(v * 100) / 100; }
+
+      function generateData(count = 220) {
+        const rows = [];
+        const vols = [];
+        let price = 118;
+        const start = new Date('2025-10-01T00:00:00Z');
+        for (let i = 0; i < count; i++) {
+          const d = new Date(start);
+          d.setUTCDate(start.getUTCDate() + i);
+          const drift = Math.sin(i / 11) * 1.4 + Math.cos(i / 23) * .9;
+          const open = price + (Math.random() - .5) * 2.2;
+          const close = open + drift * .34 + (Math.random() - .5) * 3.2;
+          const high = Math.max(open, close) + 1 + Math.random() * 3.4;
+          const low = Math.min(open, close) - 1 - Math.random() * 3.0;
+          price = close;
+          const up = close >= open;
+          rows.push({ time: toDateString(d), open: round2(open), high: round2(high), low: round2(low), close: round2(close) });
+          vols.push({ time: toDateString(d), value: Math.round(150000 + Math.random() * 680000 + Math.abs(close - open) * 60000), color: up ? 'rgba(34,197,94,.45)' : 'rgba(239,68,68,.45)' });
+        }
+        return { rows, vols };
+      }
+
+      function toLineData(rows) { return rows.map(r => ({ time: r.time, value: r.close })); }
+      function movingAverage(rows, period) {
+        const out = [];
+        for (let i = 0; i < rows.length; i++) {
+          if (i < period - 1) continue;
+          const slice = rows.slice(i - period + 1, i + 1);
+          out.push({ time: rows[i].time, value: round2(slice.reduce((s, r) => s + r.close, 0) / period) });
+        }
+        return out;
+      }
+      function ema(rows, period) {
+        const out = [];
+        const k = 2 / (period + 1);
+        let prev = rows[0].close;
+        rows.forEach((r, idx) => {
+          prev = idx === 0 ? r.close : r.close * k + prev * (1 - k);
+          if (idx >= period - 1) out.push({ time: r.time, value: round2(prev) });
+        });
+        return out;
+      }
+      function indexData(rows) {
+        const base = rows[0].close;
+        return rows.map(r => ({ time: r.time, value: round2((r.close / base) * 100) }));
+      }
+
+      const generated = generateData();
+      state.data = generated.rows;
+      state.volume = generated.vols;
+
+      function chartOptions(height) {
+        return {
+          height,
+          autoSize: true,
+          layout: {
+            background: { type: ColorType.Solid, color: cssVar('--chart-bg') },
+            textColor: cssVar('--muted'),
+            fontFamily: 'system-ui, -apple-system, Segoe UI, sans-serif',
+            attributionLogo: true,
+          },
+          grid: {
+            vertLines: { color: cssVar('--line') },
+            horzLines: { color: cssVar('--line') },
+          },
+          rightPriceScale: { borderColor: cssVar('--line') },
+          leftPriceScale: { visible: true, borderColor: cssVar('--line') },
+          timeScale: {
+            borderColor: cssVar('--line'),
+            timeVisible: true,
+            secondsVisible: false,
+            rightOffset: 8,
+            barSpacing: 8,
+          },
+          crosshair: {
+            mode: CrosshairMode.Normal,
+            vertLine: { width: 1, color: 'rgba(148,163,184,.7)', style: LineStyle.Dashed, labelBackgroundColor: '#334155' },
+            horzLine: { width: 1, color: 'rgba(148,163,184,.7)', style: LineStyle.Dashed, labelBackgroundColor: '#334155' },
+          },
+          localization: {
+            locale: 'ko-KR',
+            priceFormatter: price => fmt.format(price),
+          },
+          handleScale: true,
+          handleScroll: true,
+        };
+      }
+
+      const chart = L.createChart(mainEl, chartOptions(600));
+      const series = {};
+
+      function addTextWatermark(targetChart, text, fontSize = 34) {
+        if (!L.createTextWatermark || typeof targetChart.panes !== 'function') return null;
+        try {
+          const pane = targetChart.panes()[0];
+          return L.createTextWatermark(pane, {
+            horzAlign: 'center',
+            vertAlign: 'center',
+            lines: [{
+              text,
+              color: state.dark ? 'rgba(148,163,184,.12)' : 'rgba(15,23,42,.08)',
+              fontSize,
+              fontStyle: 'bold',
+            }],
+          });
+        } catch (error) {
+          return null;
+        }
+      }
+      addTextWatermark(chart, 'Lightweight Charts Demo', 42);
+
+      series.candlestick = chart.addSeries(L.CandlestickSeries, {
+        upColor: '#22c55e', downColor: '#ef4444', wickUpColor: '#22c55e', wickDownColor: '#ef4444', borderVisible: false,
+        priceScaleId: 'right',
+      }, 0);
+      series.bar = chart.addSeries(L.BarSeries, { upColor: '#22c55e', downColor: '#ef4444', priceScaleId: 'right', visible: false }, 0);
+      series.line = chart.addSeries(L.LineSeries, { color: '#38bdf8', lineWidth: 2, priceScaleId: 'right', visible: false, pointMarkersVisible: true }, 0);
+      series.area = chart.addSeries(L.AreaSeries, {
+        lineColor: '#38bdf8', topColor: 'rgba(56,189,248,.42)', bottomColor: 'rgba(56,189,248,.04)', lineWidth: 2, priceScaleId: 'right', visible: false,
+      }, 0);
+      series.baseline = chart.addSeries(L.BaselineSeries, {
+        baseValue: { type: 'price', price: state.data[Math.floor(state.data.length / 2)].close },
+        topLineColor: '#22c55e', topFillColor1: 'rgba(34,197,94,.30)', topFillColor2: 'rgba(34,197,94,.05)',
+        bottomLineColor: '#ef4444', bottomFillColor1: 'rgba(239,68,68,.05)', bottomFillColor2: 'rgba(239,68,68,.30)',
+        priceScaleId: 'right', visible: false,
+      }, 0);
+      series.volume = chart.addSeries(L.HistogramSeries, {
+        priceScaleId: 'right',
+        priceFormat: { type: 'volume' },
+        lastValueVisible: false,
+        priceLineVisible: false,
+      }, 1);
+      series.sma = chart.addSeries(L.LineSeries, { color: '#f59e0b', lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: 'SMA20' }, 0);
+      series.ema = chart.addSeries(L.LineSeries, { color: '#a78bfa', lineWidth: 2, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: true, title: 'EMA50' }, 0);
+      series.index = chart.addSeries(L.LineSeries, { color: '#14b8a6', lineWidth: 1, priceScaleId: 'left', priceLineVisible: false, title: 'INDEX' }, 0);
+
+      function setAllData() {
+        series.candlestick.setData(state.data);
+        series.bar.setData(state.data);
+        const lineRows = toLineData(state.data);
+        series.line.setData(lineRows);
+        series.area.setData(lineRows);
+        series.baseline.setData(lineRows);
+        series.volume.setData(state.volume);
+        series.sma.setData(movingAverage(state.data, 20));
+        series.ema.setData(ema(state.data, 50));
+        series.index.setData(indexData(state.data));
+      }
+      setAllData();
+
+      const baseMarkers = [
+        { time: state.data[34].time, position: 'belowBar', color: '#22c55e', shape: 'arrowUp', text: '매수' },
+        { time: state.data[88].time, position: 'aboveBar', color: '#ef4444', shape: 'arrowDown', text: '매도' },
+        { time: state.data[134].time, position: 'inBar', color: '#38bdf8', shape: 'circle', text: '뉴스' },
+        { time: state.data[178].time, position: 'belowBar', color: '#f59e0b', shape: 'square', text: '관심' },
+      ];
+      state.markers = baseMarkers.slice();
+
+      function applyMarkers() {
+        if (L.createSeriesMarkers) {
+          if (!state.markerApi) state.markerApi = L.createSeriesMarkers(series.candlestick, state.markers);
+          else state.markerApi.setMarkers(state.markers);
+        } else if (typeof series.candlestick.setMarkers === 'function') {
+          series.candlestick.setMarkers(state.markers);
+        }
+      }
+      applyMarkers();
+
+      const latest = state.data[state.data.length - 1];
+      const support = Math.min(...state.data.slice(-90).map(r => r.low));
+      const resistance = Math.max(...state.data.slice(-90).map(r => r.high));
+      [series.candlestick, series.bar, series.line, series.area, series.baseline].forEach(s => {
+        s.createPriceLine({ price: round2(latest.close), color: '#38bdf8', lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title: '현재가' });
+        s.createPriceLine({ price: round2(support), color: '#22c55e', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '지지' });
+        s.createPriceLine({ price: round2(resistance), color: '#ef4444', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: '저항' });
+      });
+
+      function activeSeries() { return series[state.activeType]; }
+      function updateLegend(row, volumeRow) {
+        if (!row) row = state.data[state.data.length - 1];
+        if (!volumeRow) volumeRow = state.volume.find(v => v.time === row.time) || state.volume[state.volume.length - 1];
+        $('lgTime').textContent = row.time || '-';
+        $('lgOpen').textContent = row.open !== undefined ? fmt.format(row.open) : '-';
+        $('lgHigh').textContent = row.high !== undefined ? fmt.format(row.high) : '-';
+        $('lgLow').textContent = row.low !== undefined ? fmt.format(row.low) : '-';
+        $('lgClose').textContent = fmt.format(row.close ?? row.value ?? 0);
+        $('lgVolume').textContent = volumeRow ? fmt0.format(volumeRow.value) : '-';
+      }
+      updateLegend(latest);
+
+      function formatTooltip(row, vol) {
+        const isOhlc = row && row.open !== undefined;
+        const close = row ? (row.close ?? row.value) : undefined;
+        return `
+          <b>${row?.time || '-'}</b>
+          ${isOhlc ? `<div class="row"><span>O</span><strong>${fmt.format(row.open)}</strong></div>
+          <div class="row"><span>H</span><strong>${fmt.format(row.high)}</strong></div>
+          <div class="row"><span>L</span><strong>${fmt.format(row.low)}</strong></div>` : ''}
+          <div class="row"><span>C</span><strong>${close !== undefined ? fmt.format(close) : '-'}</strong></div>
+          <div class="row"><span>Volume</span><strong>${vol ? fmt0.format(vol.value) : '-'}</strong></div>
+        `;
+      }
+
+      chart.subscribeCrosshairMove(param => {
+        if (!param || !param.point || !param.time || param.point.x < 0 || param.point.y < 0) {
+          tooltip.style.display = 'none';
+          return;
+        }
+        const data = param.seriesData.get(activeSeries()) || param.seriesData.get(series.candlestick);
+        const vol = param.seriesData.get(series.volume);
+        const normalized = data && data.value !== undefined ? { time: param.time, value: data.value, close: data.value } : data;
+        updateLegend(normalized, vol);
+        tooltip.innerHTML = formatTooltip(normalized, vol);
+        tooltip.style.display = 'block';
+        const box = mainEl.getBoundingClientRect();
+        const left = clamp(param.point.x + 18, 8, box.width - 220);
+        const top = clamp(param.point.y + 18, 8, box.height - 150);
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+      });
+
+      function setActiveType(type) {
+        state.activeType = type;
+        Object.entries(series).forEach(([key, s]) => {
+          if (['candlestick', 'bar', 'line', 'area', 'baseline'].includes(key)) {
+            s.applyOptions({ visible: key === type });
+          }
+        });
+        statusbar.innerHTML = `
+          <span class="pill">메인: ${type}</span>
+          <span class="pill">보조: SMA20 / EMA50 / Volume</span>
+          <span class="pill">좌축: 상대지수</span>
+          <span class="pill">우축: 가격</span>
+        `;
+      }
+
+      function applyTheme() {
+        document.body.classList.toggle('light', !state.dark);
+        const opts = chartOptions(600);
+        chart.applyOptions(opts);
+        state.miniCharts.forEach(c => c.applyOptions(chartOptions(170)));
+      }
+
+      $('seriesType').addEventListener('change', e => setActiveType(e.target.value));
+      $('themeBtn').addEventListener('click', () => { state.dark = !state.dark; applyTheme(); });
+      $('fitBtn').addEventListener('click', () => chart.timeScale().fitContent());
+      document.querySelectorAll('button[data-range]').forEach(btn => btn.addEventListener('click', () => {
+        const range = btn.dataset.range;
+        if (range === 'all') return chart.timeScale().fitContent();
+        const n = Number(range);
+        const rows = state.data.slice(-n);
+        chart.timeScale().setVisibleRange({ from: rows[0].time, to: rows[rows.length - 1].time });
+      }));
+      $('scaleMode').addEventListener('change', e => {
+        const mode = PriceScaleMode[e.target.value] ?? PriceScaleMode.Normal;
+        chart.priceScale('right').applyOptions({ mode });
+      });
+      $('invertScale').addEventListener('change', e => chart.priceScale('right').applyOptions({ invertScale: e.target.checked }));
+      $('leftScale').addEventListener('change', e => chart.applyOptions({ leftPriceScale: { visible: e.target.checked } }));
+      $('lockScroll').addEventListener('change', e => chart.applyOptions({ handleScroll: !e.target.checked, handleScale: !e.target.checked }));
+
+      $('markerBtn').addEventListener('click', () => {
+        const r = state.data[state.data.length - 1];
+        const up = r.close >= r.open;
+        state.markers.push({ time: r.time, position: up ? 'belowBar' : 'aboveBar', color: up ? '#22c55e' : '#ef4444', shape: up ? 'arrowUp' : 'arrowDown', text: up ? '추가 매수' : '추가 매도' });
+        applyMarkers();
+      });
+      $('clearBtn').addEventListener('click', () => { state.markers = baseMarkers.slice(); applyMarkers(); });
+      $('priceLineBtn').addEventListener('click', () => {
+        const r = state.data[state.data.length - 1];
+        const price = round2(r.close + (Math.random() - .5) * 12);
+        state.extraLineCount += 1;
+        activeSeries().createPriceLine({ price, color: '#f59e0b', lineWidth: 1, lineStyle: LineStyle.LargeDashed, axisLabelVisible: true, title: `사용자선 ${state.extraLineCount}` });
+      });
+      $('crosshairBtn').addEventListener('click', () => {
+        const idx = Math.floor(state.data.length * .72);
+        const r = state.data[idx];
+        if (typeof chart.setCrosshairPosition === 'function') chart.setCrosshairPosition(r.close, r.time, activeSeries());
+        updateLegend(r, state.volume[idx]);
+      });
+
+      function updateLastBar() {
+        const last = { ...state.data[state.data.length - 1] };
+        const delta = (Math.random() - .5) * 2.4;
+        last.close = round2(Math.max(10, last.close + delta));
+        last.high = round2(Math.max(last.high, last.close + Math.random() * 1.3));
+        last.low = round2(Math.min(last.low, last.close - Math.random() * 1.3));
+        const vol = { ...state.volume[state.volume.length - 1] };
+        vol.value = Math.max(50000, Math.round(vol.value + Math.random() * 80000));
+        vol.color = last.close >= last.open ? 'rgba(34,197,94,.45)' : 'rgba(239,68,68,.45)';
+        state.data[state.data.length - 1] = last;
+        state.volume[state.volume.length - 1] = vol;
+        series.candlestick.update(last);
+        series.bar.update(last);
+        const linePoint = { time: last.time, value: last.close };
+        series.line.update(linePoint);
+        series.area.update(linePoint);
+        series.baseline.update(linePoint);
+        series.volume.update(vol);
+        series.sma.setData(movingAverage(state.data, 20));
+        series.ema.setData(ema(state.data, 50));
+        series.index.setData(indexData(state.data));
+        updateLegend(last, vol);
+      }
+
+      function appendBar() {
+        const prev = state.data[state.data.length - 1];
+        const time = nextDateString(prev.time);
+        const open = prev.close + (Math.random() - .5) * 2;
+        const close = open + (Math.random() - .5) * 4;
+        const high = Math.max(open, close) + Math.random() * 2.5;
+        const low = Math.min(open, close) - Math.random() * 2.5;
+        const row = { time, open: round2(open), high: round2(high), low: round2(low), close: round2(close) };
+        const vol = { time, value: Math.round(180000 + Math.random() * 800000), color: close >= open ? 'rgba(34,197,94,.45)' : 'rgba(239,68,68,.45)' };
+        state.data.push(row);
+        state.volume.push(vol);
+        setAllData();
+        updateLegend(row, vol);
+      }
+      $('appendBtn').addEventListener('click', appendBar);
+      $('realtimeBtn').addEventListener('click', () => {
+        if (state.realtime) {
+          clearInterval(state.realtime);
+          state.realtime = null;
+          $('realtimeBtn').textContent = '실시간 업데이트 시작';
+        } else {
+          state.realtime = setInterval(updateLastBar, 900);
+          $('realtimeBtn').textContent = '실시간 업데이트 중지';
+        }
+      });
+      $('pngBtn').addEventListener('click', () => {
+        if (typeof chart.takeScreenshot !== 'function') return alert('현재 로드된 버전에서 takeScreenshot API를 찾을 수 없습니다.');
+        const canvas = chart.takeScreenshot();
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'lightweight-charts-sample.png';
+        a.click();
+      });
+
+      chart.timeScale().fitContent();
+
+      function createMini(id, title, build) {
+        const el = $(id);
+        const c = L.createChart(el, chartOptions(170));
+        state.miniCharts.push(c);
+        build(c);
+        c.timeScale().fitContent();
+        return c;
+      }
+      const miniRows = state.data.slice(-72);
+      const miniLine = toLineData(miniRows);
+      createMini('miniArea', 'area', c => {
+        const s = c.addSeries(L.AreaSeries, { lineColor: '#38bdf8', topColor: 'rgba(56,189,248,.42)', bottomColor: 'rgba(56,189,248,.04)' });
+        s.setData(miniLine);
+        s.createPriceLine({ price: miniLine[miniLine.length - 1].value, color: '#38bdf8', lineStyle: LineStyle.Dotted, title: 'last' });
+      });
+      createMini('miniBaseline', 'baseline', c => {
+        const s = c.addSeries(L.BaselineSeries, { baseValue: { type: 'price', price: miniLine[20].value }, topLineColor: '#22c55e', bottomLineColor: '#ef4444', topFillColor1: 'rgba(34,197,94,.32)', topFillColor2: 'rgba(34,197,94,.04)', bottomFillColor1: 'rgba(239,68,68,.04)', bottomFillColor2: 'rgba(239,68,68,.32)' });
+        s.setData(miniLine);
+      });
+      createMini('miniLine', 'line', c => {
+        const s = c.addSeries(L.LineSeries, { color: '#f59e0b', lineWidth: 2, pointMarkersVisible: true });
+        s.setData(miniLine);
+        if (L.createSeriesMarkers) L.createSeriesMarkers(s, [
+          { time: miniLine[12].time, position: 'aboveBar', color: '#f59e0b', shape: 'circle', text: 'A' },
+          { time: miniLine[45].time, position: 'belowBar', color: '#22c55e', shape: 'arrowUp', text: 'B' },
+        ]);
+      });
+      createMini('miniBar', 'bar', c => {
+        const s = c.addSeries(L.BarSeries, { upColor: '#22c55e', downColor: '#ef4444' });
+        s.setData(miniRows);
+      });
+      createMini('miniHistogram', 'hist', c => {
+        const s = c.addSeries(L.HistogramSeries, { priceFormat: { type: 'volume' } });
+        s.setData(state.volume.slice(-72));
+      });
+      createMini('miniDual', 'dual', c => {
+        c.applyOptions({ leftPriceScale: { visible: true }, rightPriceScale: { visible: true } });
+        const right = c.addSeries(L.LineSeries, { color: '#38bdf8', lineWidth: 2, priceScaleId: 'right' });
+        const left = c.addSeries(L.LineSeries, { color: '#14b8a6', lineWidth: 2, priceScaleId: 'left' });
+        right.setData(miniLine);
+        left.setData(indexData(miniRows));
+      });
+
+      const ro = new ResizeObserver(() => {
+        chart.applyOptions({});
+        state.miniCharts.forEach(c => c.applyOptions({}));
+      });
+      ro.observe(document.body);
+    });
+  </script>
+</body>
+</html>
