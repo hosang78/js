@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>SortableJS 기능 실습실</title>
+  <style>
+    :root{
+      --ink:#182032; --muted:#667085; --line:#e5e9f2; --surface:#ffffff; --bg:#f4f7fb;
+      --blue:#2f6fed; --blue-soft:#edf3ff; --cyan:#03a9b5; --amber:#f59f00; --rose:#e64980;
+      --green:#16a34a; --purple:#7c3aed; --dark:#172033;
+      --shadow:0 12px 32px rgba(25,44,78,.08); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    .app{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+    .sidebar{position:sticky;top:0;height:100vh;background:#14213d;color:#e8efff;padding:24px 14px;overflow:auto}
+    .brand{padding:2px 12px 22px;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:16px}
+    .brand-mark{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#63a4ff,#a77dff);font-weight:800;font-size:18px;margin-bottom:10px}
+    .brand h1{font-size:17px;margin:0 0 5px;letter-spacing:-.03em}
+    .brand p{font-size:12px;margin:0;color:#b8c8e8}
+    .nav-label{font-size:11px;letter-spacing:.11em;color:#8ca2ca;font-weight:800;padding:12px 12px 5px}
+    .sidebar a{display:block;color:#cddaf2;text-decoration:none;padding:8px 12px;border-radius:10px;font-size:13px;margin:2px 0}
+    .sidebar a:hover,.sidebar a:focus{background:rgba(255,255,255,.1);color:#fff;outline:none}
+    .side-note{margin:20px 10px 0;padding:12px;border:1px solid rgba(255,255,255,.13);border-radius:12px;color:#b6c7e8;font-size:11px;line-height:1.6}
+    main{min-width:0;padding:28px 34px 64px;max-width:1600px;width:100%;margin:0 auto}
+    .hero{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+    .eyebrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--blue);text-transform:uppercase;margin-bottom:8px}
+    .eyebrow span{width:9px;height:9px;background:var(--green);border-radius:50%;box-shadow:0 0 0 4px rgba(22,163,74,.1)}
+    h2{font-size:31px;letter-spacing:-.055em;margin:0 0 8px;line-height:1.15}
+    .hero p{margin:0;color:var(--muted);max-width:760px;font-size:14px}
+    .version-card{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:14px;padding:12px 15px;min-width:190px;font-size:12px;color:var(--muted)}
+    .version-card strong{display:block;color:var(--ink);font-size:13px;margin-bottom:2px}
+    .toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:14px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:22px}
+    .toolbar-group{display:flex;align-items:center;gap:8px;padding-right:12px;border-right:1px solid var(--line)}
+    .toolbar-group:last-child{border-right:none;padding-right:0}
+    .btn{border:1px solid #d8dfec;background:#fff;color:#2c3853;padding:8px 11px;border-radius:9px;font-size:12px;font-weight:700;transition:.18s}
+    .btn:hover{border-color:#aab9d4;background:#f7f9fd}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.primary:hover{filter:brightness(.94)}
+    .status{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#50617e}.status-dot{width:8px;height:8px;border-radius:50%;background:#b7c1d4}.status.ok .status-dot{background:var(--green);box-shadow:0 0 0 4px rgba(22,163,74,.1)}.status.error .status-dot{background:#e03131;box-shadow:0 0 0 4px rgba(224,49,49,.1)}
+    .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;background:#fbfcff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:22px}
+    .control{padding:3px 8px}.control label{display:flex;justify-content:space-between;gap:10px;font-size:11px;font-weight:800;color:#4f5d78;margin-bottom:7px}.control output{color:var(--blue)}
+    input[type=range]{width:100%;accent-color:var(--blue)}
+    .toggle-row{display:flex;align-items:center;gap:8px;justify-content:space-between}.toggle-row label{margin:0;font-size:12px}.switch{position:relative;width:40px;height:23px;display:inline-block}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.2s}.slider:before{content:"";position:absolute;width:17px;height:17px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.22)}.switch input:checked + .slider{background:var(--blue)}.switch input:checked + .slider:before{transform:translateX(17px)}
+    .chapter{margin-top:30px;scroll-margin-top:20px}.chapter-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin:0 0 12px}.chapter-title{display:flex;gap:11px;align-items:center}.chapter-num{display:grid;place-items:center;border-radius:9px;width:30px;height:30px;background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:900}.chapter h3{font-size:18px;letter-spacing:-.035em;margin:0}.chapter-desc{margin:3px 0 0;color:var(--muted);font-size:12px}.chip{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:#f0f3f8;color:#5d6a84;font-size:10px;font-weight:800;white-space:nowrap}
+    .demo-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}.card{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:var(--radius);padding:16px;min-width:0}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+    .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.card h4{margin:0;font-size:14px;letter-spacing:-.025em}.card p{margin:4px 0 0;font-size:11px;color:var(--muted)}
+    .sort-list{display:flex;flex-direction:column;gap:8px;min-height:42px}.sort-item{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e1e7f0;border-radius:11px;padding:10px 11px;font-size:12px;font-weight:700;color:#34415a;user-select:none;transition:background .15s,border-color .15s,transform .15s}.sort-item:hover{border-color:#b7c7e6}.sort-item .label{flex:1;min-width:0}.rank{display:inline-grid;place-items:center;width:21px;height:21px;border-radius:7px;background:#eef3ff;color:#4a70d5;font-size:10px;font-weight:900;flex:0 0 auto}.drag-handle{font-size:16px;line-height:1;color:#8b9ab4;cursor:grab;letter-spacing:-2px;padding:0 2px}.drag-handle:active{cursor:grabbing}.tag{font-size:10px;font-weight:800;padding:3px 6px;border-radius:6px;background:#edf8f0;color:#198754}.tag.orange{background:#fff4e6;color:#d97706}.tag.purple{background:#f4efff;color:#7c3aed}.tag.gray{background:#f1f3f5;color:#6b7280}.tag.red{background:#fff0f2;color:#d6336c}
+    .sortable-ghost{opacity:.34;background:#dbe8ff!important;border:1px dashed var(--blue)!important}.sortable-chosen{border-color:var(--blue)!important;background:#f4f8ff!important;box-shadow:0 0 0 3px rgba(47,111,237,.12)}.sortable-drag{opacity:.98;box-shadow:0 16px 28px rgba(30,55,95,.18)}.sortable-fallback{background:#fff!important;border-color:var(--blue)!important;box-shadow:0 16px 28px rgba(30,55,95,.22)}.selected{background:#efeaff!important;border-color:#9b7cec!important;box-shadow:0 0 0 3px rgba(124,58,237,.12)}.swap-highlight{background:#fff7d6!important;border-color:#eab308!important;transform:scale(.97)}
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}.metric{background:#f7f9fc;border:1px solid #ecf0f6;border-radius:10px;padding:8px}.metric small{display:block;color:#7a879f;font-weight:700;font-size:10px}.metric strong{display:block;font-size:11px;color:#2e3a54;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.board-col{background:#f7f9fd;border:1px solid #e7ecf4;border-radius:13px;padding:10px;min-height:198px}.board-title{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:11px;margin:0 1px 9px;color:#4a5874}.count{display:grid;place-items:center;width:19px;height:19px;background:#e8edf6;border-radius:50%;font-size:10px;color:#5a6a86}.task{background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:9px;font-size:11px;font-weight:700;color:#3e4b64;margin-bottom:7px;box-shadow:0 3px 8px rgba(25,55,95,.03);user-select:none}.task:last-child{margin-bottom:0}.task .task-meta{display:flex;justify-content:space-between;align-items:center;margin-top:7px;color:#8090a9;font-size:10px;font-weight:700}
+    .palette-wrap{display:grid;grid-template-columns:1fr 1.25fr;gap:10px}.drop-zone{border:1px dashed #a9b9d4;background:#fbfdff;border-radius:12px;padding:10px;min-height:178px}.drop-zone-title{font-size:11px;font-weight:900;color:#50617e;margin-bottom:8px}.template{background:linear-gradient(135deg,#f7faff,#eff4ff);border:1px solid #cbd9f7;color:#3e5fae}.template i{font-style:normal;font-size:14px}.clone-note{font-size:10px;color:#697993;margin-top:8px;line-height:1.5}
+    .locked{background:#fff5f5;border-color:#ffc9c9;color:#a32626}.locked .tag{background:#ffe3e3;color:#c92a2a}.action-btn{border:0;background:#eef4ff;color:#3767bc;border-radius:7px;padding:4px 6px;font-size:10px;font-weight:800;cursor:pointer}.action-btn:hover{background:#dfeaff}
+    .horizontal-wrap{overflow:auto;padding:5px 2px 10px}.horizontal{display:flex;gap:10px;min-width:max-content}.h-card{width:142px;min-height:104px;border:1px solid #dfe6f1;border-radius:13px;padding:12px;background:linear-gradient(180deg,#fff,#f9fbff);user-select:none}.h-card .ico{font-size:18px}.h-card strong{display:block;font-size:12px;margin-top:13px}.h-card span{font-size:10px;color:#7b89a3;display:block;margin-top:3px}.h-card:nth-child(2n) .ico{filter:hue-rotate(70deg)}
+    .grid-sort{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.grid-item{aspect-ratio:1;border-radius:12px;border:1px solid #dbe4f1;background:linear-gradient(135deg,#f8fbff,#edf3ff);display:grid;place-items:center;font-weight:900;font-size:16px;color:#5473ba;user-select:none}.grid-item:nth-child(3n){background:linear-gradient(135deg,#f8f1ff,#efe1ff);color:#8155b7}.grid-item:nth-child(4n){background:linear-gradient(135deg,#edfff6,#dcfce7);color:#218d54}
+    .nested-root{display:flex;flex-direction:column;gap:9px}.nested-box{border:1px solid #dde5f0;border-radius:12px;padding:9px;background:#fafcff}.nested-parent{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:900;color:#4b5c78;margin-bottom:8px}.nested-list{display:flex;gap:7px;flex-wrap:wrap;min-height:34px}.nested-item{border:1px solid #dbe4f3;background:#fff;border-radius:8px;padding:7px 8px;font-size:10px;font-weight:800;color:#5a6984;user-select:none}
+    .capacity-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.capacity{background:#fbfcff;border:1px solid #e3e9f3;border-radius:12px;padding:10px;min-height:185px}.capacity h5{margin:0 0 8px;font-size:11px;color:#53617e}.capacity.full{background:#fffafa;border-color:#ffd4d4}.capacity .capacity-note{font-size:10px;color:#9a6a6a;margin:8px 0 0}
+    .auto-scroll-box{max-height:185px;overflow:auto;border:1px solid #e4eaf3;border-radius:12px;padding:9px;background:#fbfcff}.auto-scroll-box .sort-list{gap:6px}.auto-scroll-box .sort-item{padding:8px 9px}
+    .order-output{margin-top:10px;background:#111b2f;color:#d8e7ff;border-radius:10px;padding:9px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;white-space:pre-wrap;word-break:break-all;min-height:35px}.feature-code{margin:12px 0 0;background:#f6f8fc;border:1px solid #e7ecf4;border-radius:10px;padding:9px;white-space:pre-wrap;overflow:auto;font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#55637e}
+    .event-panel{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.event-log{height:305px;overflow:auto;background:#111b2f;border-radius:14px;padding:12px;font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#b8cbed}.event-line{border-bottom:1px solid rgba(255,255,255,.07);padding:6px 0}.event-line:first-child{padding-top:0}.event-line .event-name{color:#80b4ff;font-weight:800}.event-line .event-time{color:#8294b8}.event-empty{color:#8091b0;padding:10px 0}.inspector{background:#fbfcff;border:1px solid #e5eaf2;border-radius:14px;padding:13px}.inspector h5{margin:0 0 8px;font-size:12px}.inspector ul{padding-left:17px;margin:8px 0;color:#5d6b84;font-size:11px;line-height:1.75}.inspector button{margin-top:6px}.source-box{margin-top:12px;border:1px solid var(--line);border-radius:13px;overflow:hidden}.source-box summary{padding:10px 12px;background:#fff;font-size:12px;font-weight:800;color:#40506d;cursor:pointer}.source-box pre{margin:0;padding:12px;background:#0f172a;color:#d6e5ff;overflow:auto;font:10px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .notice{margin-top:26px;padding:14px 15px;border-radius:14px;background:#eef5ff;border:1px solid #d2e2fb;color:#40577f;font-size:11px;line-height:1.65}.notice strong{color:#25477b}.notice code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;background:#fff;padding:2px 4px;border-radius:4px}
+    @media(max-width:1180px){.span-4{grid-column:span 6}.span-5{grid-column:span 6}.span-7{grid-column:span 12}.event-panel{grid-template-columns:1fr}.controls{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:780px){.app{display:block}.sidebar{position:relative;height:auto;padding:14px;display:flex;gap:4px;overflow:auto;white-space:nowrap}.brand{display:none}.nav-label,.side-note{display:none}.sidebar a{font-size:11px;padding:8px 9px}.sidebar a::before{content:""}main{padding:20px 14px 44px}.hero{display:block}.version-card{margin-top:14px;width:max-content}.toolbar{gap:7px}.toolbar-group{border:0;padding:0}.toolbar .btn{padding:7px 9px}.status{width:100%;margin-left:0}.controls{grid-template-columns:1fr 1fr}.span-4,.span-5,.span-6,.span-7,.span-8{grid-column:span 12}.board{grid-template-columns:1fr}.palette-wrap,.capacity-grid{grid-template-columns:1fr}h2{font-size:25px}.chapter-head{align-items:flex-start}.chip{display:none}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="기능 탐색">
+      <div class="brand"><div class="brand-mark">↕</div><h1>SortableJS Lab</h1><p>드래그·드롭 인터랙션 실습 페이지</p></div>
+      <div class="nav-label">CORE</div>
+      <a href="#basic">01 기본 정렬</a><a href="#groups">02 그룹 · 복제</a><a href="#control">03 핸들 · 필터</a>
+      <div class="nav-label">ADVANCED</div>
+      <a href="#layout">04 가로 · Grid</a><a href="#plugins">05 플러그인</a><a href="#nested">06 중첩</a><a href="#rules">07 이동 제어</a>
+      <div class="nav-label">INTEGRATION</div>
+      <a href="#store">08 저장 · AutoScroll</a><a href="#events">09 이벤트 로그</a>
+      <div class="side-note">모든 예제는 동일한 SortableJS 인스턴스 설정을 실제로 실행합니다. 카드·항목을 직접 끌어 동작을 확인하세요.</div>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <div>
+          <div class="eyebrow"><span></span> Interactive component playground</div>
+          <h2>SortableJS 기능 실습실</h2>
+          <p>정렬, 칸반 이동, 복제, 핸들 제한, 필터, 가로 목록, Grid Swap, MultiDrag, 중첩 목록, 이동 제한, LocalStorage 저장, 자동 스크롤 및 이벤트 콜백을 한 페이지에서 확인할 수 있습니다.</p>
+        </div>
+        <div class="version-card"><strong>SortableJS v1.15.7</strong><span>Complete ESM build · MIT</span><br><span id="modeText">브라우저 모듈 로딩 준비 중</span></div>
+      </header>
+
+      <section class="toolbar" aria-label="전체 제어">
+        <div class="toolbar-group"><button class="btn primary" id="resetAll">전체 초기화</button><button class="btn" id="clearEvents">이벤트 로그 비우기</button></div>
+        <div class="toolbar-group"><button class="btn" id="toggleBasic">기본 목록 잠금</button><button class="btn" id="showOrders">현재 순서 보기</button></div>
+        <div class="toolbar-group"><button class="btn" id="clearStorage">저장된 순서 삭제</button></div>
+        <div id="loadStatus" class="status"><i class="status-dot"></i><span>SortableJS 로딩 대기</span></div>
+      </section>
+
+      <section class="controls" aria-label="실시간 옵션 조절">
+        <div class="control"><label for="animationRange">animation <output id="animationOut">180 ms</output></label><input id="animationRange" type="range" min="0" max="600" step="10" value="180" /></div>
+        <div class="control"><label for="delayRange">delay <output id="delayOut">0 ms</output></label><input id="delayRange" type="range" min="0" max="400" step="50" value="0" /></div>
+        <div class="control"><label for="thresholdRange">swapThreshold <output id="thresholdOut">0.65</output></label><input id="thresholdRange" type="range" min="0.1" max="1" step="0.05" value="0.65" /></div>
+        <div class="control"><div class="toggle-row"><label for="fallbackToggle">forceFallback</label><label class="switch"><input id="fallbackToggle" type="checkbox" /><span class="slider"></span></label></div><div class="toggle-row" style="margin-top:10px"><label for="invertToggle">invertSwap</label><label class="switch"><input id="invertToggle" type="checkbox" /><span class="slider"></span></label></div></div>
+      </section>
+
+      <section class="chapter" id="basic">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">01</span><div><h3>기본 정렬과 CSS 상태 클래스</h3><p class="chapter-desc">animation, easing, ghostClass, chosenClass, dragClass, toArray(), onEnd</p></div></div><span class="chip">Single list</span></div>
+        <div class="demo-grid">
+          <article class="card span-5"><div class="card-top"><div><h4>우선순위 목록</h4><p>항목을 끌어 우선순위를 바꿔보세요.</p></div><span class="tag">정렬 가능</span></div>
+            <div class="sort-list" id="basicList">
+              <div class="sort-item" data-id="plan"><span class="rank">1</span><span class="label">업무 계획 수립</span><span class="tag purple">기획</span></div>
+              <div class="sort-item" data-id="review"><span class="rank">2</span><span class="label">요청사항 검토</span><span class="tag orange">검토</span></div>
+              <div class="sort-item" data-id="build"><span class="rank">3</span><span class="label">시안 및 기능 구현</span><span class="tag">진행</span></div>
+              <div class="sort-item" data-id="share"><span class="rank">4</span><span class="label">결과 공유 및 반영</span><span class="tag gray">배포</span></div>
+            </div>
+            <div class="metric-row"><div class="metric"><small>dataIdAttr</small><strong>data-id</strong></div><div class="metric"><small>animation</small><strong id="basicAnimMetric">180 ms</strong></div><div class="metric"><small>상태</small><strong id="basicState">활성</strong></div></div>
+          </article>
+          <article class="card span-7"><div class="card-top"><div><h4>현재 순서 / 실행 코드</h4><p>드롭 시 <code>toArray()</code> 결과와 이벤트가 즉시 갱신됩니다.</p></div><span class="chip">onStart · onEnd · onSort</span></div>
+            <div class="order-output" id="basicOrder">["plan","review","build","share"]</div>
+            <pre class="feature-code">new Sortable(document.querySelector('#basicList'), {
+  animation: 180,
+  easing: 'cubic-bezier(.2,.75,.25,1)',
+  ghostClass: 'sortable-ghost',
+  chosenClass: 'sortable-chosen',
+  dragClass: 'sortable-drag',
+  onEnd: (evt) => console.log(evt.oldIndex, evt.newIndex)
+});</pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="groups">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">02</span><div><h3>공유 그룹 이동과 복제</h3><p class="chapter-desc">group, pull, put, sort, clone, revertClone, onAdd, onRemove</p></div></div><span class="chip">Cross-list drag</span></div>
+        <div class="demo-grid">
+          <article class="card span-8"><div class="card-top"><div><h4>칸반 보드</h4><p>세 컬럼은 <strong>workflow</strong> 그룹으로 연결되어 있습니다.</p></div><span class="tag purple">group: workflow</span></div>
+            <div class="board">
+              <div class="board-col"><div class="board-title">할 일 <span class="count" data-count-for="todoList">3</span></div><div class="sort-list board-list" id="todoList">
+                <div class="task" data-id="task-brief">요구사항 정리<div class="task-meta"><span>기획</span><span>오늘</span></div></div>
+                <div class="task" data-id="task-api">API 응답 확인<div class="task-meta"><span>개발</span><span>내일</span></div></div>
+                <div class="task" data-id="task-ui">화면 시안 확정<div class="task-meta"><span>디자인</span><span>금주</span></div></div>
+              </div></div>
+              <div class="board-col"><div class="board-title">진행 중 <span class="count" data-count-for="doingList">2</span></div><div class="sort-list board-list" id="doingList">
+                <div class="task" data-id="task-wire">와이어프레임 제작<div class="task-meta"><span>디자인</span><span>60%</span></div></div>
+                <div class="task" data-id="task-test">드래그 동작 시험<div class="task-meta"><span>QA</span><span>40%</span></div></div>
+              </div></div>
+              <div class="board-col"><div class="board-title">완료 <span class="count" data-count-for="doneList">1</span></div><div class="sort-list board-list" id="doneList">
+                <div class="task" data-id="task-setup">개발 환경 설정<div class="task-meta"><span>개발</span><span>완료</span></div></div>
+              </div></div>
+            </div>
+          </article>
+          <article class="card span-4"><div class="card-top"><div><h4>템플릿 복제 팔레트</h4><p>왼쪽 요소는 그대로 남고, 오른쪽에 복제본이 생성됩니다.</p></div><span class="tag orange">pull: clone</span></div>
+            <div class="palette-wrap"><div><div class="drop-zone-title">템플릿</div><div class="sort-list" id="paletteList">
+              <div class="sort-item template" data-id="tpl-note"><i>▤</i><span class="label">메모 블록</span></div>
+              <div class="sort-item template" data-id="tpl-chart"><i>◔</i><span class="label">차트 블록</span></div>
+              <div class="sort-item template" data-id="tpl-alert"><i>⚑</i><span class="label">알림 블록</span></div>
+            </div></div><div class="drop-zone"><div class="drop-zone-title">대시보드 캔버스</div><div class="sort-list" id="canvasList"><div class="sort-item" data-id="welcome"><span class="rank">＋</span><span class="label">여기로 템플릿을 끌어오세요</span></div></div></div></div>
+            <div class="clone-note">원본: <code>sort:false</code> / <code>group.pull:'clone'</code> / 드롭 대상: <code>group.put:true</code></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="control">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">03</span><div><h3>핸들, 필터, 드래그 대상 제한</h3><p class="chapter-desc">handle, filter, preventOnFilter, draggable, ignore, onFilter</p></div></div><span class="chip">Fine-grained control</span></div>
+        <div class="demo-grid">
+          <article class="card span-6"><div class="card-top"><div><h4>핸들을 잡아야만 이동</h4><p>왼쪽의 ⠿ 핸들로만 드래그가 시작됩니다. 버튼 클릭은 필터링됩니다.</p></div><span class="tag">handle: .drag-handle</span></div>
+            <div class="sort-list" id="handleList">
+              <div class="sort-item" data-id="member-a"><span class="drag-handle" title="여기를 끌어 이동">⠿</span><span class="label">민지 · 화면 설계</span><span class="tag purple">UI</span><button class="action-btn" data-action="ping">알림</button></div>
+              <div class="sort-item" data-id="member-b"><span class="drag-handle" title="여기를 끌어 이동">⠿</span><span class="label">도윤 · API 연동</span><span class="tag">DEV</span><button class="action-btn" data-action="ping">알림</button></div>
+              <div class="sort-item locked no-drag" data-id="member-c"><span class="drag-handle">⠿</span><span class="label">승인 대기 항목</span><span class="tag red">잠김</span><button class="action-btn" data-action="info">상세</button></div>
+              <div class="sort-item" data-id="member-d"><span class="drag-handle" title="여기를 끌어 이동">⠿</span><span class="label">지후 · 테스트</span><span class="tag orange">QA</span><button class="action-btn" data-action="ping">알림</button></div>
+            </div>
+          </article>
+          <article class="card span-6"><div class="card-top"><div><h4>옵션 이해 포인트</h4><p>업무 화면에서 오작동을 줄이는 데 자주 쓰는 설정입니다.</p></div><span class="chip">필터 이벤트 로깅</span></div>
+            <pre class="feature-code" style="margin-top:0">new Sortable(handleList, {
+  animation: 180,
+  draggable: '.sort-item',
+  handle: '.drag-handle',
+  filter: '.no-drag, .action-btn',
+  preventOnFilter: false,
+  ignore: 'a, img, button',
+  onFilter: (evt) => log('onFilter', evt)
+});</pre>
+            <div class="notice" style="margin-top:12px"><strong>시험 방법</strong><br>① 텍스트 본문을 끌면 이동하지 않음<br>② <b>⠿</b> 핸들을 끌면 이동<br>③ <b>잠김</b> 항목과 우측 버튼은 이동하지 않고 클릭 이벤트만 발생</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="layout">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">04</span><div><h3>가로 방향과 Grid 레이아웃</h3><p class="chapter-desc">direction, swapThreshold, invertSwap, swapClass, CSS Grid</p></div></div><span class="chip">Visual layout</span></div>
+        <div class="demo-grid">
+          <article class="card span-7"><div class="card-top"><div><h4>가로 카드 스트립</h4><p>가로 스크롤 영역에서 카드 순서를 바꿉니다. 상단 슬라이더로 임계값을 조절하세요.</p></div><span class="tag">direction: horizontal</span></div>
+            <div class="horizontal-wrap"><div class="horizontal" id="horizontalList">
+              <div class="h-card" data-id="h-1"><div class="ico">📌</div><strong>요청 등록</strong><span>접수 단계</span></div>
+              <div class="h-card" data-id="h-2"><div class="ico">🧭</div><strong>분석</strong><span>현황 진단</span></div>
+              <div class="h-card" data-id="h-3"><div class="ico">🧩</div><strong>설계</strong><span>구조 수립</span></div>
+              <div class="h-card" data-id="h-4"><div class="ico">🛠</div><strong>구현</strong><span>기능 개발</span></div>
+              <div class="h-card" data-id="h-5"><div class="ico">🧪</div><strong>검증</strong><span>품질 확인</span></div>
+              <div class="h-card" data-id="h-6"><div class="ico">🚀</div><strong>배포</strong><span>운영 반영</span></div>
+            </div></div>
+          </article>
+          <article class="card span-5"><div class="card-top"><div><h4>Swap 플러그인 Grid</h4><p>일반 정렬 대신 대상 항목과 위치를 교환합니다.</p></div><span class="tag purple">swap: true</span></div>
+            <div class="grid-sort" id="swapGrid">
+              <div class="grid-item" data-id="g1">1</div><div class="grid-item" data-id="g2">2</div><div class="grid-item" data-id="g3">3</div><div class="grid-item" data-id="g4">4</div>
+              <div class="grid-item" data-id="g5">5</div><div class="grid-item" data-id="g6">6</div><div class="grid-item" data-id="g7">7</div><div class="grid-item" data-id="g8">8</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="plugins">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">05</span><div><h3>플러그인: MultiDrag</h3><p class="chapter-desc">multiDrag, selectedClass, fallbackTolerance, multiDragKey</p></div></div><span class="chip">Complete build</span></div>
+        <div class="demo-grid">
+          <article class="card span-6"><div class="card-top"><div><h4>여러 항목 한 번에 이동</h4><p><strong>Ctrl / Cmd</strong>을 누른 채 항목을 여러 개 선택한 뒤 하나를 끌어보세요. 모바일에서는 길게 누르거나 한 항목씩 선택을 시험하세요.</p></div><span class="tag purple">multiDrag: true</span></div>
+            <div class="sort-list" id="multiList">
+              <div class="sort-item" data-id="multi-1"><span class="rank">A</span><span class="label">자료 수집</span><span class="tag gray">1h</span></div>
+              <div class="sort-item" data-id="multi-2"><span class="rank">B</span><span class="label">정제 및 분류</span><span class="tag gray">2h</span></div>
+              <div class="sort-item" data-id="multi-3"><span class="rank">C</span><span class="label">초안 작성</span><span class="tag gray">3h</span></div>
+              <div class="sort-item" data-id="multi-4"><span class="rank">D</span><span class="label">검수 요청</span><span class="tag gray">1h</span></div>
+              <div class="sort-item" data-id="multi-5"><span class="rank">E</span><span class="label">최종 반영</span><span class="tag gray">1h</span></div>
+            </div>
+          </article>
+          <article class="card span-6"><div class="card-top"><div><h4>선택 규칙</h4><p>선택된 항목에는 <code>.selected</code> 클래스가 적용됩니다.</p></div><span class="chip">selectedClass</span></div>
+            <pre class="feature-code" style="margin-top:0">new Sortable(multiList, {
+  animation: 180,
+  multiDrag: true,
+  selectedClass: 'selected',
+  fallbackTolerance: 3,
+  multiDragKey: 'CTRL',
+  onSelect: (evt) => log('onSelect', evt),
+  onDeselect: (evt) => log('onDeselect', evt)
+});</pre>
+            <div class="notice" style="margin-top:12px"><strong>참고</strong><br>MultiDrag와 Swap은 기본 번들이 아닌 <b>Complete ESM build</b>에서 함께 제공되는 플러그인입니다.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="nested">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">06</span><div><h3>중첩 Sortable</h3><p class="chapter-desc">nested lists, fallbackOnBody, group, bubbleScroll, swapThreshold</p></div></div><span class="chip">Nested interaction</span></div>
+        <div class="demo-grid"><article class="card span-12"><div class="card-top"><div><h4>상위 카테고리 내 세부 항목</h4><p>하위 태그를 다른 카테고리로 드래그할 수 있습니다. 중첩 애니메이션에서는 <code>fallbackOnBody:true</code>와 낮은 swapThreshold가 유용합니다.</p></div><span class="tag">group: nested-tags</span></div>
+          <div class="nested-root">
+            <div class="nested-box"><div class="nested-parent">📁 조사 · 분석</div><div class="nested-list" id="nestedA"><div class="nested-item" data-id="na-1">현황 조사</div><div class="nested-item" data-id="na-2">데이터 정리</div><div class="nested-item" data-id="na-3">이슈 분류</div></div></div>
+            <div class="nested-box"><div class="nested-parent">🧩 설계 · 제작</div><div class="nested-list" id="nestedB"><div class="nested-item" data-id="nb-1">화면 구성</div><div class="nested-item" data-id="nb-2">기능 설계</div></div></div>
+            <div class="nested-box"><div class="nested-parent">✅ 검증 · 공유</div><div class="nested-list" id="nestedC"><div class="nested-item" data-id="nc-1">사용자 확인</div><div class="nested-item" data-id="nc-2">배포 공지</div><div class="nested-item" data-id="nc-3">회고 작성</div></div></div>
+          </div>
+        </article></div>
+      </section>
+
+      <section class="chapter" id="rules">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">07</span><div><h3>이동 규칙과 수용량 제어</h3><p class="chapter-desc">onMove return false, put, pull, sort:false, emptyInsertThreshold</p></div></div><span class="chip">Business rule</span></div>
+        <div class="demo-grid"><article class="card span-6"><div class="card-top"><div><h4>검토 대기열 — 최대 3건</h4><p>왼쪽의 후보를 오른쪽으로 끌어보세요. 검토 대기열이 3건이면 추가 이동을 막습니다.</p></div><span class="tag red">onMove validation</span></div>
+          <div class="capacity-grid"><div class="capacity"><h5>후보 목록</h5><div class="sort-list" id="candidateList"><div class="sort-item" data-id="c-1"><span class="label">협의안 A</span><span class="tag gray">후보</span></div><div class="sort-item" data-id="c-2"><span class="label">협의안 B</span><span class="tag gray">후보</span></div><div class="sort-item" data-id="c-3"><span class="label">협의안 C</span><span class="tag gray">후보</span></div><div class="sort-item" data-id="c-4"><span class="label">협의안 D</span><span class="tag gray">후보</span></div></div></div><div class="capacity" id="reviewBox"><h5>검토 대기열 <span id="reviewCount">(0/3)</span></h5><div class="sort-list" id="reviewList"></div><p class="capacity-note">3건을 초과하면 드롭 거부</p></div></div>
+        </article>
+        <article class="card span-6"><div class="card-top"><div><h4>권한 제어 개념</h4><p>업무 프로세스에서 상태별 이동을 제한할 때 사용할 수 있습니다.</p></div><span class="chip">onMove / group</span></div>
+          <pre class="feature-code" style="margin-top:0">new Sortable(reviewList, {
+  group: { name: 'review', pull: true, put: true },
+  animation: 180,
+  onMove: (evt) => {
+    const count = evt.to.querySelectorAll('.sort-item').length;
+    const movingIntoReview = evt.to.id === 'reviewList';
+    return !(movingIntoReview && count >= 3);
+  }
+});</pre>
+          <div class="notice" style="margin-top:12px"><strong>구현 팁</strong><br>서버 권한 검증은 별도로 수행해야 합니다. <code>onMove</code>는 프론트엔드 화면에서 즉시 피드백을 주는 용도로 적합합니다.</div>
+        </article></div>
+      </section>
+
+      <section class="chapter" id="store">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">08</span><div><h3>순서 저장과 자동 스크롤</h3><p class="chapter-desc">store.get / store.set, localStorage, scroll, bubbleScroll, scrollSensitivity</p></div></div><span class="chip">Persist & scroll</span></div>
+        <div class="demo-grid">
+          <article class="card span-5"><div class="card-top"><div><h4>LocalStorage에 순서 유지</h4><p>순서를 바꾼 후 페이지를 새로고침해도 유지됩니다.</p></div><span class="tag">store</span></div>
+            <div class="sort-list" id="storeList"><div class="sort-item" data-id="store-one"><span class="rank">1</span><span class="label">주간 업무 보고</span></div><div class="sort-item" data-id="store-two"><span class="rank">2</span><span class="label">회의 자료 준비</span></div><div class="sort-item" data-id="store-three"><span class="rank">3</span><span class="label">협업 요청 회신</span></div><div class="sort-item" data-id="store-four"><span class="rank">4</span><span class="label">성과 지표 갱신</span></div></div>
+            <div class="order-output" id="storeOrder">저장된 순서 읽는 중…</div>
+          </article>
+          <article class="card span-7"><div class="card-top"><div><h4>AutoScroll 긴 목록</h4><p>목록 상단 또는 하단 가장자리로 드래그하면 자동 스크롤합니다.</p></div><span class="tag purple">scroll: true</span></div>
+            <div class="auto-scroll-box"><div class="sort-list" id="scrollList">
+              <div class="sort-item" data-id="s01"><span class="rank">01</span><span class="label">점검 항목 01</span></div><div class="sort-item" data-id="s02"><span class="rank">02</span><span class="label">점검 항목 02</span></div><div class="sort-item" data-id="s03"><span class="rank">03</span><span class="label">점검 항목 03</span></div><div class="sort-item" data-id="s04"><span class="rank">04</span><span class="label">점검 항목 04</span></div><div class="sort-item" data-id="s05"><span class="rank">05</span><span class="label">점검 항목 05</span></div><div class="sort-item" data-id="s06"><span class="rank">06</span><span class="label">점검 항목 06</span></div><div class="sort-item" data-id="s07"><span class="rank">07</span><span class="label">점검 항목 07</span></div><div class="sort-item" data-id="s08"><span class="rank">08</span><span class="label">점검 항목 08</span></div><div class="sort-item" data-id="s09"><span class="rank">09</span><span class="label">점검 항목 09</span></div><div class="sort-item" data-id="s10"><span class="rank">10</span><span class="label">점검 항목 10</span></div><div class="sort-item" data-id="s11"><span class="rank">11</span><span class="label">점검 항목 11</span></div><div class="sort-item" data-id="s12"><span class="rank">12</span><span class="label">점검 항목 12</span></div>
+            </div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="events">
+        <div class="chapter-head"><div class="chapter-title"><span class="chapter-num">09</span><div><h3>이벤트 모니터와 API 확인</h3><p class="chapter-desc">onChoose, onStart, onChange, onUpdate, onAdd, onRemove, onSort, onEnd, onClone</p></div></div><span class="chip">Live event log</span></div>
+        <div class="event-panel"><article class="card"><div class="card-top"><div><h4>실시간 이벤트 로그</h4><p>각 예제의 주요 드래그 이벤트를 최근 순서로 표시합니다.</p></div><span class="tag">console-like</span></div><div class="event-log" id="eventLog"><div class="event-empty">아직 기록된 이벤트가 없습니다. 위 예제를 드래그해보세요.</div></div></article>
+          <aside class="inspector"><h5>이 샘플에 포함된 핵심 API</h5><ul><li><b>Sortable.create()</b> / <b>new Sortable()</b></li><li><b>sortable.option(name, value)</b></li><li><b>sortable.toArray()</b> / <b>sortable.sort()</b></li><li><b>sortable.save()</b> / <b>sortable.destroy()</b></li><li><b>evt.from / evt.to / evt.item</b></li><li><b>evt.oldIndex / evt.newIndex</b></li><li><b>group.pull / group.put</b></li></ul><button class="btn" id="inspectBasic">기본 목록 상태 확인</button><div class="order-output" id="inspectOutput">인스턴스 정보가 여기에 표시됩니다.</div></aside>
+        </div>
+        <details class="source-box"><summary>이 페이지의 SortableJS 로딩 방식과 오프라인 교체 방법</summary><pre>&lt;script type="module"&gt;
+  import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/modular/sortable.complete.esm.js';
+  // 사내망 등 오프라인 환경에서는 위 URL을 아래 로컬 경로로 교체
+  // import Sortable from './assets/sortable.complete.esm.js';
+&lt;/script&gt;</pre></details>
+      </section>
+
+      <div class="notice"><strong>실행 유의사항</strong><br>이 HTML은 SortableJS의 Complete ESM 번들을 CDN에서 불러옵니다. 외부망이 차단된 환경에서는 공식 배포 파일을 <code>assets/sortable.complete.esm.js</code>로 저장하고, 하단 코드에 표시된 import 경로를 로컬 경로로 바꾸면 됩니다. 이 페이지의 UI 및 예제 코드는 외부 프레임워크 없이 동작하도록 작성했습니다.</div>
+    </main>
+  </div>
+
+  <script>
+    window.__sortableDemoReady = false;
+    setTimeout(() => {
+      if (!window.__sortableDemoReady) {
+        const s = document.getElementById('loadStatus');
+        s.className = 'status error';
+        s.innerHTML = '<i class="status-dot"></i><span>라이브러리 로딩 실패 · 네트워크/모듈 경로 확인</span>';
+        document.getElementById('modeText').textContent = 'CDN 불러오기 실패';
+      }
+    }, 6000);
+  </script>
+
+  <script type="module">
+    import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/modular/sortable.complete.esm.js';
+
+    const $ = (selector, scope = document) => scope.querySelector(selector);
+    const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+    const state = { instances: {}, logs: [], basicDisabled: false };
+    const animInput = $('#animationRange');
+    const delayInput = $('#delayRange');
+    const thresholdInput = $('#thresholdRange');
+    const fallbackInput = $('#fallbackToggle');
+    const invertInput = $('#invertToggle');
+
+    const shortId = (id) => id ? String(id).replace(/List$/, '') : 'unknown';
+    const itemText = (evt) => evt?.item?.textContent?.trim().replace(/\s+/g, ' ').slice(0, 34) || '—';
+    function log(name, evt = {}) {
+      const time = new Date().toLocaleTimeString('ko-KR', { hour12:false });
+      const info = `${name} · ${shortId(evt.from?.id)} → ${shortId(evt.to?.id)} · ${itemText(evt)}${Number.isInteger(evt.oldIndex) ? ` · ${evt.oldIndex}→${evt.newIndex}` : ''}`;
+      state.logs.unshift({ time, name, info });
+      state.logs = state.logs.slice(0, 40);
+      renderLog();
+    }
+    function renderLog() {
+      const target = $('#eventLog');
+      if (!state.logs.length) { target.innerHTML = '<div class="event-empty">아직 기록된 이벤트가 없습니다. 위 예제를 드래그해보세요.</div>'; return; }
+      target.innerHTML = state.logs.map(row => `<div class="event-line"><span class="event-time">${row.time}</span> <span class="event-name">${row.name}</span><br>${row.info}</div>`).join('');
+    }
+    function updateCounts() {
+      $$('[data-count-for]').forEach(el => { const list = document.getElementById(el.dataset.countFor); el.textContent = list ? list.children.length : 0; });
+      const review = $('#reviewList'); const count = review.children.length; $('#reviewCount').textContent = `(${count}/3)`;
+      $('#reviewBox').classList.toggle('full', count >= 3);
+    }
+    function updateBasicOutput() {
+      const list = state.instances.basic;
+      if (!list) return;
+      const order = list.toArray();
+      $('#basicOrder').textContent = JSON.stringify(order);
+      $$('#basicList .rank').forEach((el, i) => el.textContent = i + 1);
+    }
+    function updateStoreOutput() {
+      const list = state.instances.store;
+      if (!list) return;
+      $('#storeOrder').textContent = JSON.stringify(list.toArray());
+      $$('#storeList .rank').forEach((el, i) => el.textContent = i + 1);
+    }
+    function commonCallbacks(label, extra = {}) {
+      return {
+        onChoose: evt => log(`${label}:onChoose`, evt),
+        onUnchoose: evt => log(`${label}:onUnchoose`, evt),
+        onStart: evt => log(`${label}:onStart`, evt),
+        onChange: evt => log(`${label}:onChange`, evt),
+        onUpdate: evt => log(`${label}:onUpdate`, evt),
+        onAdd: evt => { log(`${label}:onAdd`, evt); updateCounts(); },
+        onRemove: evt => { log(`${label}:onRemove`, evt); updateCounts(); },
+        onSort: evt => { log(`${label}:onSort`, evt); updateCounts(); },
+        onEnd: evt => { log(`${label}:onEnd`, evt); updateCounts(); },
+        onClone: evt => log(`${label}:onClone`, evt),
+        ...extra
+      };
+    }
+    function optionBase(overrides = {}) {
+      return {
+        animation: +animInput.value,
+        easing: 'cubic-bezier(.2,.75,.25,1)',
+        delay: +delayInput.value,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 3,
+        forceFallback: fallbackInput.checked,
+        fallbackOnBody: true,
+        fallbackTolerance: 3,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        ...overrides
+      };
+    }
+
+    // 01 Basic
+    state.instances.basic = new Sortable($('#basicList'), optionBase({
+      dataIdAttr: 'data-id',
+      onEnd: evt => { log('basic:onEnd', evt); updateBasicOutput(); },
+      onSort: evt => { log('basic:onSort', evt); updateBasicOutput(); },
+      onStart: evt => log('basic:onStart', evt)
+    }));
+
+    // 02 Board
+    ['todoList','doingList','doneList'].forEach(id => {
+      state.instances[id] = new Sortable(document.getElementById(id), optionBase({ group: { name:'workflow', pull:true, put:true }, dataIdAttr:'data-id', ...commonCallbacks('board') }));
+    });
+    state.instances.palette = new Sortable($('#paletteList'), optionBase({
+      group: { name: 'blocks', pull: 'clone', put: false }, sort: false, dataIdAttr:'data-id', revertClone: true, ...commonCallbacks('clone-source')
+    }));
+    state.instances.canvas = new Sortable($('#canvasList'), optionBase({
+      group: { name: 'blocks', pull: true, put: true }, dataIdAttr:'data-id', ...commonCallbacks('clone-target')
+    }));
+
+    // 03 Handle + filter
+    state.instances.handle = new Sortable($('#handleList'), optionBase({
+      dataIdAttr:'data-id', draggable:'.sort-item', handle:'.drag-handle', filter:'.no-drag, .action-btn', preventOnFilter:false,
+      onFilter: evt => log('handle:onFilter', evt), ...commonCallbacks('handle')
+    }));
+    $('#handleList').addEventListener('click', (event) => {
+      const btn = event.target.closest('.action-btn'); if (!btn) return;
+      const item = btn.closest('.sort-item');
+      log(`button:${btn.dataset.action}`, { item, from: $('#handleList'), to: $('#handleList') });
+      btn.textContent = btn.dataset.action === 'ping' ? '전송됨' : '확인됨';
+      setTimeout(() => { btn.textContent = btn.dataset.action === 'ping' ? '알림' : '상세'; }, 900);
+    });
+
+    // 04 layout
+    state.instances.horizontal = new Sortable($('#horizontalList'), optionBase({ direction:'horizontal', dataIdAttr:'data-id', swapThreshold:+thresholdInput.value, invertSwap:invertInput.checked, ...commonCallbacks('horizontal') }));
+    state.instances.swap = new Sortable($('#swapGrid'), optionBase({ dataIdAttr:'data-id', swap:true, swapClass:'swap-highlight', animation:170, ...commonCallbacks('swap') }));
+
+    // 05 MultiDrag
+    state.instances.multi = new Sortable($('#multiList'), optionBase({ dataIdAttr:'data-id', multiDrag:true, selectedClass:'selected', fallbackTolerance:3, multiDragKey:'CTRL', ...commonCallbacks('multi') }));
+
+    // 06 nested
+    ['nestedA','nestedB','nestedC'].forEach(id => {
+      state.instances[id] = new Sortable(document.getElementById(id), optionBase({ group:'nested-tags', dataIdAttr:'data-id', animation:150, fallbackOnBody:true, swapThreshold:.65, invertSwap:true, ...commonCallbacks('nested') }));
+    });
+
+    // 07 Business rules
+    state.instances.candidates = new Sortable($('#candidateList'), optionBase({ group:{name:'review', pull:true, put:false}, dataIdAttr:'data-id', sort:false, ...commonCallbacks('candidate') }));
+    state.instances.review = new Sortable($('#reviewList'), optionBase({
+      group:{name:'review', pull:true, put:true}, dataIdAttr:'data-id', emptyInsertThreshold:12,
+      onMove: evt => {
+        const currentCount = evt.to.querySelectorAll('.sort-item').length;
+        const movingIntoReview = evt.to.id === 'reviewList' && evt.from.id !== 'reviewList';
+        const allowed = !(movingIntoReview && currentCount >= 3);
+        if (!allowed) { log('review:onMove blocked', evt); $('#reviewBox').classList.add('full'); setTimeout(() => $('#reviewBox').classList.toggle('full', $('#reviewList').children.length >= 3), 500); }
+        return allowed;
+      },
+      ...commonCallbacks('review')
+    }));
+
+    // 08 Store + autoscroll
+    const storeKey = 'sortablejs-lab-store-v1';
+    state.instances.store = new Sortable($('#storeList'), optionBase({
+      dataIdAttr:'data-id',
+      store:{
+        get: () => { try { return JSON.parse(localStorage.getItem(storeKey) || '[]'); } catch { return []; } },
+        set: sortable => { localStorage.setItem(storeKey, JSON.stringify(sortable.toArray())); updateStoreOutput(); log('store:set', { from: sortable.el, to: sortable.el, item: sortable.el.firstElementChild }); }
+      },
+      onEnd: evt => { log('store:onEnd', evt); updateStoreOutput(); }
+    }));
+    state.instances.scroll = new Sortable($('#scrollList'), optionBase({ dataIdAttr:'data-id', scroll:true, bubbleScroll:true, scrollSensitivity:80, scrollSpeed:12, ...commonCallbacks('autoScroll') }));
+
+    function updateRuntimeOptions() {
+      const animation = +animInput.value, delay = +delayInput.value, threshold = +thresholdInput.value, fallback = fallbackInput.checked;
+      $('#animationOut').value = `${animation} ms`; $('#delayOut').value = `${delay} ms`; $('#thresholdOut').value = threshold.toFixed(2); $('#basicAnimMetric').textContent = `${animation} ms`;
+      Object.values(state.instances).forEach(instance => {
+        if (!instance || !instance.option) return;
+        instance.option('animation', animation);
+        instance.option('delay', delay);
+        instance.option('forceFallback', fallback);
+      });
+      state.instances.horizontal.option('swapThreshold', threshold);
+      state.instances.horizontal.option('invertSwap', invertInput.checked);
+      $$('#nestedA, #nestedB, #nestedC').forEach(el => { const instance = state.instances[el.id]; instance.option('swapThreshold', Math.min(.8, threshold)); instance.option('invertSwap', true); });
+    }
+    [animInput, delayInput, thresholdInput, fallbackInput, invertInput].forEach(input => input.addEventListener('input', updateRuntimeOptions));
+
+    $('#resetAll').addEventListener('click', () => location.reload());
+    $('#clearEvents').addEventListener('click', () => { state.logs=[]; renderLog(); });
+    $('#toggleBasic').addEventListener('click', () => {
+      state.basicDisabled = !state.basicDisabled; state.instances.basic.option('disabled', state.basicDisabled);
+      $('#toggleBasic').textContent = state.basicDisabled ? '기본 목록 잠금 해제' : '기본 목록 잠금';
+      $('#basicState').textContent = state.basicDisabled ? '잠김' : '활성';
+      log(`basic:${state.basicDisabled ? 'disabled' : 'enabled'}`, { from: $('#basicList'), to: $('#basicList'), item: $('#basicList').firstElementChild });
+    });
+    $('#showOrders').addEventListener('click', () => { updateBasicOutput(); updateStoreOutput(); $('#basicOrder').scrollIntoView({ behavior:'smooth', block:'center' }); });
+    $('#clearStorage').addEventListener('click', () => { localStorage.removeItem(storeKey); $('#storeOrder').textContent = '저장된 순서를 삭제했습니다. 새로고침하면 초기 순서로 복원됩니다.'; log('store:cleared', { from: $('#storeList'), to: $('#storeList'), item: $('#storeList').firstElementChild }); });
+    $('#inspectBasic').addEventListener('click', () => {
+      const instance = state.instances.basic;
+      $('#inspectOutput').textContent = JSON.stringify({ toArray: instance.toArray(), disabled: instance.option('disabled'), animation: instance.option('animation'), group: instance.option('group') }, null, 2);
+    });
+
+    updateRuntimeOptions(); updateCounts(); updateBasicOutput(); updateStoreOutput();
+    window.__sortableDemoReady = true;
+    const loadStatus = $('#loadStatus'); loadStatus.className='status ok'; loadStatus.innerHTML='<i class="status-dot"></i><span>SortableJS Complete 로드 완료</span>';
+    $('#modeText').textContent = 'Complete ESM build 로드 완료';
+    log('system:ready', { from: $('#basicList'), to: $('#basicList'), item: $('#basicList').firstElementChild });
+  </script>
+</body>
+</html>
