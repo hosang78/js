@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="MapLibre GL JS의 주요 기능을 한 페이지에서 실습하는 인터랙티브 데모" />
+  <title>MapLibre GL JS · 기능 종합 샘플</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <style>
+    :root {
+      --navy: #0a1e3c;
+      --blue: #1f5fae;
+      --aqua: #17a9a0;
+      --bg: #edf3f9;
+      --panel: #ffffff;
+      --text: #1a2a3a;
+      --muted: #667789;
+      --line: #dce6f0;
+      --orange: #ef7b45;
+      --shadow: 0 14px 34px rgba(25, 48, 75, .11);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", Arial, sans-serif; color: var(--text); background: var(--bg); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { height: 100%; display: grid; grid-template-columns: 365px 1fr; overflow: hidden; }
+    .sidebar { min-width: 0; overflow-y: auto; background: linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%); border-right: 1px solid var(--line); padding: 18px 16px 26px; }
+    .brand { border-radius: 18px; padding: 18px; color: #fff; background: linear-gradient(135deg, #08295a 0%, #146a9a 70%, #1a9c9a 100%); box-shadow: var(--shadow); }
+    .brand .eyebrow { display: inline-flex; align-items: center; gap: 7px; padding: 4px 8px; border: 1px solid rgba(255,255,255,.32); border-radius: 999px; font-size: 11px; letter-spacing: .07em; font-weight: 800; }
+    .brand h1 { margin: 11px 0 6px; font-size: 21px; line-height: 1.28; letter-spacing: -.55px; }
+    .brand p { margin: 0; color: rgba(255,255,255,.84); font-size: 12px; line-height: 1.55; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+    .badge { padding: 5px 8px; background: rgba(255,255,255,.13); border-radius: 7px; color: #fff; font-size: 11px; font-weight: 700; }
+
+    .section { margin-top: 15px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.89); }
+    .section h2 { margin: 0 0 10px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; letter-spacing: -.2px; }
+    .section h2 small { color: var(--muted); font-size: 10px; font-weight: 600; }
+    .section p.note { margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.48; }
+
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row + .row { margin-top: 8px; }
+    .row > * { min-width: 0; }
+    .grow { flex: 1; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .control-label { display: block; margin-bottom: 5px; color: #566779; font-size: 10px; font-weight: 800; letter-spacing: .02em; }
+    select, input[type="text"], input[type="number"] { width: 100%; height: 34px; padding: 0 9px; outline: none; border: 1px solid #cfdce9; border-radius: 8px; background: #fff; color: var(--text); font-size: 12px; }
+    select:focus, input:focus { border-color: #3b84c8; box-shadow: 0 0 0 3px rgba(59,132,200,.11); }
+
+    .btn { min-height: 34px; padding: 7px 9px; border: 1px solid #cbd9e8; border-radius: 8px; background: #fff; color: #24415e; font-size: 11px; font-weight: 800; line-height: 1.15; transition: .15s ease; }
+    .btn:hover { transform: translateY(-1px); border-color: #7aadd9; box-shadow: 0 4px 12px rgba(27,93,145,.12); }
+    .btn.primary { border-color: #135d9e; color: #fff; background: #1c69ab; }
+    .btn.teal { border-color: #138d89; color: #fff; background: #169a94; }
+    .btn.orange { border-color: #d46a38; color: #fff; background: var(--orange); }
+    .btn.active { border-color: #0a6975; color: #fff; background: #0f8491; }
+    .btn.danger { border-color: #e49b9b; color: #a43636; background: #fff7f7; }
+    .btn.small { min-height: 29px; padding: 5px 8px; font-size: 10px; }
+
+    .toggle-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .check { display: flex; align-items: center; gap: 7px; min-height: 29px; padding: 6px 7px; border: 1px solid #dce6ef; border-radius: 7px; background: #fbfdff; color: #3d5368; font-size: 11px; font-weight: 700; }
+    .check input { accent-color: #147a9c; }
+    .feature-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .feature-buttons .btn { min-height: 39px; padding: 5px; font-size: 10px; }
+
+    .status-card { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .stat { padding: 8px; border-radius: 8px; background: #f5f9fc; border: 1px solid #e1ebf3; }
+    .stat .k { display: block; color: #738497; font-size: 9px; font-weight: 800; }
+    .stat .v { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; color: #163e63; font-size: 12px; font-weight: 900; }
+    .metric-live { color: #0d907d !important; }
+
+    .log { height: 92px; overflow-y: auto; padding: 8px; border: 1px solid #dae5ef; border-radius: 8px; background: #071b31; color: #c7e8ff; font: 10px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .log span { display: block; }
+    .log .t { color: #79d6d0; }
+    .fineprint { margin: 10px 1px 0; color: #718193; font-size: 10px; line-height: 1.55; }
+
+    .map-stage { position: relative; min-width: 0; height: 100%; }
+    #map { width: 100%; height: 100%; background: #dfeaf2; }
+    .map-topbar { position: absolute; z-index: 4; left: 16px; top: 16px; right: 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none; }
+    .map-title, .map-actions { pointer-events: auto; }
+    .map-title { padding: 11px 13px; border: 1px solid rgba(255,255,255,.78); border-radius: 12px; background: rgba(255,255,255,.9); backdrop-filter: blur(7px); box-shadow: 0 7px 18px rgba(25,53,78,.12); }
+    .map-title b { display: block; font-size: 13px; color: #173c5d; }
+    .map-title span { display: block; margin-top: 3px; color: #5f748a; font-size: 10px; }
+    .map-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 620px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; min-height: 33px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.78); border-radius: 999px; color: #25415b; background: rgba(255,255,255,.91); box-shadow: 0 6px 16px rgba(25,53,78,.12); font-size: 11px; font-weight: 800; }
+    .pill button { border: 0; padding: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+    .pill-dot { width: 8px; height: 8px; border-radius: 50%; background: #18a888; box-shadow: 0 0 0 3px rgba(24,168,136,.17); }
+    .map-footer { position: absolute; z-index: 4; left: 16px; bottom: 14px; display: flex; gap: 8px; align-items: center; pointer-events: none; }
+    .coord-box, .mode-box { pointer-events: auto; padding: 7px 10px; border: 1px solid rgba(255,255,255,.8); border-radius: 9px; background: rgba(255,255,255,.91); box-shadow: 0 4px 14px rgba(25,53,78,.1); color: #36536f; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .mode-box { font-family: inherit; font-weight: 800; color: #17556b; }
+
+    .ship-marker { width: 34px; height: 34px; display: grid; place-items: center; border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #0d85a0; box-shadow: 0 5px 12px rgba(3,55,82,.32); }
+    .ship-marker span { transform: rotate(45deg); color: #fff; font-size: 15px; }
+    .popup-card { min-width: 200px; font-family: "Pretendard", "Noto Sans KR", sans-serif; }
+    .popup-card b { display: block; margin-bottom: 5px; color: #0c3966; font-size: 14px; }
+    .popup-card p { margin: 0; color: #5a6f83; font-size: 11px; line-height: 1.55; }
+    .popup-card .tag { display: inline-block; margin: 8px 0 0; padding: 3px 6px; border-radius: 99px; color: #007977; background: #e6f7f4; font-size: 10px; font-weight: 800; }
+
+    .legend { position: absolute; z-index: 3; right: 16px; bottom: 16px; width: 178px; padding: 11px; border: 1px solid rgba(255,255,255,.8); border-radius: 11px; background: rgba(255,255,255,.92); box-shadow: 0 5px 16px rgba(25,53,78,.13); font-size: 10px; }
+    .legend b { display: block; margin-bottom: 7px; color: #183d5e; font-size: 11px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; margin: 5px 0; color: #547087; }
+    .legend-i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #9cb3c5; }
+    .legend-line { width: 17px; height: 0; border-top: 3px solid #0d89a3; }
+    .legend-box { width: 13px; height: 10px; background: rgba(232,120,65,.6); border: 1px solid #c95d28; }
+    .hidden { display: none !important; }
+    .maplibregl-popup-content { padding: 13px 14px; border-radius: 11px; box-shadow: 0 10px 28px rgba(18,44,70,.18); }
+    .maplibregl-popup-close-button { padding: 2px 6px; color: #577087; font-size: 17px; }
+    .maplibregl-ctrl-group { overflow: hidden; border-radius: 9px; box-shadow: 0 5px 15px rgba(20, 50, 80, .16); }
+    .maplibregl-ctrl-top-right { top: 85px; right: 15px; }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 320px 1fr; }
+      .sidebar { padding: 12px; }
+      .section { padding: 11px; }
+      .map-title span { display: none; }
+      .legend { display: none; }
+    }
+    @media (max-width: 760px) {
+      .app { display: block; height: auto; overflow: visible; }
+      .sidebar { height: auto; max-height: 52vh; overflow: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .map-stage { height: 62vh; min-height: 440px; }
+      .map-topbar { top: 9px; left: 9px; right: 9px; }
+      .map-title { padding: 8px 9px; }
+      .map-actions { max-width: 49%; }
+      .map-actions .pill:nth-child(n+3) { display: none; }
+      .maplibregl-ctrl-top-right { top: 67px; right: 9px; }
+      .map-footer { left: 9px; bottom: 9px; }
+      .coord-box { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar" aria-label="MapLibre 기능 제어 패널">
+      <section class="brand">
+        <span class="eyebrow">WEBGL MAP PLAYGROUND</span>
+        <h1>MapLibre GL JS<br>기능 종합 샘플</h1>
+        <p>지도 렌더링부터 데이터 레이어, 3D 표현, 사용자 상호작용까지 한 화면에서 직접 시험하는 단일 HTML 데모</p>
+        <div class="badge-row">
+          <span class="badge">v5.24.0 CDN</span><span class="badge">GeoJSON</span><span class="badge">WebGL</span><span class="badge">No npm</span>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>01. 지도 및 카메라 <small>STYLE · CAMERA</small></h2>
+        <div class="row">
+          <div class="grow"><label class="control-label" for="baseStyle">베이스맵</label><select id="baseStyle"><option value="osm">OSM 표준</option><option value="dark">다크 지도</option><option value="satellite">위성 영상</option></select></div>
+          <div style="width:105px"><label class="control-label" for="citySelect">빠른 이동</label><select id="citySelect"><option value="seoul">서울</option><option value="busan">부산</option><option value="jeju">제주</option><option value="dokdo">독도</option><option value="world">세계 보기</option></select></div>
+        </div>
+        <div class="grid-3" style="margin-top:8px">
+          <button class="btn primary" id="flySeoul">Fly To</button>
+          <button class="btn" id="fitRoute">경로 맞춤</button>
+          <button class="btn" id="resetBearing">북쪽 정렬</button>
+        </div>
+        <div class="grid-3" style="margin-top:7px">
+          <button class="btn" id="toggleGlobe">지구본</button>
+          <button class="btn" id="toggleTerrain">3D 지형</button>
+          <button class="btn" id="togglePitch">기울기</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>02. 레이어 시각화 <small>SOURCES · LAYERS</small></h2>
+        <div class="toggle-list">
+          <label class="check"><input type="checkbox" id="layerStations" checked> 시설·선박 포인트</label>
+          <label class="check"><input type="checkbox" id="layerClusters" checked> 클러스터</label>
+          <label class="check"><input type="checkbox" id="layerRoute" checked> 항로·애니메이션</label>
+          <label class="check"><input type="checkbox" id="layerPolygon" checked> 해역 폴리곤</label>
+          <label class="check"><input type="checkbox" id="layerHeat"> 히트맵</label>
+          <label class="check"><input type="checkbox" id="layerBuildings"> 3D 건물</label>
+          <label class="check"><input type="checkbox" id="layerHillshade"> 음영 기복</label>
+          <label class="check"><input type="checkbox" id="layerLabels" checked> 데이터 라벨</label>
+        </div>
+        <div class="row" style="margin-top:9px">
+          <div class="grow"><label class="control-label" for="categoryFilter">포인트 속성 필터</label><select id="categoryFilter"><option value="all">전체 유형</option><option value="항만">항만</option><option value="수산시장">수산시장</option><option value="어선">어선</option><option value="연구">연구</option></select></div>
+          <button class="btn teal" id="pulseData" style="align-self:end">데이터 갱신</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>03. 상호작용 도구 <small>DRAW · MEASURE</small></h2>
+        <p class="note">도구를 선택한 뒤 지도 위를 클릭한다. 선·폴리곤은 <b>완료</b> 버튼으로 확정한다.</p>
+        <div class="feature-buttons">
+          <button class="btn" data-mode="measure" id="modeMeasure">거리 측정</button>
+          <button class="btn" data-mode="draw-point" id="modeDrawPoint">점 그리기</button>
+          <button class="btn" data-mode="draw-line" id="modeDrawLine">선 그리기</button>
+          <button class="btn" data-mode="draw-polygon" id="modeDrawPolygon">면 그리기</button>
+          <button class="btn orange" id="finishDraw">완료</button>
+          <button class="btn danger" id="clearDraw">초기화</button>
+        </div>
+        <div class="row" style="margin-top:9px">
+          <button class="btn small grow" id="exportGeoJSON">그리기 GeoJSON 저장</button>
+          <label class="btn small grow" for="importGeoJSON" style="display:flex;align-items:center;justify-content:center">GeoJSON 불러오기</label>
+          <input id="importGeoJSON" type="file" accept=".json,.geojson,application/geo+json,application/json" class="hidden" />
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>04. 검색 및 좌표 이동 <small>GEOCODE · CAMERA</small></h2>
+        <div class="row"><input id="searchInput" class="grow" type="text" placeholder="예: 노량진수산시장, 부산항" /><button id="searchBtn" class="btn primary">검색</button></div>
+        <div id="searchResults" class="row" style="flex-wrap:wrap; margin-top:8px;"></div>
+        <div class="grid-2" style="margin-top:8px">
+          <div><label class="control-label" for="lngInput">경도 (Lng)</label><input id="lngInput" type="number" step="0.0001" value="126.9780" /></div>
+          <div><label class="control-label" for="latInput">위도 (Lat)</label><input id="latInput" type="number" step="0.0001" value="37.5665" /></div>
+        </div>
+        <button class="btn teal" id="goCoords" style="width:100%;margin-top:8px">입력 좌표로 이동 및 팝업 표시</button>
+      </section>
+
+      <section class="section">
+        <h2>05. 실행 정보 <small>EVENTS · FPS</small></h2>
+        <div class="status-card">
+          <div class="stat"><span class="k">ZOOM / PITCH</span><span class="v" id="statCamera">-</span></div>
+          <div class="stat"><span class="k">CENTER</span><span class="v" id="statCenter">-</span></div>
+          <div class="stat"><span class="k">RENDER FPS</span><span class="v metric-live" id="statFps">-</span></div>
+          <div class="stat"><span class="k">TILES</span><span class="v" id="statTiles">-</span></div>
+        </div>
+        <div class="log" id="eventLog" aria-live="polite" style="margin-top:8px"></div>
+      </section>
+      <p class="fineprint">외부 CDN(MapLibre), 공개 지도 타일, 공개 DEM 및 Nominatim 검색 API를 사용한다. 인터넷 연결이 필요하며, 대량·상용 서비스에는 각 공급자의 이용 정책·API 키·타일 서버를 별도로 적용해야 한다.</p>
+    </aside>
+
+    <section class="map-stage" aria-label="MapLibre 지도">
+      <div id="map"></div>
+      <div class="map-topbar">
+        <div class="map-title"><b>대한민국 수산·항만 데이터 데모</b><span>클러스터 클릭 · 포인트 클릭 · 마우스 좌표 · 3D 및 사용자 데이터 기능 포함</span></div>
+        <div class="map-actions">
+          <span class="pill"><i class="pill-dot"></i><span id="networkText">지도 준비 중</span></span>
+          <span class="pill"><button id="toggleInspect">레이어 현황</button></span>
+          <span class="pill"><button id="downloadSnapshot">화면 PNG</button></span>
+        </div>
+      </div>
+      <div class="map-footer"><div class="coord-box" id="mouseCoord">Lng 126.9780 · Lat 37.5665</div><div class="mode-box" id="modeStatus">기본 탐색 모드</div></div>
+      <aside class="legend" id="legend">
+        <b>표시 범례</b>
+        <div class="legend-row"><i class="legend-i" style="background:#1388b5"></i> 항만·시장·연구 시설</div>
+        <div class="legend-row"><i class="legend-i" style="background:#f07f44"></i> 어선 포인트</div>
+        <div class="legend-row"><i class="legend-line"></i> 시뮬레이션 항로</div>
+        <div class="legend-row"><i class="legend-box"></i> 관심 해역·3D 건물</div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    /*
+      MapLibre GL JS 기능 종합 샘플
+      - 외부 의존성: MapLibre CDN / 공개 베이스맵 / DEM / Nominatim(검색)
+      - 모든 업무용 데이터는 아래 GeoJSON 구조를 실제 데이터로 교체하여 연계 가능
+    */
+
+    const INITIAL_VIEW = { center: [126.9780, 37.5665], zoom: 8.4, pitch: 0, bearing: 0 };
+    const CITY_PRESETS = {
+      seoul: { center: [126.9780, 37.5665], zoom: 10.2, pitch: 0, bearing: 0 },
+      busan: { center: [129.0756, 35.1796], zoom: 10.2, pitch: 0, bearing: 0 },
+      jeju: { center: [126.5312, 33.4996], zoom: 9.25, pitch: 0, bearing: 0 },
+      dokdo: { center: [131.8698, 37.2411], zoom: 11.3, pitch: 45, bearing: -28 },
+      world: { center: [126.9780, 37.5665], zoom: 2.1, pitch: 0, bearing: 0 }
+    };
+
+    const stationData = {
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', properties: { id: 'P01', name: '부산항 북항', category: '항만', status: '정상', intensity: 0.95 }, geometry: { type: 'Point', coordinates: [129.0403, 35.1130] } },
+        { type: 'Feature', properties: { id: 'P02', name: '인천항', category: '항만', status: '혼잡', intensity: 0.84 }, geometry: { type: 'Point', coordinates: [126.6168, 37.4550] } },
+        { type: 'Feature', properties: { id: 'P03', name: '목포항', category: '항만', status: '정상', intensity: 0.67 }, geometry: { type: 'Point', coordinates: [126.3882, 34.7892] } },
+        { type: 'Feature', properties: { id: 'P04', name: '여수신항', category: '항만', status: '점검', intensity: 0.58 }, geometry: { type: 'Point', coordinates: [127.7395, 34.7267] } },
+        { type: 'Feature', properties: { id: 'M01', name: '노량진수산시장', category: '수산시장', status: '운영', intensity: 0.92 }, geometry: { type: 'Point', coordinates: [126.9406, 37.5140] } },
+        { type: 'Feature', properties: { id: 'M02', name: '자갈치시장', category: '수산시장', status: '운영', intensity: 0.88 }, geometry: { type: 'Point', coordinates: [129.0309, 35.0969] } },
+        { type: 'Feature', properties: { id: 'R01', name: '수산 연구 거점', category: '연구', status: '분석중', intensity: 0.42 }, geometry: { type: 'Point', coordinates: [126.6582, 37.4525] } },
+        { type: 'Feature', properties: { id: 'F01', name: '어선 해해 01', category: '어선', status: '항해중', intensity: 0.72 }, geometry: { type: 'Point', coordinates: [128.994, 35.062] } },
+        { type: 'Feature', properties: { id: 'F02', name: '어선 해해 02', category: '어선', status: '조업중', intensity: 0.74 }, geometry: { type: 'Point', coordinates: [127.988, 34.414] } },
+        { type: 'Feature', properties: { id: 'F03', name: '어선 해해 03', category: '어선', status: '항해중', intensity: 0.76 }, geometry: { type: 'Point', coordinates: [129.309, 35.516] } },
+        { type: 'Feature', properties: { id: 'F04', name: '어선 해해 04', category: '점검', status: '대기', intensity: 0.36 }, geometry: { type: 'Point', coordinates: [126.105, 34.811] } },
+        { type: 'Feature', properties: { id: 'P05', name: '제주항', category: '항만', status: '정상', intensity: 0.73 }, geometry: { type: 'Point', coordinates: [126.5290, 33.5168] } },
+        { type: 'Feature', properties: { id: 'P06', name: '동해항', category: '항만', status: '정상', intensity: 0.55 }, geometry: { type: 'Point', coordinates: [129.1278, 37.4930] } }
+      ]
+    };
+
+    const routeData = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', properties: { name: '남해 연안 시뮬레이션 항로' }, geometry: { type: 'LineString', coordinates: [[126.522,33.503],[126.95,33.79],[127.42,34.23],[127.98,34.42],[128.54,34.71],[129.04,35.10]] } }]
+    };
+    const areaData = {
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', properties: { name: '남해 조업 관심 해역', grade: 'B' }, geometry: { type: 'Polygon', coordinates: [[[127.00,34.08],[127.79,34.05],[128.19,34.48],[127.58,34.84],[126.88,34.52],[127.00,34.08]]] } }]
+    };
+    const buildingData = {
+      type: 'FeatureCollection',
+      features: [
+        { type:'Feature', properties:{name:'수산물 유통센터',height:110,base:8},geometry:{type:'Polygon',coordinates:[[[126.9371,37.5136],[126.9392,37.5136],[126.9392,37.5150],[126.9371,37.5150],[126.9371,37.5136]]]}},
+        { type:'Feature', properties:{name:'항만 관제동',height:155,base:6},geometry:{type:'Polygon',coordinates:[[[129.0370,35.1117],[129.0391,35.1117],[129.0391,35.1132],[129.0370,35.1132],[129.0370,35.1117]]]}},
+        { type:'Feature', properties:{name:'연구 복합동',height:92,base:5},geometry:{type:'Polygon',coordinates:[[[126.6568,37.4520],[126.6587,37.4520],[126.6587,37.4532],[126.6568,37.4532],[126.6568,37.4520]]]}}
+      ]
+    };
+
+    let drawFeatures = [];
+    let importedFeatures = [];
+    let measureCoords = [];
+    let currentDrawCoords = [];
+    let mode = 'browse';
+    let terrainOn = false;
+    let globeOn = false;
+    let animationOn = true;
+    let frameCount = 0;
+    let styleName = 'osm';
+    let movingProgress = 0;
+    let lastHoverId = null;
+    let customHtmlMarker;
+
+    function baseStyle(kind) {
+      const sources = {
+        osm: {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          maxzoom: 19,
+          attribution: '© OpenStreetMap contributors'
+        },
+        dark: {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          maxzoom: 20,
+          attribution: '© OpenStreetMap contributors © CARTO'
+        },
+        satellite: {
+          type: 'raster',
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          ],
+          tileSize: 256,
+          maxzoom: 19,
+          attribution: 'Tiles © Esri'
+        }
+      };
+      return {
+        version: 8,
+        sources: {
+          basemap: sources[kind],
+          terrainDem: { type: 'raster-dem', url: 'https://tiles.mapterhorn.com/tilejson.json' }
+        },
+        layers: [
+          { id: 'basemap', type: 'raster', source: 'basemap' },
+          { id: 'hillshade', type: 'hillshade', source: 'terrainDem', layout: { visibility: 'none' }, paint: { 'hillshade-shadow-color': '#4a3b25', 'hillshade-highlight-color': '#ffffff' } }
+        ]
+      };
+    }
+
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: baseStyle(styleName),
+      center: INITIAL_VIEW.center,
+      zoom: INITIAL_VIEW.zoom,
+      pitch: INITIAL_VIEW.pitch,
+      bearing: INITIAL_VIEW.bearing,
+      minZoom: 1.7,
+      maxZoom: 18.5,
+      maxBounds: [[120.0, 30.0], [136.5, 40.5]],
+      hash: true,
+      attributionControl: true,
+      renderWorldCopies: true
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'top-right');
+    map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
+    map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showAccuracyCircle: true }), 'top-right');
+
+    function logEvent(text) {
+      const log = document.getElementById('eventLog');
+      const now = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+      const line = document.createElement('span');
+      line.innerHTML = `<span class="t">${now}</span> ${text}`;
+      log.prepend(line);
+      while (log.children.length > 16) log.lastChild.remove();
+    }
+
+    function setNetwork(text, ok = true) {
+      document.getElementById('networkText').textContent = text;
+      const dot = document.querySelector('.pill-dot');
+      dot.style.background = ok ? '#18a888' : '#dd6f45';
+      dot.style.boxShadow = ok ? '0 0 0 3px rgba(24,168,136,.17)' : '0 0 0 3px rgba(221,111,69,.16)';
+    }
+
+    function isLayer(id) { return !!map.getLayer(id); }
+    function setVisibility(ids, visible) {
+      ids.forEach(id => { if (isLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none'); });
+    }
+
+    function addGeneratedImage() {
+      if (map.hasImage('boat-icon')) return;
+      const size = 76;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(size / 2, size / 2);
+      ctx.rotate(-0.55);
+      ctx.fillStyle = '#ef7b45';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(0, -27); ctx.lineTo(22, 22); ctx.lineTo(0, 14); ctx.lineTo(-22, 22); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#0a4f76';
+      ctx.fillRect(-4, -10, 8, 26);
+      map.addImage('boat-icon', ctx.getImageData(0, 0, size, size), { pixelRatio: 2 });
+    }
+
+    function hydrateScene() {
+      try {
+        addGeneratedImage();
+
+        if (!map.getSource('stations')) {
+          map.addSource('stations', { type: 'geojson', data: stationData, cluster: true, clusterMaxZoom: 12, clusterRadius: 52 });
+          map.addSource('route', { type: 'geojson', data: routeData });
+          map.addSource('area', { type: 'geojson', data: areaData });
+          map.addSource('buildings', { type: 'geojson', data: buildingData });
+          map.addSource('moving-vessel', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+          map.addSource('drawings', { type: 'geojson', data: emptyFC() });
+          map.addSource('draft', { type: 'geojson', data: emptyFC() });
+          map.addSource('measure', { type: 'geojson', data: emptyFC() });
+          map.addSource('imports', { type: 'geojson', data: emptyFC() });
+        }
+
+        if (!isLayer('area-fill')) {
+          map.addLayer({ id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': '#3b9cbe', 'fill-opacity': .16 } });
+          map.addLayer({ id: 'area-outline', type: 'line', source: 'area', paint: { 'line-color': '#087898', 'line-width': 2, 'line-dasharray': [3, 2] } });
+          map.addLayer({ id: 'area-label', type: 'symbol', source: 'area', layout: { 'text-field': ['get', 'name'], 'text-size': 12, 'text-font': ['Open Sans Semibold'], 'text-offset': [0, 0] }, paint: { 'text-color': '#075877', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
+
+          map.addLayer({ id: 'route-shadow', type: 'line', source: 'route', paint: { 'line-color': '#ffffff', 'line-width': 7, 'line-opacity': .82 } });
+          map.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': '#0d89a3', 'line-width': 3.5, 'line-dasharray': [1.5, 1] } });
+          map.addLayer({ id: 'moving-vessel-layer', type: 'symbol', source: 'moving-vessel', layout: { 'icon-image': 'boat-icon', 'icon-size': .52, 'icon-allow-overlap': true, 'icon-rotate': ['get', 'bearing'], 'icon-rotation-alignment': 'map' } });
+
+          map.addLayer({ id: 'heatmap', type: 'heatmap', source: 'stations', maxzoom: 12, layout: { visibility: 'none' }, paint: {
+            'heatmap-weight': ['interpolate', ['linear'], ['get', 'intensity'], 0, 0, 1, 1],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 10, 1.25],
+            'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(33,102,172,0)', .25, '#58a6c9', .5, '#f4d35e', .75, '#ef8a62', 1, '#b2182b'],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 4, 18, 10, 42],
+            'heatmap-opacity': .72
+          }});
+
+          map.addLayer({ id: 'cluster-circles', type: 'circle', source: 'stations', filter: ['has', 'point_count'], paint: {
+            'circle-color': ['step', ['get', 'point_count'], '#70b7ca', 5, '#2d91b8', 10, '#126f9d'],
+            'circle-radius': ['step', ['get', 'point_count'], 18, 5, 23, 10, 29],
+            'circle-stroke-width': 2, 'circle-stroke-color': '#ffffff', 'circle-opacity': .94
+          }});
+          map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'stations', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Open Sans Bold'], 'text-size': 12 }, paint: { 'text-color': '#ffffff' } });
+          map.addLayer({ id: 'stations-unclustered', type: 'circle', source: 'stations', filter: ['!', ['has', 'point_count']], paint: {
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 5, 5, 12, 9],
+            'circle-color': ['match', ['get', 'category'], '어선', '#ef7b45', '수산시장', '#e3af39', '연구', '#7b74cc', '#1388b5'],
+            'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.3, 'circle-opacity': .96
+          }});
+          map.addLayer({ id: 'stations-vessel', type: 'symbol', source: 'stations', filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'category'], '어선']], layout: { 'icon-image': 'boat-icon', 'icon-size': .33, 'icon-allow-overlap': true, 'icon-offset': [0, -1] } });
+          map.addLayer({ id: 'stations-label', type: 'symbol', source: 'stations', filter: ['!', ['has', 'point_count']], layout: { 'text-field': ['get', 'name'], 'text-font': ['Open Sans Semibold'], 'text-size': 11, 'text-offset': [0, 1.35], 'text-anchor': 'top', 'text-allow-overlap': false }, paint: { 'text-color': '#1a4664', 'text-halo-color': '#ffffff', 'text-halo-width': 1.35 } });
+
+          map.addLayer({ id: 'building-3d', type: 'fill-extrusion', source: 'buildings', layout: { visibility: 'none' }, paint: { 'fill-extrusion-color': '#e77543', 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-opacity': .76 } });
+          map.addLayer({ id: 'building-label', type: 'symbol', source: 'buildings', layout: { visibility: 'none', 'text-field': ['get', 'name'], 'text-size': 10, 'text-offset': [0, .7] }, paint: { 'text-color': '#7b3215', 'text-halo-color': '#fff', 'text-halo-width': 1.1 } });
+
+          map.addLayer({ id: 'import-fill', type: 'fill', source: 'imports', filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': '#8d55c7', 'fill-opacity': .23 } });
+          map.addLayer({ id: 'import-line', type: 'line', source: 'imports', filter: ['!=', '$type', 'Point'], paint: { 'line-color': '#7038a7', 'line-width': 3 } });
+          map.addLayer({ id: 'import-point', type: 'circle', source: 'imports', filter: ['==', '$type', 'Point'], paint: { 'circle-color': '#7038a7', 'circle-radius': 7, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } });
+
+          map.addLayer({ id: 'draw-fill', type: 'fill', source: 'drawings', filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': '#1aa98f', 'fill-opacity': .23 } });
+          map.addLayer({ id: 'draw-line', type: 'line', source: 'drawings', filter: ['!=', '$type', 'Point'], paint: { 'line-color': '#087d69', 'line-width': 3 } });
+          map.addLayer({ id: 'draw-point', type: 'circle', source: 'drawings', filter: ['==', '$type', 'Point'], paint: { 'circle-color': '#087d69', 'circle-radius': 7, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } });
+          map.addLayer({ id: 'draft-fill', type: 'fill', source: 'draft', filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': '#1a8eb0', 'fill-opacity': .16 } });
+          map.addLayer({ id: 'draft-line', type: 'line', source: 'draft', filter: ['!=', '$type', 'Point'], paint: { 'line-color': '#076e9a', 'line-width': 2, 'line-dasharray': [2, 1] } });
+          map.addLayer({ id: 'draft-vertices', type: 'circle', source: 'draft', filter: ['==', '$type', 'Point'], paint: { 'circle-color': '#0a6991', 'circle-radius': 5, 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff' } });
+          map.addLayer({ id: 'measure-line', type: 'line', source: 'measure', filter: ['==', '$type', 'LineString'], paint: { 'line-color': '#e86a3d', 'line-width': 3, 'line-dasharray': [1, 1] } });
+          map.addLayer({ id: 'measure-points', type: 'circle', source: 'measure', filter: ['==', '$type', 'Point'], paint: { 'circle-color': '#e86a3d', 'circle-radius': 5.5, 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+        }
+        restoreDynamicData();
+        restoreLayerControls();
+        if (terrainOn) setTerrain(true, false);
+        if (globeOn && map.setProjection) map.setProjection({ type: 'globe' });
+      } catch (error) {
+        console.error(error);
+        logEvent('레이어 구성 오류: ' + error.message);
+      }
+    }
+
+    function emptyFC() { return { type: 'FeatureCollection', features: [] }; }
+    function restoreDynamicData() {
+      if (map.getSource('drawings')) map.getSource('drawings').setData({ type: 'FeatureCollection', features: drawFeatures });
+      if (map.getSource('imports')) map.getSource('imports').setData({ type: 'FeatureCollection', features: importedFeatures });
+      updateDraft(); updateMeasure(); updateMovingVessel();
+    }
+
+    function restoreLayerControls() {
+      const controls = [
+        ['layerStations', ['stations-unclustered','stations-vessel']],
+        ['layerClusters', ['cluster-circles','cluster-count']],
+        ['layerRoute', ['route-shadow','route-line','moving-vessel-layer']],
+        ['layerPolygon', ['area-fill','area-outline','area-label']],
+        ['layerHeat', ['heatmap']],
+        ['layerBuildings', ['building-3d','building-label']],
+        ['layerHillshade', ['hillshade']],
+        ['layerLabels', ['stations-label','area-label','building-label']]
+      ];
+      controls.forEach(([input, layers]) => {
+        const el = document.getElementById(input);
+        if (el) setVisibility(layers, el.checked);
+      });
+      applyCategoryFilter();
+    }
+
+    function applyCategoryFilter() {
+      const category = document.getElementById('categoryFilter').value;
+      const basic = ['!', ['has', 'point_count']];
+      const specific = category === 'all' ? basic : ['all', basic, ['==', ['get', 'category'], category]];
+      if (isLayer('stations-unclustered')) map.setFilter('stations-unclustered', specific);
+      if (isLayer('stations-label')) map.setFilter('stations-label', specific);
+      if (isLayer('stations-vessel')) {
+        const vessel = category === 'all' ? ['all', basic, ['==', ['get', 'category'], '어선']] : (category === '어선' ? ['all', basic, ['==', ['get', 'category'], '어선']] : ['all', ['==', 1, 0]]);
+        map.setFilter('stations-vessel', vessel);
+      }
+      logEvent('포인트 필터 적용: ' + (category === 'all' ? '전체' : category));
+    }
+
+    function setTerrain(enabled, notify = true) {
+      terrainOn = enabled;
+      try {
+        if (enabled) {
+          map.setTerrain({ source: 'terrainDem', exaggeration: 1.25 });
+          map.setSky({ 'sky-color': '#7fb6e9', 'sky-horizon-blend': .55, 'horizon-color': '#e6f0f6', 'horizon-fog-blend': .45, 'fog-color': '#dce8ee', 'fog-ground-blend': .45 });
+          map.easeTo({ pitch: Math.max(map.getPitch(), 56), duration: 700 });
+          document.getElementById('toggleTerrain').classList.add('active');
+          if (notify) logEvent('3D 지형 및 Sky/Fog 활성화');
+        } else {
+          map.setTerrain(null);
+          map.setSky(null);
+          document.getElementById('toggleTerrain').classList.remove('active');
+          if (notify) logEvent('3D 지형 해제');
+        }
+      } catch (error) {
+        terrainOn = false;
+        document.getElementById('toggleTerrain').classList.remove('active');
+        logEvent('3D 지형을 불러오지 못함: DEM 타일 상태 확인 필요');
+      }
+    }
+
+    function createHtmlMarker() {
+      if (customHtmlMarker) customHtmlMarker.remove();
+      const el = document.createElement('div');
+      el.className = 'ship-marker';
+      el.innerHTML = '<span>⚓</span>';
+      const popup = new maplibregl.Popup({ offset: 25 }).setHTML('<div class="popup-card"><b>드래그 가능한 HTML 마커</b><p>DOM 요소 기반 Marker와 Popup을 표시한다. 마커를 움직인 뒤 좌표를 확인해 보자.</p><span class="tag">draggable: true</span></div>');
+      customHtmlMarker = new maplibregl.Marker({ element: el, draggable: true, anchor: 'bottom' }).setLngLat([126.978, 37.5665]).setPopup(popup).addTo(map);
+      customHtmlMarker.on('dragend', () => {
+        const p = customHtmlMarker.getLngLat();
+        logEvent(`HTML 마커 이동: ${p.lng.toFixed(4)}, ${p.lat.toFixed(4)}`);
+      });
+    }
+
+    function showFeaturePopup(feature, lngLat) {
+      const p = feature.properties || {};
+      const html = `<div class="popup-card"><b>${escapeHtml(p.name || '데이터 포인트')}</b><p>유형: <b>${escapeHtml(p.category || '사용자 데이터')}</b><br>상태: ${escapeHtml(p.status || '정보 없음')}<br>ID: ${escapeHtml(p.id || '-')}</p><span class="tag">GeoJSON Feature</span></div>`;
+      new maplibregl.Popup({ offset: 16, maxWidth: '270px' }).setLngLat(lngLat).setHTML(html).addTo(map);
+    }
+    function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+
+    function updateMovingVessel() {
+      if (!map.getSource('moving-vessel')) return;
+      const coords = routeData.features[0].geometry.coordinates;
+      const progress = movingProgress % (coords.length - 1);
+      const i = Math.floor(progress);
+      const t = progress - i;
+      const a = coords[i], b = coords[Math.min(i + 1, coords.length - 1)];
+      const point = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+      const bearing = Math.atan2(b[0] - a[0], b[1] - a[1]) * 180 / Math.PI;
+      map.getSource('moving-vessel').setData({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: { bearing }, geometry: { type: 'Point', coordinates: point } }] });
+    }
+
+    function animateVessel() {
+      if (animationOn && map.isStyleLoaded()) {
+        movingProgress += 0.003;
+        if (movingProgress >= routeData.features[0].geometry.coordinates.length - 1) movingProgress = 0;
+        updateMovingVessel();
+      }
+      requestAnimationFrame(animateVessel);
+    }
+
+    function kmBetween(a, b) {
+      const R = 6371;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(b[1] - a[1]);
+      const dLon = toRad(b[0] - a[0]);
+      const lat1 = toRad(a[1]), lat2 = toRad(b[1]);
+      const x = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) ** 2;
+      return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+    }
+    function totalDistance(coords) { return coords.slice(1).reduce((sum, p, i) => sum + kmBetween(coords[i], p), 0); }
+
+    function updateMeasure() {
+      if (!map.getSource('measure')) return;
+      const features = measureCoords.map((c, i) => ({ type: 'Feature', properties: { index: i + 1 }, geometry: { type: 'Point', coordinates: c } }));
+      if (measureCoords.length > 1) features.push({ type: 'Feature', properties: { distance: totalDistance(measureCoords) }, geometry: { type: 'LineString', coordinates: measureCoords } });
+      map.getSource('measure').setData({ type: 'FeatureCollection', features });
+      if (measureCoords.length > 1) {
+        const distance = totalDistance(measureCoords);
+        document.getElementById('modeStatus').textContent = `거리 측정: ${distance < 1 ? (distance*1000).toFixed(0)+' m' : distance.toFixed(2)+' km'}`;
+      }
+    }
+
+    function updateDraft(pointerCoord) {
+      if (!map.getSource('draft')) return;
+      const features = [];
+      const coords = pointerCoord ? [...currentDrawCoords, pointerCoord] : currentDrawCoords;
+      if (mode === 'draw-line' && coords.length > 0) {
+        coords.forEach(c => features.push({ type:'Feature', properties:{}, geometry:{type:'Point', coordinates:c} }));
+        if (coords.length > 1) features.push({ type:'Feature', properties:{}, geometry:{type:'LineString', coordinates:coords} });
+      }
+      if (mode === 'draw-polygon' && coords.length > 0) {
+        coords.forEach(c => features.push({ type:'Feature', properties:{}, geometry:{type:'Point', coordinates:c} }));
+        if (coords.length > 2) features.push({ type:'Feature', properties:{}, geometry:{type:'Polygon', coordinates:[[...coords, coords[0]]]} });
+        else if (coords.length > 1) features.push({ type:'Feature', properties:{}, geometry:{type:'LineString', coordinates:coords} });
+      }
+      map.getSource('draft').setData({ type: 'FeatureCollection', features });
+    }
+
+    function activateMode(nextMode) {
+      mode = mode === nextMode ? 'browse' : nextMode;
+      document.querySelectorAll('[data-mode]').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+      if (mode === 'browse') {
+        currentDrawCoords = [];
+        updateDraft();
+        document.getElementById('modeStatus').textContent = '기본 탐색 모드';
+      } else if (mode === 'measure') {
+        document.getElementById('modeStatus').textContent = '거리 측정 모드: 지도 클릭';
+      } else {
+        const labels = { 'draw-point':'점 그리기', 'draw-line':'선 그리기', 'draw-polygon':'면 그리기' };
+        document.getElementById('modeStatus').textContent = `${labels[mode]} 모드: 지도 클릭`;
+      }
+      map.getCanvas().style.cursor = mode === 'browse' ? '' : 'crosshair';
+      logEvent('도구 변경: ' + document.getElementById('modeStatus').textContent);
+    }
+
+    function finishDrawing() {
+      if (mode === 'measure') {
+        document.getElementById('modeStatus').textContent += ' · 완료';
+        logEvent('거리 측정 확정');
+        return;
+      }
+      let feature = null;
+      if (mode === 'draw-line' && currentDrawCoords.length >= 2) feature = { type:'Feature', properties:{type:'사용자 선'}, geometry:{type:'LineString', coordinates:currentDrawCoords} };
+      if (mode === 'draw-polygon' && currentDrawCoords.length >= 3) feature = { type:'Feature', properties:{type:'사용자 폴리곤'}, geometry:{type:'Polygon', coordinates:[[...currentDrawCoords, currentDrawCoords[0]]] } };
+      if (feature) {
+        drawFeatures.push(feature);
+        map.getSource('drawings').setData({ type:'FeatureCollection', features:drawFeatures });
+        logEvent('사용자 도형 저장: ' + feature.geometry.type);
+      } else if (mode !== 'browse' && mode !== 'draw-point') {
+        logEvent('완료 불가: 선은 2점, 면은 3점 이상 필요');
+      }
+      currentDrawCoords = [];
+      updateDraft();
+      if (mode !== 'browse') activateMode('browse');
+    }
+
+    function pulseData() {
+      stationData.features.forEach(f => {
+        f.properties.intensity = Math.max(.15, Math.min(1, f.properties.intensity + (Math.random() - .5) * .28));
+        if (f.properties.category === '어선') {
+          f.geometry.coordinates[0] += (Math.random() - .5) * .035;
+          f.geometry.coordinates[1] += (Math.random() - .5) * .025;
+        }
+      });
+      const source = map.getSource('stations');
+      if (source) source.setData(stationData);
+      logEvent('GeoJSON source.setData()로 실시간 상태 갱신');
+    }
+
+    function setBaseStyle(kind) {
+      styleName = kind;
+      const center = map.getCenter();
+      const zoom = map.getZoom(), pitch = map.getPitch(), bearing = map.getBearing();
+      map.setStyle(baseStyle(kind));
+      map.once('style.load', () => {
+        map.jumpTo({ center, zoom, pitch, bearing });
+        hydrateScene();
+        logEvent('베이스맵 전환: ' + document.querySelector('#baseStyle option:checked').textContent);
+      });
+    }
+
+    async function searchNominatim() {
+      const keyword = document.getElementById('searchInput').value.trim();
+      if (!keyword) { document.getElementById('searchInput').focus(); return; }
+      const holder = document.getElementById('searchResults');
+      holder.innerHTML = '<span style="font-size:10px;color:#5e7387">검색 중...</span>';
+      try {
+        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=ko&q=' + encodeURIComponent(keyword);
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const results = await res.json();
+        if (!results.length) { holder.innerHTML = '<span style="font-size:10px;color:#a35e42">검색 결과 없음</span>'; return; }
+        holder.innerHTML = '';
+        results.forEach((item, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'btn small';
+          btn.style.maxWidth = '100%'; btn.style.whiteSpace = 'nowrap'; btn.style.overflow = 'hidden'; btn.style.textOverflow = 'ellipsis';
+          btn.textContent = item.display_name;
+          btn.title = item.display_name;
+          btn.onclick = () => {
+            const lngLat = [+item.lon, +item.lat];
+            map.flyTo({ center: lngLat, zoom: Math.max(11, Number(item.type === 'city' ? 9 : 13)), essential: true });
+            new maplibregl.Popup().setLngLat(lngLat).setHTML(`<div class="popup-card"><b>${escapeHtml(item.display_name)}</b><p>Nominatim 검색 결과</p><span class="tag">Search result</span></div>`).addTo(map);
+            logEvent('Nominatim 검색 위치 이동 #' + (idx + 1));
+          };
+          holder.appendChild(btn);
+        });
+        logEvent('Nominatim 검색 완료: ' + results.length + '건');
+      } catch (error) {
+        holder.innerHTML = '<span style="font-size:10px;color:#a35e42">검색 API 응답 실패</span>';
+        logEvent('검색 API 오류: 네트워크 또는 서비스 제한');
+      }
+    }
+
+    function goToCoordinates() {
+      const lng = Number(document.getElementById('lngInput').value), lat = Number(document.getElementById('latInput').value);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) { alert('유효한 경도(-180~180)와 위도(-90~90)를 입력하세요.'); return; }
+      map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 12), essential: true });
+      new maplibregl.Popup().setLngLat([lng, lat]).setHTML(`<div class="popup-card"><b>입력 좌표</b><p>Lng ${lng.toFixed(5)}<br>Lat ${lat.toFixed(5)}</p><span class="tag">Camera.flyTo()</span></div>`).addTo(map);
+      logEvent('좌표 이동: ' + lng.toFixed(4) + ', ' + lat.toFixed(4));
+    }
+
+    function downloadData(data, filename, type = 'application/geo+json') {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function inspectLayers() {
+      const layers = map.getStyle().layers || [];
+      const custom = layers.filter(l => !['basemap', 'hillshade'].includes(l.id));
+      const shown = custom.filter(l => !l.layout || l.layout.visibility !== 'none');
+      alert(`현재 스타일 레이어: ${layers.length}개\n사용자/데모 레이어: ${custom.length}개\n스타일 상 표시 상태: ${shown.length}개\n\n브라우저 개발자도구에서 map.getStyle()을 실행하면 전체 스타일 JSON을 확인할 수 있습니다.`);
+      logEvent(`스타일 검사: 총 ${layers.length}개 레이어`);
+    }
+
+    async function downloadMapPng() {
+      try {
+        const dataUrl = map.getCanvas().toDataURL('image/png');
+        const a = document.createElement('a'); a.href = dataUrl; a.download = 'maplibre-map-snapshot.png'; document.body.appendChild(a); a.click(); a.remove();
+        logEvent('Canvas 기반 PNG 저장 완료');
+      } catch (error) {
+        alert('현재 타일 공급자의 CORS 정책 때문에 PNG 내보내기가 제한될 수 있습니다. GeoJSON 저장 기능은 정상 사용 가능합니다.');
+        logEvent('PNG 저장 제한: Canvas/CORS 정책');
+      }
+    }
+
+    // 지도 이벤트
+    map.on('load', () => {
+      hydrateScene();
+      createHtmlMarker();
+      animateVessel();
+      setNetwork('지도 연결됨', true);
+      logEvent('MapLibre map.load 완료');
+    });
+    map.on('style.load', () => hydrateScene());
+    map.on('error', event => {
+      const message = event?.error?.message || '알 수 없는 지도 오류';
+      console.warn(event.error);
+      if (!message.includes('Image')) logEvent('Map 오류: ' + message.slice(0, 90));
+    });
+    map.on('move', () => {
+      const c = map.getCenter();
+      document.getElementById('statCamera').textContent = `${map.getZoom().toFixed(2)} / ${Math.round(map.getPitch())}°`;
+      document.getElementById('statCenter').textContent = `${c.lng.toFixed(3)}, ${c.lat.toFixed(3)}`;
+    });
+    map.on('mousemove', event => {
+      document.getElementById('mouseCoord').textContent = `Lng ${event.lngLat.lng.toFixed(5)} · Lat ${event.lngLat.lat.toFixed(5)}`;
+      if (mode === 'draw-line' || mode === 'draw-polygon') updateDraft([event.lngLat.lng, event.lngLat.lat]);
+      const queryIds = ['cluster-circles','stations-unclustered','area-fill','building-3d'];
+      const existing = queryIds.filter(isLayer);
+      const feats = existing.length ? map.queryRenderedFeatures(event.point, { layers: existing }) : [];
+      map.getCanvas().style.cursor = (mode === 'browse' && feats.length) ? 'pointer' : (mode === 'browse' ? '' : 'crosshair');
+    });
+    map.on('render', () => { frameCount++; });
+    map.on('idle', () => { document.getElementById('statTiles').textContent = map.areTilesLoaded() ? 'Ready' : 'Loading'; });
+
+    map.on('click', event => {
+      const coord = [event.lngLat.lng, event.lngLat.lat];
+      if (mode === 'measure') {
+        measureCoords.push(coord); updateMeasure(); logEvent('측정 지점 추가: ' + measureCoords.length);
+        return;
+      }
+      if (mode === 'draw-point') {
+        drawFeatures.push({ type:'Feature', properties:{type:'사용자 점'}, geometry:{type:'Point', coordinates:coord} });
+        map.getSource('drawings').setData({ type:'FeatureCollection', features:drawFeatures });
+        logEvent('사용자 Point 추가');
+        return;
+      }
+      if (mode === 'draw-line' || mode === 'draw-polygon') {
+        currentDrawCoords.push(coord); updateDraft(); logEvent('도형 꼭짓점 추가: ' + currentDrawCoords.length); return;
+      }
+
+      const clusters = isLayer('cluster-circles') ? map.queryRenderedFeatures(event.point, { layers: ['cluster-circles'] }) : [];
+      if (clusters.length) {
+        const feature = clusters[0];
+        const source = map.getSource('stations');
+        source.getClusterExpansionZoom(feature.properties.cluster_id, (err, zoom) => {
+          if (err) return;
+          map.easeTo({ center: feature.geometry.coordinates, zoom, duration: 550 });
+          logEvent('클러스터 확장: ' + feature.properties.point_count + '건');
+        });
+        return;
+      }
+      const stations = isLayer('stations-unclustered') ? map.queryRenderedFeatures(event.point, { layers: ['stations-unclustered'] }) : [];
+      if (stations.length) { showFeaturePopup(stations[0], event.lngLat); logEvent('GeoJSON 포인트 Popup 표시'); return; }
+      const areas = isLayer('area-fill') ? map.queryRenderedFeatures(event.point, { layers: ['area-fill'] }) : [];
+      if (areas.length) { showFeaturePopup(areas[0], event.lngLat); return; }
+      const buildings = isLayer('building-3d') ? map.queryRenderedFeatures(event.point, { layers: ['building-3d'] }) : [];
+      if (buildings.length) { showFeaturePopup(buildings[0], event.lngLat); }
+    });
+
+    // UI 이벤트
+    document.getElementById('baseStyle').addEventListener('change', e => setBaseStyle(e.target.value));
+    document.getElementById('citySelect').addEventListener('change', e => { const p = CITY_PRESETS[e.target.value]; map.flyTo({ ...p, essential:true, duration:1100 }); logEvent('빠른 이동: ' + e.target.options[e.target.selectedIndex].text); });
+    document.getElementById('flySeoul').onclick = () => { map.flyTo({ ...CITY_PRESETS.seoul, pitch: 58, bearing: -19, essential: true, duration: 1600 }); logEvent('Camera.flyTo() 서울 시연'); };
+    document.getElementById('fitRoute').onclick = () => { const bounds = routeData.features[0].geometry.coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(routeData.features[0].geometry.coordinates[0], routeData.features[0].geometry.coordinates[0])); map.fitBounds(bounds, { padding:{top:105,bottom:70,left:45,right:230}, maxZoom:9.5, duration:900 }); logEvent('Camera.fitBounds() 항로 맞춤'); };
+    document.getElementById('resetBearing').onclick = () => map.easeTo({ bearing:0, pitch:0, duration:500 });
+    document.getElementById('togglePitch').onclick = e => { const next = map.getPitch() < 30 ? 60 : 0; map.easeTo({ pitch: next, bearing: next ? -20 : 0, duration:650 }); e.currentTarget.classList.toggle('active', next > 0); logEvent('Pitch 변경: ' + next + '°'); };
+    document.getElementById('toggleTerrain').onclick = () => setTerrain(!terrainOn);
+    document.getElementById('toggleGlobe').onclick = e => { try { globeOn = !globeOn; map.setProjection({ type: globeOn ? 'globe' : 'mercator' }); e.currentTarget.classList.toggle('active', globeOn); logEvent(globeOn ? 'Globe projection 활성화' : 'Mercator projection 복귀'); } catch (err) { globeOn = false; logEvent('Globe projection 미지원'); } };
+
+    const layerMap = {
+      layerStations: ['stations-unclustered','stations-vessel'], layerClusters: ['cluster-circles','cluster-count'], layerRoute: ['route-shadow','route-line','moving-vessel-layer'], layerPolygon: ['area-fill','area-outline','area-label'], layerHeat: ['heatmap'], layerBuildings: ['building-3d','building-label'], layerHillshade: ['hillshade'], layerLabels: ['stations-label','area-label','building-label']
+    };
+    Object.entries(layerMap).forEach(([id, layers]) => document.getElementById(id).addEventListener('change', e => { setVisibility(layers, e.target.checked); logEvent('레이어 가시성: ' + id + ' = ' + (e.target.checked ? 'ON' : 'OFF')); }));
+    document.getElementById('categoryFilter').addEventListener('change', applyCategoryFilter);
+    document.getElementById('pulseData').onclick = pulseData;
+    document.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => activateMode(btn.dataset.mode)));
+    document.getElementById('finishDraw').onclick = finishDrawing;
+    document.getElementById('clearDraw').onclick = () => { drawFeatures = []; importedFeatures = []; measureCoords = []; currentDrawCoords = []; restoreDynamicData(); activateMode('browse'); logEvent('그리기·측정·불러온 데이터 초기화'); };
+    document.getElementById('exportGeoJSON').onclick = () => { downloadData({ type:'FeatureCollection', features:drawFeatures }, 'maplibre-user-drawings.geojson'); logEvent('사용자 도형 GeoJSON 저장'); };
+    document.getElementById('importGeoJSON').addEventListener('change', event => {
+      const file = event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => { try { const json = JSON.parse(reader.result); const incoming = json.type === 'FeatureCollection' ? json.features : (json.type === 'Feature' ? [json] : []); if (!incoming.length) throw new Error('Feature 또는 FeatureCollection만 지원'); importedFeatures = incoming; map.getSource('imports').setData({ type:'FeatureCollection', features:importedFeatures }); logEvent('GeoJSON 불러오기: ' + incoming.length + '개 Feature'); } catch (err) { alert('유효한 GeoJSON 파일이 아닙니다.'); logEvent('GeoJSON 불러오기 실패'); } };
+      reader.readAsText(file, 'utf-8'); event.target.value = '';
+    });
+    document.getElementById('searchBtn').onclick = searchNominatim;
+    document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') searchNominatim(); });
+    document.getElementById('goCoords').onclick = goToCoordinates;
+    document.getElementById('toggleInspect').onclick = inspectLayers;
+    document.getElementById('downloadSnapshot').onclick = downloadMapPng;
+
+    setInterval(() => { document.getElementById('statFps').textContent = frameCount + ' fps'; frameCount = 0; }, 1000);
+  </script>
+</body>
+</html>
