@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>docx.js 종합 기능 실험실</title>
+<style>
+:root{
+  --bg:#f4f7fb;--panel:#ffffff;--line:#dce3ed;--text:#172033;--muted:#667085;
+  --brand:#1d4ed8;--brand2:#0f766e;--danger:#c2410c;--shadow:0 18px 50px rgba(16,24,40,.10);
+  --radius:18px;--font:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font)}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.topbar-inner{max-width:1540px;margin:auto;padding:14px 22px;display:flex;align-items:center;gap:14px}
+.logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#1d4ed8,#0f766e);color:#fff;font-weight:900;box-shadow:0 10px 24px rgba(29,78,216,.25)}
+.brand-title{font-weight:900;font-size:18px}.brand-sub{font-size:12px;color:var(--muted);margin-top:3px}.spacer{flex:1}
+.status{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff}
+.dot{width:9px;height:9px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.13)}.status.ok .dot{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.13)}.status.bad .dot{background:#dc2626}
+.btn{border:0;border-radius:12px;padding:11px 15px;font-weight:850;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.18s;white-space:nowrap}.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;box-shadow:0 10px 24px rgba(37,99,235,.24)}.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--line)}.btn-soft{background:#eef4ff;color:#1d4ed8}.btn-danger{background:#fff4ed;color:#c2410c;border:1px solid #fed7aa}.btn-sm{padding:8px 11px;border-radius:10px;font-size:12px}
+.layout{max-width:1540px;margin:0 auto;padding:22px;display:grid;grid-template-columns:390px minmax(0,1fr);gap:22px;align-items:start}
+.sidebar{position:sticky;top:92px;max-height:calc(100vh - 112px);overflow:auto;padding-right:4px}.sidebar::-webkit-scrollbar{width:7px}.sidebar::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 8px 28px rgba(16,24,40,.05);overflow:hidden}.card+.card{margin-top:14px}
+.card-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}.card-title{font-size:14px;font-weight:900}.card-desc{font-size:11px;color:var(--muted);margin-top:4px}.card-body{padding:17px 18px}
+.field{display:grid;gap:7px;margin-bottom:13px}.field:last-child{margin-bottom:0}.label{font-size:12px;font-weight:850;color:#344054}.hint{font-size:11px;color:var(--muted);line-height:1.5}
+.input,.textarea,.select{width:100%;border:1px solid #cfd8e6;border-radius:11px;background:#fff;color:var(--text);padding:10px 12px;outline:none;transition:.16s}.input:focus,.textarea:focus,.select:focus{border-color:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,.10)}.textarea{min-height:90px;resize:vertical;line-height:1.65}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.switch-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px dashed #e5e9f0}.switch-row:last-child{border-bottom:0}.switch-row input{margin-top:3px;accent-color:#2563eb}.switch-title{font-size:12px;font-weight:850}.switch-desc{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.45}
+.feature-tools{display:flex;gap:7px;margin-bottom:8px}.feature-count{font-size:11px;color:#1d4ed8;font-weight:900;background:#eef4ff;padding:5px 8px;border-radius:999px}
+.main{min-width:0}.hero{padding:27px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 52%,#0f766e 100%);border-radius:24px;color:#fff;box-shadow:var(--shadow);position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:330px;height:330px;border-radius:50%;background:rgba(255,255,255,.08);right:-90px;top:-160px}.hero h1{font-size:30px;line-height:1.25;margin:0 0 9px;letter-spacing:-.04em}.hero p{margin:0;color:#dbeafe;max-width:850px;line-height:1.65;font-size:14px}.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.badge{border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.10);padding:7px 10px;border-radius:999px;font-size:11px;font-weight:800}
+.tabs{display:flex;gap:6px;margin:20px 0 14px;padding:6px;background:#e8edf5;border-radius:14px;overflow:auto}.tab{border:0;background:transparent;padding:10px 14px;border-radius:10px;font-weight:850;color:#667085;white-space:nowrap}.tab.active{background:#fff;color:#1d4ed8;box-shadow:0 4px 14px rgba(16,24,40,.08)}.tab-panel{display:none}.tab-panel.active{display:block}
+.panel-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}.section-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:19px;box-shadow:0 8px 28px rgba(16,24,40,.04)}.section-card+.section-card{margin-top:14px}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.section-title h2{font-size:16px;margin:0}.kicker{font-size:10px;font-weight:900;letter-spacing:.08em;color:#2563eb;text-transform:uppercase;margin-bottom:4px}
+.preview-wrap{background:#dfe5ee;padding:26px;border-radius:18px;min-height:900px;overflow:auto}.paper{width:min(100%,720px);min-height:1018px;background:#fff;margin:auto;box-shadow:0 16px 44px rgba(15,23,42,.18);padding:66px 70px;position:relative;border-top:7px solid var(--preview-accent,#1d4ed8)}.paper.landscape{width:min(100%,980px);min-height:690px}.paper-header{position:absolute;left:70px;right:70px;top:25px;font-size:10px;color:#64748b;display:flex;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:7px}.paper-footer{position:absolute;left:70px;right:70px;bottom:24px;font-size:10px;color:#64748b;display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding-top:7px}.cover-mark{height:8px;width:90px;border-radius:99px;background:var(--preview-accent,#1d4ed8);margin:90px 0 28px}.paper h1{font-size:36px;line-height:1.25;margin:0 0 12px;letter-spacing:-.04em}.paper h2{font-size:20px;margin:34px 0 13px;border-left:5px solid var(--preview-accent,#1d4ed8);padding-left:11px}.paper h3{font-size:15px;margin:22px 0 9px}.paper p{font-size:12px;line-height:1.85;color:#334155}.meta-table,.demo-table{width:100%;border-collapse:collapse;font-size:11px;margin:18px 0}.meta-table td,.demo-table th,.demo-table td{border:1px solid #dce3ed;padding:9px}.meta-table td:first-child{width:105px;background:#f8fafc;font-weight:850}.demo-table th{background:#eaf1ff;color:#1e3a8a}.preview-note{margin-top:11px;color:#667085;font-size:11px;text-align:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:16px}.stat{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px}.stat-value{font-size:23px;font-weight:950;color:#1d4ed8}.stat-label{font-size:11px;color:var(--muted);margin-top:3px}
+.feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.feature-card{padding:15px;border:1px solid var(--line);border-radius:15px;background:#fff}.feature-card strong{display:block;font-size:13px;margin-bottom:7px}.feature-card p{font-size:11px;line-height:1.55;color:var(--muted);margin:0}.api{display:inline-block;margin-top:9px;font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f5f9;color:#334155;padding:5px 7px;border-radius:7px}
+.log{background:#0b1220;color:#cbd5e1;border-radius:15px;padding:15px;height:300px;overflow:auto;font:12px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace}.log-line{border-bottom:1px solid rgba(255,255,255,.06);padding:4px 0}.log-time{color:#60a5fa}.log-ok{color:#4ade80}.log-err{color:#fb7185}.log-warn{color:#fbbf24}
+.codebox{background:#0b1220;color:#e2e8f0;border-radius:15px;padding:18px;white-space:pre;overflow:auto;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;min-height:420px}.callout{padding:13px 15px;border-radius:13px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;line-height:1.55}.success-box{display:none;padding:14px 16px;border:1px solid #bbf7d0;background:#f0fdf4;color:#166534;border-radius:13px;margin-bottom:14px;font-size:12px;line-height:1.55}.success-box.show{display:block}
+.table-editor{width:100%;border-collapse:collapse}.table-editor th,.table-editor td{border-bottom:1px solid var(--line);padding:8px 5px;text-align:left}.table-editor th{font-size:11px;color:#667085}.table-editor .input{padding:8px 9px;font-size:11px}.dropzone{border:2px dashed #b8c4d6;border-radius:14px;padding:20px;text-align:center;background:#f8fafc;transition:.16s}.dropzone.drag{border-color:#2563eb;background:#eff6ff}.dropzone strong{font-size:12px}.dropzone p{font-size:10px;color:var(--muted);margin:6px 0 0}.image-preview{display:none;max-width:100%;max-height:140px;margin:12px auto 0;border-radius:10px}.image-preview.show{display:block}
+.action-stack{display:grid;gap:9px}.divider{height:1px;background:var(--line);margin:14px 0}.inline-actions{display:flex;flex-wrap:wrap;gap:8px}.mini{font-size:10px;color:#667085}.footer-info{text-align:center;padding:24px;color:#667085;font-size:11px}.toast{position:fixed;right:22px;bottom:22px;z-index:100;min-width:260px;max-width:420px;background:#101828;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.24);transform:translateY(130%);opacity:0;transition:.25s;font-size:12px;line-height:1.5}.toast.show{transform:translateY(0);opacity:1}.toast.error{background:#7f1d1d}
+.loader{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:none}.busy .loader{display:inline-block}.busy .btn-label{opacity:.8}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:1120px){.layout{grid-template-columns:1fr}.sidebar{position:static;max-height:none}.panel-grid{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){.topbar-inner{padding:10px 12px}.brand-sub,.status{display:none}.layout{padding:12px}.hero{padding:22px}.hero h1{font-size:24px}.grid2,.grid3,.feature-grid,.stats{grid-template-columns:1fr}.paper{padding:58px 32px}.paper-header,.paper-footer{left:32px;right:32px}.topbar .btn-secondary{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">D</div>
+    <div><div class="brand-title">docx.js 종합 기능 실험실</div><div class="brand-sub">브라우저에서 Word 문서 생성 · docx 9.7.1</div></div>
+    <div class="spacer"></div>
+    <div id="libStatus" class="status"><span class="dot"></span><span>라이브러리 확인 중</span></div>
+    <button class="btn btn-secondary" id="saveConfigBtn">설정 저장</button>
+    <button class="btn btn-primary" id="generateTopBtn"><span class="loader"></span><span class="btn-label">DOCX 생성</span></button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">문서 기본정보</div><div class="card-desc">표지·속성·본문에 반영</div></div></div>
+      <div class="card-body">
+        <div class="field"><label class="label" for="docTitle">문서 제목</label><input class="input live" id="docTitle" value="수산업 디지털 전환 추진계획" /></div>
+        <div class="field"><label class="label" for="docSubtitle">부제</label><input class="input live" id="docSubtitle" value="docx.js 종합 기능 시연 문서" /></div>
+        <div class="grid2">
+          <div class="field"><label class="label" for="author">작성자</label><input class="input live" id="author" value="홍길동" /></div>
+          <div class="field"><label class="label" for="department">부서</label><input class="input live" id="department" value="ICT전략실" /></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="label" for="docNumber">문서번호</label><input class="input live" id="docNumber" value="ICT-2026-0712" /></div>
+          <div class="field"><label class="label" for="docDate">작성일</label><input class="input live" type="date" id="docDate" value="2026-07-12" /></div>
+        </div>
+        <div class="field"><label class="label" for="recipient">수신</label><input class="input live" id="recipient" value="관련 부서장" /></div>
+        <div class="field"><label class="label" for="summary">요약</label><textarea class="textarea live" id="summary">현장 중심의 업무 자동화와 데이터 기반 의사결정을 위해 문서 생성, 표준 보고서, 반복 서식 자동화를 단계적으로 추진한다.</textarea></div>
+        <div class="field"><label class="label" for="bodyText">본문</label><textarea class="textarea live" id="bodyText">docx.js는 JavaScript 또는 TypeScript로 OOXML 기반 Word 문서를 생성하는 오픈소스 라이브러리다. 이 샘플은 브라우저에서 별도 서버 없이 문서를 구성하고 다운로드하는 과정을 보여준다.</textarea></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">레이아웃·스타일</div><div class="card-desc">페이지, 글꼴, 강조색 설정</div></div></div>
+      <div class="card-body">
+        <div class="grid2">
+          <div class="field"><label class="label">기본 방향</label><select class="select live" id="orientation"><option value="portrait">세로</option><option value="landscape">가로</option></select></div>
+          <div class="field"><label class="label">페이지 여백</label><select class="select" id="margin"><option value="normal">보통</option><option value="narrow">좁게</option><option value="wide">넓게</option></select></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="label">기본 글꼴</label><select class="select live" id="font"><option>맑은 고딕</option><option>나눔고딕</option><option>Arial</option><option>Times New Roman</option></select></div>
+          <div class="field"><label class="label">본문 크기</label><select class="select" id="fontSize"><option value="20">10pt</option><option value="21">10.5pt</option><option value="22" selected>11pt</option><option value="24">12pt</option></select></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="label">강조색</label><input class="input live" id="accent" type="color" value="#1d4ed8" /></div>
+          <div class="field"><label class="label">문서 배경</label><input class="input" id="background" type="color" value="#ffffff" /></div>
+        </div>
+        <div class="field"><label class="label">파일명</label><input class="input" id="filename" value="docxjs_종합기능_샘플.docx" /><div class="hint">확장자가 없으면 자동으로 .docx를 추가함</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">포함 기능</div><div class="card-desc">선택한 기능만 문서에 생성</div></div><span id="featureCount" class="feature-count">0개</span></div>
+      <div class="card-body">
+        <div class="feature-tools"><button class="btn btn-soft btn-sm" id="allOnBtn">전체 선택</button><button class="btn btn-secondary btn-sm" id="allOffBtn">전체 해제</button></div>
+        <div id="featureToggles"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">이미지 삽입</div><div class="card-desc">PNG·JPG 업로드 또는 기본 로고</div></div></div>
+      <div class="card-body">
+        <div class="dropzone" id="dropzone"><strong>이미지를 끌어 놓거나 눌러서 선택</strong><p>문서의 이미지 예제 영역에 삽입됨</p><input id="imageInput" type="file" accept="image/png,image/jpeg" hidden /><img id="imagePreview" class="image-preview" alt="선택 이미지 미리보기" /></div>
+        <div class="inline-actions" style="margin-top:10px"><button class="btn btn-secondary btn-sm" id="clearImageBtn">이미지 초기화</button></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">실행</div><div class="card-desc">문서 및 설정 파일 생성</div></div></div>
+      <div class="card-body action-stack">
+        <button class="btn btn-primary" id="generateBtn"><span class="loader"></span><span class="btn-label">종합 DOCX 생성</span></button>
+        <button class="btn btn-secondary" id="previewRefreshBtn">미리보기 갱신</button>
+        <button class="btn btn-secondary" id="loadConfigBtn">설정 불러오기</button>
+        <input id="configInput" type="file" accept="application/json" hidden />
+        <button class="btn btn-danger" id="resetBtn">샘플값 초기화</button>
+      </div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <section class="hero">
+      <h1>한 페이지에서 시험하는 Word 문서 자동화</h1>
+      <p>텍스트 서식부터 복합 표, 이미지, 목차, 머리말·꼬리말, 각주, 주석, 수식, 책갈피, 다단 편집, 가로 섹션까지 실제 DOCX 파일로 생성한다.</p>
+      <div class="hero-badges"><span class="badge">브라우저 단독 실행</span><span class="badge">서버 업로드 없음</span><span class="badge">OOXML 문서 생성</span><span class="badge">MIT 라이선스</span><span class="badge">docx 9.7.1 고정</span></div>
+    </section>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-value" id="statFeatures">0</div><div class="stat-label">선택 기능</div></div>
+      <div class="stat"><div class="stat-value">4</div><div class="stat-label">문서 섹션 유형</div></div>
+      <div class="stat"><div class="stat-value">3</div><div class="stat-label">표·목록 예제</div></div>
+      <div class="stat"><div class="stat-value" id="statGenerated">0</div><div class="stat-label">생성 완료 횟수</div></div>
+    </div>
+
+    <nav class="tabs" aria-label="화면 탭">
+      <button class="tab active" data-tab="preview">문서 미리보기</button>
+      <button class="tab" data-tab="content">데이터 편집</button>
+      <button class="tab" data-tab="features">기능 안내</button>
+      <button class="tab" data-tab="code">핵심 코드</button>
+      <button class="tab" data-tab="log">실행 로그</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-preview">
+      <div class="panel-grid">
+        <div>
+          <div id="successBox" class="success-box"></div>
+          <div class="preview-wrap"><article class="paper" id="paperPreview">
+            <div class="paper-header"><span id="pvHeaderDept">ICT전략실</span><span id="pvHeaderNo">ICT-2026-0712</span></div>
+            <div class="cover-mark"></div>
+            <div class="mini" id="pvSubtitle">DOCX.JS COMPREHENSIVE DEMO</div>
+            <h1 id="pvTitle">수산업 디지털 전환 추진계획</h1>
+            <p id="pvSummary">현장 중심의 업무 자동화와 데이터 기반 의사결정을 위해 문서 생성, 표준 보고서, 반복 서식 자동화를 단계적으로 추진한다.</p>
+            <table class="meta-table"><tr><td>작성부서</td><td id="pvDept">ICT전략실</td></tr><tr><td>작성자</td><td id="pvAuthor">홍길동</td></tr><tr><td>문서번호</td><td id="pvNo">ICT-2026-0712</td></tr><tr><td>작성일</td><td id="pvDate">2026-07-12</td></tr></table>
+            <h2>1. 추진 개요</h2><p id="pvBody">docx.js는 JavaScript 또는 TypeScript로 OOXML 기반 Word 문서를 생성하는 오픈소스 라이브러리다.</p>
+            <h2>2. 기능별 적용 예시</h2><table class="demo-table"><thead><tr><th>기능</th><th>적용 예시</th><th>상태</th></tr></thead><tbody><tr><td>문단·텍스트</td><td>굵게, 색상, 강조, 정렬</td><td>포함</td></tr><tr><td>표·셀 병합</td><td>업무현황 및 일정표</td><td>포함</td></tr><tr><td>머리말·꼬리말</td><td>문서번호, 페이지 번호</td><td>포함</td></tr></tbody></table>
+            <div class="paper-footer"><span>docx.js 기능 시연 문서</span><span>1 / N</span></div>
+          </article></div>
+          <div class="preview-note">화면 미리보기는 구조 확인용이며 실제 Word의 줄바꿈·목차·페이지 수와 차이가 있을 수 있음</div>
+        </div>
+        <aside>
+          <div class="section-card"><div class="section-title"><div><div class="kicker">OUTPUT</div><h2>생성 결과</h2></div></div><div id="resultInfo" class="hint">아직 생성된 문서가 없음</div><div class="divider"></div><div class="callout"><strong>Word 필드 업데이트</strong><br />목차·페이지 참조가 비어 보이면 Word에서 전체 선택(Ctrl+A) 후 F9를 눌러 필드를 업데이트해야 함.</div></div>
+          <div class="section-card"><div class="section-title"><div><div class="kicker">PRIVACY</div><h2>처리 방식</h2></div></div><div class="hint">입력한 텍스트와 이미지는 현재 브라우저 메모리에서 DOCX 압축 파일로 만들어지며 별도 서버로 업로드하지 않음. 단, 라이브러리 파일은 최초 실행 시 jsDelivr CDN에서 불러옴.</div></div>
+          <div class="section-card"><div class="section-title"><div><div class="kicker">COMPATIBILITY</div><h2>권장 환경</h2></div></div><div class="hint">Chrome·Edge 최신 버전, Microsoft Word 또는 LibreOffice에서 확인 권장. 웹뷰나 일부 모바일 브라우저에서는 파일 저장 동작이 제한될 수 있음.</div></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-content">
+      <div class="section-card">
+        <div class="section-title"><div><div class="kicker">DATA TABLE</div><h2>추진과제 표 데이터</h2></div><button class="btn btn-soft btn-sm" id="addRowBtn">행 추가</button></div>
+        <div style="overflow:auto"><table class="table-editor"><thead><tr><th style="min-width:160px">과제</th><th style="min-width:120px">담당</th><th style="min-width:90px">진척률</th><th style="min-width:90px">우선순위</th><th></th></tr></thead><tbody id="taskRows"></tbody></table></div>
+      </div>
+      <div class="section-card">
+        <div class="section-title"><div><div class="kicker">BULLET DATA</div><h2>핵심 추진내용</h2></div></div>
+        <div class="field"><textarea class="textarea" id="bulletText">반복 문서의 표준 템플릿화
+입력 데이터와 문서 서식의 분리
+부서별 보고서 생성 절차 자동화
+검증 가능한 결과물과 이력 관리</textarea><div class="hint">한 줄당 목록 항목 하나로 처리</div></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-features">
+      <div class="section-card"><div class="section-title"><div><div class="kicker">FEATURE MAP</div><h2>구현 기능과 주요 API</h2></div></div><div class="feature-grid" id="featureGuide"></div></div>
+    </section>
+
+    <section class="tab-panel" id="tab-code">
+      <div class="section-card">
+        <div class="section-title"><div><div class="kicker">CODE</div><h2>브라우저 기본 생성 구조</h2></div><button class="btn btn-secondary btn-sm" id="copyCodeBtn">코드 복사</button></div>
+        <div class="codebox" id="codeBox"></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-log">
+      <div class="section-card"><div class="section-title"><div><div class="kicker">RUNTIME</div><h2>실행 로그</h2></div><button class="btn btn-secondary btn-sm" id="clearLogBtn">로그 지우기</button></div><div class="log" id="logBox"></div></div>
+    </section>
+
+    <div class="footer-info">docx.js는 DOCX 파일을 생성하는 라이브러리이며 Word 편집기 자체를 브라우저에 구현하는 도구는 아님</div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  const FEATURES = [
+    {id:"cover", title:"표지·문서 속성", desc:"표지, 제목, 작성자, 사용자 정의 속성", api:"Document · customProperties"},
+    {id:"styles", title:"텍스트·문단 서식", desc:"글꼴, 굵게, 기울임, 밑줄, 강조, 정렬, 들여쓰기", api:"TextRun · Paragraph"},
+    {id:"toc", title:"자동 목차", desc:"제목 스타일을 기반으로 Word 목차 필드 구성", api:"TableOfContents"},
+    {id:"headerFooter", title:"머리말·꼬리말", desc:"홀수·짝수 머리말, 문서번호, 현재/전체 페이지", api:"Header · Footer · PageNumber"},
+    {id:"lists", title:"글머리표·번호 목록", desc:"다단계 번호, 글머리표, 사용자 지정 들여쓰기", api:"numbering · LevelFormat"},
+    {id:"tables", title:"복합 표", desc:"배경색, 테두리, 너비, 셀 병합, 행 높이, 반복 머리행", api:"Table · TableCell"},
+    {id:"images", title:"이미지·차트", desc:"사용자 이미지와 Canvas 기반 PNG 차트 삽입", api:"ImageRun"},
+    {id:"links", title:"링크·책갈피", desc:"외부 URL, 내부 책갈피, 페이지 참조", api:"ExternalHyperlink · Bookmark"},
+    {id:"footnotes", title:"각주", desc:"본문 참조 번호와 각주 본문 생성", api:"FootnoteReferenceRun"},
+    {id:"comments", title:"검토 주석", desc:"특정 텍스트 범위에 작성자·일자 포함 주석", api:"CommentRangeStart · CommentReference"},
+    {id:"checkbox", title:"체크박스", desc:"선택·미선택 상태의 Word 체크박스 컨트롤", api:"CheckBox"},
+    {id:"math", title:"수식", desc:"분수, 제곱근, 합계 기호를 OOXML 수식으로 생성", api:"Math · MathFraction · MathRadical"},
+    {id:"columns", title:"다단 편집", desc:"2단 문서 섹션과 단 사이 구분선", api:"section.properties.column"},
+    {id:"landscape", title:"가로 방향 섹션", desc:"넓은 표를 위한 별도 가로 페이지", api:"PageOrientation.LANDSCAPE"},
+    {id:"pageBorder", title:"페이지 테두리·배경", desc:"페이지별 테두리와 문서 배경색 설정", api:"page.borders · background"},
+    {id:"breaks", title:"페이지·섹션 나누기", desc:"페이지 나누기와 다음 페이지 섹션 구성", api:"PageBreak · SectionType"}
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  let selectedImage = null;
+  let generatedCount = 0;
+
+  const defaults = {
+    docTitle:"수산업 디지털 전환 추진계획", docSubtitle:"docx.js 종합 기능 시연 문서", author:"홍길동", department:"ICT전략실",
+    docNumber:"ICT-2026-0712", docDate:"2026-07-12", recipient:"관련 부서장",
+    summary:"현장 중심의 업무 자동화와 데이터 기반 의사결정을 위해 문서 생성, 표준 보고서, 반복 서식 자동화를 단계적으로 추진한다.",
+    bodyText:"docx.js는 JavaScript 또는 TypeScript로 OOXML 기반 Word 문서를 생성하는 오픈소스 라이브러리다. 이 샘플은 브라우저에서 별도 서버 없이 문서를 구성하고 다운로드하는 과정을 보여준다.",
+    orientation:"portrait", margin:"normal", font:"맑은 고딕", fontSize:"22", accent:"#1d4ed8", background:"#ffffff", filename:"docxjs_종합기능_샘플.docx",
+    bulletText:"반복 문서의 표준 템플릿화\n입력 데이터와 문서 서식의 분리\n부서별 보고서 생성 절차 자동화\n검증 가능한 결과물과 이력 관리"
+  };
+
+  const defaultTasks = [
+    {name:"문서 템플릿 표준화", owner:"ICT전략실", progress:"85", priority:"높음"},
+    {name:"보고서 자동 생성", owner:"기획조정실", progress:"65", priority:"높음"},
+    {name:"현장 데이터 연계", owner:"어업양식지원부", progress:"40", priority:"보통"},
+    {name:"성과지표 대시보드", owner:"회원지원부", progress:"25", priority:"보통"}
+  ];
+
+  function cleanHex(v){ return String(v || "1D4ED8").replace("#","").toUpperCase(); }
+  function val(id){ return $(id).value.trim(); }
+  function checked(id){ const el = $("f_"+id); return !!el && el.checked; }
+  function formatDate(v){ if(!v) return ""; const [y,m,d] = v.split("-"); return `${y}.${m}.${d}.`; }
+  function log(message, type="info"){
+    const time = new Date().toLocaleTimeString("ko-KR", {hour12:false});
+    const line = document.createElement("div"); line.className="log-line";
+    const cls = type==="ok"?"log-ok":type==="error"?"log-err":type==="warn"?"log-warn":"";
+    line.innerHTML = `<span class="log-time">[${time}]</span> <span class="${cls}"></span>`;
+    line.querySelector("span:last-child").textContent = message;
+    $("logBox").appendChild(line); $("logBox").scrollTop = $("logBox").scrollHeight;
+  }
+  function toast(message, error=false){ const el=$("toast"); el.textContent=message; el.className="toast show"+(error?" error":""); clearTimeout(toast.t); toast.t=setTimeout(()=>el.className="toast",3000); }
+  function setBusy(on){ document.querySelectorAll("#generateBtn,#generateTopBtn").forEach(b=>b.classList.toggle("busy",on)); document.querySelectorAll("#generateBtn,#generateTopBtn").forEach(b=>b.disabled=on); }
+
+  function initFeatures(){
+    $("featureToggles").innerHTML = FEATURES.map(f=>`<label class="switch-row"><input type="checkbox" id="f_${f.id}" checked /><span><span class="switch-title">${f.title}</span><span class="switch-desc">${f.desc}</span></span></label>`).join("");
+    $("featureGuide").innerHTML = FEATURES.map(f=>`<div class="feature-card"><strong>${f.title}</strong><p>${f.desc}</p><span class="api">${f.api}</span></div>`).join("");
+    document.querySelectorAll("#featureToggles input").forEach(el=>el.addEventListener("change", updateFeatureCount)); updateFeatureCount();
+  }
+  function updateFeatureCount(){ const n=document.querySelectorAll("#featureToggles input:checked").length; $("featureCount").textContent=n+"개"; $("statFeatures").textContent=n; }
+
+  function addTaskRow(data={name:"",owner:"",progress:"0",priority:"보통"}){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><input class="input task-name" value="${escapeAttr(data.name)}"></td><td><input class="input task-owner" value="${escapeAttr(data.owner)}"></td><td><input class="input task-progress" type="number" min="0" max="100" value="${escapeAttr(data.progress)}"></td><td><select class="select task-priority"><option${data.priority==="높음"?" selected":""}>높음</option><option${data.priority==="보통"?" selected":""}>보통</option><option${data.priority==="낮음"?" selected":""}>낮음</option></select></td><td><button class="btn btn-danger btn-sm remove-row">삭제</button></td>`;
+    tr.querySelector(".remove-row").addEventListener("click",()=>{tr.remove();}); $("taskRows").appendChild(tr);
+  }
+  function escapeAttr(s){ return String(s??"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+  function getTasks(){ return [...$("taskRows").querySelectorAll("tr")].map(tr=>({name:tr.querySelector(".task-name").value,owner:tr.querySelector(".task-owner").value,progress:tr.querySelector(".task-progress").value,priority:tr.querySelector(".task-priority").value})); }
+
+  function updatePreview(){
+    $("pvTitle").textContent=val("docTitle")||"제목 없음"; $("pvSubtitle").textContent=val("docSubtitle"); $("pvSummary").textContent=val("summary"); $("pvBody").textContent=val("bodyText");
+    $("pvDept").textContent=$("pvHeaderDept").textContent=val("department"); $("pvAuthor").textContent=val("author"); $("pvNo").textContent=$("pvHeaderNo").textContent=val("docNumber"); $("pvDate").textContent=formatDate(val("docDate"));
+    $("paperPreview").style.setProperty("--preview-accent", val("accent")); $("paperPreview").classList.toggle("landscape", val("orientation")==="landscape");
+  }
+
+  function getConfig(){
+    const data={}; Object.keys(defaults).forEach(k=>{if($(k)) data[k]=$(k).value;}); data.features={}; FEATURES.forEach(f=>data.features[f.id]=checked(f.id)); data.tasks=getTasks(); return data;
+  }
+  function applyConfig(data){
+    Object.keys(defaults).forEach(k=>{if($(k)&&data[k]!==undefined) $(k).value=data[k];});
+    if(data.features) FEATURES.forEach(f=>{if($("f_"+f.id)&&data.features[f.id]!==undefined) $("f_"+f.id).checked=!!data.features[f.id];});
+    if(Array.isArray(data.tasks)){ $("taskRows").innerHTML=""; data.tasks.forEach(addTaskRow); }
+    updateFeatureCount(); updatePreview();
+  }
+  function downloadBlob(blob, name){ const a=document.createElement("a"); const url=URL.createObjectURL(blob); a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500); }
+  function safeFilename(name){ let n=(name||"docxjs_sample.docx").replace(/[\\/:*?"<>|]/g,"_"); if(!n.toLowerCase().endsWith(".docx")) n+=".docx"; return n; }
+
+  function dataUrlToUint8(dataUrl){ const base64=dataUrl.split(",")[1]; const bin=atob(base64); const out=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i); return out; }
+  function makeLogoData(accent){
+    const c=document.createElement("canvas"); c.width=900;c.height=260; const x=c.getContext("2d");
+    x.fillStyle="#ffffff";x.fillRect(0,0,c.width,c.height);x.fillStyle="#"+accent;x.beginPath();x.arc(130,130,92,0,Math.PI*2);x.fill();x.fillStyle="#fff";x.font="bold 105px Arial";x.textAlign="center";x.textBaseline="middle";x.fillText("D",130,136);
+    x.fillStyle="#172033";x.textAlign="left";x.font="bold 62px Arial";x.fillText("DOCX.JS",255,112);x.fillStyle="#667085";x.font="32px Arial";x.fillText("Document Automation Laboratory",258,165);
+    return dataUrlToUint8(c.toDataURL("image/png"));
+  }
+  function makeChartData(accent, tasks){
+    const c=document.createElement("canvas"); c.width=1100;c.height=500; const x=c.getContext("2d");
+    x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.fillStyle="#172033";x.font="bold 34px Arial";x.fillText("Task Progress",50,55);
+    const maxW=760; tasks.slice(0,5).forEach((t,i)=>{const y=110+i*72; const p=Math.max(0,Math.min(100,Number(t.progress)||0));x.fillStyle="#e5e7eb";x.fillRect(260,y,maxW,32);x.fillStyle="#"+accent;x.fillRect(260,y,maxW*p/100,32);x.fillStyle="#344054";x.font="25px Arial";x.fillText((t.name||"Task").slice(0,18),50,y+25);x.fillText(p+"%",1030,y+25);});
+    return dataUrlToUint8(c.toDataURL("image/png"));
+  }
+
+  function borderAll(color="CBD5E1", size=4){ const b={style:docx.BorderStyle.SINGLE,size,color}; return {top:b,bottom:b,left:b,right:b,insideHorizontal:b,insideVertical:b}; }
+  function textP(text, options={}){ return new docx.Paragraph({children:[new docx.TextRun({text,...options})]}); }
+  function heading(text, level){ return new docx.Paragraph({text,heading:level,spacing:{before:260,after:120}}); }
+  function tableCell(text, opts={}){
+    return new docx.TableCell({children:[new docx.Paragraph({alignment:opts.align||docx.AlignmentType.LEFT,children:[new docx.TextRun({text:String(text??""),bold:!!opts.bold,color:opts.color})]})],shading:opts.fill?{fill:opts.fill,type:docx.ShadingType.CLEAR}:undefined,verticalAlign:docx.VerticalAlign.CENTER,columnSpan:opts.columnSpan,rowSpan:opts.rowSpan,margins:{top:100,bottom:100,left:120,right:120},borders:opts.borders});
+  }
+  function makeHeaderFooter(accent){
+    const header=(label)=>new docx.Header({children:[new docx.Paragraph({border:{bottom:{style:docx.BorderStyle.SINGLE,size:6,color:accent}},children:[new docx.TextRun({text:val("department")+"  |  ",bold:true,color:accent}),new docx.TextRun({text:label+"  ·  "+val("docNumber"),color:"64748B"})]})]});
+    const footer=(label)=>new docx.Footer({children:[new docx.Paragraph({alignment:docx.AlignmentType.CENTER,border:{top:{style:docx.BorderStyle.SINGLE,size:4,color:"CBD5E1"}},children:[new docx.TextRun({text:label+"   |   ",color:"64748B",size:18}),new docx.TextRun({children:["Page ",docx.PageNumber.CURRENT," / ",docx.PageNumber.TOTAL_PAGES],color:accent,size:18})]})]});
+    return {headers:{default:header("홀수 페이지"),even:header("짝수 페이지")},footers:{default:footer("docx.js 종합 기능"),even:footer("DOCX AUTOMATION")}};
+  }
+  function pageProps(accent, orientation, includeBorder){
+    const marginMap={normal:{top:1100,right:1000,bottom:1100,left:1000},narrow:{top:720,right:720,bottom:720,left:720},wide:{top:1440,right:1440,bottom:1440,left:1440}};
+    const page={margin:marginMap[val("margin")]||marginMap.normal,size:{orientation:orientation==="landscape"?docx.PageOrientation.LANDSCAPE:docx.PageOrientation.PORTRAIT},pageNumbers:{start:1,formatType:docx.NumberFormat.DECIMAL}};
+    if(includeBorder) page.borders={pageBorderTop:{style:docx.BorderStyle.SINGLE,size:12,color:accent},pageBorderBottom:{style:docx.BorderStyle.SINGLE,size:12,color:accent},pageBorderLeft:{style:docx.BorderStyle.SINGLE,size:8,color:"CBD5E1"},pageBorderRight:{style:docx.BorderStyle.SINGLE,size:8,color:"CBD5E1"},pageBorders:{display:docx.PageBorderDisplay.ALL_PAGES,offsetFrom:docx.PageBorderOffsetFrom.TEXT,zOrder:docx.PageBorderZOrder.FRONT}};
+    return {page};
+  }
+
+  function buildDocument(){
+    if(typeof window.docx==="undefined") throw new Error("docx.js 라이브러리를 불러오지 못했습니다. 인터넷 연결 또는 CDN 차단 여부를 확인하세요.");
+    const accent=cleanHex(val("accent")); const font=val("font")||"맑은 고딕"; const bodySize=Number(val("fontSize"))||22; const tasks=getTasks();
+    const logoData=selectedImage?.data || makeLogoData(accent); const logoType=selectedImage?.type || "png"; const chartData=makeChartData(accent,tasks);
+    const hf=checked("headerFooter")?makeHeaderFooter(accent):{};
+    const sectionBase={...hf,properties:pageProps(accent,val("orientation"),checked("pageBorder"))};
+    const sections=[]; const main=[];
+
+    if(checked("cover")){
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,spacing:{before:1100,after:380},children:[new docx.ImageRun({type:logoType,data:logoData,transformation:{width:390,height:selectedImage?180:113},altText:{title:"문서 로고",description:"사용자가 지정한 문서 표지 이미지",name:"cover-logo"}})]}));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,spacing:{after:180},children:[new docx.TextRun({text:val("docTitle"),bold:true,size:48,color:"172033",font})]}));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,spacing:{after:600},children:[new docx.TextRun({text:val("docSubtitle"),size:25,color:accent,font})]}));
+      main.push(new docx.Table({width:{size:70,type:docx.WidthType.PERCENTAGE},alignment:docx.AlignmentType.CENTER,borders:borderAll("DCE3ED",4),rows:[
+        new docx.TableRow({children:[tableCell("작성부서",{bold:true,fill:"F1F5F9"}),tableCell(val("department"))]}),
+        new docx.TableRow({children:[tableCell("작성자",{bold:true,fill:"F1F5F9"}),tableCell(val("author"))]}),
+        new docx.TableRow({children:[tableCell("문서번호",{bold:true,fill:"F1F5F9"}),tableCell(val("docNumber"))]}),
+        new docx.TableRow({children:[tableCell("작성일",{bold:true,fill:"F1F5F9"}),tableCell(formatDate(val("docDate")))]})
+      ]}));
+      main.push(new docx.Paragraph({children:[new docx.PageBreak()]}));
+    }
+
+    if(checked("toc")){
+      main.push(new docx.TableOfContents("목차",{hyperlink:true,headingStyleRange:"1-3"}));
+      main.push(new docx.Paragraph({children:[new docx.PageBreak()]}));
+    }
+
+    main.push(new docx.Paragraph({heading:docx.HeadingLevel.HEADING_1,children:[new docx.Bookmark({id:"overviewAnchor",children:[new docx.TextRun("1. 추진 개요")]})]}));
+    main.push(new docx.Table({width:{size:100,type:docx.WidthType.PERCENTAGE},borders:borderAll(),rows:[
+      new docx.TableRow({children:[tableCell("수신",{bold:true,fill:"EFF6FF",color:accent}),tableCell(val("recipient")),tableCell("작성일",{bold:true,fill:"EFF6FF",color:accent}),tableCell(formatDate(val("docDate")))]}),
+      new docx.TableRow({children:[tableCell("제목",{bold:true,fill:"EFF6FF",color:accent}),tableCell(val("docTitle"),{columnSpan:3})]})
+    ]}));
+    main.push(new docx.Paragraph({spacing:{before:220,after:160},shading:{fill:"F8FAFC",type:docx.ShadingType.CLEAR},border:{left:{style:docx.BorderStyle.SINGLE,size:18,color:accent}},indent:{left:220},children:[new docx.TextRun({text:val("summary"),bold:true,color:"334155",font,size:bodySize})]}));
+    main.push(new docx.Paragraph({alignment:docx.AlignmentType.JUSTIFIED,spacing:{line:360,after:160},children:[new docx.TextRun({text:val("bodyText"),font,size:bodySize})]}));
+
+    if(checked("styles")){
+      main.push(heading("2. 텍스트 및 문단 서식",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({spacing:{after:100},children:[
+        new docx.TextRun({text:"굵게 ",bold:true,font,size:bodySize}),new docx.TextRun({text:"기울임 ",italics:true,font,size:bodySize}),new docx.TextRun({text:"밑줄 ",underline:{type:docx.UnderlineType.SINGLE,color:accent},font,size:bodySize}),
+        new docx.TextRun({text:"취소선 ",strike:true,font,size:bodySize}),new docx.TextRun({text:"강조 ",highlight:"yellow",font,size:bodySize}),new docx.TextRun({text:"색상 ",color:accent,font,size:bodySize}),
+        new docx.TextRun({text:"위첨자",superScript:true,font,size:bodySize}),new docx.TextRun({text:" / 아래첨자",subScript:true,font,size:bodySize})
+      ]}));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,spacing:{before:100,after:100},border:{top:{style:docx.BorderStyle.DOUBLE,size:6,color:accent},bottom:{style:docx.BorderStyle.DOUBLE,size:6,color:accent}},children:[new docx.TextRun({text:"가운데 정렬 · 위아래 이중 테두리 · 자간 적용",characterSpacing:20,bold:true,font,size:bodySize})]}));
+      main.push(new docx.Paragraph({tabStops:[{type:docx.TabStopType.LEFT,position:1200},{type:docx.TabStopType.RIGHT,position:8500}],children:[new docx.TextRun("왼쪽 탭"),new docx.Tab(),new docx.TextRun("중간 내용"),new docx.Tab(),new docx.TextRun("오른쪽 탭")]}));
+    }
+
+    if(checked("lists")){
+      main.push(heading("3. 목록 및 추진내용",docx.HeadingLevel.HEADING_1));
+      const bullets=val("bulletText").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      bullets.forEach(t=>main.push(new docx.Paragraph({text:t,bullet:{level:0},spacing:{after:70}})));
+      ["요구사항 정의","서식 설계","데이터 연결","검증 및 배포"].forEach(t=>main.push(new docx.Paragraph({text:t,numbering:{reference:"main-numbering",level:0},spacing:{after:70}})));
+      main.push(new docx.Paragraph({text:"세부 검증 항목",numbering:{reference:"main-numbering",level:1},spacing:{after:70}}));
+    }
+
+    if(checked("tables")){
+      main.push(heading("4. 복합 표 및 셀 병합",docx.HeadingLevel.HEADING_1));
+      const rows=[new docx.TableRow({tableHeader:true,children:[tableCell("추진과제",{bold:true,fill:accent,color:"FFFFFF"}),tableCell("담당",{bold:true,fill:accent,color:"FFFFFF"}),tableCell("진척률",{bold:true,fill:accent,color:"FFFFFF",align:docx.AlignmentType.CENTER}),tableCell("우선순위",{bold:true,fill:accent,color:"FFFFFF",align:docx.AlignmentType.CENTER})]})];
+      tasks.forEach((t,i)=>rows.push(new docx.TableRow({cantSplit:true,children:[tableCell(t.name,{fill:i%2?"F8FAFC":undefined}),tableCell(t.owner,{fill:i%2?"F8FAFC":undefined}),tableCell((Number(t.progress)||0)+"%",{fill:i%2?"F8FAFC":undefined,align:docx.AlignmentType.CENTER}),tableCell(t.priority,{fill:t.priority==="높음"?"FEE2E2":t.priority==="낮음"?"ECFDF3":"FEF3C7",align:docx.AlignmentType.CENTER})]})));
+      rows.push(new docx.TableRow({children:[tableCell("종합 의견",{bold:true,fill:"EAF1FF"}),tableCell("핵심 과제 우선 추진 및 분기별 점검",{columnSpan:3})]}));
+      main.push(new docx.Table({width:{size:100,type:docx.WidthType.PERCENTAGE},layout:docx.TableLayoutType.FIXED,borders:borderAll("CBD5E1",5),rows}));
+      main.push(new docx.Paragraph({spacing:{before:160},children:[new docx.TextRun({text:"셀 병합 예제: ",bold:true}),new docx.TextRun("마지막 행의 3개 열이 하나의 셀로 병합됨")]}));
+    }
+
+    if(checked("checkbox")){
+      main.push(heading("5. Word 체크박스",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({children:[new docx.CheckBox({checked:true,alias:"검토 완료"}),new docx.TextRun("  검토 완료     "),new docx.CheckBox({checked:false,alias:"승인 대기"}),new docx.TextRun("  승인 대기     "),new docx.CheckBox({checked:true,alias:"배포 가능"}),new docx.TextRun("  배포 가능")]}));
+    }
+
+    if(checked("links")){
+      main.push(heading("6. 하이퍼링크·책갈피·페이지 참조",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({children:[new docx.ExternalHyperlink({link:"https://docx.js.org/",children:[new docx.TextRun({text:"docx.js 공식 문서",style:"Hyperlink"})]}),new docx.TextRun("  |  "),new docx.InternalHyperlink({anchor:"overviewAnchor",children:[new docx.TextRun({text:"추진 개요로 이동",style:"Hyperlink"})]})]}));
+      if(docx.PageReference) main.push(new docx.Paragraph({children:[new docx.TextRun("추진 개요 책갈피 페이지: "),new docx.PageReference("overviewAnchor")]}));
+    }
+
+    if(checked("footnotes")){
+      main.push(heading("7. 각주",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({children:[new docx.TextRun("브라우저에서 생성되는 문서는 OOXML 표준을 기반으로 한다"),new docx.FootnoteReferenceRun(1),new docx.TextRun(". 각주에는 설명과 링크를 함께 넣을 수 있다"),new docx.FootnoteReferenceRun(2),new docx.TextRun(".")]}));
+    }
+
+    if(checked("comments")){
+      main.push(heading("8. 검토 주석",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({children:[new docx.TextRun("다음 문구에는 Word 주석이 연결되어 있다: "),new docx.CommentRangeStart(0),new docx.TextRun({text:"분기별 성과지표를 확정한다",bold:true,highlight:"yellow"}),new docx.CommentRangeEnd(0),new docx.TextRun({children:[new docx.CommentReference(0)]})]}));
+    }
+
+    if(checked("math")){
+      main.push(heading("9. 수식",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,children:[new docx.Math({children:[new docx.MathRun("ROI = "),new docx.MathFraction({numerator:[new docx.MathRun("Benefit - Cost")],denominator:[new docx.MathRun("Cost")]}),new docx.MathRun(" × 100")]} )]}));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,children:[new docx.Math({children:[new docx.MathRun("Score = "),new docx.MathRadical({children:[new docx.MathRun("Quality² + Speed²")]})]})]}));
+    }
+
+    if(checked("images")){
+      main.push(heading("10. 이미지 및 Canvas 차트",docx.HeadingLevel.HEADING_1));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,children:[new docx.ImageRun({type:logoType,data:logoData,transformation:{width:420,height:selectedImage?190:121},altText:{title:"사용자 이미지",description:"업로드 또는 자동 생성 이미지",name:"user-image"}})]}));
+      main.push(new docx.Paragraph({alignment:docx.AlignmentType.CENTER,spacing:{before:180},children:[new docx.ImageRun({type:"png",data:chartData,transformation:{width:610,height:277},altText:{title:"진척률 차트",description:"추진과제별 진척률 막대 차트",name:"progress-chart"}})]}));
+    }
+
+    if(checked("breaks")) main.push(new docx.Paragraph({children:[new docx.PageBreak()]}));
+    main.push(heading("11. 결론",docx.HeadingLevel.HEADING_1));
+    main.push(textP("docx.js를 활용하면 반복 문서의 내용과 서식을 코드로 표준화할 수 있다. 실제 업무 적용 시에는 입력 검증, 파일명 규칙, 템플릿 버전 관리, Word 호환성 검증을 함께 설계해야 한다.",{font,size:bodySize}));
+    sections.push({...sectionBase,children:main});
+
+    if(checked("columns")){
+      sections.push({...hf,properties:{...pageProps(accent,"portrait",checked("pageBorder")),type:docx.SectionType.NEXT_PAGE,column:{space:720,count:2,separate:true}},children:[heading("부록 A. 2단 편집 예제",docx.HeadingLevel.HEADING_1),textP((val("bodyText")+" ").repeat(9),{font,size:bodySize})]});
+    }
+    if(checked("landscape")){
+      const wideRows=[new docx.TableRow({tableHeader:true,children:["번호","과제명","담당부서","1분기","2분기","3분기","4분기","성과지표"].map(x=>tableCell(x,{bold:true,fill:accent,color:"FFFFFF",align:docx.AlignmentType.CENTER}))})];
+      tasks.forEach((t,i)=>wideRows.push(new docx.TableRow({children:[tableCell(i+1,{align:docx.AlignmentType.CENTER}),tableCell(t.name),tableCell(t.owner),tableCell("계획"),tableCell("추진"),tableCell("점검"),tableCell("완료"),tableCell((Number(t.progress)||0)+"%")]})));
+      sections.push({...hf,properties:{...pageProps(accent,"landscape",checked("pageBorder")),type:docx.SectionType.NEXT_PAGE},children:[heading("부록 B. 가로 방향 일정표",docx.HeadingLevel.HEADING_1),new docx.Table({width:{size:100,type:docx.WidthType.PERCENTAGE},borders:borderAll(),rows:wideRows})]});
+    }
+
+    const options={
+      creator:val("author"),lastModifiedBy:val("author"),title:val("docTitle"),subject:val("docSubtitle"),description:val("summary"),keywords:"docx.js, DOCX, 문서자동화, OOXML",revision:1,
+      customProperties:[{name:"Department",value:val("department")},{name:"DocumentNumber",value:val("docNumber")},{name:"Recipient",value:val("recipient")}],
+      background:checked("pageBorder")?{color:cleanHex(val("background"))}:undefined,
+      evenAndOddHeaderAndFooters:checked("headerFooter"),features:{updateFields:true},
+      styles:{default:{document:{run:{font,size:bodySize,color:"172033"},paragraph:{spacing:{line:320,after:100}}},hyperlink:{run:{color:accent,underline:{type:docx.UnderlineType.SINGLE,color:accent}}}},paragraphStyles:[
+        {id:"Title",name:"Title",basedOn:"Normal",next:"Normal",quickFormat:true,run:{size:48,bold:true,color:"172033",font},paragraph:{spacing:{after:240},alignment:docx.AlignmentType.CENTER}},
+        {id:"Heading1",name:"Heading 1",basedOn:"Normal",next:"Normal",quickFormat:true,run:{size:30,bold:true,color:accent,font},paragraph:{spacing:{before:300,after:140},keepNext:true}},
+        {id:"Heading2",name:"Heading 2",basedOn:"Normal",next:"Normal",quickFormat:true,run:{size:26,bold:true,color:"334155",font},paragraph:{spacing:{before:240,after:100},keepNext:true}}
+      ]},
+      numbering:{config:[{reference:"main-numbering",levels:[{level:0,format:docx.LevelFormat.DECIMAL,text:"%1.",alignment:docx.AlignmentType.LEFT,style:{paragraph:{indent:{left:720,hanging:360}}}},{level:1,format:docx.LevelFormat.LOWER_LETTER,text:"%2)",alignment:docx.AlignmentType.LEFT,style:{paragraph:{indent:{left:1200,hanging:360}}}}]}]},
+      sections
+    };
+    if(checked("footnotes")) options.footnotes={1:{children:[new docx.Paragraph("OOXML: Office Open XML 문서 형식") ]},2:{children:[new docx.Paragraph({children:[new docx.TextRun("공식 문서: "),new docx.ExternalHyperlink({link:"https://docx.js.org/",children:[new docx.TextRun({text:"docx.js.org",style:"Hyperlink"})]})]})]}};
+    if(checked("comments")) options.comments={children:[{id:0,author:val("author")||"Reviewer",date:new Date(),children:[new docx.Paragraph("성과지표의 산식과 데이터 출처를 최종 보고 전에 확인하세요.")]}]};
+    return new docx.Document(options);
+  }
+
+  async function generate(){
+    setBusy(true); $("successBox").classList.remove("show"); log("DOCX 생성을 시작합니다.");
+    try{
+      const doc=buildDocument(); log("문서 구조 및 선택 기능 구성을 완료했습니다.","ok");
+      const blob=await docx.Packer.toBlob(doc); const name=safeFilename(val("filename"));
+      downloadBlob(blob,name); generatedCount++; $("statGenerated").textContent=generatedCount;
+      const kb=(blob.size/1024).toFixed(1); const now=new Date().toLocaleString("ko-KR");
+      $("resultInfo").innerHTML=`<strong>${name}</strong><br>크기: ${kb} KB<br>생성: ${now}<br>선택 기능: ${document.querySelectorAll("#featureToggles input:checked").length}개`;
+      $("successBox").innerHTML=`<strong>DOCX 생성 완료</strong><br>${name} · ${kb} KB`; $("successBox").classList.add("show");
+      log(`${name} 생성 완료 (${kb} KB)`,"ok"); toast("DOCX 파일을 생성했습니다.");
+    }catch(err){ console.error(err); log("오류: "+(err?.message||err),"error"); toast("생성 실패: "+(err?.message||err),true); document.querySelector('[data-tab="log"]').click(); }
+    finally{setBusy(false);}
+  }
+
+  function resetAll(){ Object.entries(defaults).forEach(([k,v])=>{if($(k)) $(k).value=v;}); FEATURES.forEach(f=>$("f_"+f.id).checked=true); $("taskRows").innerHTML="";defaultTasks.forEach(addTaskRow); selectedImage=null;$("imagePreview").src="";$("imagePreview").classList.remove("show");updateFeatureCount();updatePreview();log("샘플 기본값으로 초기화했습니다.","warn");toast("초기화했습니다."); }
+  function saveConfig(){ const blob=new Blob([JSON.stringify(getConfig(),null,2)],{type:"application/json"});downloadBlob(blob,"docxjs_demo_config.json");log("설정 JSON 파일을 저장했습니다.","ok"); }
+  function handleImage(file){
+    if(!file) return; if(!/^image\/(png|jpeg)$/.test(file.type)){toast("PNG 또는 JPG 이미지만 사용할 수 있습니다.",true);return;}
+    const reader=new FileReader();reader.onload=()=>{const data=new Uint8Array(reader.result);selectedImage={data,type:file.type==="image/png"?"png":"jpg",name:file.name};const url=URL.createObjectURL(file);$("imagePreview").src=url;$("imagePreview").classList.add("show");log(`이미지 선택: ${file.name} (${(file.size/1024).toFixed(1)} KB)`,"ok");};reader.readAsArrayBuffer(file);
+  }
+
+  function setupEvents(){
+    document.querySelectorAll(".live").forEach(el=>el.addEventListener("input",updatePreview));
+    document.querySelectorAll(".tab").forEach(tab=>tab.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));tab.classList.add("active");$("tab-"+tab.dataset.tab).classList.add("active");}));
+    $("generateBtn").addEventListener("click",generate);$("generateTopBtn").addEventListener("click",generate);$("previewRefreshBtn").addEventListener("click",()=>{updatePreview();toast("미리보기를 갱신했습니다.");});
+    $("allOnBtn").addEventListener("click",()=>{document.querySelectorAll("#featureToggles input").forEach(x=>x.checked=true);updateFeatureCount();});$("allOffBtn").addEventListener("click",()=>{document.querySelectorAll("#featureToggles input").forEach(x=>x.checked=false);updateFeatureCount();});
+    $("addRowBtn").addEventListener("click",()=>addTaskRow({name:"신규 과제",owner:"담당부서",progress:"0",priority:"보통"}));$("resetBtn").addEventListener("click",resetAll);
+    $("saveConfigBtn").addEventListener("click",saveConfig);$("loadConfigBtn").addEventListener("click",()=>$("configInput").click());$("configInput").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{applyConfig(JSON.parse(r.result));log("설정 파일을 불러왔습니다.","ok");toast("설정을 불러왔습니다.");}catch(err){toast("설정 파일 형식이 올바르지 않습니다.",true);}};r.readAsText(f);});
+    $("dropzone").addEventListener("click",()=>$("imageInput").click());$("imageInput").addEventListener("change",e=>handleImage(e.target.files[0]));
+    ["dragenter","dragover"].forEach(n=>$("dropzone").addEventListener(n,e=>{e.preventDefault();$("dropzone").classList.add("drag");}));["dragleave","drop"].forEach(n=>$("dropzone").addEventListener(n,e=>{e.preventDefault();$("dropzone").classList.remove("drag");}));$("dropzone").addEventListener("drop",e=>handleImage(e.dataTransfer.files[0]));
+    $("clearImageBtn").addEventListener("click",e=>{e.stopPropagation();selectedImage=null;$("imageInput").value="";$("imagePreview").classList.remove("show");log("사용자 이미지를 초기화했습니다.","warn");});
+    $("clearLogBtn").addEventListener("click",()=>$("logBox").innerHTML="");
+    $("copyCodeBtn").addEventListener("click",async()=>{try{await navigator.clipboard.writeText($("codeBox").textContent);toast("코드를 복사했습니다.");}catch{toast("브라우저에서 클립보드 접근을 허용하지 않았습니다.",true);}});
+  }
+
+  function initCode(){
+    $("codeBox").textContent=`<script src="https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js"><\/script>\n<script>\nconst { Document, Paragraph, TextRun, Packer } = docx;\n\nconst documentFile = new Document({\n  creator: "작성자",\n  title: "문서 제목",\n  sections: [{\n    children: [\n      new Paragraph({\n        children: [\n          new TextRun({ text: "Hello DOCX", bold: true })\n        ]\n      })\n    ]\n  }]\n});\n\nconst blob = await Packer.toBlob(documentFile);\nconst url = URL.createObjectURL(blob);\nconst link = document.createElement("a");\nlink.href = url;\nlink.download = "sample.docx";\nlink.click();\nURL.revokeObjectURL(url);\n<\/script>`;
+  }
+
+  function init(){
+    initFeatures(); defaultTasks.forEach(addTaskRow); setupEvents(); initCode(); updatePreview();
+    if(typeof window.docx!=="undefined"){$("libStatus").classList.add("ok");$("libStatus").querySelector("span:last-child").textContent="docx 9.7.1 준비 완료";log("docx.js 9.7.1 라이브러리를 불러왔습니다.","ok");}
+    else{$("libStatus").classList.add("bad");$("libStatus").querySelector("span:last-child").textContent="라이브러리 로드 실패";log("docx.js 로드 실패: CDN 연결을 확인하세요.","error");}
+  }
+  init();
+})();
+</script>
+</body>
+</html>
