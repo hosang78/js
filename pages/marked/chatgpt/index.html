@@ -1,0 +1,1041 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Marked.js의 Markdown 파싱, 옵션, 토큰, 렌더러, 훅, 사용자 확장 및 DOMPurify 보안 처리를 실험하는 단일 HTML 페이지" />
+  <title>Marked Feature Lab · Markdown Playground</title>
+  <!-- 폐쇄망에서는 아래 두 파일을 ./assets/ 폴더에 배치하면 CDN보다 먼저 로드됩니다. -->
+  <script src="./assets/marked.umd.js"></script>
+  <script>if (!window.marked) document.write('<script src="https://cdn.jsdelivr.net/npm/marked@18.0.4/lib/marked.umd.js"><\/script>');</script>
+  <script src="./assets/purify.min.js"></script>
+  <script>if (!window.DOMPurify) document.write('<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"><\/script>');</script>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --surface: #ffffff;
+      --surface-2: #f2f5fb;
+      --line: #dfe5f0;
+      --line-strong: #cbd5e1;
+      --text: #172033;
+      --muted: #64748b;
+      --primary: #2058d5;
+      --primary-dark: #1743a8;
+      --primary-soft: #eaf0ff;
+      --success: #0a8f62;
+      --success-soft: #e6f8f1;
+      --warning: #b45309;
+      --warning-soft: #fff4df;
+      --danger: #c2413b;
+      --danger-soft: #fff0ef;
+      --code: #111827;
+      --shadow: 0 16px 40px rgba(21, 33, 65, .08);
+      --radius: 16px;
+      --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Noto Sans Mono CJK KR", monospace;
+    }
+    [data-theme="dark"] {
+      --bg: #101521;
+      --surface: #171e2d;
+      --surface-2: #202a3d;
+      --line: #303c52;
+      --line-strong: #42506a;
+      --text: #edf2ff;
+      --muted: #aab7ce;
+      --primary: #7ca7ff;
+      --primary-dark: #9bbcff;
+      --primary-soft: #1e3158;
+      --success: #50d8a8;
+      --success-soft: #103a31;
+      --warning: #f6bd62;
+      --warning-soft: #453114;
+      --danger: #ff9f9a;
+      --danger-soft: #482420;
+      --code: #0c111c;
+      --shadow: 0 16px 40px rgba(0, 0, 0, .24);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-width: 320px;
+    }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 22px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 250px; }
+    .brand-mark {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border-radius: 11px; background: linear-gradient(135deg, var(--primary), #7b61ff);
+      color: white; font-weight: 900; box-shadow: 0 10px 24px rgba(32, 88, 213, .28);
+    }
+    .brand h1 { font-size: 15px; margin: 0; letter-spacing: -.2px; }
+    .brand p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .button, .icon-btn, .tab, .template-btn {
+      border: 1px solid var(--line); background: var(--surface); color: var(--text);
+      border-radius: 10px; transition: .18s ease; font-weight: 700;
+    }
+    .button:hover, .icon-btn:hover, .tab:hover, .template-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+    .button { padding: 9px 12px; font-size: 12px; }
+    .button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .button.primary:hover { background: var(--primary-dark); color: #fff; }
+    .button.danger { background: var(--danger-soft); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, var(--line)); }
+    .button[disabled], .icon-btn[disabled] { opacity: .48; cursor: not-allowed; transform: none; }
+    .workspace {
+      display: grid; grid-template-columns: 270px minmax(360px, .9fr) minmax(420px, 1.1fr);
+      min-height: calc(100vh - 68px);
+    }
+    .sidebar {
+      padding: 18px 14px; border-right: 1px solid var(--line); background: var(--surface);
+      overflow: auto; max-height: calc(100vh - 68px); position: sticky; top: 68px;
+    }
+    .side-section { padding: 0 5px 18px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+    .side-section:last-child { border-bottom: 0; }
+    .section-label { display: block; margin: 0 0 10px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .07em; }
+    .template-list, .feature-list, .outline-list { display: grid; gap: 7px; }
+    .template-btn { padding: 10px; text-align: left; font-size: 12px; }
+    .template-btn.active { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+    .feature-row { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .feature-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex: 0 0 auto; }
+    .outline-empty { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .outline-link { border: 0; background: transparent; color: var(--muted); padding: 5px 0; text-align: left; font-size: 12px; line-height: 1.35; }
+    .outline-link:hover { color: var(--primary); }
+    .outline-link.depth-2 { padding-left: 10px; }
+    .outline-link.depth-3 { padding-left: 20px; }
+    .outline-link.depth-4, .outline-link.depth-5, .outline-link.depth-6 { padding-left: 30px; }
+    .main-column, .preview-column { min-width: 0; }
+    .main-column { border-right: 1px solid var(--line); background: var(--bg); }
+    .panel-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
+    .panel-title-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .panel-title-line h2 { margin: 0; font-size: 14px; }
+    .status-inline { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .status-led { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px var(--success-soft); }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+    .icon-btn { min-width: 30px; height: 30px; padding: 4px 8px; font-size: 12px; font-family: var(--mono); }
+    .icon-btn.wide { font-family: var(--font); font-size: 11px; }
+    .editor-wrap { position: relative; height: calc(100vh - 198px); min-height: 470px; }
+    #editor {
+      display: block; width: 100%; height: 100%; resize: none; border: 0; outline: 0;
+      background: var(--bg); color: var(--text); padding: 20px; font-family: var(--mono); font-size: 13px;
+      line-height: 1.72; tab-size: 2;
+    }
+    .editor-footer { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--surface); }
+    .metric { padding: 9px 14px; border-right: 1px solid var(--line); min-width: 0; }
+    .metric:last-child { border-right: 0; }
+    .metric b { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
+    .metric span { color: var(--muted); font-size: 10px; }
+    .preview-column { display: grid; grid-template-rows: auto auto 1fr; background: var(--surface); }
+    .preview-tools { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+    .tab { padding: 7px 10px; font-size: 12px; }
+    .tab.active { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+    .seg-divider { width: 1px; height: 20px; background: var(--line); margin: 0 2px; }
+    .render-meta { padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .render-meta strong { color: var(--text); }
+    .view { overflow: auto; min-height: 0; }
+    .view-panel { display: none; height: 100%; }
+    .view-panel.active { display: block; }
+    #preview { height: 100%; overflow: auto; padding: 30px clamp(18px, 3vw, 46px) 70px; }
+    .code-view { height: 100%; overflow: auto; margin: 0; padding: 22px; background: var(--code); color: #d7e1ff; font-family: var(--mono); font-size: 12px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+    .token-view { height: 100%; overflow: auto; padding: 18px; background: var(--bg); }
+    .token-summary { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+    .token-chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 5px 8px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); font: 11px var(--mono); }
+    .token-tree { margin: 0; padding: 14px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
+    .inline-demo { padding: 28px; }
+    .inline-box { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); margin-bottom: 14px; }
+    .inline-box label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 800; }
+    #inlineInput { width: 100%; border: 1px solid var(--line-strong); border-radius: 9px; padding: 10px; background: var(--surface); color: var(--text); outline: none; font-family: var(--mono); font-size: 12px; }
+    #inlineOutput { padding: 12px; min-height: 52px; border: 1px dashed var(--line-strong); border-radius: 9px; background: var(--surface); }
+    .settings { padding: 18px; overflow: auto; height: 100%; background: var(--bg); }
+    .settings-grid { display: grid; gap: 12px; }
+    .setting-card { padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+    .switch-line { display: flex; gap: 10px; align-items: flex-start; }
+    .switch-line input { margin-top: 2px; accent-color: var(--primary); }
+    .switch-line b { display: block; font-size: 13px; }
+    .switch-line small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .setting-card code { font-family: var(--mono); font-size: 11px; }
+    .info-callout { margin-top: 16px; padding: 12px; border-radius: 10px; color: var(--warning); background: var(--warning-soft); font-size: 11px; line-height: 1.6; }
+
+    /* Markdown output */
+    .markdown-body { font-size: 15px; line-height: 1.75; color: var(--text); }
+    .markdown-body > :first-child { margin-top: 0; }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { line-height: 1.32; scroll-margin-top: 88px; color: var(--text); }
+    .markdown-body h1 { font-size: 2em; margin: 0 0 .75em; padding-bottom: .38em; border-bottom: 1px solid var(--line); }
+    .markdown-body h2 { font-size: 1.5em; margin: 2em 0 .72em; padding-bottom: .3em; border-bottom: 1px solid var(--line); }
+    .markdown-body h3 { font-size: 1.23em; margin: 1.6em 0 .5em; }
+    .markdown-body h4 { font-size: 1.05em; margin: 1.4em 0 .45em; }
+    .markdown-body p { margin: .8em 0; }
+    .markdown-body a { color: var(--primary); text-decoration: none; font-weight: 650; }
+    .markdown-body a:hover { text-decoration: underline; }
+    .heading-anchor { margin-left: .45em; color: var(--muted) !important; text-decoration: none !important; font-size: .72em; opacity: .45; }
+    .markdown-body h1:hover .heading-anchor, .markdown-body h2:hover .heading-anchor, .markdown-body h3:hover .heading-anchor, .markdown-body h4:hover .heading-anchor { opacity: 1; }
+    .external-mark { display: inline-block; margin-left: 3px; font-size: .78em; opacity: .72; }
+    .markdown-body blockquote { margin: 1.1em 0; padding: .2em 1em; color: var(--muted); border-left: 4px solid var(--primary); background: var(--primary-soft); border-radius: 0 8px 8px 0; }
+    .markdown-body ul, .markdown-body ol { padding-left: 1.6em; }
+    .markdown-body li { margin: .28em 0; }
+    .markdown-body li input[type="checkbox"] { margin-right: .45em; accent-color: var(--primary); }
+    .markdown-body hr { border: 0; height: 1px; background: var(--line); margin: 2em 0; }
+    .markdown-body code { padding: .18em .38em; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; color: color-mix(in srgb, var(--primary) 72%, var(--text)); font-family: var(--mono); font-size: .87em; }
+    .markdown-body pre { overflow: auto; padding: 15px; border-radius: 12px; background: var(--code); color: #d7e1ff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+    .markdown-body pre code { background: transparent; border: 0; padding: 0; color: inherit; font-size: .88em; }
+    .markdown-body mark { padding: .08em .25em; border-radius: 4px; color: inherit; background: #ffe38b; }
+    .table-scroll { overflow-x: auto; margin: 1em 0; border: 1px solid var(--line); border-radius: 10px; }
+    .markdown-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .markdown-body th, .markdown-body td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+    .markdown-body th { background: var(--surface-2); font-weight: 800; }
+    .markdown-body tr:last-child td { border-bottom: 0; }
+    .markdown-body img { max-width: 100%; border-radius: 10px; border: 1px solid var(--line); }
+    .markdown-body .callout { margin: 1em 0; border-radius: 12px; padding: 13px 16px; border: 1px solid var(--line); border-left-width: 5px; background: var(--surface-2); }
+    .markdown-body .callout p:last-child { margin-bottom: 0; }
+    .callout-title { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 900; }
+    .callout.info { border-left-color: var(--primary); }
+    .callout.tip, .callout.success { border-left-color: var(--success); background: var(--success-soft); }
+    .callout.warning { border-left-color: var(--warning); background: var(--warning-soft); }
+    .callout.danger { border-left-color: var(--danger); background: var(--danger-soft); }
+    .dropzone { position: absolute; inset: 10px; display: none; place-items: center; border: 2px dashed var(--primary); border-radius: 14px; background: color-mix(in srgb, var(--primary-soft) 88%, transparent); color: var(--primary); font-weight: 900; z-index: 3; }
+    .editor-wrap.dragover .dropzone { display: grid; }
+    .toast { position: fixed; right: 18px; bottom: 18px; z-index: 100; padding: 12px 14px; border-radius: 10px; background: var(--text); color: var(--surface); font-size: 12px; box-shadow: var(--shadow); transform: translateY(110px); opacity: 0; transition: .25s ease; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(8, 15, 32, .56); }
+    .modal.open { display: flex; }
+    .modal-card { width: min(720px, 100%); max-height: min(760px, 90vh); overflow: auto; padding: 24px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+    .modal-card h2 { margin: 0 0 12px; font-size: 18px; }
+    .modal-card p, .modal-card li { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .modal-card code { padding: 2px 5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; font-family: var(--mono); font-size: 11px; color: var(--text); }
+    .modal-foot { display: flex; justify-content: flex-end; margin-top: 18px; }
+    @media (max-width: 1180px) { .workspace { grid-template-columns: 230px minmax(330px, .9fr) minmax(380px, 1.1fr); } }
+    @media (max-width: 980px) {
+      .workspace { grid-template-columns: 225px 1fr; }
+      .preview-column { grid-column: 2; border-top: 1px solid var(--line); min-height: 700px; }
+      .main-column { border-right: 0; }
+      .sidebar { grid-row: span 2; }
+    }
+    @media (max-width: 690px) {
+      .topbar { align-items: flex-start; padding: 12px 14px; }
+      .brand { min-width: 0; }
+      .brand p { display: none; }
+      .top-actions { gap: 5px; }
+      .top-actions .button:not(.primary) { padding: 8px 9px; font-size: 11px; }
+      .workspace { display: block; }
+      .sidebar { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--line); }
+      .side-section { padding-bottom: 12px; margin-bottom: 12px; }
+      .template-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .feature-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .editor-wrap { height: 480px; min-height: 0; }
+      .preview-column { min-height: 600px; }
+      .editor-footer { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    }
+    @media print {
+      .topbar, .sidebar, .main-column, .preview-tools, .render-meta { display: none !important; }
+      .workspace { display: block; }
+      .preview-column { display: block; }
+      #preview { padding: 0; overflow: visible; }
+      body { background: #fff; }
+      .markdown-body { color: #111; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div>
+          <h1>Marked Feature Lab</h1>
+          <p>Markdown → Tokens → HTML · 브라우저 단일 페이지 실습</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="button" id="themeBtn" type="button" title="테마 전환">◐ 테마</button>
+        <button class="button" id="helpBtn" type="button">기능 안내</button>
+        <button class="button" id="downloadBtn" type="button">.md 저장</button>
+        <button class="button primary" id="copyHtmlBtn" type="button">HTML 복사</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar">
+        <section class="side-section">
+          <span class="section-label">SAMPLE DOCUMENTS</span>
+          <div class="template-list" id="templateList">
+            <button class="template-btn active" data-template="full" type="button">전체 기능 문서</button>
+            <button class="template-btn" data-template="readme" type="button">README</button>
+            <button class="template-btn" data-template="meeting" type="button">회의록</button>
+            <button class="template-btn" data-template="api" type="button">API 명세</button>
+            <button class="template-btn" data-template="security" type="button">보안 처리 예시</button>
+          </div>
+        </section>
+        <section class="side-section">
+          <span class="section-label">ACTIVATED FEATURES</span>
+          <div class="feature-list">
+            <div class="feature-row"><i class="feature-dot"></i>GFM · 표 · 체크리스트</div>
+            <div class="feature-row"><i class="feature-dot"></i>Lexer / Parser 토큰</div>
+            <div class="feature-row"><i class="feature-dot"></i>Heading Renderer</div>
+            <div class="feature-row"><i class="feature-dot"></i>Link Renderer</div>
+            <div class="feature-row"><i class="feature-dot"></i>Hooks</div>
+            <div class="feature-row"><i class="feature-dot"></i>walkTokens</div>
+            <div class="feature-row"><i class="feature-dot"></i>::: Callout 확장</div>
+            <div class="feature-row"><i class="feature-dot"></i>== Highlight 확장</div>
+            <div class="feature-row"><i class="feature-dot"></i>DOMPurify 정화</div>
+          </div>
+        </section>
+        <section class="side-section">
+          <span class="section-label">DOCUMENT OUTLINE</span>
+          <div class="outline-list" id="outline"><div class="outline-empty">렌더링 후 제목 목차가 표시됩니다.</div></div>
+        </section>
+      </aside>
+
+      <section class="main-column" aria-label="Markdown editor">
+        <div class="panel-header">
+          <div class="panel-title-line">
+            <h2>Markdown 원문</h2>
+            <div class="status-inline"><i class="status-led" id="engineLed"></i><span id="engineStatus">Marked 로딩 확인 중</span></div>
+          </div>
+          <div class="toolbar" aria-label="Markdown toolbar">
+            <button class="icon-btn" data-action="heading" type="button" title="제목">H</button>
+            <button class="icon-btn" data-action="bold" type="button" title="굵게">B</button>
+            <button class="icon-btn" data-action="italic" type="button" title="기울임">I</button>
+            <button class="icon-btn" data-action="strike" type="button" title="취소선">S</button>
+            <button class="icon-btn" data-action="link" type="button" title="링크">↗</button>
+            <button class="icon-btn" data-action="code" type="button" title="인라인 코드">&lt;/&gt;</button>
+            <button class="icon-btn wide" data-action="table" type="button" title="GFM 표 삽입">표</button>
+            <button class="icon-btn wide" data-action="task" type="button" title="체크리스트 삽입">체크</button>
+            <button class="icon-btn wide" data-action="quote" type="button" title="인용문 삽입">인용</button>
+            <button class="icon-btn wide" data-action="callout" type="button" title="사용자 확장 :::callout 삽입">Callout</button>
+            <button class="icon-btn wide" data-action="highlight" type="button" title="사용자 확장 ==highlight== 삽입">형광</button>
+            <span class="seg-divider"></span>
+            <button class="icon-btn wide" id="resetBtn" type="button" title="현재 샘플로 초기화">초기화</button>
+            <button class="icon-btn wide" id="openFileBtn" type="button" title="Markdown 파일 불러오기">파일 열기</button>
+            <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden />
+          </div>
+        </div>
+        <div class="editor-wrap" id="editorWrap">
+          <div class="dropzone">Markdown 파일을 놓으면 불러옵니다</div>
+          <textarea id="editor" spellcheck="false" aria-label="Markdown source"></textarea>
+        </div>
+        <div class="editor-footer" aria-label="Document statistics">
+          <div class="metric"><b id="charCount">0</b><span>문자 수</span></div>
+          <div class="metric"><b id="wordCount">0</b><span>단어 수</span></div>
+          <div class="metric"><b id="lineCount">0</b><span>줄 수</span></div>
+          <div class="metric"><b id="renderTime">0 ms</b><span>파싱 시간</span></div>
+        </div>
+      </section>
+
+      <section class="preview-column" aria-label="Marked output viewer">
+        <div class="panel-header">
+          <div class="panel-title-line">
+            <h2>Marked 출력 탐색기</h2>
+            <div class="status-inline"><span id="modeStatus">동기 파싱</span></div>
+          </div>
+        </div>
+        <div class="preview-tools">
+          <button class="tab active" type="button" data-tab="preview">Preview</button>
+          <button class="tab" type="button" data-tab="html">HTML</button>
+          <button class="tab" type="button" data-tab="tokens">Tokens</button>
+          <button class="tab" type="button" data-tab="inline">Inline</button>
+          <button class="tab" type="button" data-tab="settings">Settings</button>
+          <span class="seg-divider"></span>
+          <button class="icon-btn wide" id="printBtn" type="button" title="미리보기 인쇄">인쇄</button>
+          <button class="icon-btn wide" id="copyMdBtn" type="button" title="Markdown 복사">MD 복사</button>
+        </div>
+        <div class="render-meta">
+          <span><strong id="tokenHeadline">0개</strong> 토큰 · <strong id="htmlSize">0 B</strong> HTML</span>
+          <span id="sanitizerStatus">DOMPurify 활성</span>
+        </div>
+        <div class="view">
+          <div class="view-panel active" id="view-preview"><article id="preview" class="markdown-body"></article></div>
+          <div class="view-panel" id="view-html"><pre id="htmlOutput" class="code-view"></pre></div>
+          <div class="view-panel" id="view-tokens"><div class="token-view"><div id="tokenSummary" class="token-summary"></div><pre id="tokenOutput" class="token-tree"></pre></div></div>
+          <div class="view-panel" id="view-inline">
+            <div class="inline-demo">
+              <div class="inline-box">
+                <label for="inlineInput">marked.parseInline() 입력</label>
+                <input id="inlineInput" value="**굵게** · _기울임_ · `code` · ==custom highlight== · [링크](https://marked.js.org)" />
+              </div>
+              <div class="inline-box">
+                <label>인라인 HTML 출력</label>
+                <pre id="inlineHtml" class="code-view" style="height:auto;max-height:220px"></pre>
+              </div>
+              <div class="inline-box">
+                <label>렌더링 결과</label>
+                <div id="inlineOutput"></div>
+              </div>
+            </div>
+          </div>
+          <div class="view-panel" id="view-settings">
+            <div class="settings">
+              <div class="settings-grid">
+                <div class="setting-card">
+                  <label class="switch-line"><input id="gfmToggle" type="checkbox" checked /><span><b>GFM</b><small>표, 취소선, 체크리스트, 자동 URL 처리 등 GitHub Flavored Markdown 기능을 사용합니다.</small></span></label>
+                </div>
+                <div class="setting-card">
+                  <label class="switch-line"><input id="breaksToggle" type="checkbox" /><span><b>단일 줄바꿈을 &lt;br&gt;로 변환</b><small><code>breaks: true</code>. GFM이 활성화되어야 동작합니다.</small></span></label>
+                </div>
+                <div class="setting-card">
+                  <label class="switch-line"><input id="sanitizeToggle" type="checkbox" checked /><span><b>DOMPurify HTML 정화</b><small>Marked 출력 HTML을 DOMPurify로 정화한 뒤 미리보기에 삽입합니다. 신뢰할 수 없는 입력에서는 켜 두십시오.</small></span></label>
+                </div>
+                <div class="setting-card">
+                  <label class="switch-line"><input id="asyncToggle" type="checkbox" /><span><b>비동기 walkTokens 데모</b><small><code>async: true</code>와 async <code>walkTokens</code> 경로를 실험합니다. 링크 토큰에 비동기 메타데이터를 적용합니다.</small></span></label>
+                </div>
+                <div class="setting-card">
+                  <label class="switch-line"><input id="frontMatterToggle" type="checkbox" checked /><span><b>Front matter 제거 Hook</b><small><code>preprocess</code> hook에서 맨 앞의 YAML 형식 front matter 블록을 제거합니다.</small></span></label>
+                </div>
+                <div class="setting-card">
+                  <label class="switch-line"><input id="tocToggle" type="checkbox" checked /><span><b>Heading 목차 생성</b><small>사용자 Heading renderer가 ID와 앵커를 붙이고, 미리보기 DOM에서 목차를 생성합니다.</small></span></label>
+                </div>
+              </div>
+              <div class="info-callout">주의: Marked 자체의 <code>sanitize</code> 옵션은 제거되었습니다. 이 페이지는 Marked 결과에 별도 DOMPurify 처리를 적용하여 이를 시연합니다.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-card">
+      <h2 id="helpTitle">이 샘플에서 확인할 Marked 기능</h2>
+      <ol>
+        <li><b>기본 파싱:</b> 제목, 목록, 인용문, 코드, 링크, 이미지, HTML, 수평선</li>
+        <li><b>GFM:</b> 표, 취소선, 체크리스트, 자동 URL, 단일 줄바꿈 옵션</li>
+        <li><b>Lexer / Parser:</b> 토큰 트리를 직접 확인하고, 같은 원문이 HTML로 변환되는 과정을 비교</li>
+        <li><b>Renderer override:</b> 제목에 앵커 ID를 추가하고, 외부 링크에 <code>target</code>/<code>rel</code>과 표시를 추가</li>
+        <li><b>Hooks:</b> <code>preprocess</code>로 front matter 제거, <code>postprocess</code>로 표 컨테이너 래핑</li>
+        <li><b>walkTokens:</b> 모든 토큰을 순회해 통계를 수집하고 링크 제목을 보강</li>
+        <li><b>Custom extensions:</b> <code>:::tip ... :::</code> 블록과 <code>==text==</code> 인라인 강조 문법</li>
+        <li><b>보안:</b> Marked의 결과는 기본적으로 정화되지 않으므로 DOMPurify 적용 여부를 비교</li>
+        <li><b>비동기:</b> <code>async: true</code> 활성화 시 async <code>walkTokens</code>를 await하는 흐름</li>
+      </ol>
+      <div class="modal-foot"><button class="button primary" id="closeHelpBtn" type="button">확인</button></div>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const samples = {
+      full: `---
+title: Marked Feature Lab
+owner: ICT Strategy
+---
+
+# Marked Feature Lab
+
+Marked.js로 Markdown을 **HTML로 렌더링**하고, 토큰·확장·보안 처리를 한 화면에서 확인합니다.
+
+> "Markdown 원문 → Lexer 토큰 → Parser / Renderer → HTML" 흐름을 실시간으로 비교합니다.
+
+:::tip 실습 안내
+왼쪽 원문을 수정하면 즉시 미리보기와 HTML, 토큰 구조가 갱신됩니다. **형광 표시**와 Callout은 이 페이지에서 등록한 사용자 문법입니다.
+:::
+
+## 1. 기본 Markdown 문법
+
+- **굵게** / _기울임_ / ~~취소선~~ / ==사용자 확장 하이라이트==
+- 인라인 코드: \`marked.parse(markdown)\`
+- 외부 링크: [Marked 공식 문서](https://marked.js.org)
+- 자동 URL: https://github.com/markedjs/marked
+- 이스케이프: \\*별표를 문자로 표시\\*
+
+### 할 일 목록
+
+- [x] GFM 테이블 렌더링
+- [x] 사용자 Heading / Link Renderer
+- [x] Lexer 토큰 트리 확인
+- [ ] settings 탭에서 옵션 조합 변경
+
+## 2. GFM 테이블
+
+| 기능 | Marked 처리 지점 | 현재 샘플 |
+|:---|:---|---:|
+| 표 | GFM tokenizer → table renderer | 활성 |
+| 제목 앵커 | heading renderer override | 활성 |
+| Callout | block custom extension | 활성 |
+| 형광 | inline custom extension | 활성 |
+
+## 3. 코드 블록
+
+\`\`\`js
+const engine = new Marked({ gfm: true });
+const html = engine.parse('# Hello Marked');
+console.log(html);
+\`\`\`
+
+## 4. 인용문과 목록
+
+> 사용자가 입력한 Markdown을 HTML로 삽입할 때는 **DOMPurify 같은 별도 정화 도구**를 함께 적용하는 방식이 필요합니다.
+
+1. 원문 입력
+2. Lexer가 토큰 트리 생성
+3. walkTokens가 토큰 순회 및 보정
+4. Parser / Renderer가 HTML 생성
+5. DOMPurify가 최종 HTML 정화
+
+:::warning 운영 유의사항
+Marked는 Markdown 파서입니다. 신뢰할 수 없는 입력을 그대로 DOM에 넣지 말고, 반드시 별도의 HTML 정화 정책을 적용해야 합니다.
+:::
+
+## 5. 원본 HTML도 입력 가능
+
+<details>
+  <summary>HTML details 요소</summary>
+  <p>Marked는 HTML 블록도 출력할 수 있습니다. Settings에서 DOMPurify 적용 상태를 확인해 보세요.</p>
+</details>
+
+---
+
+끝입니다. 오른쪽 상단 탭에서 **HTML**, **Tokens**, **Inline**, **Settings**를 전환해 보세요.`,
+      readme: `# maritime-data-kit
+
+수산·해양 데이터 요약 화면을 위한 작은 Markdown 기반 문서 패키지입니다.
+
+[![Status](https://img.shields.io/badge/status-demo-2058d5)](https://example.com)
+
+## Quick start
+
+\`\`\`bash
+# npm 환경 예시
+npm install marked dompurify
+\`\`\`
+
+\`\`\`js
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
+const html = DOMPurify.sanitize(marked.parse('# 안전한 미리보기'));
+\`\`\`
+
+## Features
+
+- [x] Markdown 미리보기
+- [x] Token inspection
+- [x] HTML sanitization
+- [ ] Export adapter
+
+:::info 프로젝트 원칙
+문서는 Markdown으로 작성하고, 브라우저에서는 정화된 HTML만 렌더링합니다.
+:::
+
+## License
+
+MIT`,
+      meeting: `---
+type: meeting-note
+---
+
+# AI 서비스 운영협의회 회의록
+
+- **일시**: 2026-07-01 10:00
+- **참석**: ICT전략실, 현업 부서 담당자
+- **작성**: 운영지원 담당
+
+## 논의 안건
+
+1. 부서별 문서요약 템플릿 표준화
+2. Markdown 기반 결과물의 내부 포털 표시 방식
+3. 외부 입력 데이터의 HTML 정화 기준
+
+## 결정 사항
+
+| 항목 | 결정 | 담당 | 기한 |
+|---|---|---|---|
+| Markdown 문서 | Marked 기반 공통 렌더러 검토 | ICT전략실 | 7월 2주 |
+| 보안 | DOMPurify 기본 적용 | 보안 담당 | 사전 검토 |
+| 템플릿 | 회의록 / 보고서 / FAQ 우선 | 현업 부서 | 상시 |
+
+:::success 확정
+Markdown 원문 보관과 HTML 표시를 분리하고, HTML 표시 직전 정화 단계를 적용합니다.
+:::
+
+## 후속 조치
+
+- [ ] 운영 환경 CDN 정책 확인
+- [ ] 폐쇄망용 로컬 라이브러리 배포본 준비
+- [ ] 샘플 문서 3종 추가 작성`,
+      api: `# Markdown Render API 명세
+
+## Endpoint
+
+\`POST /api/markdown/render\`
+
+## Request body
+
+\`\`\`json
+{
+  "markdown": "# 제목\\n\\n내용",
+  "options": {
+    "gfm": true,
+    "breaks": false,
+    "sanitize": true
+  }
+}
+\`\`\`
+
+## Response body
+
+\`\`\`json
+{
+  "html": "<h1>제목</h1>\\n<p>내용</p>\\n",
+  "tokenCount": 3,
+  "durationMs": 2.14
+}
+\`\`\`
+
+## Option matrix
+
+| 옵션 | 형식 | 기본 | 설명 |
+|---|---:|---:|---|
+| gfm | boolean | true | GitHub Flavored Markdown |
+| breaks | boolean | false | 단일 줄바꿈을 br로 출력 |
+| sanitize | boolean | true | DOMPurify 정화 적용 |
+| async | boolean | false | async walkTokens 지원 |
+
+:::danger 보안 계약
+<code>sanitize: false</code>는 신뢰된 관리자 입력 등 제한적인 상황에서만 허용하십시오.
+:::
+
+## Error response
+
+\`\`\`json
+{ "error": "MARKDOWN_PARSE_FAILED", "message": "입력 형식을 확인하십시오." }
+\`\`\``,
+      security: `# HTML 정화 처리 예시
+
+## 핵심 원칙
+
+Marked는 Markdown을 HTML로 변환합니다. **HTML 정화 기능이 내장된 보안 도구는 아닙니다.**
+
+:::warning 안전한 렌더링 순서
+1. Marked로 Markdown → HTML 변환
+2. DOMPurify로 허용 가능한 HTML만 정화
+3. 정화된 HTML만 <code>innerHTML</code>에 설정
+:::
+
+## 입력 HTML 예시
+
+아래 HTML은 정상적인 서식 예시입니다.
+
+<div style="padding:10px;border:1px solid #bbb;border-radius:8px">
+  <strong>안전한 안내 박스</strong>
+  <p>정화가 활성화된 상태에서 결과를 확인하십시오.</p>
+</div>
+
+## 코드 예시
+
+\`\`\`js
+const rawHtml = marked.parse(markdown);
+const safeHtml = DOMPurify.sanitize(rawHtml);
+preview.innerHTML = safeHtml;
+\`\`\`
+
+==Settings 탭에서 DOMPurify를 끄면 위험한 외부 입력을 처리하기에 적합하지 않은 상태가 됩니다.==`
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+    const editor = $('#editor');
+    const preview = $('#preview');
+    const htmlOutput = $('#htmlOutput');
+    const tokenOutput = $('#tokenOutput');
+    const tokenSummary = $('#tokenSummary');
+    const toast = $('#toast');
+    const editorWrap = $('#editorWrap');
+    const modeStatus = $('#modeStatus');
+    const engineStatus = $('#engineStatus');
+    const engineLed = $('#engineLed');
+    const gfmToggle = $('#gfmToggle');
+    const breaksToggle = $('#breaksToggle');
+    const sanitizeToggle = $('#sanitizeToggle');
+    const asyncToggle = $('#asyncToggle');
+    const frontMatterToggle = $('#frontMatterToggle');
+    const tocToggle = $('#tocToggle');
+    const sanitizerStatus = $('#sanitizerStatus');
+    const inlineInput = $('#inlineInput');
+    const inlineOutput = $('#inlineOutput');
+    const inlineHtml = $('#inlineHtml');
+    let currentTemplate = 'full';
+    let lastHtml = '';
+    let toastTimer;
+    let renderSequence = 0;
+
+    const escapeHtml = (value = '') => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    const stripHtml = (value = '') => {
+      const div = document.createElement('div');
+      div.innerHTML = value;
+      return div.textContent || div.innerText || '';
+    };
+
+    const slugify = (text, used) => {
+      const base = text.toString().toLowerCase().trim()
+        .replace(/<[^>]+>/g, '')
+        .replace(/[\s_]+/g, '-')
+        .replace(/[^\p{L}\p{N}\-]/gu, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || 'section';
+      const seen = used.get(base) || 0;
+      used.set(base, seen + 1);
+      return seen ? `${base}-${seen + 1}` : base;
+    };
+
+    function notice(message) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function getSettings() {
+      return {
+        gfm: gfmToggle.checked,
+        breaks: breaksToggle.checked,
+        sanitize: sanitizeToggle.checked,
+        async: asyncToggle.checked,
+        frontMatter: frontMatterToggle.checked,
+        toc: tocToggle.checked
+      };
+    }
+
+    function createMarkedEngine(settings, metrics) {
+      if (!window.marked || !window.marked.Marked) throw new Error('Marked 라이브러리를 불러오지 못했습니다. 네트워크 또는 CDN 경로를 확인하십시오.');
+      const usedHeadingIds = new Map();
+      const Marked = window.marked.Marked;
+      const engine = new Marked({ gfm: settings.gfm, breaks: settings.breaks, async: settings.async, silent: false });
+
+      const calloutExtension = {
+        name: 'callout',
+        level: 'block',
+        start(src) { return src.indexOf(':::'); },
+        tokenizer(src) {
+          const rule = /^:::(info|tip|success|warning|danger)(?:[ \t]+([^\n]+))?\n([\s\S]*?)\n:::(?:\n|$)/i;
+          const match = rule.exec(src);
+          if (!match) return false;
+          const token = {
+            type: 'callout', raw: match[0], kind: match[1].toLowerCase(), title: match[2] || '', tokens: []
+          };
+          token.tokens = this.lexer.blockTokens(match[3], []);
+          return token;
+        },
+        renderer(token) {
+          const icon = { info: 'i', tip: '✓', success: '✓', warning: '!', danger: '!' }[token.kind] || 'i';
+          const title = token.title || ({ info: '정보', tip: '팁', success: '완료', warning: '주의', danger: '중요' }[token.kind] || '안내');
+          return `<aside class="callout ${escapeHtml(token.kind)}"><div class="callout-title"><span>${icon}</span><span>${escapeHtml(title)}</span></div>${this.parser.parse(token.tokens)}</aside>`;
+        },
+        childTokens: ['tokens']
+      };
+
+      const highlightExtension = {
+        name: 'highlight',
+        level: 'inline',
+        start(src) { return src.indexOf('=='); },
+        tokenizer(src) {
+          const match = /^==([^=\n][\s\S]*?)==/.exec(src);
+          if (!match) return false;
+          return { type: 'highlight', raw: match[0], tokens: this.lexer.inlineTokens(match[1]) };
+        },
+        renderer(token) { return `<mark>${this.parser.parseInline(token.tokens)}</mark>`; },
+        childTokens: ['tokens']
+      };
+
+      const walkTokens = settings.async
+        ? async (token) => {
+            metrics.types[token.type] = (metrics.types[token.type] || 0) + 1;
+            metrics.total += 1;
+            if (token.type === 'link' && /^https?:\/\//i.test(token.href || '')) {
+              await Promise.resolve();
+              token.title = token.title ? `${token.title} · 비동기 확인` : '외부 링크 · 비동기 walkTokens';
+            }
+          }
+        : (token) => {
+            metrics.types[token.type] = (metrics.types[token.type] || 0) + 1;
+            metrics.total += 1;
+            if (token.type === 'link' && /^https?:\/\//i.test(token.href || '')) {
+              token.title = token.title ? `${token.title} · 외부 링크` : '외부 링크';
+            }
+          };
+
+      engine.use({
+        hooks: {
+          preprocess(markdown) {
+            let value = markdown.replace(/\r\n?/g, '\n');
+            if (settings.frontMatter) value = value.replace(/^---\n[\s\S]*?\n---\n?/, '');
+            return value;
+          },
+          postprocess(html) {
+            return html.replace(/<table>/g, '<div class="table-scroll"><table>').replace(/<\/table>/g, '</table></div>');
+          }
+        },
+        renderer: {
+          heading({ tokens, depth }) {
+            const content = this.parser.parseInline(tokens);
+            const id = slugify(stripHtml(content), usedHeadingIds);
+            return `<h${depth} id="${escapeHtml(id)}">${content}<a class="heading-anchor" href="#${escapeHtml(id)}" aria-label="${escapeHtml(stripHtml(content))} 링크">#</a></h${depth}>\n`;
+          },
+          link({ href, title, tokens }) {
+            const label = this.parser.parseInline(tokens || []);
+            const rawHref = href || '#';
+            const external = /^https?:\/\//i.test(rawHref);
+            const safeHref = escapeHtml(rawHref);
+            const safeTitle = title ? ` title="${escapeHtml(title)}"` : '';
+            const attrs = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+            return `<a href="${safeHref}"${safeTitle}${attrs}>${label}${external ? '<span class="external-mark" aria-hidden="true">↗</span>' : ''}</a>`;
+          }
+        },
+        extensions: [calloutExtension, highlightExtension],
+        walkTokens
+      });
+      return engine;
+    }
+
+    function compactTokens(tokens, maxDepth = 6, depth = 0) {
+      if (depth > maxDepth) return '[…]';
+      if (Array.isArray(tokens)) return tokens.map((token) => compactTokens(token, maxDepth, depth + 1));
+      if (!tokens || typeof tokens !== 'object') return tokens;
+      const result = {};
+      Object.keys(tokens).forEach((key) => {
+        if (key === 'raw' && typeof tokens[key] === 'string' && tokens[key].length > 120) {
+          result[key] = `${tokens[key].slice(0, 120)}…`;
+        } else if (key === 'links') {
+          result[key] = tokens[key];
+        } else if (key === 'tokens' || key === 'items' || key === 'header' || key === 'rows') {
+          result[key] = compactTokens(tokens[key], maxDepth, depth + 1);
+        } else if (typeof tokens[key] !== 'function') {
+          result[key] = tokens[key];
+        }
+      });
+      return result;
+    }
+
+    function updateStats(source, elapsed) {
+      $('#charCount').textContent = source.length.toLocaleString('ko-KR');
+      const words = source.trim() ? source.trim().split(/\s+/).filter(Boolean).length : 0;
+      $('#wordCount').textContent = words.toLocaleString('ko-KR');
+      $('#lineCount').textContent = source ? source.split('\n').length.toLocaleString('ko-KR') : '0';
+      $('#renderTime').textContent = `${elapsed.toFixed(2)} ms`;
+    }
+
+    function updateOutline() {
+      const outline = $('#outline');
+      if (!tocToggle.checked) {
+        outline.innerHTML = '<div class="outline-empty">Settings에서 Heading 목차 생성을 켜면 표시됩니다.</div>';
+        return;
+      }
+      const heads = Array.from(preview.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+      if (!heads.length) {
+        outline.innerHTML = '<div class="outline-empty">문서에 제목이 없습니다.</div>';
+        return;
+      }
+      outline.innerHTML = '';
+      heads.forEach((heading) => {
+        const button = document.createElement('button');
+        button.className = `outline-link depth-${Math.min(Number(heading.tagName.slice(1)), 4)}`;
+        button.type = 'button';
+        button.textContent = heading.textContent.replace(/#$/, '').trim();
+        button.addEventListener('click', () => heading.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        outline.appendChild(button);
+      });
+    }
+
+    function updateInline(engine, settings) {
+      const source = inlineInput.value;
+      try {
+        const raw = engine.parseInline(source);
+        if (settings.sanitize && !window.DOMPurify) throw new Error('DOMPurify 미로딩');
+        const safe = settings.sanitize ? window.DOMPurify.sanitize(raw) : raw;
+        inlineHtml.textContent = safe;
+        inlineOutput.innerHTML = safe;
+      } catch (error) {
+        inlineHtml.textContent = `오류: ${error.message}`;
+        inlineOutput.textContent = '인라인 파싱에 실패했습니다.';
+      }
+    }
+
+    async function render() {
+      const sequence = ++renderSequence;
+      const source = editor.value;
+      const settings = getSettings();
+      const metrics = { total: 0, types: {} };
+      const start = performance.now();
+      try {
+        const engine = createMarkedEngine(settings, metrics);
+        let rawHtml = engine.parse(source);
+        if (rawHtml && typeof rawHtml.then === 'function') rawHtml = await rawHtml;
+        if (sequence !== renderSequence) return;
+        if (settings.sanitize && !window.DOMPurify) {
+          throw new Error('DOMPurify를 불러오지 못했습니다. 보안상 정화된 미리보기를 생성하지 않았습니다. ./assets/purify.min.js 또는 CDN 연결을 확인하십시오.');
+        }
+        const safeHtml = settings.sanitize ? window.DOMPurify.sanitize(rawHtml) : rawHtml;
+        lastHtml = safeHtml;
+        preview.innerHTML = safeHtml;
+        htmlOutput.textContent = safeHtml;
+        sanitizerStatus.textContent = settings.sanitize ? 'DOMPurify 활성' : '정화 미적용';
+        sanitizerStatus.style.color = settings.sanitize ? 'var(--success)' : 'var(--danger)';
+        modeStatus.textContent = settings.async ? '비동기 walkTokens' : '동기 파싱';
+        updateOutline();
+        updateInline(engine, settings);
+
+        let tokens = [];
+        try {
+          tokens = engine.lexer ? engine.lexer(source) : window.marked.lexer(source, { gfm: settings.gfm, breaks: settings.breaks });
+        } catch (tokenError) {
+          tokens = [{ type: 'tokenization_error', message: tokenError.message }];
+        }
+        const displayTokens = compactTokens(tokens);
+        tokenOutput.textContent = JSON.stringify(displayTokens, null, 2);
+        const types = Object.entries(metrics.types).sort((a, b) => b[1] - a[1]);
+        tokenSummary.innerHTML = types.length
+          ? types.map(([type, count]) => `<span class="token-chip"><b>${escapeHtml(type)}</b> ${count}</span>`).join('')
+          : '<span class="token-chip">토큰 정보 준비 중</span>';
+        $('#tokenHeadline').textContent = `${metrics.total.toLocaleString('ko-KR')}개`;
+        $('#htmlSize').textContent = `${new Blob([safeHtml]).size.toLocaleString('ko-KR')} B`;
+        updateStats(source, performance.now() - start);
+        engineStatus.textContent = `Marked 준비 완료 · ${settings.gfm ? 'GFM' : '기본 문법'}`;
+        engineLed.style.background = 'var(--success)';
+      } catch (error) {
+        if (sequence !== renderSequence) return;
+        preview.innerHTML = `<div class="callout danger"><div class="callout-title"><span>!</span><span>렌더링 오류</span></div><p>${escapeHtml(error.message)}</p></div>`;
+        htmlOutput.textContent = `Error: ${error.stack || error.message}`;
+        tokenOutput.textContent = '토큰을 생성하지 못했습니다.';
+        tokenSummary.innerHTML = '<span class="token-chip">Error</span>';
+        engineStatus.textContent = 'Marked 로딩 또는 파싱 오류';
+        engineLed.style.background = 'var(--danger)';
+        updateStats(source, performance.now() - start);
+      }
+    }
+
+    let debounceTimer;
+    function scheduleRender() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(render, 120);
+    }
+
+    function setTemplate(name) {
+      currentTemplate = name;
+      editor.value = samples[name];
+      $$('.template-btn').forEach((button) => button.classList.toggle('active', button.dataset.template === name));
+      scheduleRender();
+    }
+
+    function insertAtSelection(before, after = '', placeholder = '텍스트') {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const selected = editor.value.slice(start, end) || placeholder;
+      editor.setRangeText(`${before}${selected}${after}`, start, end, 'select');
+      editor.focus();
+      scheduleRender();
+    }
+
+    const toolbarActions = {
+      heading: () => insertAtSelection('## ', '', '새 제목'),
+      bold: () => insertAtSelection('**', '**', '굵은 텍스트'),
+      italic: () => insertAtSelection('_', '_', '기울임 텍스트'),
+      strike: () => insertAtSelection('~~', '~~', '취소선'),
+      link: () => insertAtSelection('[', '](https://example.com)', '링크 텍스트'),
+      code: () => insertAtSelection('`', '`', 'code'),
+      table: () => insertAtSelection('\n| 항목 | 설명 |\n|---|---|\n| 값 | 내용 |\n', '', ''),
+      task: () => insertAtSelection('\n- [ ] 새 할 일\n', '', ''),
+      quote: () => insertAtSelection('\n> ', '', '인용문'),
+      callout: () => insertAtSelection('\n:::tip 안내\n', '\n:::\n', 'Callout 내용'),
+      highlight: () => insertAtSelection('==', '==', '강조할 내용')
+    };
+
+    async function copyText(text, message) {
+      try {
+        await navigator.clipboard.writeText(text);
+        notice(message);
+      } catch {
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        temp.remove();
+        notice(message);
+      }
+    }
+
+    function downloadMarkdown() {
+      const blob = new Blob([editor.value], { type: 'text/markdown;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'marked-feature-lab.md';
+      link.click();
+      URL.revokeObjectURL(link.href);
+      notice('Markdown 파일을 저장했습니다.');
+    }
+
+    function loadFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        editor.value = String(reader.result || '');
+        $$('.template-btn').forEach((button) => button.classList.remove('active'));
+        scheduleRender();
+        notice(`${file.name} 파일을 불러왔습니다.`);
+      };
+      reader.onerror = () => notice('파일을 읽지 못했습니다.');
+      reader.readAsText(file, 'utf-8');
+    }
+
+    // Event binding
+    $$('.template-btn').forEach((button) => button.addEventListener('click', () => setTemplate(button.dataset.template)));
+    $$('.toolbar .icon-btn[data-action]').forEach((button) => button.addEventListener('click', () => toolbarActions[button.dataset.action]?.()));
+    editor.addEventListener('input', scheduleRender);
+    inlineInput.addEventListener('input', scheduleRender);
+    [gfmToggle, breaksToggle, sanitizeToggle, asyncToggle, frontMatterToggle, tocToggle].forEach((input) => input.addEventListener('change', scheduleRender));
+    $$('.tab').forEach((tab) => tab.addEventListener('click', () => {
+      $$('.tab').forEach((item) => item.classList.toggle('active', item === tab));
+      $$('.view-panel').forEach((panel) => panel.classList.toggle('active', panel.id === `view-${tab.dataset.tab}`));
+    }));
+    $('#themeBtn').addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      $('#themeBtn').textContent = isDark ? '◐ 테마' : '◑ 테마';
+    });
+    $('#helpBtn').addEventListener('click', () => $('#helpModal').classList.add('open'));
+    $('#closeHelpBtn').addEventListener('click', () => $('#helpModal').classList.remove('open'));
+    $('#helpModal').addEventListener('click', (event) => { if (event.target === $('#helpModal')) $('#helpModal').classList.remove('open'); });
+    $('#copyHtmlBtn').addEventListener('click', () => copyText(lastHtml, '정화된 HTML을 복사했습니다.'));
+    $('#copyMdBtn').addEventListener('click', () => copyText(editor.value, 'Markdown 원문을 복사했습니다.'));
+    $('#downloadBtn').addEventListener('click', downloadMarkdown);
+    $('#printBtn').addEventListener('click', () => window.print());
+    $('#resetBtn').addEventListener('click', () => { setTemplate(currentTemplate); notice('현재 샘플로 초기화했습니다.'); });
+    $('#openFileBtn').addEventListener('click', () => $('#fileInput').click());
+    $('#fileInput').addEventListener('change', (event) => loadFile(event.target.files[0]));
+    ['dragenter', 'dragover'].forEach((eventName) => editorWrap.addEventListener(eventName, (event) => { event.preventDefault(); editorWrap.classList.add('dragover'); }));
+    ['dragleave', 'drop'].forEach((eventName) => editorWrap.addEventListener(eventName, (event) => { event.preventDefault(); editorWrap.classList.remove('dragover'); }));
+    editorWrap.addEventListener('drop', (event) => loadFile(event.dataTransfer.files[0]));
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); downloadMarkdown(); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'enter') { event.preventDefault(); render(); notice('즉시 렌더링했습니다.'); }
+      if (event.key === 'Escape') $('#helpModal').classList.remove('open');
+    });
+
+    // Start
+    editor.value = samples.full;
+    if (!window.DOMPurify) sanitizerStatus.textContent = 'DOMPurify 로딩 실패';
+    render();
+  })();
+  </script>
+</body>
+</html>
