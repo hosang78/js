@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Chart.js + date-fns Adapter 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: rgba(255,255,255,.92);
+      --panel-solid: #ffffff;
+      --panel-soft: #f8fafc;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dfe5ef;
+      --primary: #2457e6;
+      --primary-2: #6d5dfc;
+      --accent: #00a6a6;
+      --warn: #e67e22;
+      --danger: #d64555;
+      --success: #138a5b;
+      --shadow: 0 14px 34px rgba(36, 50, 84, .10);
+      --radius: 18px;
+      --chart-grid: rgba(92, 105, 135, .16);
+      --chart-text: #5f6b7d;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0b1020;
+      --panel: rgba(19,27,48,.94);
+      --panel-solid: #131b30;
+      --panel-soft: #10172a;
+      --text: #edf2ff;
+      --muted: #9eabc2;
+      --line: #2b3858;
+      --primary: #6f91ff;
+      --primary-2: #9a8cff;
+      --accent: #37d2c7;
+      --warn: #ffad5c;
+      --danger: #ff7e8a;
+      --success: #58d69c;
+      --shadow: 0 18px 46px rgba(0,0,0,.28);
+      --chart-grid: rgba(151, 169, 205, .16);
+      --chart-text: #aab6cc;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(36,87,230,.12), transparent 32%),
+        radial-gradient(circle at 96% 12%, rgba(0,166,166,.11), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      transition: background .25s ease, color .25s ease;
+    }
+
+    button, select, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel-solid) 82%, transparent);
+      backdrop-filter: blur(16px);
+    }
+
+    .topbar-inner {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      box-shadow: 0 8px 20px rgba(36,87,230,.26);
+    }
+
+    .brand-title { font-weight: 850; letter-spacing: -.03em; white-space: nowrap; }
+    .brand-sub { color: var(--muted); font-size: 12px; }
+
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .btn, .icon-btn, .chip-btn {
+      border: 1px solid var(--line);
+      background: var(--panel-solid);
+      color: var(--text);
+      border-radius: 11px;
+      min-height: 38px;
+      padding: 8px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-weight: 700;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .btn:hover, .icon-btn:hover, .chip-btn:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+    .btn.primary { color: white; background: linear-gradient(135deg, var(--primary), var(--primary-2)); border-color: transparent; }
+    .btn.danger { color: var(--danger); }
+    .icon-btn { width: 40px; padding: 0; font-size: 17px; }
+    .chip-btn { min-height: 32px; padding: 5px 10px; font-size: 12px; border-radius: 999px; }
+    .chip-btn.active { background: color-mix(in srgb, var(--primary) 12%, var(--panel-solid)); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+
+    .layout {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 26px 22px 60px;
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 82px;
+      height: fit-content;
+      max-height: calc(100vh - 104px);
+      overflow: auto;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .side-title { font-size: 11px; color: var(--muted); font-weight: 800; letter-spacing: .12em; margin: 2px 8px 10px; }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      margin: 3px 0;
+      border-radius: 10px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .nav-link:hover, .nav-link.active { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+    .nav-num { width: 23px; height: 23px; border-radius: 7px; display: grid; place-items: center; background: var(--panel-soft); font-size: 11px; }
+
+    .content { min-width: 0; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, var(--panel-solid)), var(--panel-solid) 50%, color-mix(in srgb, var(--accent) 8%, var(--panel-solid)));
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      right: -120px;
+      top: -130px;
+      background: linear-gradient(135deg, rgba(36,87,230,.22), rgba(109,93,252,.06));
+      filter: blur(2px);
+    }
+    .eyebrow { color: var(--primary); font-size: 12px; font-weight: 900; letter-spacing: .12em; }
+    h1 { margin: 8px 0 10px; font-size: clamp(30px, 4vw, 52px); line-height: 1.08; letter-spacing: -.055em; }
+    .hero p { max-width: 840px; margin: 0; color: var(--muted); font-size: 15px; }
+    .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .tag { border: 1px solid var(--line); background: var(--panel-solid); color: var(--muted); padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 750; }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0 24px;
+    }
+    .status-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--panel);
+    }
+    .status-label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+    .status-value { margin-top: 4px; font-size: 18px; font-weight: 900; letter-spacing: -.03em; }
+    .status-note { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .ok { color: var(--success); }
+    .bad { color: var(--danger); }
+
+    .section-head { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin: 28px 2px 12px; }
+    .section-head h2 { margin: 0; font-size: 22px; letter-spacing: -.035em; }
+    .section-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .grid.single { grid-template-columns: 1fr; }
+
+    .card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 8px 26px rgba(36,50,84,.065);
+      overflow: hidden;
+      scroll-margin-top: 92px;
+    }
+    .card-header { padding: 18px 18px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .card-index { color: var(--primary); font-size: 11px; font-weight: 900; letter-spacing: .10em; }
+    .card h3 { margin: 3px 0 4px; font-size: 17px; letter-spacing: -.025em; }
+    .card-desc { color: var(--muted); font-size: 12px; }
+    .card-actions { display: flex; gap: 7px; flex-shrink: 0; }
+    .card-body { padding: 0 18px 18px; }
+    .chart-wrap { position: relative; height: 300px; min-height: 240px; }
+    .chart-wrap.tall { height: 360px; }
+    canvas { max-width: 100%; }
+
+    .controls {
+      display: flex;
+      align-items: end;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-soft);
+    }
+    .field { display: grid; gap: 5px; min-width: 120px; }
+    .field.grow { flex: 1 1 180px; }
+    .field label { color: var(--muted); font-size: 11px; font-weight: 800; }
+    select, input[type="date"], input[type="datetime-local"], input[type="text"], input[type="number"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 7px 10px;
+      background: var(--panel-solid);
+      color: var(--text);
+      outline: none;
+    }
+    select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent); }
+    input[type="range"] { width: 100%; accent-color: var(--primary); }
+    .switch { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; color: var(--muted); font-size: 12px; font-weight: 700; }
+
+    .mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .mini-panel { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-soft); }
+    .mini-panel strong { display: block; font-size: 12px; margin-bottom: 4px; }
+    .mini-panel span { color: var(--muted); font-size: 11px; }
+
+    .compare-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+    .compare-label { text-align: center; font-size: 12px; font-weight: 800; color: var(--muted); }
+    .compare-canvases { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 310px; }
+    .compare-canvases > div { min-width: 0; position: relative; }
+
+    .code-pill { margin-top: 12px; padding: 8px 10px; border-radius: 9px; background: #111827; color: #d7e2ff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; overflow: auto; white-space: nowrap; }
+
+    .lab-grid { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); gap: 16px; }
+    .result-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .result-table th, .result-table td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .result-table th { color: var(--muted); width: 34%; font-weight: 800; }
+    .result-table code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--primary); word-break: break-all; }
+
+    .feature-matrix { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; font-size: 12px; }
+    .feature-matrix th, .feature-matrix td { padding: 11px 12px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: left; }
+    .feature-matrix th:last-child, .feature-matrix td:last-child { border-right: 0; }
+    .feature-matrix tr:last-child td { border-bottom: 0; }
+    .feature-matrix thead th { background: var(--panel-soft); color: var(--muted); }
+    .yes { color: var(--success); font-weight: 900; }
+
+    .notice {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 13px;
+      border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line));
+      background: color-mix(in srgb, var(--warn) 8%, var(--panel-solid));
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 100;
+      max-width: 360px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-solid);
+      box-shadow: var(--shadow);
+      transform: translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .22s ease;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(6,10,22,.62);
+      backdrop-filter: blur(8px);
+    }
+    .modal.open { display: grid; }
+    .modal-panel { width: min(900px, 100%); max-height: 84vh; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--panel-solid); box-shadow: 0 28px 90px rgba(0,0,0,.38); }
+    .modal-head { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .modal-head strong { font-size: 14px; }
+    pre { margin: 0; padding: 18px; max-height: calc(84vh - 60px); overflow: auto; background: #0e1424; color: #d9e4ff; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; tab-size: 2; }
+
+    .loading-failure { display: none; margin: 14px 0; padding: 14px; border-radius: 12px; border: 1px solid rgba(214,69,85,.4); background: rgba(214,69,85,.08); color: var(--danger); font-size: 13px; }
+    .loading-failure.show { display: block; }
+
+    footer { margin-top: 28px; padding: 20px 2px; color: var(--muted); font-size: 11px; text-align: center; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; display: flex; gap: 6px; overflow-x: auto; max-height: none; padding: 10px; }
+      .side-title { display: none; }
+      .nav-link { flex: 0 0 auto; margin: 0; }
+      .nav-link span:last-child { display: none; }
+    }
+    @media (max-width: 820px) {
+      .grid, .status-strip { grid-template-columns: 1fr; }
+      .topbar-inner { align-items: flex-start; }
+      .brand-sub { display: none; }
+      .top-actions .btn span { display: none; }
+      .hero { padding: 24px 20px; }
+      .layout { padding: 18px 12px 40px; }
+      .compare-canvases { grid-template-columns: 1fr; height: auto; }
+      .compare-canvases > div { height: 280px; }
+      .compare-labels { display: none; }
+      .lab-grid { grid-template-columns: 1fr; }
+      .mini-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .topbar-inner { padding: 10px 12px; }
+      .brand-title { font-size: 13px; }
+      .hero h1 { font-size: 31px; }
+      .card-header { flex-direction: column; }
+      .card-actions { width: 100%; }
+      .card-actions .chip-btn { flex: 1; }
+      .chart-wrap { height: 270px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">Df</div>
+        <div>
+          <div class="brand-title">Chart.js date-fns Adapter Lab</div>
+          <div class="brand-sub">시간축·파싱·로케일·주차·성능 실험 페이지</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn" id="refreshAllBtn" title="모든 샘플 데이터 재생성">↻ <span>전체 갱신</span></button>
+        <button class="btn primary" id="exportAllBtn" title="현재 보이는 차트를 PNG로 순차 저장">⇩ <span>차트 PNG 저장</span></button>
+        <button class="icon-btn" id="themeBtn" aria-label="테마 전환" title="테마 전환">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" aria-label="샘플 목차">
+      <div class="side-title">FEATURE INDEX</div>
+      <a class="nav-link" href="#basic"><span class="nav-num">01</span><span>기본 시간축</span></a>
+      <a class="nav-link" href="#parser"><span class="nav-num">02</span><span>사용자 지정 파서</span></a>
+      <a class="nav-link" href="#compare"><span class="nav-num">03</span><span>time vs timeseries</span></a>
+      <a class="nav-link" href="#unit"><span class="nav-num">04</span><span>단위·표시 형식</span></a>
+      <a class="nav-link" href="#locale"><span class="nav-num">05</span><span>다국어 로케일</span></a>
+      <a class="nav-link" href="#week"><span class="nav-num">06</span><span>ISO 주차</span></a>
+      <a class="nav-link" href="#range"><span class="nav-num">07</span><span>범위·ticks·bounds</span></a>
+      <a class="nav-link" href="#mixed"><span class="nav-num">08</span><span>혼합 차트</span></a>
+      <a class="nav-link" href="#events"><span class="nav-num">09</span><span>이벤트 산점도</span></a>
+      <a class="nav-link" href="#performance"><span class="nav-num">10</span><span>고성능 타임스탬프</span></a>
+      <a class="nav-link" href="#live"><span class="nav-num">11</span><span>실시간 스트림</span></a>
+      <a class="nav-link" href="#lab"><span class="nav-num">12</span><span>date-fns 실험실</span></a>
+      <a class="nav-link" href="#matrix"><span class="nav-num">13</span><span>기능 매트릭스</span></a>
+    </aside>
+
+    <div class="content">
+      <section class="hero">
+        <div class="eyebrow">FREE OPEN-SOURCE TIME SCALE DEMO</div>
+        <h1>Chart.js 시간 데이터를<br />date-fns로 정교하게 다루기</h1>
+        <p>
+          Chart.js의 <b>time / timeseries 축</b>과 chartjs-adapter-date-fns의 날짜 파싱·포맷·로케일 처리를 한 번에 확인하는 샘플이다.
+          각 차트의 컨트롤을 바꾸면 실제 설정값이 즉시 반영되며, 코드 보기와 PNG 저장도 지원한다.
+        </p>
+        <div class="hero-tags">
+          <span class="tag">ISO 문자열</span><span class="tag">Unix timestamp</span><span class="tag">custom parser</span>
+          <span class="tag">displayFormats</span><span class="tag">tooltipFormat</span><span class="tag">locale</span>
+          <span class="tag">isoWeekday</span><span class="tag">round</span><span class="tag">min / max</span>
+          <span class="tag">parsing:false</span><span class="tag">decimation</span><span class="tag">live update</span>
+        </div>
+      </section>
+
+      <div id="cdnFailure" class="loading-failure">
+        외부 CDN 라이브러리를 불러오지 못했다. 인터넷 연결 또는 기관망의 jsDelivr 접근 허용 여부를 확인해야 한다.
+      </div>
+
+      <section class="status-strip" aria-label="라이브러리 상태">
+        <div class="status-card">
+          <div class="status-label">CHART.JS</div>
+          <div class="status-value" id="chartVersion">확인 중</div>
+          <div class="status-note">UMD 빌드</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">DATE ADAPTER</div>
+          <div class="status-value" id="adapterStatus">확인 중</div>
+          <div class="status-note">date-fns side-effect adapter</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">DATE-FNS</div>
+          <div class="status-value" id="dateFnsStatus">확인 중</div>
+          <div class="status-note">함수·로케일 실험용 CDN</div>
+        </div>
+        <div class="status-card">
+          <div class="status-label">RENDERED CHARTS</div>
+          <div class="status-value" id="chartCount">0</div>
+          <div class="status-note">현재 생성된 인스턴스</div>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <div><h2>시간축 핵심 기능</h2><p>어댑터가 실제로 개입하는 파싱·포맷·단위·로케일 동작 중심</p></div>
+      </div>
+
+      <section class="grid">
+        <article class="card" id="basic">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 01</div><h3>기본 time 축 + ISO 날짜</h3><div class="card-desc">ISO 8601 문자열을 자동 파싱하고 시간 간격에 비례해 배치</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="basic">코드 보기</button><button class="chip-btn export-btn" data-chart="basicChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="mini-grid">
+              <div class="mini-panel"><strong>입력 형식</strong><span>2026-07-01T09:00:00</span></div>
+              <div class="mini-panel"><strong>핵심 옵션</strong><span>type: 'time', tooltipFormat</span></div>
+            </div>
+            <div class="chart-wrap"><canvas id="basicChart"></canvas></div>
+            <div class="code-pill">x: { type: 'time', time: { unit: 'day', tooltipFormat: 'PPP p' } }</div>
+          </div>
+        </article>
+
+        <article class="card" id="parser">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 02</div><h3>사용자 지정 문자열 파서</h3><div class="card-desc">업무 데이터의 yyyy/MM/dd HH:mm 형식을 time.parser로 해석</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="parser">코드 보기</button><button class="chip-btn export-btn" data-chart="parserChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <div class="field grow"><label>새 데이터 시각</label><input id="parserInput" type="text" value="2026/07/12 15:30" /></div>
+              <div class="field"><label>값</label><input id="parserValue" type="number" value="63" /></div>
+              <button class="btn primary" id="parserAddBtn">데이터 추가</button>
+            </div>
+            <div class="chart-wrap"><canvas id="parserChart"></canvas></div>
+            <div class="code-pill">time: { parser: 'yyyy/MM/dd HH:mm', displayFormats: { hour: 'M/d HH:mm' } }</div>
+          </div>
+        </article>
+
+        <article class="card" id="compare">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 03</div><h3>time vs timeseries 비교</h3><div class="card-desc">불규칙 간격을 실제 시간 비율로 표시하거나 동일 간격으로 표시</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="compare">코드 보기</button></div>
+          </div>
+          <div class="card-body">
+            <div class="compare-labels"><div class="compare-label">time · 실제 시간 간격</div><div class="compare-label">timeseries · 데이터 동일 간격</div></div>
+            <div class="compare-canvases"><div><canvas id="timeCompareChart"></canvas></div><div><canvas id="seriesCompareChart"></canvas></div></div>
+            <div class="code-pill">type: 'time' ↔ type: 'timeseries'</div>
+          </div>
+        </article>
+
+        <article class="card" id="unit">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 04</div><h3>시간 단위·표시 형식 전환</h3><div class="card-desc">unit, stepSize, displayFormats, minUnit을 동적으로 변경</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="unit">코드 보기</button><button class="chip-btn export-btn" data-chart="unitChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <div class="field"><label>unit</label><select id="unitSelect"><option value="hour">hour</option><option value="day" selected>day</option><option value="week">week</option><option value="month">month</option></select></div>
+              <div class="field"><label>stepSize</label><select id="stepSelect"><option>1</option><option>2</option><option>3</option><option>7</option></select></div>
+              <div class="field grow"><label>displayFormats token</label><input id="formatInput" value="M월 d일" /></div>
+              <button class="btn primary" id="unitApplyBtn">적용</button>
+            </div>
+            <div class="chart-wrap"><canvas id="unitChart"></canvas></div>
+            <div class="code-pill">time.unit / ticks.stepSize / time.displayFormats[unit]</div>
+          </div>
+        </article>
+
+        <article class="card" id="locale">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 05</div><h3>date-fns 다국어 로케일</h3><div class="card-desc">adapters.date.locale에 locale 객체를 전달해 월·요일 표기 변경</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="locale">코드 보기</button><button class="chip-btn export-btn" data-chart="localeChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <div class="field grow"><label>로케일</label><select id="localeSelect"><option value="ko" selected>한국어 ko</option><option value="enUS">English en-US</option><option value="ja">日本語 ja</option><option value="de">Deutsch de</option></select></div>
+              <div class="field grow"><label>표시 토큰</label><select id="localeFormat"><option value="MMM d (EEE)" selected>MMM d (EEE)</option><option value="PP">PP</option><option value="PPP">PPP</option><option value="MMMM">MMMM</option></select></div>
+            </div>
+            <div class="chart-wrap"><canvas id="localeChart"></canvas></div>
+            <div class="code-pill">adapters: { date: { locale: dateFns.locale.ko } }</div>
+          </div>
+        </article>
+
+        <article class="card" id="week">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 06</div><h3>주 단위·ISO 월요일 시작</h3><div class="card-desc">unit:'week'와 isoWeekday를 사용해 주간 실적 기준일 제어</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="week">코드 보기</button><button class="chip-btn export-btn" data-chart="weekChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <label class="switch"><input type="checkbox" id="isoWeekToggle" checked /> ISO 월요일 시작</label>
+              <label class="switch"><input type="checkbox" id="roundWeekToggle" /> 주 시작일로 반올림</label>
+            </div>
+            <div class="chart-wrap"><canvas id="weekChart"></canvas></div>
+            <div class="code-pill">time: { unit: 'week', isoWeekday: 1, round: 'week' }</div>
+          </div>
+        </article>
+      </section>
+
+      <div class="section-head">
+        <div><h2>범위·복합 시각화·성능</h2><p>실무형 데이터 탐색과 대량 데이터 렌더링에 필요한 옵션</p></div>
+      </div>
+
+      <section class="grid">
+        <article class="card" id="range">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 07</div><h3>min/max · ticks.source · bounds</h3><div class="card-desc">조회 기간과 눈금 생성 기준, 축 경계를 직접 조절</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="range">코드 보기</button><button class="chip-btn export-btn" data-chart="rangeChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <div class="field"><label>시작일</label><input type="date" id="rangeStart" value="2026-05-01" /></div>
+              <div class="field"><label>종료일</label><input type="date" id="rangeEnd" value="2026-07-31" /></div>
+              <div class="field"><label>ticks.source</label><select id="tickSource"><option value="auto">auto</option><option value="data">data</option><option value="labels">labels</option></select></div>
+              <div class="field"><label>bounds</label><select id="boundsSelect"><option value="data">data</option><option value="ticks">ticks</option></select></div>
+              <button class="btn primary" id="rangeApplyBtn">적용</button>
+            </div>
+            <div class="controls" id="presetButtons">
+              <button class="chip-btn" data-days="14">최근 14일</button><button class="chip-btn" data-days="30">최근 30일</button><button class="chip-btn" data-days="60">최근 60일</button><button class="chip-btn" data-days="120">최근 120일</button><button class="chip-btn" data-days="0">전체</button>
+            </div>
+            <div class="chart-wrap"><canvas id="rangeChart"></canvas></div>
+          </div>
+        </article>
+
+        <article class="card" id="mixed">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 08</div><h3>날짜 기반 막대 + 선 혼합</h3><div class="card-desc">동일 time 축에 거래량 막대와 평균단가 선을 함께 표현</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="mixed">코드 보기</button><button class="chip-btn export-btn" data-chart="mixedChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <label class="switch"><input type="checkbox" id="mixedStackToggle" /> 막대 누적</label>
+              <label class="switch"><input type="checkbox" id="mixedFillToggle" checked /> 선 영역 채움</label>
+            </div>
+            <div class="chart-wrap tall"><canvas id="mixedChart"></canvas></div>
+            <div class="code-pill">datasets: [{ type:'bar' }, { type:'line', yAxisID:'price' }]</div>
+          </div>
+        </article>
+
+        <article class="card" id="events">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 09</div><h3>시간 기반 이벤트 산점도</h3><div class="card-desc">사고·점검·경보 이벤트를 시간 x축과 심각도 y축으로 표시</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="events">코드 보기</button><button class="chip-btn export-btn" data-chart="eventChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <div class="field grow"><label>이벤트 필터</label><select id="eventFilter"><option value="all">전체</option><option value="점검">점검</option><option value="주의">주의</option><option value="위험">위험</option></select></div>
+              <label class="switch"><input type="checkbox" id="eventRadiusToggle" checked /> 심각도별 크기</label>
+            </div>
+            <div class="chart-wrap"><canvas id="eventChart"></canvas></div>
+            <div class="code-pill">scatter + x.type:'time' + scriptable pointRadius</div>
+          </div>
+        </article>
+
+        <article class="card" id="performance">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 10</div><h3>대량 타임스탬프·parsing:false</h3><div class="card-desc">밀리초 timestamp 정렬 데이터와 decimation으로 대량 포인트 처리</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="performance">코드 보기</button><button class="chip-btn export-btn" data-chart="performanceChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <div class="field grow"><label>포인트 수 <b id="perfCountLabel">5,000</b></label><input type="range" id="perfCount" min="500" max="20000" step="500" value="5000" /></div>
+              <div class="field"><label>decimation</label><select id="decimationMode"><option value="lttb">LTTB</option><option value="min-max">min-max</option><option value="off">사용 안 함</option></select></div>
+              <button class="btn primary" id="perfRenderBtn">재렌더링</button>
+            </div>
+            <div class="mini-grid">
+              <div class="mini-panel"><strong>렌더링 시간</strong><span id="perfTime">-</span></div>
+              <div class="mini-panel"><strong>데이터 규칙</strong><span>오름차순 timestamp + normalized:true</span></div>
+            </div>
+            <div class="chart-wrap"><canvas id="performanceChart"></canvas></div>
+            <div class="code-pill">parsing:false · normalized:true · animation:false · decimation</div>
+          </div>
+        </article>
+
+        <article class="card" id="live">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 11</div><h3>실시간 시간축 스트림</h3><div class="card-desc">새 timestamp를 추가하고 x축 min/max를 이동하는 경량 실시간 예제</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="live">코드 보기</button><button class="chip-btn export-btn" data-chart="liveChart">PNG</button></div>
+          </div>
+          <div class="card-body">
+            <div class="controls">
+              <button class="btn primary" id="liveToggleBtn">▶ 시작</button>
+              <button class="btn" id="liveOnceBtn">+ 1포인트</button>
+              <div class="field"><label>보관 포인트</label><select id="liveWindow"><option>20</option><option selected>40</option><option>80</option></select></div>
+              <div class="field"><label>갱신 주기</label><select id="liveInterval"><option value="500">0.5초</option><option value="1000" selected>1초</option><option value="2000">2초</option></select></div>
+            </div>
+            <div class="chart-wrap"><canvas id="liveChart"></canvas></div>
+            <div class="code-pill">data.push({x: Date.now(), y}) + scale.min/max 갱신</div>
+          </div>
+        </article>
+
+        <article class="card" id="lab">
+          <div class="card-header">
+            <div><div class="card-index">SAMPLE 12</div><h3>date-fns 함수 실험실</h3><div class="card-desc">어댑터 내부 기반 라이브러리의 parse·format·add·difference·week 함수 확인</div></div>
+            <div class="card-actions"><button class="chip-btn code-btn" data-code="lab">코드 보기</button></div>
+          </div>
+          <div class="card-body">
+            <div class="lab-grid">
+              <div class="controls" style="align-content:start;">
+                <div class="field grow"><label>기준 일시</label><input type="datetime-local" id="labDate" value="2026-07-12T14:30" /></div>
+                <div class="field grow"><label>파싱 토큰</label><input id="labParseToken" value="yyyy-MM-dd'T'HH:mm" /></div>
+                <div class="field grow"><label>출력 토큰</label><input id="labFormatToken" value="PPPP p" /></div>
+                <div class="field"><label>더할 일수</label><input type="number" id="labAddDays" value="10" /></div>
+                <div class="field"><label>로케일</label><select id="labLocale"><option value="ko">한국어</option><option value="enUS">English</option><option value="ja">日本語</option><option value="de">Deutsch</option></select></div>
+                <button class="btn primary" id="labRunBtn">계산 실행</button>
+              </div>
+              <div class="mini-panel" style="overflow:auto;">
+                <table class="result-table"><tbody id="labResult"></tbody></table>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="card" id="matrix" style="margin-top:18px;">
+        <div class="card-header">
+          <div><div class="card-index">REFERENCE 13</div><h3>구현 기능 매트릭스</h3><div class="card-desc">샘플 페이지에서 확인 가능한 주요 Chart.js 시간축·date-fns 기능</div></div>
+        </div>
+        <div class="card-body" style="overflow:auto;">
+          <table class="feature-matrix">
+            <thead><tr><th>구분</th><th>기능/옵션</th><th>샘플</th><th>포함</th></tr></thead>
+            <tbody>
+              <tr><td>축 종류</td><td><code>time</code>, <code>timeseries</code></td><td>01, 03</td><td class="yes">✓</td></tr>
+              <tr><td>입력</td><td>ISO 문자열, 사용자 문자열, 밀리초 timestamp</td><td>01, 02, 10</td><td class="yes">✓</td></tr>
+              <tr><td>파싱</td><td><code>time.parser</code>, <code>parsing:false</code></td><td>02, 10</td><td class="yes">✓</td></tr>
+              <tr><td>표시</td><td><code>unit</code>, <code>displayFormats</code>, <code>tooltipFormat</code>, <code>minUnit</code></td><td>01, 04</td><td class="yes">✓</td></tr>
+              <tr><td>달력</td><td><code>locale</code>, <code>isoWeekday</code>, <code>round</code></td><td>05, 06</td><td class="yes">✓</td></tr>
+              <tr><td>범위</td><td><code>min</code>, <code>max</code>, <code>bounds</code>, <code>ticks.source</code></td><td>07</td><td class="yes">✓</td></tr>
+              <tr><td>복합</td><td>time 축 기반 bar/line/scatter</td><td>08, 09</td><td class="yes">✓</td></tr>
+              <tr><td>성능</td><td><code>normalized</code>, <code>decimation</code>, animation off</td><td>10</td><td class="yes">✓</td></tr>
+              <tr><td>동적 처리</td><td>데이터 추가, 옵션 업데이트, 이동 시간창</td><td>02, 04, 07, 11</td><td class="yes">✓</td></tr>
+              <tr><td>date-fns</td><td>parse, format, addDays, differenceInDays, startOfWeek, getISOWeek</td><td>12</td><td class="yes">✓</td></tr>
+            </tbody>
+          </table>
+          <div class="notice">
+            이 파일은 CDN 방식이므로 최초 실행 시 인터넷 연결이 필요하다. 기관 내부망에서 사용할 경우 Chart.js, adapter, date-fns 및 locale 파일을 내려받아 같은 폴더의 로컬 경로로 바꾸면 된다.
+          </div>
+        </div>
+      </section>
+
+      <footer>Chart.js 4.5.1 · chartjs-adapter-date-fns 3.0.0 · date-fns 4.4.0 CDN 기반 교육·검증용 샘플</footer>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal" id="codeModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-panel">
+      <div class="modal-head"><strong id="modalTitle">샘플 코드</strong><div style="display:flex;gap:8px;"><button class="chip-btn" id="copyCodeBtn">복사</button><button class="icon-btn" id="closeModalBtn" aria-label="닫기">×</button></div></div>
+      <pre><code id="modalCode"></code></pre>
+    </div>
+  </div>
+
+  <!-- 버전 고정: 재현성 확보 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@4.4.0/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@4.4.0/locale/ko/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@4.4.0/locale/en-US/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@4.4.0/locale/ja/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@4.4.0/locale/de/cdn.min.js"></script>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const charts = {};
+    let liveTimer = null;
+    let currentCode = '';
+
+    const COLORS = {
+      blue: '#3568e8', purple: '#7a62e8', teal: '#0aa7a0', orange: '#ee8a35',
+      red: '#dc5264', green: '#26996a', sky: '#3aaee8', gray: '#8290a8'
+    };
+
+    const localeMap = () => ({
+      ko: window.dateFns?.locale?.ko,
+      enUS: window.dateFns?.locale?.enUS,
+      ja: window.dateFns?.locale?.ja,
+      de: window.dateFns?.locale?.de
+    });
+
+    function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function gridColor() { return css('--chart-grid'); }
+    function textColor() { return css('--chart-text'); }
+
+    function toast(message) {
+      const el = $('#toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.classList.remove('show'), 2200);
+    }
+
+    function updateChartCount() { $('#chartCount').textContent = Object.keys(charts).filter(k => charts[k]).length; }
+
+    function commonOptions(title = '') {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+        plugins: {
+          legend: { labels: { color: textColor(), usePointStyle: true, boxWidth: 8, font: { size: 11, weight: '600' } } },
+          title: title ? { display: true, text: title, color: textColor(), font: { size: 12, weight: '700' } } : { display: false },
+          tooltip: { backgroundColor: '#101828', padding: 11, cornerRadius: 9, titleFont: { size: 12 }, bodyFont: { size: 11 } }
+        },
+        scales: {
+          x: { grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 0, autoSkipPadding: 16, font: { size: 10 } }, border: { color: gridColor() } },
+          y: { grid: { color: gridColor() }, ticks: { color: textColor(), font: { size: 10 } }, border: { color: gridColor() } }
+        }
+      };
+    }
+
+    function destroyChart(id) {
+      if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+    }
+
+    function makeChart(id, config) {
+      destroyChart(id);
+      charts[id] = new Chart(document.getElementById(id), config);
+      updateChartCount();
+      return charts[id];
+    }
+
+    function dateAt(dayOffset, hour = 9, minute = 0) {
+      return new Date(2026, 6, 1 + dayOffset, hour, minute, 0, 0);
+    }
+
+    function seededWave(count, base = 50, amplitude = 10, stepMs = 86400000, start = new Date(2026, 0, 1).getTime()) {
+      let seed = 1327;
+      const rand = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+      return Array.from({ length: count }, (_, i) => ({
+        x: start + i * stepMs,
+        y: +(base + Math.sin(i / 4.2) * amplitude + (rand() - .5) * amplitude * .55).toFixed(2)
+      }));
+    }
+
+    function initStatus() {
+      $('#chartVersion').textContent = window.Chart?.version || '로드 실패';
+      $('#chartVersion').className = 'status-value ' + (window.Chart ? 'ok' : 'bad');
+      $('#dateFnsStatus').textContent = window.dateFns ? '로드 완료' : '로드 실패';
+      $('#dateFnsStatus').className = 'status-value ' + (window.dateFns ? 'ok' : 'bad');
+      let adapterOk = false;
+      try {
+        const ctx = document.createElement('canvas').getContext('2d');
+        const test = new Chart(ctx, { type: 'line', data: { datasets: [{ data: [{ x: Date.now(), y: 1 }] }] }, options: { animation: false, scales: { x: { type: 'time' } } } });
+        adapterOk = true;
+        test.destroy();
+      } catch (e) {
+        console.error('Adapter test failed:', e);
+      }
+      $('#adapterStatus').textContent = adapterOk ? '정상 연결' : '연결 실패';
+      $('#adapterStatus').className = 'status-value ' + (adapterOk ? 'ok' : 'bad');
+      if (!window.Chart || !window.dateFns || !adapterOk) $('#cdnFailure').classList.add('show');
+      return adapterOk;
+    }
+
+    function initBasic() {
+      const data = [
+        { x: '2026-07-01T09:00:00', y: 18.4 }, { x: '2026-07-02T13:20:00', y: 19.1 },
+        { x: '2026-07-04T08:10:00', y: 20.0 }, { x: '2026-07-07T16:45:00', y: 21.7 },
+        { x: '2026-07-08T11:25:00', y: 21.2 }, { x: '2026-07-12T14:30:00', y: 22.6 }
+      ];
+      const options = commonOptions();
+      options.scales.x = {
+        type: 'time', time: { unit: 'day', tooltipFormat: 'PPP p', displayFormats: { day: 'M월 d일' } },
+        adapters: { date: { locale: localeMap().ko } }, grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 0 }, border: { color: gridColor() }
+      };
+      options.scales.y.title = { display: true, text: '수온(℃)', color: textColor() };
+      options.plugins.tooltip.callbacks = { label: c => ` 수온 ${c.parsed.y.toFixed(1)}℃` };
+      makeChart('basicChart', {
+        type: 'line', data: { datasets: [{ label: '연안 수온', data, borderColor: COLORS.blue, backgroundColor: 'rgba(53,104,232,.14)', fill: true, tension: .35, pointRadius: 4, pointHoverRadius: 7 }] }, options
+      });
+    }
+
+    function initParser() {
+      const options = commonOptions();
+      options.scales.x = {
+        type: 'time', time: { parser: 'yyyy/MM/dd HH:mm', unit: 'day', tooltipFormat: 'PPP p', displayFormats: { day: 'M/d' } },
+        adapters: { date: { locale: localeMap().ko } }, grid: { color: gridColor() }, ticks: { color: textColor() }, border: { color: gridColor() }
+      };
+      options.scales.y.beginAtZero = true;
+      makeChart('parserChart', {
+        type: 'bar', data: { datasets: [{ label: '민원 접수 건수', data: [
+          { x: '2026/07/01 09:00', y: 42 }, { x: '2026/07/03 14:20', y: 58 }, { x: '2026/07/06 10:10', y: 39 }, { x: '2026/07/10 16:40', y: 71 }
+        ], backgroundColor: 'rgba(122,98,232,.72)', borderColor: COLORS.purple, borderWidth: 1, borderRadius: 7 }] }, options
+      });
+    }
+
+    function addParserPoint() {
+      const x = $('#parserInput').value.trim();
+      const y = Number($('#parserValue').value);
+      if (!x || !Number.isFinite(y)) return toast('날짜 문자열과 숫자 값을 확인해줘.');
+      charts.parserChart.data.datasets[0].data.push({ x, y });
+      charts.parserChart.data.datasets[0].data.sort((a, b) => {
+        try { return dateFns.parse(a.x, 'yyyy/MM/dd HH:mm', new Date()) - dateFns.parse(b.x, 'yyyy/MM/dd HH:mm', new Date()); }
+        catch { return 0; }
+      });
+      charts.parserChart.update();
+      toast('사용자 지정 형식 데이터가 추가됐다.');
+    }
+
+    function initCompare() {
+      const irregular = [
+        { x: '2026-01-01', y: 10 }, { x: '2026-01-02', y: 18 }, { x: '2026-01-10', y: 14 },
+        { x: '2026-02-25', y: 29 }, { x: '2026-03-01', y: 24 }, { x: '2026-06-20', y: 37 }
+      ];
+      ['timeCompareChart', 'seriesCompareChart'].forEach((id, idx) => {
+        const options = commonOptions(idx === 0 ? '실제 시간 간격' : '동일 데이터 간격');
+        options.scales.x = { type: idx === 0 ? 'time' : 'timeseries', time: { unit: 'month', displayFormats: { month: 'yyyy-MM' } }, grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 0 }, border: { color: gridColor() } };
+        options.plugins.legend.display = false;
+        makeChart(id, { type: 'line', data: { datasets: [{ data: irregular, borderColor: idx === 0 ? COLORS.teal : COLORS.orange, backgroundColor: idx === 0 ? 'rgba(10,167,160,.13)' : 'rgba(238,138,53,.13)', fill: true, tension: .28, pointRadius: 4 }] }, options });
+      });
+    }
+
+    function initUnit() {
+      const data = seededWave(90, 72, 18, 86400000, new Date(2026, 0, 1).getTime());
+      const options = commonOptions();
+      options.scales.x = { type: 'time', time: { unit: 'day', minUnit: 'hour', tooltipFormat: 'PPP', displayFormats: { day: 'M월 d일' } }, ticks: { color: textColor(), stepSize: 1, maxRotation: 0 }, grid: { color: gridColor() }, border: { color: gridColor() } };
+      makeChart('unitChart', { type: 'line', data: { datasets: [{ label: '일별 위판량 지수', data, borderColor: COLORS.green, pointRadius: 0, borderWidth: 2, tension: .25 }] }, options });
+    }
+
+    function applyUnit() {
+      const unit = $('#unitSelect').value;
+      const step = Number($('#stepSelect').value);
+      const token = $('#formatInput').value.trim() || 'M/d';
+      const x = charts.unitChart.options.scales.x;
+      x.time.unit = unit;
+      x.time.displayFormats[unit] = token;
+      x.ticks.stepSize = step;
+      charts.unitChart.update();
+      toast(`${unit} 단위와 ${token} 형식을 적용했다.`);
+    }
+
+    function initLocale() {
+      const data = seededWave(12, 100, 28, 30 * 86400000, new Date(2026, 0, 1).getTime());
+      const options = commonOptions();
+      options.scales.x = {
+        type: 'time', adapters: { date: { locale: localeMap().ko } },
+        time: { unit: 'month', tooltipFormat: 'PPPP', displayFormats: { month: 'MMM d (EEE)' } },
+        grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 0 }, border: { color: gridColor() }
+      };
+      options.plugins.tooltip.callbacks = { label: c => ` 지수 ${Math.round(c.parsed.y)}` };
+      makeChart('localeChart', { type: 'line', data: { datasets: [{ label: '월별 생산 지수', data, borderColor: COLORS.purple, backgroundColor: 'rgba(122,98,232,.13)', fill: true, tension: .35, pointRadius: 4 }] }, options });
+    }
+
+    function applyLocale() {
+      const key = $('#localeSelect').value;
+      const token = $('#localeFormat').value;
+      const locale = localeMap()[key];
+      const x = charts.localeChart.options.scales.x;
+      x.adapters.date.locale = locale;
+      x.time.displayFormats.month = token;
+      x.time.tooltipFormat = token === 'MMMM' ? 'PPPP' : token;
+      charts.localeChart.update();
+      toast(`${key} 로케일을 적용했다.`);
+    }
+
+    function initWeek() {
+      const data = seededWave(18, 45, 14, 7 * 86400000, new Date(2026, 0, 5).getTime());
+      const options = commonOptions();
+      options.scales.x = {
+        type: 'time', adapters: { date: { locale: localeMap().ko } },
+        time: { unit: 'week', isoWeekday: 1, tooltipFormat: 'PPP', displayFormats: { week: 'M월 d일' } },
+        grid: { color: gridColor() }, ticks: { color: textColor(), maxRotation: 0 }, border: { color: gridColor() }
+      };
+      makeChart('weekChart', { type: 'bar', data: { datasets: [{ label: '주간 안전점검 완료', data, backgroundColor: 'rgba(10,167,160,.72)', borderRadius: 7 }] }, options });
+    }
+
+    function applyWeekOptions() {
+      const time = charts.weekChart.options.scales.x.time;
+      time.isoWeekday = $('#isoWeekToggle').checked ? 1 : false;
+      time.round = $('#roundWeekToggle').checked ? 'week' : false;
+      charts.weekChart.update();
+    }
+
+    function rangeData() {
+      const start = new Date(2026, 2, 1).getTime();
+      return Array.from({ length: 153 }, (_, i) => ({ x: start + i * 86400000, y: Math.round(35 + Math.sin(i / 8) * 12 + Math.cos(i / 3.5) * 5 + (i % 7) * 1.2) }));
+    }
+
+    function initRange() {
+      const options = commonOptions();
+      options.scales.x = {
+        type: 'time', min: '2026-05-01', max: '2026-07-31', bounds: 'data',
+        time: { unit: 'week', tooltipFormat: 'PPP', displayFormats: { week: 'M/d' } },
+        ticks: { color: textColor(), source: 'auto', maxRotation: 0 }, grid: { color: gridColor() }, border: { color: gridColor() }
+      };
+      options.plugins.legend.display = false;
+      makeChart('rangeChart', { type: 'line', data: { datasets: [{ data: rangeData(), borderColor: COLORS.blue, backgroundColor: 'rgba(53,104,232,.1)', fill: true, pointRadius: 0, tension: .25 }] }, options });
+    }
+
+    function applyRange() {
+      const x = charts.rangeChart.options.scales.x;
+      x.min = $('#rangeStart').value || undefined;
+      x.max = $('#rangeEnd').value || undefined;
+      x.ticks.source = $('#tickSource').value;
+      x.bounds = $('#boundsSelect').value;
+      charts.rangeChart.update();
+      toast('조회 범위와 눈금 설정을 적용했다.');
+    }
+
+    function applyRangePreset(days, btn) {
+      $$('#presetButtons .chip-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (!days) {
+        $('#rangeStart').value = '2026-03-01'; $('#rangeEnd').value = '2026-07-31';
+      } else {
+        const end = new Date(2026, 6, 31);
+        const start = new Date(end.getTime() - (days - 1) * 86400000);
+        $('#rangeStart').value = dateFns.format(start, 'yyyy-MM-dd');
+        $('#rangeEnd').value = dateFns.format(end, 'yyyy-MM-dd');
+      }
+      applyRange();
+    }
+
+    function initMixed() {
+      const dates = Array.from({ length: 12 }, (_, i) => new Date(2026, i, 1).getTime());
+      const volumeA = dates.map((x, i) => ({ x, y: 140 + Math.round(Math.sin(i / 1.8) * 30 + i * 5) }));
+      const volumeB = dates.map((x, i) => ({ x, y: 90 + Math.round(Math.cos(i / 2.1) * 22 + i * 3) }));
+      const price = dates.map((x, i) => ({ x, y: 8700 + Math.round(Math.sin(i / 2.4) * 1200 + i * 90) }));
+      const options = commonOptions();
+      options.scales.x = { type: 'time', time: { unit: 'month', tooltipFormat: 'yyyy년 M월', displayFormats: { month: 'M월' } }, stacked: false, grid: { color: gridColor() }, ticks: { color: textColor() }, border: { color: gridColor() } };
+      options.scales.y = { type: 'linear', position: 'left', stacked: false, title: { display: true, text: '거래량(t)', color: textColor() }, grid: { color: gridColor() }, ticks: { color: textColor() } };
+      options.scales.price = { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: textColor(), callback: v => `${Math.round(v / 1000)}천원` }, title: { display: true, text: '평균단가', color: textColor() } };
+      makeChart('mixedChart', { type: 'bar', data: { datasets: [
+        { label: '선어 거래량', data: volumeA, backgroundColor: 'rgba(53,104,232,.66)', borderRadius: 5, yAxisID: 'y', stack: 'volume' },
+        { label: '패류 거래량', data: volumeB, backgroundColor: 'rgba(10,167,160,.66)', borderRadius: 5, yAxisID: 'y', stack: 'volume' },
+        { type: 'line', label: '평균단가', data: price, borderColor: COLORS.orange, backgroundColor: 'rgba(238,138,53,.12)', fill: true, pointRadius: 4, tension: .3, yAxisID: 'price' }
+      ] }, options });
+    }
+
+    function applyMixed() {
+      const stacked = $('#mixedStackToggle').checked;
+      charts.mixedChart.options.scales.x.stacked = stacked;
+      charts.mixedChart.options.scales.y.stacked = stacked;
+      charts.mixedChart.data.datasets[2].fill = $('#mixedFillToggle').checked;
+      charts.mixedChart.update();
+    }
+
+    const eventSource = [
+      { x: '2026-07-01T08:30:00', y: 1, type: '점검', label: '정기 장비점검' },
+      { x: '2026-07-02T16:20:00', y: 2, type: '주의', label: '통신 지연 감지' },
+      { x: '2026-07-04T05:40:00', y: 3, type: '위험', label: '강풍 경보' },
+      { x: '2026-07-05T11:10:00', y: 1, type: '점검', label: '구명설비 확인' },
+      { x: '2026-07-08T22:00:00', y: 2, type: '주의', label: '수온 급변' },
+      { x: '2026-07-10T03:30:00', y: 3, type: '위험', label: '침수 센서 경보' },
+      { x: '2026-07-12T13:15:00', y: 1, type: '점검', label: '위치발신기 테스트' }
+    ];
+
+    function eventDataset(filter = 'all') {
+      const colors = { 점검: COLORS.green, 주의: COLORS.orange, 위험: COLORS.red };
+      const data = eventSource.filter(d => filter === 'all' || d.type === filter);
+      return { label: '이벤트', data, parsing: { xAxisKey: 'x', yAxisKey: 'y' }, pointBackgroundColor: data.map(d => colors[d.type]), pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: ctx => $('#eventRadiusToggle').checked ? 4 + ctx.raw.y * 2 : 6, pointHoverRadius: 10 };
+    }
+
+    function initEvents() {
+      const options = commonOptions();
+      options.scales.x = { type: 'time', time: { unit: 'day', tooltipFormat: 'PPP p', displayFormats: { day: 'M/d' } }, grid: { color: gridColor() }, ticks: { color: textColor() }, border: { color: gridColor() } };
+      options.scales.y = { min: .5, max: 3.5, grid: { color: gridColor() }, ticks: { color: textColor(), stepSize: 1, callback: v => ({ 1: '점검', 2: '주의', 3: '위험' }[v] || '') }, border: { color: gridColor() } };
+      options.plugins.legend.display = false;
+      options.plugins.tooltip.callbacks = { label: c => ` ${c.raw.type} · ${c.raw.label}` };
+      makeChart('eventChart', { type: 'scatter', data: { datasets: [eventDataset()] }, options });
+    }
+
+    function applyEvents() {
+      charts.eventChart.data.datasets = [eventDataset($('#eventFilter').value)];
+      charts.eventChart.update();
+    }
+
+    function generatePerfData(count) {
+      const start = new Date(2026, 0, 1).getTime();
+      const step = 5 * 60 * 1000;
+      let y = 100;
+      let seed = 7341;
+      const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      return Array.from({ length: count }, (_, i) => {
+        y += (rand() - .49) * 2.5;
+        return { x: start + i * step, y: +y.toFixed(3) };
+      });
+    }
+
+    function initPerformance() {
+      const count = Number($('#perfCount').value);
+      $('#perfCountLabel').textContent = count.toLocaleString('ko-KR');
+      const mode = $('#decimationMode').value;
+      const t0 = performance.now();
+      const options = commonOptions();
+      options.animation = false;
+      options.normalized = true;
+      options.parsing = false;
+      options.plugins.legend.display = false;
+      options.plugins.decimation = { enabled: mode !== 'off', algorithm: mode === 'off' ? 'lttb' : mode, samples: Math.min(1000, Math.max(200, Math.round(count / 8))) };
+      options.scales.x = { type: 'time', time: { minUnit: 'minute', tooltipFormat: 'yyyy-MM-dd HH:mm', displayFormats: { hour: 'M/d HH시', day: 'M/d' } }, grid: { color: gridColor() }, ticks: { color: textColor(), maxTicksLimit: 9, maxRotation: 0 }, border: { color: gridColor() } };
+      makeChart('performanceChart', { type: 'line', data: { datasets: [{ data: generatePerfData(count), borderColor: COLORS.sky, borderWidth: 1.2, pointRadius: 0 }] }, options });
+      requestAnimationFrame(() => { $('#perfTime').textContent = `${(performance.now() - t0).toFixed(1)} ms (브라우저 환경별 차이)`; });
+    }
+
+    function initialLiveData() {
+      const now = Date.now();
+      return Array.from({ length: 20 }, (_, i) => ({ x: now - (19 - i) * 1000, y: 50 + Math.sin(i / 2.4) * 7 + (i % 3) }));
+    }
+
+    function initLive() {
+      const options = commonOptions();
+      options.animation = { duration: 220 };
+      options.plugins.legend.display = false;
+      options.scales.x = { type: 'time', time: { unit: 'second', tooltipFormat: 'HH:mm:ss', displayFormats: { second: 'HH:mm:ss' } }, grid: { color: gridColor() }, ticks: { color: textColor(), maxTicksLimit: 7, maxRotation: 0 }, border: { color: gridColor() } };
+      options.scales.y.suggestedMin = 38; options.scales.y.suggestedMax = 64;
+      makeChart('liveChart', { type: 'line', data: { datasets: [{ data: initialLiveData(), borderColor: COLORS.teal, backgroundColor: 'rgba(10,167,160,.12)', fill: true, tension: .3, pointRadius: 2 }] }, options });
+      moveLiveWindow();
+    }
+
+    function addLivePoint() {
+      const ds = charts.liveChart.data.datasets[0].data;
+      const prev = ds[ds.length - 1]?.y ?? 50;
+      const next = Math.max(35, Math.min(70, prev + (Math.random() - .48) * 5));
+      ds.push({ x: Date.now(), y: +next.toFixed(2) });
+      const keep = Number($('#liveWindow').value);
+      while (ds.length > keep) ds.shift();
+      moveLiveWindow();
+      charts.liveChart.update('none');
+    }
+
+    function moveLiveWindow() {
+      const ds = charts.liveChart?.data.datasets[0].data || [];
+      if (!ds.length) return;
+      const x = charts.liveChart.options.scales.x;
+      x.min = ds[0].x;
+      x.max = ds[ds.length - 1].x + 1000;
+    }
+
+    function toggleLive() {
+      if (liveTimer) {
+        clearInterval(liveTimer); liveTimer = null; $('#liveToggleBtn').textContent = '▶ 시작'; toast('실시간 갱신을 중지했다.');
+      } else {
+        liveTimer = setInterval(addLivePoint, Number($('#liveInterval').value)); $('#liveToggleBtn').textContent = '■ 중지'; toast('실시간 갱신을 시작했다.');
+      }
+    }
+
+    function restartLiveIfRunning() {
+      if (!liveTimer) return;
+      clearInterval(liveTimer);
+      liveTimer = setInterval(addLivePoint, Number($('#liveInterval').value));
+    }
+
+    function runLab() {
+      if (!window.dateFns) return;
+      const value = $('#labDate').value;
+      const parseToken = $('#labParseToken').value;
+      const formatToken = $('#labFormatToken').value;
+      const add = Number($('#labAddDays').value) || 0;
+      const locale = localeMap()[$('#labLocale').value];
+      try {
+        const parsed = dateFns.parse(value, parseToken, new Date());
+        if (!dateFns.isValid(parsed)) throw new Error('유효하지 않은 날짜');
+        const added = dateFns.addDays(parsed, add);
+        const weekStart = dateFns.startOfWeek(parsed, { locale });
+        const monthEnd = dateFns.endOfMonth(parsed);
+        const rows = [
+          ['parse()', parsed.toString()],
+          ['format()', dateFns.format(parsed, formatToken, { locale })],
+          [`addDays(${add})`, dateFns.format(added, 'PPPP p', { locale })],
+          ['differenceInDays()', `${dateFns.differenceInDays(added, parsed)}일`],
+          ['startOfWeek()', dateFns.format(weekStart, 'PPPP', { locale })],
+          ['endOfMonth()', dateFns.format(monthEnd, 'PPPP', { locale })],
+          ['getISOWeek()', `${dateFns.getISOWeek(parsed)}주차`],
+          ['formatISO()', dateFns.formatISO(parsed)],
+          ['isWeekend()', dateFns.isWeekend(parsed) ? '예' : '아니오']
+        ];
+        $('#labResult').innerHTML = rows.map(([k, v]) => `<tr><th>${k}</th><td><code>${escapeHtml(String(v))}</code></td></tr>`).join('');
+      } catch (e) {
+        $('#labResult').innerHTML = `<tr><th>오류</th><td><code>${escapeHtml(e.message)}</code></td></tr>`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>'"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[ch]));
+    }
+
+    function refreshThemeStyles() {
+      Chart.defaults.color = textColor();
+      Object.values(charts).filter(Boolean).forEach(chart => {
+        Object.values(chart.options.scales || {}).forEach(scale => {
+          if (scale.ticks) scale.ticks.color = textColor();
+          if (scale.grid) scale.grid.color = gridColor();
+          if (scale.border) scale.border.color = gridColor();
+          if (scale.title) scale.title.color = textColor();
+        });
+        if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = textColor();
+        if (chart.options.plugins?.title) chart.options.plugins.title.color = textColor();
+        chart.update('none');
+      });
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      localStorage.setItem('dateFnsDemoTheme', next);
+      refreshThemeStyles();
+    }
+
+    function exportChart(id) {
+      const chart = charts[id];
+      if (!chart) return;
+      const link = document.createElement('a');
+      link.download = `${id}_${dateFns?.format ? dateFns.format(new Date(), 'yyyyMMdd_HHmmss') : Date.now()}.png`;
+      link.href = chart.toBase64Image('image/png', 1);
+      link.click();
+      toast(`${id} 차트를 PNG로 저장했다.`);
+    }
+
+    async function exportAll() {
+      const entries = Object.entries(charts).filter(([, chart]) => chart);
+      for (let i = 0; i < entries.length; i++) {
+        exportChart(entries[i][0]);
+        await new Promise(r => setTimeout(r, 180));
+      }
+    }
+
+    const codeSnippets = {
+      basic: `new Chart(ctx, {\n  type: 'line',\n  data: { datasets: [{\n    data: [{ x: '2026-07-01T09:00:00', y: 18.4 }]\n  }]},\n  options: { scales: { x: {\n    type: 'time',\n    adapters: { date: { locale: dateFns.locale.ko } },\n    time: { unit: 'day', tooltipFormat: 'PPP p',\n      displayFormats: { day: 'M월 d일' } }\n  }}}\n});`,
+      parser: `scales: { x: {\n  type: 'time',\n  time: {\n    parser: 'yyyy/MM/dd HH:mm',\n    unit: 'day',\n    displayFormats: { day: 'M/d' }\n  }\n}}`,
+      compare: `// 실제 시간 간격\nx: { type: 'time' }\n\n// 모든 데이터 포인트를 동일 간격으로 배치\nx: { type: 'timeseries' }`,
+      unit: `const x = chart.options.scales.x;\nx.time.unit = 'week';\nx.time.displayFormats.week = 'M월 d일';\nx.ticks.stepSize = 2;\nchart.update();`,
+      locale: `x: {\n  type: 'time',\n  adapters: {\n    date: { locale: dateFns.locale.ko }\n  },\n  time: {\n    unit: 'month',\n    displayFormats: { month: 'MMM d (EEE)' }\n  }\n}`,
+      week: `time: {\n  unit: 'week',\n  isoWeekday: 1, // 월요일 시작\n  round: 'week',\n  displayFormats: { week: 'M월 d일' }\n}`,
+      range: `x: {\n  type: 'time',\n  min: '2026-05-01',\n  max: '2026-07-31',\n  bounds: 'data',\n  ticks: { source: 'data' }\n}`,
+      mixed: `datasets: [\n  { type: 'bar', data: volume, yAxisID: 'y' },\n  { type: 'line', data: price, yAxisID: 'price' }\n],\nscales: { x: { type: 'time' } }`,
+      events: `new Chart(ctx, {\n  type: 'scatter',\n  data: { datasets: [{ data: events,\n    pointRadius: ctx => 4 + ctx.raw.y * 2\n  }]},\n  options: { scales: { x: { type: 'time' } } }\n});`,
+      performance: `options: {\n  parsing: false,\n  normalized: true,\n  animation: false,\n  plugins: {\n    decimation: { enabled: true, algorithm: 'lttb', samples: 1000 }\n  },\n  scales: { x: { type: 'time' } }\n}`,
+      live: `dataset.data.push({ x: Date.now(), y: nextValue });\nwhile (dataset.data.length > 40) dataset.data.shift();\nchart.options.scales.x.min = dataset.data[0].x;\nchart.options.scales.x.max = Date.now() + 1000;\nchart.update('none');`,
+      lab: `const parsed = dateFns.parse(value, "yyyy-MM-dd'T'HH:mm", new Date());\nconst label = dateFns.format(parsed, 'PPPP p', {\n  locale: dateFns.locale.ko\n});\nconst next = dateFns.addDays(parsed, 10);\nconst week = dateFns.getISOWeek(parsed);`
+    };
+
+    function openCode(key) {
+      currentCode = codeSnippets[key] || '';
+      $('#modalTitle').textContent = `샘플 코드 · ${key}`;
+      $('#modalCode').textContent = currentCode;
+      $('#codeModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCode() {
+      $('#codeModal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    async function copyCode() {
+      try { await navigator.clipboard.writeText(currentCode); toast('코드를 복사했다.'); }
+      catch { toast('브라우저 보안 정책으로 복사하지 못했다.'); }
+    }
+
+    function bindEvents() {
+      $('#themeBtn').addEventListener('click', toggleTheme);
+      $('#refreshAllBtn').addEventListener('click', () => { initializeCharts(); toast('전체 차트를 다시 생성했다.'); });
+      $('#exportAllBtn').addEventListener('click', exportAll);
+      $('#parserAddBtn').addEventListener('click', addParserPoint);
+      $('#unitApplyBtn').addEventListener('click', applyUnit);
+      $('#localeSelect').addEventListener('change', applyLocale);
+      $('#localeFormat').addEventListener('change', applyLocale);
+      $('#isoWeekToggle').addEventListener('change', applyWeekOptions);
+      $('#roundWeekToggle').addEventListener('change', applyWeekOptions);
+      $('#rangeApplyBtn').addEventListener('click', applyRange);
+      $$('#presetButtons [data-days]').forEach(btn => btn.addEventListener('click', () => applyRangePreset(Number(btn.dataset.days), btn)));
+      $('#mixedStackToggle').addEventListener('change', applyMixed);
+      $('#mixedFillToggle').addEventListener('change', applyMixed);
+      $('#eventFilter').addEventListener('change', applyEvents);
+      $('#eventRadiusToggle').addEventListener('change', applyEvents);
+      $('#perfCount').addEventListener('input', e => $('#perfCountLabel').textContent = Number(e.target.value).toLocaleString('ko-KR'));
+      $('#perfRenderBtn').addEventListener('click', initPerformance);
+      $('#liveToggleBtn').addEventListener('click', toggleLive);
+      $('#liveOnceBtn').addEventListener('click', addLivePoint);
+      $('#liveInterval').addEventListener('change', restartLiveIfRunning);
+      $('#labRunBtn').addEventListener('click', runLab);
+      $$('.export-btn').forEach(btn => btn.addEventListener('click', () => exportChart(btn.dataset.chart)));
+      $$('.code-btn').forEach(btn => btn.addEventListener('click', () => openCode(btn.dataset.code)));
+      $('#closeModalBtn').addEventListener('click', closeCode);
+      $('#copyCodeBtn').addEventListener('click', copyCode);
+      $('#codeModal').addEventListener('click', e => { if (e.target.id === 'codeModal') closeCode(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCode(); });
+
+      const sections = $$('.card[id]');
+      const navs = $$('.nav-link');
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            navs.forEach(n => n.classList.toggle('active', n.getAttribute('href') === `#${entry.target.id}`));
+          }
+        });
+      }, { rootMargin: '-20% 0px -65% 0px', threshold: 0 });
+      sections.forEach(section => observer.observe(section));
+    }
+
+    function initializeCharts() {
+      if (liveTimer) { clearInterval(liveTimer); liveTimer = null; $('#liveToggleBtn').textContent = '▶ 시작'; }
+      Object.keys(charts).forEach(destroyChart);
+      initBasic(); initParser(); initCompare(); initUnit(); initLocale(); initWeek();
+      initRange(); initMixed(); initEvents(); initPerformance(); initLive(); runLab();
+      updateChartCount();
+    }
+
+    function boot() {
+      const savedTheme = localStorage.getItem('dateFnsDemoTheme');
+      if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+      else if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
+
+      if (!window.Chart) {
+        $('#cdnFailure').classList.add('show');
+        initStatus();
+        return;
+      }
+      Chart.defaults.font.family = 'Pretendard, Noto Sans KR, Segoe UI, sans-serif';
+      Chart.defaults.color = textColor();
+      const adapterOk = initStatus();
+      bindEvents();
+      if (adapterOk) initializeCharts();
+    }
+
+    window.addEventListener('load', boot);
+    window.addEventListener('beforeunload', () => { if (liveTimer) clearInterval(liveTimer); });
+  })();
+  </script>
+</body>
+</html>
