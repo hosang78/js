@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>Fabric.js 종합 기능 플레이그라운드</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --line: #dce3ed;
+      --text: #182230;
+      --muted: #64748b;
+      --primary: #2457d6;
+      --primary-2: #eaf0ff;
+      --danger: #dc3545;
+      --success: #16875b;
+      --shadow: 0 12px 32px rgba(23, 35, 56, .10);
+      --radius: 14px;
+      --toolbar-h: 60px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 54px var(--toolbar-h) minmax(0, 1fr) 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      color: #fff;
+      background: linear-gradient(100deg, #17233a, #243f76 70%, #2457d6);
+      box-shadow: 0 2px 12px rgba(10, 25, 60, .2);
+      z-index: 10;
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .brand-mark {
+      width: 32px; height: 32px; display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,.28); border-radius: 9px;
+      background: rgba(255,255,255,.12); font-weight: 900;
+    }
+    .brand h1 { margin: 0; font-size: 17px; letter-spacing: -.4px; white-space: nowrap; }
+    .brand small { color: rgba(255,255,255,.68); font-size: 11px; }
+    .top-actions { display: flex; gap: 7px; align-items: center; }
+    .version-badge {
+      padding: 5px 9px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px;
+      background: rgba(255,255,255,.1); font-size: 11px; white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      overflow-x: auto;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      z-index: 8;
+    }
+    .toolbar::-webkit-scrollbar { height: 5px; }
+    .toolbar::-webkit-scrollbar-thumb { background: #ccd5e3; border-radius: 5px; }
+    .tool-group { display: flex; align-items: center; gap: 5px; padding-right: 8px; margin-right: 2px; border-right: 1px solid var(--line); }
+    .tool-group:last-child { border-right: 0; }
+
+    .btn {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: .15s ease;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .btn:hover { border-color: #a9b8cf; background: #f7f9fc; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn.active { color: #fff; background: var(--primary); border-color: var(--primary); }
+    .btn.primary { color: #fff; background: var(--primary); border-color: var(--primary); }
+    .btn.danger { color: #b42333; background: #fff5f6; border-color: #f4c9cf; }
+    .btn.success { color: #0f744d; background: #effaf5; border-color: #bfe6d3; }
+    .btn.icon { width: 35px; padding: 0; display: grid; place-items: center; font-size: 15px; }
+    .btn.sm { min-height: 29px; padding: 4px 7px; font-size: 11px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 252px minmax(360px, 1fr) 312px;
+      gap: 0;
+    }
+
+    .sidebar {
+      min-height: 0;
+      overflow-y: auto;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+    }
+    .sidebar.right { border-right: 0; border-left: 1px solid var(--line); }
+    .sidebar::-webkit-scrollbar { width: 7px; }
+    .sidebar::-webkit-scrollbar-thumb { background: #ccd5e3; border-radius: 10px; }
+
+    details.panel { border-bottom: 1px solid var(--line); }
+    details.panel > summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 850;
+      background: #fff;
+      user-select: none;
+    }
+    details.panel > summary::-webkit-details-marker { display: none; }
+    details.panel > summary::after { content: "⌄"; color: var(--muted); transition: .2s; }
+    details.panel[open] > summary::after { transform: rotate(180deg); }
+    .panel-body { padding: 0 12px 13px; background: var(--panel); }
+
+    .button-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .button-grid.two { grid-template-columns: repeat(2, 1fr); }
+    .button-grid.four { grid-template-columns: repeat(4, 1fr); }
+    .tile-btn {
+      min-height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel-2);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 750;
+      transition: .15s;
+    }
+    .tile-btn:hover { border-color: #9fb2d1; background: var(--primary-2); color: #173f9e; }
+    .tile-btn b { font-size: 19px; line-height: 1; }
+
+    .field { margin-top: 9px; }
+    .field:first-child { margin-top: 0; }
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+      color: #43516a;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .field-label output { color: var(--primary); font-weight: 850; }
+    .input, .select, .textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 8px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      font-size: 12px;
+    }
+    .input:focus, .select:focus, .textarea:focus { border-color: #7d9dde; box-shadow: 0 0 0 3px rgba(36,87,214,.1); }
+    .input[type="color"] { height: 35px; padding: 3px; cursor: pointer; }
+    .input[type="range"] { padding: 0; border: 0; accent-color: var(--primary); }
+    .textarea { min-height: 105px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; line-height: 1.45; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .row.three { grid-template-columns: repeat(3, 1fr); }
+    .row.auto { grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); }
+    .check-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 11px; color: #42506a; }
+    .check-row input { accent-color: var(--primary); }
+    .muted { color: var(--muted); }
+    .hint { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+    .center {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 39px minmax(0, 1fr) 118px;
+      background: #e9eef6;
+    }
+    .canvas-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 5px 10px;
+      background: #f9fbfd;
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+    }
+    .canvas-toolbar .left, .canvas-toolbar .right { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .canvas-toolbar select { max-width: 120px; }
+
+    .canvas-scroll {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      position: relative;
+      padding: 32px;
+      background:
+        radial-gradient(circle at 1px 1px, rgba(84,102,130,.16) 1px, transparent 0) 0 0/18px 18px,
+        #e9eef6;
+    }
+    .canvas-shell {
+      width: max-content;
+      position: relative;
+      margin: auto;
+      background-color: #fff;
+      border: 1px solid #c8d1df;
+      box-shadow: 0 16px 45px rgba(35, 49, 71, .18);
+    }
+    .canvas-shell.grid-on {
+      background-image:
+        linear-gradient(rgba(58,96,170,.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58,96,170,.09) 1px, transparent 1px),
+        linear-gradient(rgba(58,96,170,.16) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(58,96,170,.16) 1px, transparent 1px);
+      background-size: 10px 10px, 10px 10px, 50px 50px, 50px 50px;
+      background-position: -1px -1px;
+    }
+    .canvas-container { display: block !important; }
+    .canvas-container canvas { touch-action: none; }
+    canvas.upper-canvas, canvas.lower-canvas { touch-action: none; }
+
+    .drop-overlay {
+      position: absolute;
+      inset: 12px;
+      display: none;
+      place-items: center;
+      z-index: 100;
+      border: 3px dashed #4775df;
+      border-radius: 14px;
+      color: #234dba;
+      background: rgba(234,240,255,.92);
+      font-weight: 900;
+      pointer-events: none;
+    }
+    .canvas-scroll.dragging .drop-overlay { display: grid; }
+
+    .console {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 32px 1fr;
+      background: #111827;
+      color: #d9e3f0;
+      border-top: 1px solid #0b1220;
+    }
+    .console-head { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; font-size: 11px; background: #182235; }
+    .console-body { overflow: auto; padding: 6px 10px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; line-height: 1.6; }
+    .log-line { display: grid; grid-template-columns: 64px 120px 1fr; gap: 8px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .log-time { color: #8492a8; }
+    .log-event { color: #78a6ff; }
+    .log-info { color: #d9e3f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .selection-card {
+      margin: 0 0 9px;
+      padding: 9px;
+      border: 1px solid #ccd8ed;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #f5f8ff, #fff);
+      font-size: 11px;
+    }
+    .selection-card strong { display: block; margin-bottom: 3px; color: #214baf; }
+
+    .layers { display: flex; flex-direction: column; gap: 4px; }
+    .layer-item {
+      display: grid;
+      grid-template-columns: 27px 27px 1fr 24px;
+      align-items: center;
+      gap: 3px;
+      min-height: 34px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 10px;
+    }
+    .layer-item:hover { background: #f6f8fc; }
+    .layer-item.active { border-color: #7193df; background: #edf3ff; }
+    .layer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 750; }
+    .mini-btn { border: 0; background: transparent; cursor: pointer; padding: 2px; border-radius: 5px; }
+    .mini-btn:hover { background: #e8edf5; }
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      color: #516075;
+      background: #f9fbfd;
+      border-top: 1px solid var(--line);
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .statusbar span { overflow: hidden; text-overflow: ellipsis; }
+    .ok-dot, .error-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .ok-dot { background: #19a56d; box-shadow: 0 0 0 3px rgba(25,165,109,.14); }
+    .error-dot { background: #db4354; box-shadow: 0 0 0 3px rgba(219,67,84,.14); }
+
+    .modal {
+      position: fixed; inset: 0; z-index: 9999;
+      display: none; place-items: center;
+      padding: 20px;
+      background: rgba(12,20,34,.54);
+    }
+    .modal.open { display: grid; }
+    .modal-card { width: min(720px, 95vw); max-height: 85vh; overflow: auto; padding: 18px; border-radius: 15px; background: #fff; box-shadow: var(--shadow); }
+    .modal-card h2 { margin: 0 0 10px; font-size: 17px; }
+    .shortcut-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .shortcut-table td { padding: 7px; border-bottom: 1px solid var(--line); }
+    kbd { padding: 2px 6px; border: 1px solid #bcc6d5; border-bottom-width: 2px; border-radius: 5px; background: #f5f7fa; font-family: inherit; font-size: 10px; }
+    .toast-wrap { position: fixed; top: 122px; right: 326px; z-index: 10000; display: flex; flex-direction: column; gap: 7px; pointer-events: none; }
+    .toast { min-width: 210px; max-width: 350px; padding: 10px 12px; border-radius: 9px; color: #fff; background: #1e293b; box-shadow: var(--shadow); font-size: 11px; animation: toastIn .2s ease; }
+    .toast.error { background: #b42333; }
+    .toast.success { background: #11704b; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } }
+
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 220px minmax(360px, 1fr) 275px; }
+      .toast-wrap { right: 288px; }
+    }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .app { height: auto; min-height: 100vh; display: block; }
+      .topbar { height: 54px; position: sticky; top: 0; }
+      .toolbar { position: sticky; top: 54px; z-index: 20; }
+      .workspace { display: flex; flex-direction: column; }
+      .sidebar { max-height: none; border: 0; border-bottom: 1px solid var(--line); }
+      .sidebar.right { border-left: 0; }
+      .center { min-height: 700px; order: -1; grid-template-rows: 42px 540px 118px; }
+      .canvas-scroll { padding: 20px; }
+      .toast-wrap { top: 110px; right: 12px; }
+      .statusbar { height: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">F</div>
+        <div>
+          <h1>Fabric.js 종합 기능 플레이그라운드</h1>
+          <small>캔버스 오브젝트 편집 · 이미지 필터 · 직렬화 · SVG · 애니메이션</small>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span id="libVersion" class="version-badge">Fabric.js 로딩 중</span>
+        <button class="btn sm" id="helpBtn">단축키</button>
+      </div>
+    </header>
+
+    <nav class="toolbar" aria-label="상단 도구 모음">
+      <div class="tool-group">
+        <button class="btn icon active mode-btn" data-mode="select" title="선택 도구 (V)">↖</button>
+        <button class="btn icon mode-btn" data-mode="draw" title="자유 그리기 (B)">✎</button>
+        <button class="btn icon mode-btn" data-mode="pan" title="화면 이동 (H/Space)">✋</button>
+      </div>
+      <div class="tool-group">
+        <button class="btn icon" id="undoBtn" title="실행 취소 Ctrl+Z">↶</button>
+        <button class="btn icon" id="redoBtn" title="다시 실행 Ctrl+Y">↷</button>
+      </div>
+      <div class="tool-group">
+        <button class="btn" id="copyBtn">복사</button>
+        <button class="btn" id="pasteBtn">붙여넣기</button>
+        <button class="btn" id="duplicateBtn">복제</button>
+        <button class="btn danger" id="deleteBtn">삭제</button>
+      </div>
+      <div class="tool-group">
+        <button class="btn" id="groupBtn">그룹</button>
+        <button class="btn" id="ungroupBtn">그룹 해제</button>
+        <button class="btn" id="lockBtn">잠금</button>
+      </div>
+      <div class="tool-group">
+        <button class="btn icon" id="sendBackBtn" title="맨 뒤로">⇤</button>
+        <button class="btn icon" id="sendBackwardBtn" title="한 단계 뒤로">←</button>
+        <button class="btn icon" id="bringForwardBtn" title="한 단계 앞으로">→</button>
+        <button class="btn icon" id="bringFrontBtn" title="맨 앞으로">⇥</button>
+      </div>
+      <div class="tool-group">
+        <button class="btn" data-align="left">좌측</button>
+        <button class="btn" data-align="centerX">가로 중앙</button>
+        <button class="btn" data-align="centerY">세로 중앙</button>
+        <button class="btn" data-align="top">상단</button>
+      </div>
+      <div class="tool-group">
+        <button class="btn primary" id="quickPngBtn">PNG 저장</button>
+      </div>
+    </nav>
+
+    <main class="workspace">
+      <aside class="sidebar left">
+        <details class="panel" open>
+          <summary>기본 도형</summary>
+          <div class="panel-body">
+            <div class="button-grid">
+              <button class="tile-btn add-shape" data-shape="rect"><b>▰</b>사각형</button>
+              <button class="tile-btn add-shape" data-shape="roundRect"><b>▣</b>둥근 사각</button>
+              <button class="tile-btn add-shape" data-shape="circle"><b>●</b>원</button>
+              <button class="tile-btn add-shape" data-shape="ellipse"><b>⬭</b>타원</button>
+              <button class="tile-btn add-shape" data-shape="triangle"><b>▲</b>삼각형</button>
+              <button class="tile-btn add-shape" data-shape="line"><b>╱</b>선</button>
+              <button class="tile-btn add-shape" data-shape="arrow"><b>➜</b>화살표</button>
+              <button class="tile-btn add-shape" data-shape="hexagon"><b>⬢</b>육각형</button>
+              <button class="tile-btn add-shape" data-shape="star"><b>★</b>별</button>
+              <button class="tile-btn add-shape" data-shape="heart"><b>♥</b>패스</button>
+              <button class="tile-btn" id="sampleSvgBtn"><b>SVG</b>SVG 도형</button>
+              <button class="tile-btn" id="sampleGroupBtn"><b>◉</b>그룹 샘플</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="panel" open>
+          <summary>텍스트</summary>
+          <div class="panel-body">
+            <div class="button-grid two">
+              <button class="tile-btn" id="addTextBtn"><b>T</b>일반 Text</button>
+              <button class="tile-btn" id="addITextBtn"><b>I</b>편집 IText</button>
+              <button class="tile-btn" id="addTextboxBtn"><b>¶</b>자동줄바꿈</button>
+              <button class="tile-btn" id="curvedTextBtn"><b>⌒</b>경로 텍스트</button>
+            </div>
+            <div class="field">
+              <div class="field-label">문구</div>
+              <input class="input" id="newTextValue" value="Fabric.js 편집 텍스트" />
+            </div>
+          </div>
+        </details>
+
+        <details class="panel" open>
+          <summary>이미지·파일</summary>
+          <div class="panel-body">
+            <div class="button-grid two">
+              <button class="tile-btn" id="demoImageBtn"><b>▧</b>샘플 이미지</button>
+              <button class="tile-btn" id="uploadImageBtn"><b>＋</b>이미지 업로드</button>
+              <button class="tile-btn" id="importSvgFileBtn"><b>◇</b>SVG 파일</button>
+              <button class="tile-btn" id="loadJsonFileBtn"><b>{ }</b>JSON 파일</button>
+            </div>
+            <input type="file" id="imageFile" accept="image/*" hidden />
+            <input type="file" id="svgFile" accept=".svg,image/svg+xml" hidden />
+            <input type="file" id="jsonFile" accept=".json,application/json" hidden />
+            <p class="hint">이미지 파일은 캔버스 영역에 끌어다 놓을 수도 있음.</p>
+          </div>
+        </details>
+
+        <details class="panel" open>
+          <summary>브러시·자유 그리기</summary>
+          <div class="panel-body">
+            <div class="field">
+              <div class="field-label">브러시 종류</div>
+              <select class="select" id="brushType">
+                <option value="PencilBrush">PencilBrush</option>
+                <option value="CircleBrush">CircleBrush</option>
+                <option value="SprayBrush">SprayBrush</option>
+                <option value="PatternBrush">PatternBrush</option>
+              </select>
+            </div>
+            <div class="row">
+              <div class="field">
+                <div class="field-label">색상</div>
+                <input class="input" type="color" id="brushColor" value="#2457d6" />
+              </div>
+              <div class="field">
+                <div class="field-label">굵기 <output id="brushWidthOut">8</output></div>
+                <input class="input" type="range" id="brushWidth" min="1" max="60" value="8" />
+              </div>
+            </div>
+            <div class="check-row"><label for="brushShadow">브러시 그림자</label><input type="checkbox" id="brushShadow" /></div>
+            <div class="button-grid two" style="margin-top:8px">
+              <button class="btn active" id="startDrawBtn">그리기 시작</button>
+              <button class="btn" id="clearPathsBtn">그림만 삭제</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="panel">
+          <summary>캔버스 설정</summary>
+          <div class="panel-body">
+            <div class="field">
+              <div class="field-label">크기 프리셋</div>
+              <select class="select" id="canvasPreset">
+                <option value="960x600">프레젠테이션 960×600</option>
+                <option value="800x800">정사각형 800×800</option>
+                <option value="1080x608">16:9 1080×608</option>
+                <option value="794x1123">A4 세로 794×1123</option>
+                <option value="1123x794">A4 가로 1123×794</option>
+              </select>
+            </div>
+            <div class="row">
+              <div class="field"><div class="field-label">너비</div><input class="input" type="number" id="canvasWidth" value="960" min="200" max="3000" /></div>
+              <div class="field"><div class="field-label">높이</div><input class="input" type="number" id="canvasHeight" value="600" min="200" max="3000" /></div>
+            </div>
+            <button class="btn" id="resizeCanvasBtn" style="width:100%; margin-top:7px">크기 적용</button>
+            <div class="row">
+              <div class="field"><div class="field-label">배경색</div><input class="input" type="color" id="canvasBg" value="#ffffff" /></div>
+              <div class="field"><div class="field-label">선택 영역색</div><input class="input" type="color" id="selectionColor" value="#2457d6" /></div>
+            </div>
+            <div class="button-grid two" style="margin-top:8px">
+              <button class="btn" id="canvasGradientBtn">배경 그라디언트</button>
+              <button class="btn" id="canvasClipBtn">원형 캔버스 클립</button>
+            </div>
+            <div class="check-row"><label for="showGrid">격자 표시</label><input type="checkbox" id="showGrid" checked /></div>
+            <div class="check-row"><label for="snapGrid">10px 격자 스냅</label><input type="checkbox" id="snapGrid" /></div>
+            <div class="check-row"><label for="perPixel">픽셀 단위 선택 판정</label><input type="checkbox" id="perPixel" /></div>
+          </div>
+        </details>
+      </aside>
+
+      <section class="center">
+        <div class="canvas-toolbar">
+          <div class="left">
+            <span id="modeLabel"><strong>선택 모드</strong></span>
+            <span class="muted">|</span>
+            <span id="objectCounter">오브젝트 0개</span>
+          </div>
+          <div class="right">
+            <button class="btn sm" id="zoomOutBtn">−</button>
+            <span id="zoomLabel" style="min-width:42px;text-align:center;font-weight:800">100%</span>
+            <button class="btn sm" id="zoomInBtn">＋</button>
+            <button class="btn sm" id="resetViewportBtn">화면 초기화</button>
+          </div>
+        </div>
+        <div class="canvas-scroll" id="canvasScroll">
+          <div class="drop-overlay">이미지 또는 SVG 파일을 놓으세요</div>
+          <div class="canvas-shell grid-on" id="canvasShell">
+            <canvas id="fabricCanvas" width="960" height="600"></canvas>
+          </div>
+        </div>
+        <div class="console">
+          <div class="console-head"><span>Fabric 이벤트 로그</span><button class="btn sm" id="clearLogBtn">로그 지우기</button></div>
+          <div class="console-body" id="eventLog"></div>
+        </div>
+      </section>
+
+      <aside class="sidebar right">
+        <details class="panel" open>
+          <summary>선택 오브젝트</summary>
+          <div class="panel-body">
+            <div class="selection-card" id="selectionCard"><strong>선택 없음</strong>캔버스의 오브젝트를 선택하세요.</div>
+            <div class="row">
+              <div class="field"><div class="field-label">X</div><input class="input prop" data-prop="left" type="number" step="1" /></div>
+              <div class="field"><div class="field-label">Y</div><input class="input prop" data-prop="top" type="number" step="1" /></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="field-label">회전 °</div><input class="input prop" data-prop="angle" type="number" step="1" /></div>
+              <div class="field"><div class="field-label">불투명도</div><input class="input prop" data-prop="opacity" type="number" min="0" max="1" step="0.05" /></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="field-label">Scale X</div><input class="input prop" data-prop="scaleX" type="number" min="0.01" step="0.05" /></div>
+              <div class="field"><div class="field-label">Scale Y</div><input class="input prop" data-prop="scaleY" type="number" min="0.01" step="0.05" /></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="field-label">Skew X</div><input class="input prop" data-prop="skewX" type="number" step="1" /></div>
+              <div class="field"><div class="field-label">Skew Y</div><input class="input prop" data-prop="skewY" type="number" step="1" /></div>
+            </div>
+            <div class="row">
+              <div class="field"><div class="field-label">채우기</div><input class="input prop-color" data-prop="fill" type="color" value="#2457d6" /></div>
+              <div class="field"><div class="field-label">외곽선</div><input class="input prop-color" data-prop="stroke" type="color" value="#17376f" /></div>
+            </div>
+            <div class="field"><div class="field-label">외곽선 굵기 <output id="strokeWidthOut">1</output></div><input class="input" id="strokeWidth" type="range" min="0" max="30" value="1" /></div>
+            <div class="button-grid two" style="margin-top:8px">
+              <button class="btn" id="flipXBtn">좌우 반전</button>
+              <button class="btn" id="flipYBtn">상하 반전</button>
+              <button class="btn" id="gradientFillBtn">그라디언트</button>
+              <button class="btn" id="patternFillBtn">패턴 채우기</button>
+              <button class="btn" id="shadowBtn">그림자</button>
+              <button class="btn" id="strokeUniformBtn">선 굵기 고정</button>
+              <button class="btn" id="clipCircleBtn">원형 클립</button>
+              <button class="btn" id="clearClipBtn">클립 해제</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="panel" open>
+          <summary>텍스트 스타일</summary>
+          <div class="panel-body">
+            <div class="field"><div class="field-label">글꼴</div>
+              <select class="select text-prop" data-prop="fontFamily">
+                <option value="Malgun Gothic">맑은 고딕</option>
+                <option value="Arial">Arial</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Courier New">Courier New</option>
+                <option value="serif">Serif</option>
+                <option value="sans-serif">Sans-serif</option>
+              </select>
+            </div>
+            <div class="row">
+              <div class="field"><div class="field-label">크기</div><input class="input text-prop" data-prop="fontSize" type="number" min="6" max="300" value="32" /></div>
+              <div class="field"><div class="field-label">행간</div><input class="input text-prop" data-prop="lineHeight" type="number" min="0.5" max="4" step="0.1" value="1.16" /></div>
+            </div>
+            <div class="field"><div class="field-label">자간</div><input class="input text-prop" data-prop="charSpacing" type="number" min="-500" max="2000" value="0" /></div>
+            <div class="button-grid four" style="margin-top:8px">
+              <button class="btn text-toggle" data-text-toggle="bold"><b>B</b></button>
+              <button class="btn text-toggle" data-text-toggle="italic"><i>I</i></button>
+              <button class="btn text-toggle" data-text-toggle="underline"><u>U</u></button>
+              <button class="btn text-toggle" data-text-toggle="linethrough"><s>S</s></button>
+            </div>
+            <div class="button-grid three" style="margin-top:6px">
+              <button class="btn text-align" data-value="left">왼쪽</button>
+              <button class="btn text-align" data-value="center">가운데</button>
+              <button class="btn text-align" data-value="right">오른쪽</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="panel" open>
+          <summary>이미지 필터</summary>
+          <div class="panel-body">
+            <div class="button-grid three">
+              <button class="btn filter-btn" data-filter="Grayscale">흑백</button>
+              <button class="btn filter-btn" data-filter="Sepia">세피아</button>
+              <button class="btn filter-btn" data-filter="Invert">반전</button>
+              <button class="btn filter-btn" data-filter="Vintage">빈티지</button>
+              <button class="btn filter-btn" data-filter="Kodachrome">코다크롬</button>
+              <button class="btn filter-btn" data-filter="Technicolor">테크니컬러</button>
+              <button class="btn filter-btn" data-filter="Pixelate">픽셀</button>
+              <button class="btn filter-btn" data-filter="Blur">블러</button>
+              <button class="btn filter-btn" data-filter="Noise">노이즈</button>
+            </div>
+            <div class="field"><div class="field-label">밝기 <output id="brightnessOut">0</output></div><input class="input image-filter-range" data-filter="Brightness" type="range" min="-1" max="1" step="0.05" value="0" /></div>
+            <div class="field"><div class="field-label">대비 <output id="contrastOut">0</output></div><input class="input image-filter-range" data-filter="Contrast" type="range" min="-1" max="1" step="0.05" value="0" /></div>
+            <div class="field"><div class="field-label">채도 <output id="saturationOut">0</output></div><input class="input image-filter-range" data-filter="Saturation" type="range" min="-1" max="1" step="0.05" value="0" /></div>
+            <button class="btn danger" id="resetFiltersBtn" style="width:100%;margin-top:8px">필터 초기화</button>
+          </div>
+        </details>
+
+        <details class="panel">
+          <summary>애니메이션</summary>
+          <div class="panel-body">
+            <div class="button-grid two">
+              <button class="btn" data-animation="bounce">이동+바운스</button>
+              <button class="btn" data-animation="rotate">360° 회전</button>
+              <button class="btn" data-animation="pulse">펄스</button>
+              <button class="btn" data-animation="fade">페이드</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="panel" open>
+          <summary>레이어</summary>
+          <div class="panel-body">
+            <div class="layers" id="layerList"></div>
+          </div>
+        </details>
+
+        <details class="panel">
+          <summary>JSON·SVG·내보내기</summary>
+          <div class="panel-body">
+            <textarea class="textarea" id="jsonArea" placeholder="캔버스 JSON"></textarea>
+            <div class="button-grid two" style="margin-top:7px">
+              <button class="btn" id="jsonGenerateBtn">JSON 생성</button>
+              <button class="btn" id="jsonLoadBtn">JSON 적용</button>
+              <button class="btn" id="localSaveBtn">브라우저 저장</button>
+              <button class="btn" id="localLoadBtn">브라우저 복원</button>
+              <button class="btn" id="downloadJsonBtn">JSON 파일</button>
+              <button class="btn" id="exportSvgBtn">SVG 파일</button>
+              <button class="btn primary" id="exportPngBtn">PNG 2배</button>
+              <button class="btn" id="exportJpgBtn">JPG</button>
+            </div>
+            <textarea class="textarea" id="svgArea" style="margin-top:8px" placeholder="SVG 문자열을 붙여넣으세요"></textarea>
+            <button class="btn" id="svgStringLoadBtn" style="width:100%;margin-top:7px">SVG 문자열 불러오기</button>
+          </div>
+        </details>
+      </aside>
+    </main>
+
+    <footer class="statusbar">
+      <span id="statusLeft"><i class="ok-dot"></i>준비</span>
+      <span id="statusCenter">V 선택 · B 브러시 · H 이동 · Ctrl+Z 실행 취소 · Delete 삭제</span>
+      <span id="statusRight">960 × 600 · Zoom 100%</span>
+    </footer>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <div class="modal" id="helpModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h2>키보드 단축키</h2>
+      <table class="shortcut-table">
+        <tr><td><kbd>V</kbd></td><td>선택 모드</td><td><kbd>B</kbd></td><td>자유 그리기</td></tr>
+        <tr><td><kbd>H</kbd> / <kbd>Space</kbd></td><td>팬 이동 모드</td><td><kbd>Delete</kbd></td><td>선택 삭제</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>실행 취소</td><td><kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>다시 실행</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>복사</td><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>붙여넣기</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>복제</td><td><kbd>Ctrl</kbd>+<kbd>A</kbd></td><td>전체 선택</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>그룹</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd></td><td>그룹 해제</td></tr>
+        <tr><td><kbd>방향키</kbd></td><td>1px 이동</td><td><kbd>Shift</kbd>+<kbd>방향키</kbd></td><td>10px 이동</td></tr>
+        <tr><td>마우스 휠</td><td>포인터 기준 확대/축소</td><td><kbd>Alt</kbd>+드래그</td><td>캔버스 이동</td></tr>
+      </table>
+      <div style="text-align:right;margin-top:12px"><button class="btn primary" id="closeHelpBtn">닫기</button></div>
+    </div>
+  </div>
+
+  <!-- Fabric.js is MIT licensed. Version is pinned for reproducible behavior. -->
+  <script src="https://cdn.jsdelivr.net/npm/fabric@7.4.0/dist/index.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/fabric@7.4.0/dist/index.min.js'"></script>
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const round = (v, digits = 1) => Number(Number(v || 0).toFixed(digits));
+    const safeColor = (value, fallback = '#2457d6') => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+    const escapeHtml = (s) => String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+    let canvas;
+    let mode = 'select';
+    let isPanning = false;
+    let lastPos = { x: 0, y: 0 };
+    let spacePressed = false;
+    let clipboard = null;
+    let demoId = 1;
+    let history = [];
+    let historyIndex = -1;
+    let historyLocked = false;
+    let historyTimer = null;
+    let canvasClipEnabled = false;
+    let objectCountBeforeAction = 0;
+
+    const namedProps = ['name', 'demoId'];
+    const eventLog = $('#eventLog');
+    const layerList = $('#layerList');
+    const canvasShell = $('#canvasShell');
+    const canvasScroll = $('#canvasScroll');
+
+    function toast(message, type = '') {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = message;
+      $('#toastWrap').appendChild(el);
+      setTimeout(() => el.remove(), 2300);
+    }
+
+    function setStatus(message, error = false) {
+      $('#statusLeft').innerHTML = `<i class="${error ? 'error-dot' : 'ok-dot'}"></i>${escapeHtml(message)}`;
+    }
+
+    function logEvent(name, target, extra = '') {
+      const row = document.createElement('div');
+      row.className = 'log-line';
+      const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+      const info = target ? `${target.name || target.type || 'object'} #${target.demoId || '-'}` : extra || '-';
+      row.innerHTML = `<span class="log-time">${time}</span><span class="log-event">${escapeHtml(name)}</span><span class="log-info">${escapeHtml(extra || info)}</span>`;
+      eventLog.prepend(row);
+      while (eventLog.children.length > 80) eventLog.lastElementChild.remove();
+    }
+
+    function objectType(obj) {
+      return obj?.type || obj?.constructor?.type || obj?.constructor?.name || 'Object';
+    }
+
+    function isTextObject(obj) {
+      if (!obj) return false;
+      const t = objectType(obj).toLowerCase();
+      return t.includes('text') || (window.fabric.FabricText && obj instanceof window.fabric.FabricText);
+    }
+
+    function isImageObject(obj) {
+      if (!obj) return false;
+      const t = objectType(obj).toLowerCase();
+      return t.includes('image') || (window.fabric.FabricImage && obj instanceof window.fabric.FabricImage);
+    }
+
+    function isActiveSelection(obj) {
+      return !!(obj && window.fabric.ActiveSelection && obj instanceof window.fabric.ActiveSelection);
+    }
+
+    function isGroupObject(obj) {
+      return !!(obj && window.fabric.Group && obj instanceof window.fabric.Group && !isActiveSelection(obj));
+    }
+
+    function ensureMeta(obj, preferredName) {
+      if (!obj) return obj;
+      if (!obj.demoId) obj.demoId = demoId++;
+      if (!obj.name) obj.name = preferredName || `${objectType(obj)} ${obj.demoId}`;
+      obj.set?.({
+        cornerColor: '#2457d6',
+        cornerStrokeColor: '#ffffff',
+        borderColor: '#2457d6',
+        cornerStyle: 'circle',
+        transparentCorners: false,
+        padding: 2
+      });
+      return obj;
+    }
+
+    function centerPosition(offset = 0) {
+      const vpt = canvas.viewportTransform || [1,0,0,1,0,0];
+      const zoom = canvas.getZoom();
+      return {
+        left: (canvas.width / 2 - vpt[4]) / zoom + offset,
+        top: (canvas.height / 2 - vpt[5]) / zoom + offset
+      };
+    }
+
+    function baseOptions(extra = {}) {
+      return Object.assign({
+        ...centerPosition(Math.random() * 22 - 11),
+        originX: 'center',
+        originY: 'center',
+        fill: '#4b77e5',
+        stroke: '#183b83',
+        strokeWidth: 1.5,
+        strokeUniform: true
+      }, extra);
+    }
+
+    function addObject(obj, name, options = {}) {
+      ensureMeta(obj, name);
+      canvas.add(obj);
+      if (options.select !== false) {
+        canvas.setActiveObject(obj);
+        canvas.requestRenderAll();
+      }
+      updateUI();
+      if (!options.skipHistory) commitHistory(`add:${name || objectType(obj)}`);
+      return obj;
+    }
+
+    function selectedObjects() {
+      return canvas?.getActiveObjects?.() || [];
+    }
+
+    function activeObject() {
+      return canvas?.getActiveObject?.() || null;
+    }
+
+    function removeSelected() {
+      const objects = selectedObjects();
+      if (!objects.length) return toast('삭제할 오브젝트를 선택하세요.', 'error');
+      canvas.discardActiveObject();
+      canvas.remove(...objects);
+      canvas.requestRenderAll();
+      logEvent('delete', null, `${objects.length}개 오브젝트`);
+      commitHistory('delete');
+      updateUI();
+    }
+
+    async function copySelection() {
+      const active = activeObject();
+      if (!active) return toast('복사할 오브젝트를 선택하세요.', 'error');
+      try {
+        clipboard = await active.clone(namedProps);
+        toast('선택 오브젝트를 복사했습니다.', 'success');
+      } catch (err) {
+        console.error(err);
+        toast('복사 중 오류가 발생했습니다.', 'error');
+      }
+    }
+
+    async function pasteSelection() {
+      if (!clipboard) return toast('먼저 오브젝트를 복사하세요.', 'error');
+      try {
+        const cloned = await clipboard.clone(namedProps);
+        canvas.discardActiveObject();
+        cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20, evented: true });
+        if (isActiveSelection(cloned)) {
+          cloned.canvas = canvas;
+          const objects = cloned.getObjects();
+          objects.forEach(o => { ensureMeta(o, `${o.name || objectType(o)} 복사본`); canvas.add(o); });
+          canvas.setActiveObject(new fabric.ActiveSelection(objects, { canvas }));
+        } else {
+          ensureMeta(cloned, `${cloned.name || objectType(cloned)} 복사본`);
+          canvas.add(cloned);
+          canvas.setActiveObject(cloned);
+        }
+        clipboard.set({ left: (clipboard.left || 0) + 20, top: (clipboard.top || 0) + 20 });
+        canvas.requestRenderAll();
+        commitHistory('paste');
+        updateUI();
+      } catch (err) {
+        console.error(err);
+        toast('붙여넣기 중 오류가 발생했습니다.', 'error');
+      }
+    }
+
+    async function duplicateSelection() {
+      const objects = selectedObjects();
+      if (!objects.length) return toast('복제할 오브젝트를 선택하세요.', 'error');
+      const clones = [];
+      try {
+        for (const obj of objects) {
+          const clone = await obj.clone(namedProps);
+          clone.set({ left: (obj.left || 0) + 18, top: (obj.top || 0) + 18 });
+          ensureMeta(clone, `${obj.name || objectType(obj)} 복제`);
+          canvas.add(clone);
+          clones.push(clone);
+        }
+        canvas.discardActiveObject();
+        canvas.setActiveObject(clones.length > 1 ? new fabric.ActiveSelection(clones, { canvas }) : clones[0]);
+        canvas.requestRenderAll();
+        commitHistory('duplicate');
+        updateUI();
+      } catch (err) {
+        console.error(err);
+        toast('복제 중 오류가 발생했습니다.', 'error');
+      }
+    }
+
+    function groupSelection() {
+      const active = activeObject();
+      if (!active || !isActiveSelection(active)) return toast('여러 오브젝트를 함께 선택하세요.', 'error');
+      const objects = [...active.getObjects()];
+      canvas.discardActiveObject();
+      canvas.remove(...objects);
+      const group = new fabric.Group(objects, baseOptions({ left: active.left, top: active.top, fill: undefined, stroke: undefined }));
+      ensureMeta(group, `그룹 ${demoId}`);
+      canvas.add(group);
+      canvas.setActiveObject(group);
+      canvas.requestRenderAll();
+      commitHistory('group');
+      updateUI();
+    }
+
+    function ungroupSelection() {
+      const group = activeObject();
+      if (!isGroupObject(group)) return toast('그룹 오브젝트를 선택하세요.', 'error');
+      try {
+        canvas.discardActiveObject();
+        const items = group.removeAll();
+        canvas.remove(group);
+        canvas.add(...items);
+        const selection = new fabric.ActiveSelection(items, { canvas });
+        canvas.setActiveObject(selection);
+        canvas.requestRenderAll();
+        commitHistory('ungroup');
+        updateUI();
+      } catch (err) {
+        console.error(err);
+        toast('이 그룹은 자동 해제가 어렵습니다.', 'error');
+      }
+    }
+
+    function toggleLock() {
+      const objects = selectedObjects();
+      if (!objects.length) return toast('오브젝트를 선택하세요.', 'error');
+      const shouldLock = !objects.every(o => o.lockMovementX && o.lockMovementY);
+      objects.forEach(o => o.set({
+        lockMovementX: shouldLock,
+        lockMovementY: shouldLock,
+        lockScalingX: shouldLock,
+        lockScalingY: shouldLock,
+        lockRotation: shouldLock,
+        hasControls: !shouldLock
+      }));
+      canvas.requestRenderAll();
+      commitHistory(shouldLock ? 'lock' : 'unlock');
+      updateUI();
+    }
+
+    function selectAll() {
+      const objects = canvas.getObjects().filter(o => o.visible !== false && o.selectable !== false);
+      if (!objects.length) return;
+      canvas.discardActiveObject();
+      canvas.setActiveObject(new fabric.ActiveSelection(objects, { canvas }));
+      canvas.requestRenderAll();
+      updateUI();
+    }
+
+    function moveLayer(action) {
+      const active = activeObject();
+      if (!active) return toast('오브젝트를 선택하세요.', 'error');
+      if (action === 'front') canvas.bringObjectToFront(active);
+      if (action === 'forward') canvas.bringObjectForward(active);
+      if (action === 'backward') canvas.sendObjectBackwards(active);
+      if (action === 'back') canvas.sendObjectToBack(active);
+      canvas.requestRenderAll();
+      commitHistory(`layer:${action}`);
+      updateLayers();
+    }
+
+    function alignSelection(kind) {
+      const objects = selectedObjects();
+      if (!objects.length) return toast('정렬할 오브젝트를 선택하세요.', 'error');
+      const multi = objects.length > 1;
+      const bounds = multi ? activeObject().getBoundingRect() : { left: 0, top: 0, width: canvas.width, height: canvas.height };
+      objects.forEach(o => {
+        const rect = o.getBoundingRect();
+        if (kind === 'left') o.set('left', (o.left || 0) + (bounds.left - rect.left));
+        if (kind === 'top') o.set('top', (o.top || 0) + (bounds.top - rect.top));
+        if (kind === 'centerX') o.set('left', (o.left || 0) + (bounds.left + bounds.width / 2 - (rect.left + rect.width / 2)));
+        if (kind === 'centerY') o.set('top', (o.top || 0) + (bounds.top + bounds.height / 2 - (rect.top + rect.height / 2)));
+        o.setCoords();
+      });
+      canvas.requestRenderAll();
+      commitHistory(`align:${kind}`);
+      updateInspector();
+    }
+
+    function createStarPoints(outer = 65, inner = 30, count = 5) {
+      const points = [];
+      for (let i = 0; i < count * 2; i++) {
+        const radius = i % 2 === 0 ? outer : inner;
+        const angle = -Math.PI / 2 + i * Math.PI / count;
+        points.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+      }
+      return points;
+    }
+
+    function createPolygonPoints(radius, sides) {
+      return Array.from({ length: sides }, (_, i) => {
+        const a = -Math.PI / 2 + i * Math.PI * 2 / sides;
+        return { x: Math.cos(a) * radius, y: Math.sin(a) * radius };
+      });
+    }
+
+    function addShape(type) {
+      const o = baseOptions();
+      let obj;
+      switch (type) {
+        case 'rect': obj = new fabric.Rect({ ...o, width: 150, height: 95 }); break;
+        case 'roundRect': obj = new fabric.Rect({ ...o, width: 165, height: 95, rx: 18, ry: 18, fill: '#37a57a' }); break;
+        case 'circle': obj = new fabric.Circle({ ...o, radius: 58, fill: '#f6a93b' }); break;
+        case 'ellipse': obj = new fabric.Ellipse({ ...o, rx: 78, ry: 45, fill: '#8c66d9' }); break;
+        case 'triangle': obj = new fabric.Triangle({ ...o, width: 125, height: 110, fill: '#ed5d68' }); break;
+        case 'line': obj = new fabric.Line([-75, 0, 75, 0], { ...o, fill: null, stroke: '#2457d6', strokeWidth: 5 }); break;
+        case 'hexagon': obj = new fabric.Polygon(createPolygonPoints(68, 6), { ...o, fill: '#19a4a0' }); break;
+        case 'star': obj = new fabric.Polygon(createStarPoints(), { ...o, fill: '#f4bf27', stroke: '#9b6f00' }); break;
+        case 'heart': obj = new fabric.Path('M 0 30 C -55 -15 -95 40 0 115 C 95 40 55 -15 0 30 z', { ...o, left: o.left, top: o.top, fill: '#e64362', scaleX: .8, scaleY: .8 }); break;
+        case 'arrow': {
+          const line = new fabric.Line([-70, 0, 55, 0], { stroke: '#2457d6', strokeWidth: 8, originX: 'center', originY: 'center' });
+          const head = new fabric.Triangle({ left: 68, top: 0, width: 34, height: 42, fill: '#2457d6', angle: 90, originX: 'center', originY: 'center' });
+          obj = new fabric.Group([line, head], { ...o, fill: undefined, stroke: undefined });
+          break;
+        }
+      }
+      if (obj) addObject(obj, type);
+    }
+
+    function addText(kind) {
+      const value = $('#newTextValue').value || 'Fabric.js 텍스트';
+      const opts = baseOptions({ fill: '#17233a', stroke: null, fontFamily: 'Malgun Gothic', fontSize: 34, fontWeight: '700' });
+      let obj;
+      if (kind === 'Text') obj = new fabric.Text(value, opts);
+      if (kind === 'IText') obj = new fabric.IText(value, opts);
+      if (kind === 'Textbox') obj = new fabric.Textbox(value + '\n폭을 조절하면 자동 줄바꿈됩니다.', { ...opts, width: 310, textAlign: 'center' });
+      addObject(obj, kind);
+      if (kind !== 'Text' && obj.enterEditing) {
+        obj.enterEditing();
+        obj.selectAll?.();
+      }
+    }
+
+    function addCurvedText() {
+      const value = $('#newTextValue').value || 'Fabric.js CURVED TEXT';
+      const path = new fabric.Path('M -170 45 Q 0 -90 170 45', { fill: null, stroke: '#b8c5db', strokeWidth: 1, originX: 'center', originY: 'center' });
+      const text = new fabric.Text(value, baseOptions({
+        fill: '#1d4db5', stroke: null, fontFamily: 'Arial', fontSize: 30, fontWeight: 'bold',
+        path, pathAlign: 'center', pathSide: 'left', left: centerPosition().left, top: centerPosition().top
+      }));
+      addObject(text, '경로 텍스트');
+    }
+
+    async function addSampleSvg() {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2457d6"/><stop offset="1" stop-color="#39b99b"/></linearGradient></defs>
+        <path d="M25 80 C25 30 75 15 125 45 C175 15 235 30 235 80 C235 130 175 145 125 115 C75 145 25 130 25 80Z" fill="url(#g)"/>
+        <circle cx="96" cy="72" r="8" fill="white"/><circle cx="166" cy="72" r="8" fill="white"/>
+        <path d="M90 103 Q130 130 170 103" stroke="white" stroke-width="7" fill="none" stroke-linecap="round"/>
+      </svg>`;
+      try {
+        const result = await fabric.loadSVGFromString(svg);
+        const obj = fabric.util.groupSVGElements(result.objects.filter(Boolean), result.options);
+        obj.set({ ...baseOptions({ scaleX: .7, scaleY: .7, fill: undefined, stroke: undefined }) });
+        addObject(obj, 'SVG 스마일');
+      } catch (err) {
+        console.error(err); toast('SVG 불러오기에 실패했습니다.', 'error');
+      }
+    }
+
+    function addSampleGroup() {
+      const pos = centerPosition();
+      const card = new fabric.Rect({ width: 260, height: 150, rx: 16, ry: 16, fill: '#ffffff', stroke: '#b8c8e4', strokeWidth: 2, originX: 'center', originY: 'center' });
+      const badge = new fabric.Circle({ left: -92, top: -36, radius: 28, fill: '#2457d6', originX: 'center', originY: 'center' });
+      const icon = new fabric.Text('F', { left: -92, top: -36, originX: 'center', originY: 'center', fill: '#fff', fontSize: 31, fontWeight: 'bold' });
+      const title = new fabric.Text('Fabric Group', { left: -46, top: -46, originX: 'left', originY: 'center', fill: '#17233a', fontSize: 22, fontWeight: 'bold' });
+      const sub = new fabric.Text('여러 오브젝트를 하나처럼 이동·회전', { left: -46, top: -13, originX: 'left', originY: 'center', fill: '#66758d', fontSize: 12 });
+      const bar = new fabric.Rect({ left: 0, top: 44, width: 215, height: 10, rx: 5, ry: 5, fill: '#e4eaf5', originX: 'center', originY: 'center' });
+      const progress = new fabric.Rect({ left: -43, top: 44, width: 130, height: 10, rx: 5, ry: 5, fill: '#39b99b', originX: 'center', originY: 'center' });
+      const group = new fabric.Group([card, badge, icon, title, sub, bar, progress], { left: pos.left, top: pos.top, originX: 'center', originY: 'center' });
+      addObject(group, '카드 그룹');
+    }
+
+    async function addDemoImage() {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="480" viewBox="0 0 720 480">
+        <defs>
+          <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#87d6ef"/><stop offset="1" stop-color="#1768a4"/></linearGradient>
+          <linearGradient id="sun" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff3a0"/><stop offset="1" stop-color="#ff9b44"/></linearGradient>
+        </defs>
+        <rect width="720" height="480" fill="url(#sea)"/>
+        <circle cx="565" cy="112" r="62" fill="url(#sun)"/>
+        <path d="M0 305 Q120 250 240 310 T480 300 T720 290 V480 H0Z" fill="#0b4f81" opacity=".75"/>
+        <path d="M0 355 Q110 310 230 360 T480 350 T720 340 V480 H0Z" fill="#083b69" opacity=".78"/>
+        <path d="M245 235 H470 L425 315 H285Z" fill="#f6f0df" stroke="#183b56" stroke-width="8"/>
+        <rect x="315" y="170" width="93" height="70" rx="8" fill="#fff" stroke="#183b56" stroke-width="8"/>
+        <path d="M360 170 V88" stroke="#183b56" stroke-width="9"/><path d="M360 100 L455 148 H360Z" fill="#f25e5e"/>
+        <circle cx="336" cy="270" r="16" fill="#2457d6"/><circle cx="390" cy="270" r="16" fill="#2457d6"/>
+        <text x="30" y="55" fill="white" font-size="30" font-family="Arial" font-weight="700">FABRIC IMAGE FILTER DEMO</text>
+      </svg>`;
+      await addImageFromUrl('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg), '샘플 이미지');
+    }
+
+    async function addImageFromUrl(url, name = '이미지') {
+      try {
+        let img;
+        if (fabric.FabricImage?.fromURL) img = await fabric.FabricImage.fromURL(url);
+        else if (fabric.Image?.fromURL) img = await fabric.Image.fromURL(url);
+        else throw new Error('Image loader not found');
+        const pos = centerPosition();
+        img.set({ left: pos.left, top: pos.top, originX: 'center', originY: 'center', stroke: '#ffffff', strokeWidth: 2 });
+        const maxW = canvas.width * .56, maxH = canvas.height * .58;
+        const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+        img.scale(scale);
+        addObject(img, name);
+      } catch (err) {
+        console.error(err);
+        toast('이미지를 읽지 못했습니다.', 'error');
+      }
+    }
+
+    async function importSvgString(svgText, name = '가져온 SVG') {
+      if (!svgText.trim()) return toast('SVG 문자열이 비어 있습니다.', 'error');
+      try {
+        const result = await fabric.loadSVGFromString(svgText);
+        const objects = result.objects.filter(Boolean);
+        if (!objects.length) throw new Error('No SVG objects');
+        const obj = fabric.util.groupSVGElements(objects, result.options);
+        const pos = centerPosition();
+        obj.set({ left: pos.left, top: pos.top, originX: 'center', originY: 'center' });
+        const scale = Math.min((canvas.width * .55) / (obj.width || 1), (canvas.height * .55) / (obj.height || 1), 1);
+        obj.scale(scale);
+        addObject(obj, name);
+      } catch (err) {
+        console.error(err); toast('올바른 SVG인지 확인하세요.', 'error');
+      }
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsText(file);
+      });
+    }
+
+    function applyToSelection(callback, historyReason = 'property') {
+      const objects = selectedObjects();
+      if (!objects.length) return toast('오브젝트를 선택하세요.', 'error');
+      objects.forEach(callback);
+      canvas.requestRenderAll();
+      commitHistory(historyReason);
+      updateUI();
+    }
+
+    function applyProperty(prop, rawValue) {
+      let value = rawValue;
+      if (['left','top','angle','opacity','scaleX','scaleY','skewX','skewY','fontSize','lineHeight','charSpacing','strokeWidth'].includes(prop)) value = Number(rawValue);
+      applyToSelection(obj => {
+        obj.set(prop, value);
+        obj.setCoords();
+      }, `property:${prop}`);
+    }
+
+    function applyGradientFill() {
+      applyToSelection(obj => {
+        const w = obj.width || 160, h = obj.height || 100;
+        obj.set('fill', new fabric.Gradient({
+          type: 'linear',
+          coords: { x1: -w / 2, y1: -h / 2, x2: w / 2, y2: h / 2 },
+          colorStops: [
+            { offset: 0, color: '#2457d6' },
+            { offset: .52, color: '#7a5ee6' },
+            { offset: 1, color: '#39b99b' }
+          ]
+        }));
+      }, 'gradient');
+    }
+
+    function createPatternSource() {
+      const c = document.createElement('canvas');
+      c.width = c.height = 36;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#edf3ff'; ctx.fillRect(0,0,36,36);
+      ctx.strokeStyle = '#2457d6'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(-8,32); ctx.lineTo(32,-8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(8,44); ctx.lineTo(44,8); ctx.stroke();
+      return c;
+    }
+
+    function applyPatternFill() {
+      applyToSelection(obj => obj.set('fill', new fabric.Pattern({ source: createPatternSource(), repeat: 'repeat' })), 'pattern');
+    }
+
+    function toggleShadow() {
+      applyToSelection(obj => {
+        obj.set('shadow', obj.shadow ? null : new fabric.Shadow({ color: 'rgba(13,35,78,.32)', blur: 18, offsetX: 8, offsetY: 10 }));
+      }, 'shadow');
+    }
+
+    function toggleStrokeUniform() {
+      applyToSelection(obj => obj.set('strokeUniform', !obj.strokeUniform), 'strokeUniform');
+    }
+
+    function clipToCircle() {
+      applyToSelection(obj => {
+        const radius = Math.max(10, Math.min(obj.width || 100, obj.height || 100) / 2);
+        obj.set('clipPath', new fabric.Circle({ radius, originX: 'center', originY: 'center' }));
+      }, 'clipPath');
+    }
+
+    function clearClip() { applyToSelection(obj => obj.set('clipPath', null), 'clearClip'); }
+
+    function textToggle(type) {
+      const objects = selectedObjects().filter(isTextObject);
+      if (!objects.length) return toast('텍스트 오브젝트를 선택하세요.', 'error');
+      objects.forEach(o => {
+        if (type === 'bold') o.set('fontWeight', String(o.fontWeight) === 'bold' || Number(o.fontWeight) >= 700 ? 'normal' : 'bold');
+        if (type === 'italic') o.set('fontStyle', o.fontStyle === 'italic' ? 'normal' : 'italic');
+        if (type === 'underline') o.set('underline', !o.underline);
+        if (type === 'linethrough') o.set('linethrough', !o.linethrough);
+      });
+      canvas.requestRenderAll(); commitHistory(`text:${type}`); updateUI();
+    }
+
+    function selectedImage() {
+      const img = selectedObjects().find(isImageObject);
+      if (!img) toast('이미지 오브젝트를 선택하세요.', 'error');
+      return img;
+    }
+
+    function setOrReplaceFilter(img, className, options) {
+      const FilterClass = fabric.filters?.[className];
+      if (!FilterClass) throw new Error(`Filter ${className} unavailable`);
+      img.filters ||= [];
+      const idx = img.filters.findIndex(f => f?.constructor?.name === className || f?.type === className);
+      const filter = new FilterClass(options || {});
+      if (idx >= 0) img.filters[idx] = filter; else img.filters.push(filter);
+      img.applyFilters();
+      canvas.requestRenderAll();
+    }
+
+    function applyImageFilter(className) {
+      const img = selectedImage(); if (!img) return;
+      try {
+        const options = className === 'Pixelate' ? { blocksize: 8 } : className === 'Blur' ? { blur: .25 } : className === 'Noise' ? { noise: 90 } : {};
+        setOrReplaceFilter(img, className, options);
+        commitHistory(`filter:${className}`);
+        logEvent('filter', img, className);
+      } catch (err) {
+        console.error(err); toast(`${className} 필터를 지원하지 않습니다.`, 'error');
+      }
+    }
+
+    function applyRangeFilter(className, value) {
+      const img = selectedImage(); if (!img) return;
+      try {
+        const key = className.toLowerCase();
+        setOrReplaceFilter(img, className, { [key]: Number(value) });
+        scheduleHistory(`filter:${className}`);
+      } catch (err) {
+        console.error(err); toast(`${className} 필터를 지원하지 않습니다.`, 'error');
+      }
+    }
+
+    function resetImageFilters() {
+      const img = selectedImage(); if (!img) return;
+      img.filters = [];
+      img.applyFilters();
+      $$('.image-filter-range').forEach(el => el.value = 0);
+      $('#brightnessOut').value = 0; $('#contrastOut').value = 0; $('#saturationOut').value = 0;
+      canvas.requestRenderAll(); commitHistory('filter:reset');
+    }
+
+    function setupBrush() {
+      const type = $('#brushType').value;
+      const BrushClass = fabric[type] || fabric.PencilBrush;
+      let brush;
+      try { brush = new BrushClass(canvas); }
+      catch { brush = new fabric.PencilBrush(canvas); }
+      if (type === 'PatternBrush' && brush) brush.getPatternSrc = createPatternSource;
+      brush.color = $('#brushColor').value;
+      brush.width = Number($('#brushWidth').value);
+      brush.shadow = $('#brushShadow').checked ? new fabric.Shadow({ color: 'rgba(0,0,0,.35)', blur: 8, offsetX: 3, offsetY: 3 }) : null;
+      canvas.freeDrawingBrush = brush;
+      $('#brushWidthOut').value = brush.width;
+    }
+
+    function clearFreeDrawPaths() {
+      const paths = canvas.getObjects().filter(o => objectType(o).toLowerCase() === 'path' && o.name?.startsWith('자유 그리기'));
+      if (!paths.length) return toast('삭제할 자유 그리기 선이 없습니다.', 'error');
+      canvas.remove(...paths); canvas.requestRenderAll(); commitHistory('clear paths'); updateUI();
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      $$('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      canvas.isDrawingMode = mode === 'draw';
+      canvas.selection = mode === 'select';
+      canvas.defaultCursor = mode === 'pan' ? 'grab' : mode === 'draw' ? 'crosshair' : 'default';
+      canvas.hoverCursor = mode === 'pan' ? 'grab' : 'move';
+      if (mode === 'draw') setupBrush();
+      const labels = { select: '선택 모드', draw: '자유 그리기 모드', pan: '화면 이동 모드' };
+      $('#modeLabel').innerHTML = `<strong>${labels[mode]}</strong>`;
+      logEvent('mode', null, labels[mode]);
+    }
+
+    function setZoom(value, point) {
+      const zoom = clamp(value, .2, 5);
+      const p = point || new fabric.Point(canvas.width / 2, canvas.height / 2);
+      canvas.zoomToPoint(p, zoom);
+      canvas.requestRenderAll();
+      $('#zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+      updateStatusRight();
+    }
+
+    function resetViewport() {
+      if (isMobileLayout()) {
+        fitCanvasToMobile();
+        toast('모바일 화면 폭에 맞춰 캔버스를 조정했습니다.', 'success');
+        return;
+      }
+      canvas.setViewportTransform([1,0,0,1,0,0]);
+      $('#zoomLabel').textContent = '100%';
+      canvas.requestRenderAll();
+      canvas.calcOffset();
+      updateStatusRight();
+    }
+
+    function isMobileLayout() {
+      return window.matchMedia('(max-width: 900px)').matches || window.innerWidth <= 760;
+    }
+
+    function fitCanvasToMobile() {
+      if (!canvas || !canvasScroll) return;
+      const available = Math.max(260, canvasScroll.clientWidth - 40);
+      const zoom = clamp(available / canvas.width, .28, 1);
+      canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+      $('#zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+      canvas.requestRenderAll();
+      canvas.calcOffset();
+      updateStatusRight();
+    }
+
+    function resizeCanvas(width, height) {
+      width = clamp(Number(width), 200, 3000);
+      height = clamp(Number(height), 200, 3000);
+      canvas.setDimensions({ width, height });
+      $('#canvasWidth').value = width;
+      $('#canvasHeight').value = height;
+      resetViewport();
+      canvas.requestRenderAll();
+      commitHistory('canvas resize');
+      updateStatusRight();
+      toast(`캔버스를 ${width}×${height}로 변경했습니다.`, 'success');
+    }
+
+    function setCanvasBackground(color) {
+      canvas.backgroundColor = color;
+      canvasShell.style.backgroundColor = typeof color === 'string' ? color : '#fff';
+      canvas.requestRenderAll();
+      commitHistory('canvas background');
+    }
+
+    function setCanvasGradient() {
+      canvas.backgroundColor = new fabric.Gradient({
+        type: 'linear',
+        coords: { x1: 0, y1: 0, x2: canvas.width, y2: canvas.height },
+        colorStops: [
+          { offset: 0, color: '#f5f8ff' },
+          { offset: .5, color: '#edf7f5' },
+          { offset: 1, color: '#fff6e8' }
+        ]
+      });
+      canvas.requestRenderAll(); commitHistory('canvas gradient');
+    }
+
+    function toggleCanvasClip() {
+      canvasClipEnabled = !canvasClipEnabled;
+      if (canvasClipEnabled) {
+        canvas.clipPath = new fabric.Circle({
+          radius: Math.min(canvas.width, canvas.height) * .42,
+          left: canvas.width / 2,
+          top: canvas.height / 2,
+          originX: 'center',
+          originY: 'center',
+          absolutePositioned: true
+        });
+      } else canvas.clipPath = null;
+      $('#canvasClipBtn').classList.toggle('active', canvasClipEnabled);
+      canvas.requestRenderAll(); commitHistory('canvas clip');
+    }
+
+    function animateSelection(type) {
+      const obj = activeObject();
+      if (!obj) return toast('애니메이션 대상 오브젝트를 선택하세요.', 'error');
+      const ease = fabric.util?.ease || {};
+      const render = () => canvas.requestRenderAll();
+      const complete = () => { obj.setCoords(); commitHistory(`animation:${type}`); updateUI(); };
+      if (!obj.animate) return toast('이 버전에서 animate API를 찾지 못했습니다.', 'error');
+      if (type === 'bounce') {
+        const start = obj.left || 0;
+        obj.animate({ left: start + 130 }, { duration: 850, easing: ease.easeOutBounce, onChange: render, onComplete: complete });
+      }
+      if (type === 'rotate') {
+        obj.animate({ angle: (obj.angle || 0) + 360 }, { duration: 1000, easing: ease.easeInOutCubic, onChange: render, onComplete: complete });
+      }
+      if (type === 'fade') {
+        const original = obj.opacity ?? 1;
+        obj.animate({ opacity: .15 }, { duration: 450, onChange: render, onComplete: () => obj.animate({ opacity: original }, { duration: 450, onChange: render, onComplete: complete }) });
+      }
+      if (type === 'pulse') {
+        const sx = obj.scaleX || 1, sy = obj.scaleY || 1;
+        obj.animate({ scaleX: sx * 1.25, scaleY: sy * 1.25 }, { duration: 380, easing: ease.easeOutCubic, onChange: render, onComplete: () => obj.animate({ scaleX: sx, scaleY: sy }, { duration: 380, easing: ease.easeInOutCubic, onChange: render, onComplete: complete }) });
+      }
+    }
+
+    function serializeCanvas() {
+      return JSON.stringify(canvas.toJSON(namedProps), null, 2);
+    }
+
+    async function loadCanvasJson(json, reason = 'json load') {
+      try {
+        const data = typeof json === 'string' ? JSON.parse(json) : json;
+        historyLocked = true;
+        await canvas.loadFromJSON(data);
+        canvas.getObjects().forEach(o => ensureMeta(o));
+        canvas.requestRenderAll();
+        historyLocked = false;
+        commitHistory(reason, true);
+        updateUI();
+        toast('JSON 캔버스를 불러왔습니다.', 'success');
+      } catch (err) {
+        historyLocked = false;
+        console.error(err); toast('JSON 형식 또는 리소스를 확인하세요.', 'error');
+      }
+    }
+
+    function snapshot() {
+      try { return JSON.stringify(canvas.toJSON(namedProps)); }
+      catch (err) { console.error(err); return ''; }
+    }
+
+    function commitHistory(reason = '', force = false) {
+      if (historyLocked || !canvas) return;
+      clearTimeout(historyTimer);
+      const state = snapshot();
+      if (!state) return;
+      if (!force && history[historyIndex] === state) return;
+      history = history.slice(0, historyIndex + 1);
+      history.push(state);
+      if (history.length > 40) history.shift();
+      historyIndex = history.length - 1;
+      updateHistoryButtons();
+      if (reason) logEvent('history', null, reason);
+    }
+
+    function scheduleHistory(reason) {
+      clearTimeout(historyTimer);
+      historyTimer = setTimeout(() => commitHistory(reason), 280);
+    }
+
+    async function restoreHistory(index) {
+      if (index < 0 || index >= history.length) return;
+      historyLocked = true;
+      try {
+        await canvas.loadFromJSON(history[index]);
+        canvas.getObjects().forEach(o => ensureMeta(o));
+        canvas.requestRenderAll();
+        historyIndex = index;
+      } catch (err) { console.error(err); }
+      historyLocked = false;
+      updateHistoryButtons(); updateUI();
+    }
+
+    function undo() { if (historyIndex > 0) restoreHistory(historyIndex - 1); }
+    function redo() { if (historyIndex < history.length - 1) restoreHistory(historyIndex + 1); }
+    function updateHistoryButtons() {
+      $('#undoBtn').disabled = historyIndex <= 0;
+      $('#redoBtn').disabled = historyIndex >= history.length - 1;
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function exportPng(multiplier = 2) {
+      try {
+        const data = canvas.toDataURL({ format: 'png', multiplier, enableRetinaScaling: true });
+        const a = document.createElement('a'); a.href = data; a.download = `fabric-canvas-${Date.now()}.png`; a.click();
+        toast('PNG 파일을 생성했습니다.', 'success');
+      } catch (err) { console.error(err); toast('PNG 저장에 실패했습니다.', 'error'); }
+    }
+
+    function exportJpg() {
+      try {
+        const data = canvas.toDataURL({ format: 'jpeg', quality: .9, multiplier: 1 });
+        const a = document.createElement('a'); a.href = data; a.download = `fabric-canvas-${Date.now()}.jpg`; a.click();
+      } catch (err) { console.error(err); toast('JPG 저장에 실패했습니다.', 'error'); }
+    }
+
+    function updateInspector() {
+      const objects = selectedObjects();
+      const active = activeObject();
+      const inputs = $$('.prop, .prop-color, .text-prop');
+      inputs.forEach(i => i.disabled = !objects.length);
+      if (!objects.length) {
+        $('#selectionCard').innerHTML = '<strong>선택 없음</strong>캔버스의 오브젝트를 선택하세요.';
+        return;
+      }
+      const primary = objects[0];
+      const rect = active?.getBoundingRect?.() || primary.getBoundingRect();
+      $('#selectionCard').innerHTML = `<strong>${escapeHtml(objects.length > 1 ? `${objects.length}개 다중 선택` : primary.name || objectType(primary))}</strong>${escapeHtml(objectType(primary))} · ${round(rect.width)}×${round(rect.height)} px`;
+      $$('.prop').forEach(input => {
+        const v = primary[input.dataset.prop];
+        input.value = Number.isFinite(Number(v)) ? round(v, 2) : '';
+      });
+      $$('.prop-color').forEach(input => input.value = safeColor(primary[input.dataset.prop], input.dataset.prop === 'stroke' ? '#17376f' : '#2457d6'));
+      $('#strokeWidth').value = Number(primary.strokeWidth || 0);
+      $('#strokeWidthOut').value = Number(primary.strokeWidth || 0);
+      $$('.text-prop').forEach(input => {
+        if (!isTextObject(primary)) return;
+        const val = primary[input.dataset.prop];
+        if (val != null) input.value = val;
+      });
+      $$('.text-toggle').forEach(btn => {
+        const t = btn.dataset.textToggle;
+        const on = t === 'bold' ? String(primary.fontWeight) === 'bold' || Number(primary.fontWeight) >= 700 : t === 'italic' ? primary.fontStyle === 'italic' : !!primary[t];
+        btn.classList.toggle('active', !!on);
+      });
+      $$('.text-align').forEach(btn => btn.classList.toggle('active', primary.textAlign === btn.dataset.value));
+    }
+
+    function updateLayers() {
+      const activeIds = new Set(selectedObjects().map(o => o.demoId));
+      const objects = [...canvas.getObjects()].reverse();
+      layerList.innerHTML = '';
+      if (!objects.length) {
+        layerList.innerHTML = '<div class="hint">레이어가 없습니다.</div>';
+        return;
+      }
+      objects.forEach(obj => {
+        ensureMeta(obj);
+        const row = document.createElement('div');
+        row.className = `layer-item ${activeIds.has(obj.demoId) ? 'active' : ''}`;
+        row.dataset.id = obj.demoId;
+        const locked = !!(obj.lockMovementX && obj.lockMovementY);
+        row.innerHTML = `
+          <button class="mini-btn layer-visible" title="표시/숨김">${obj.visible === false ? '○' : '◉'}</button>
+          <button class="mini-btn layer-lock" title="잠금/해제">${locked ? '🔒' : '🔓'}</button>
+          <span class="layer-name" title="${escapeHtml(obj.name)}">${escapeHtml(obj.name)}</span>
+          <span class="muted">${escapeHtml(objectType(obj).slice(0,3))}</span>`;
+        row.addEventListener('click', e => {
+          if (e.target.closest('button')) return;
+          canvas.discardActiveObject(); canvas.setActiveObject(obj); canvas.requestRenderAll(); updateUI();
+        });
+        $('.layer-visible', row).addEventListener('click', e => {
+          e.stopPropagation(); obj.set('visible', obj.visible === false); canvas.discardActiveObject(); canvas.requestRenderAll(); commitHistory('visibility'); updateUI();
+        });
+        $('.layer-lock', row).addEventListener('click', e => {
+          e.stopPropagation();
+          const willLock = !(obj.lockMovementX && obj.lockMovementY);
+          obj.set({ lockMovementX: willLock, lockMovementY: willLock, lockScalingX: willLock, lockScalingY: willLock, lockRotation: willLock, hasControls: !willLock });
+          canvas.requestRenderAll(); commitHistory('layer lock'); updateUI();
+        });
+        layerList.appendChild(row);
+      });
+    }
+
+    function updateStatusRight() {
+      $('#statusRight').textContent = `${canvas.width} × ${canvas.height} · Zoom ${Math.round(canvas.getZoom() * 100)}%`;
+    }
+
+    function updateUI() {
+      if (!canvas) return;
+      $('#objectCounter').textContent = `오브젝트 ${canvas.getObjects().length}개`;
+      updateInspector();
+      updateLayers();
+      updateStatusRight();
+    }
+
+    function bindEvents() {
+      $$('.mode-btn').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+      $$('.add-shape').forEach(btn => btn.addEventListener('click', () => addShape(btn.dataset.shape)));
+      $('#addTextBtn').onclick = () => addText('Text');
+      $('#addITextBtn').onclick = () => addText('IText');
+      $('#addTextboxBtn').onclick = () => addText('Textbox');
+      $('#curvedTextBtn').onclick = addCurvedText;
+      $('#sampleSvgBtn').onclick = addSampleSvg;
+      $('#sampleGroupBtn').onclick = addSampleGroup;
+      $('#demoImageBtn').onclick = addDemoImage;
+      $('#uploadImageBtn').onclick = () => $('#imageFile').click();
+      $('#importSvgFileBtn').onclick = () => $('#svgFile').click();
+      $('#loadJsonFileBtn').onclick = () => $('#jsonFile').click();
+
+      $('#imageFile').onchange = async e => { const f = e.target.files[0]; if (f) await addImageFromUrl(await readFileAsDataURL(f), f.name); e.target.value=''; };
+      $('#svgFile').onchange = async e => { const f = e.target.files[0]; if (f) await importSvgString(await readFileAsText(f), f.name); e.target.value=''; };
+      $('#jsonFile').onchange = async e => { const f = e.target.files[0]; if (f) await loadCanvasJson(await readFileAsText(f), 'json file'); e.target.value=''; };
+
+      ['brushType','brushColor','brushWidth','brushShadow'].forEach(id => $(`#${id}`).addEventListener('input', setupBrush));
+      $('#brushWidth').addEventListener('input', e => $('#brushWidthOut').value = e.target.value);
+      $('#startDrawBtn').onclick = () => setMode('draw');
+      $('#clearPathsBtn').onclick = clearFreeDrawPaths;
+
+      $('#undoBtn').onclick = undo; $('#redoBtn').onclick = redo;
+      $('#copyBtn').onclick = copySelection; $('#pasteBtn').onclick = pasteSelection; $('#duplicateBtn').onclick = duplicateSelection; $('#deleteBtn').onclick = removeSelected;
+      $('#groupBtn').onclick = groupSelection; $('#ungroupBtn').onclick = ungroupSelection; $('#lockBtn').onclick = toggleLock;
+      $('#sendBackBtn').onclick = () => moveLayer('back'); $('#sendBackwardBtn').onclick = () => moveLayer('backward'); $('#bringForwardBtn').onclick = () => moveLayer('forward'); $('#bringFrontBtn').onclick = () => moveLayer('front');
+      $$('[data-align]').forEach(btn => btn.addEventListener('click', () => alignSelection(btn.dataset.align)));
+
+      $('#zoomInBtn').onclick = () => setZoom(canvas.getZoom() * 1.15);
+      $('#zoomOutBtn').onclick = () => setZoom(canvas.getZoom() / 1.15);
+      $('#resetViewportBtn').onclick = resetViewport;
+
+      $('#canvasPreset').onchange = e => { const [w,h] = e.target.value.split('x').map(Number); $('#canvasWidth').value=w; $('#canvasHeight').value=h; };
+      $('#resizeCanvasBtn').onclick = () => resizeCanvas($('#canvasWidth').value, $('#canvasHeight').value);
+      $('#canvasBg').oninput = e => setCanvasBackground(e.target.value);
+      $('#canvasGradientBtn').onclick = setCanvasGradient;
+      $('#canvasClipBtn').onclick = toggleCanvasClip;
+      $('#showGrid').onchange = e => canvasShell.classList.toggle('grid-on', e.target.checked);
+      $('#snapGrid').onchange = () => toast($('#snapGrid').checked ? '10px 스냅을 켰습니다.' : '스냅을 껐습니다.');
+      $('#perPixel').onchange = e => { canvas.perPixelTargetFind = e.target.checked; canvas.requestRenderAll(); };
+      $('#selectionColor').oninput = e => { const hex = e.target.value; canvas.selectionBorderColor = hex; canvas.selectionColor = hex + '26'; canvas.selectionLineWidth = 1; canvas.requestRenderAll(); };
+
+      $$('.prop').forEach(input => input.addEventListener('change', () => applyProperty(input.dataset.prop, input.value)));
+      $$('.prop-color').forEach(input => input.addEventListener('input', () => applyProperty(input.dataset.prop, input.value)));
+      $('#strokeWidth').addEventListener('input', e => { $('#strokeWidthOut').value = e.target.value; selectedObjects().forEach(o => o.set('strokeWidth', Number(e.target.value))); canvas.requestRenderAll(); scheduleHistory('strokeWidth'); });
+      $('#flipXBtn').onclick = () => applyToSelection(o => o.set('flipX', !o.flipX), 'flipX');
+      $('#flipYBtn').onclick = () => applyToSelection(o => o.set('flipY', !o.flipY), 'flipY');
+      $('#gradientFillBtn').onclick = applyGradientFill; $('#patternFillBtn').onclick = applyPatternFill; $('#shadowBtn').onclick = toggleShadow; $('#strokeUniformBtn').onclick = toggleStrokeUniform;
+      $('#clipCircleBtn').onclick = clipToCircle; $('#clearClipBtn').onclick = clearClip;
+
+      $$('.text-prop').forEach(input => input.addEventListener('change', () => {
+        const objects = selectedObjects().filter(isTextObject); if (!objects.length) return toast('텍스트를 선택하세요.', 'error');
+        let val = input.value; if (['fontSize','lineHeight','charSpacing'].includes(input.dataset.prop)) val = Number(val);
+        objects.forEach(o => o.set(input.dataset.prop, val)); canvas.requestRenderAll(); commitHistory(`text:${input.dataset.prop}`); updateUI();
+      }));
+      $$('.text-toggle').forEach(btn => btn.addEventListener('click', () => textToggle(btn.dataset.textToggle)));
+      $$('.text-align').forEach(btn => btn.addEventListener('click', () => { const objects=selectedObjects().filter(isTextObject); if(!objects.length)return toast('텍스트를 선택하세요.','error'); objects.forEach(o=>o.set('textAlign',btn.dataset.value)); canvas.requestRenderAll(); commitHistory('textAlign'); updateUI(); }));
+
+      $$('.filter-btn').forEach(btn => btn.addEventListener('click', () => applyImageFilter(btn.dataset.filter)));
+      $$('.image-filter-range').forEach(input => input.addEventListener('input', () => {
+        const out = $(`#${input.dataset.filter.toLowerCase()}Out`); if (out) out.value = input.value;
+        applyRangeFilter(input.dataset.filter, input.value);
+      }));
+      $('#resetFiltersBtn').onclick = resetImageFilters;
+      $$('[data-animation]').forEach(btn => btn.addEventListener('click', () => animateSelection(btn.dataset.animation)));
+
+      $('#jsonGenerateBtn').onclick = () => { $('#jsonArea').value = serializeCanvas(); toast('현재 캔버스 JSON을 생성했습니다.', 'success'); };
+      $('#jsonLoadBtn').onclick = () => loadCanvasJson($('#jsonArea').value);
+      $('#localSaveBtn').onclick = () => { localStorage.setItem('fabric-demo-canvas', snapshot()); toast('브라우저에 저장했습니다.', 'success'); };
+      $('#localLoadBtn').onclick = () => { const data=localStorage.getItem('fabric-demo-canvas'); data ? loadCanvasJson(data,'local load') : toast('저장된 데이터가 없습니다.','error'); };
+      $('#downloadJsonBtn').onclick = () => downloadBlob(new Blob([serializeCanvas()], {type:'application/json'}), `fabric-canvas-${Date.now()}.json`);
+      $('#exportSvgBtn').onclick = () => downloadBlob(new Blob([canvas.toSVG()], {type:'image/svg+xml'}), `fabric-canvas-${Date.now()}.svg`);
+      $('#exportPngBtn').onclick = () => exportPng(2); $('#quickPngBtn').onclick = () => exportPng(2); $('#exportJpgBtn').onclick = exportJpg;
+      $('#svgStringLoadBtn').onclick = () => importSvgString($('#svgArea').value);
+
+      $('#clearLogBtn').onclick = () => eventLog.innerHTML = '';
+      $('#helpBtn').onclick = () => $('#helpModal').classList.add('open');
+      $('#closeHelpBtn').onclick = () => $('#helpModal').classList.remove('open');
+      $('#helpModal').addEventListener('click', e => { if (e.target.id === 'helpModal') e.currentTarget.classList.remove('open'); });
+
+      canvasScroll.addEventListener('dragover', e => { e.preventDefault(); canvasScroll.classList.add('dragging'); });
+      canvasScroll.addEventListener('dragleave', e => { if (!canvasScroll.contains(e.relatedTarget)) canvasScroll.classList.remove('dragging'); });
+      canvasScroll.addEventListener('drop', async e => {
+        e.preventDefault(); canvasScroll.classList.remove('dragging');
+        const file = e.dataTransfer.files[0]; if (!file) return;
+        if (file.type.includes('svg') || file.name.toLowerCase().endsWith('.svg')) await importSvgString(await readFileAsText(file), file.name);
+        else if (file.type.startsWith('image/')) await addImageFromUrl(await readFileAsDataURL(file), file.name);
+        else toast('이미지 또는 SVG 파일만 지원합니다.', 'error');
+      });
+
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+    }
+
+    function editingInput() {
+      const tag = document.activeElement?.tagName;
+      const active = activeObject();
+      return ['INPUT','TEXTAREA','SELECT'].includes(tag) || active?.isEditing;
+    }
+
+    function handleKeyDown(e) {
+      if (e.code === 'Space' && !editingInput()) { spacePressed = true; e.preventDefault(); }
+      if (editingInput()) return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+      else if (ctrl && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+      else if (ctrl && e.key.toLowerCase() === 'c') { e.preventDefault(); copySelection(); }
+      else if (ctrl && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteSelection(); }
+      else if (ctrl && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelection(); }
+      else if (ctrl && e.key.toLowerCase() === 'a') { e.preventDefault(); selectAll(); }
+      else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'g') { e.preventDefault(); ungroupSelection(); }
+      else if (ctrl && e.key.toLowerCase() === 'g') { e.preventDefault(); groupSelection(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); removeSelected(); }
+      else if (e.key.toLowerCase() === 'v') setMode('select');
+      else if (e.key.toLowerCase() === 'b') setMode('draw');
+      else if (e.key.toLowerCase() === 'h') setMode('pan');
+      else if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) {
+        const objects = selectedObjects(); if (!objects.length) return;
+        e.preventDefault(); const step = e.shiftKey ? 10 : 1;
+        objects.forEach(o => {
+          if (e.key === 'ArrowLeft') o.left -= step;
+          if (e.key === 'ArrowRight') o.left += step;
+          if (e.key === 'ArrowUp') o.top -= step;
+          if (e.key === 'ArrowDown') o.top += step;
+          o.setCoords();
+        });
+        canvas.requestRenderAll(); scheduleHistory('keyboard move'); updateInspector();
+      }
+    }
+    function handleKeyUp(e) { if (e.code === 'Space') spacePressed = false; }
+
+    function bindCanvasEvents() {
+      canvas.on('object:added', e => {
+        if (!e.target) return;
+        ensureMeta(e.target);
+        logEvent('object:added', e.target);
+        updateUI();
+        if (!historyLocked) scheduleHistory('object added');
+      });
+      canvas.on('object:removed', e => { logEvent('object:removed', e.target); updateUI(); if (!historyLocked) scheduleHistory('object removed'); });
+      canvas.on('object:modified', e => { logEvent('object:modified', e.target); commitHistory('object modified'); updateUI(); });
+      canvas.on('object:moving', e => {
+        if ($('#snapGrid').checked && e.target) {
+          e.target.set({ left: Math.round(e.target.left / 10) * 10, top: Math.round(e.target.top / 10) * 10 });
+        }
+        updateInspector();
+      });
+      canvas.on('selection:created', e => { logEvent('selection:created', e.selected?.[0], `${e.selected?.length || 0}개 선택`); updateUI(); });
+      canvas.on('selection:updated', e => { logEvent('selection:updated', e.selected?.[0]); updateUI(); });
+      canvas.on('selection:cleared', () => { logEvent('selection:cleared'); updateUI(); });
+      canvas.on('path:created', e => { ensureMeta(e.path, `자유 그리기 ${demoId}`); logEvent('path:created', e.path); commitHistory('path'); updateUI(); });
+      canvas.on('text:changed', e => { scheduleHistory('text changed'); updateInspector(); });
+
+      canvas.on('mouse:wheel', opt => {
+        const e = opt.e;
+        let zoom = canvas.getZoom();
+        zoom *= Math.pow(0.999, e.deltaY);
+        setZoom(zoom, new fabric.Point(e.offsetX, e.offsetY));
+        e.preventDefault(); e.stopPropagation();
+      });
+      canvas.on('mouse:down', opt => {
+        if (mode === 'pan' || spacePressed || opt.e.altKey) {
+          isPanning = true;
+          lastPos = { x: opt.e.clientX, y: opt.e.clientY };
+          canvas.selection = false;
+          canvas.defaultCursor = 'grabbing';
+        }
+      });
+      canvas.on('mouse:move', opt => {
+        if (!isPanning) return;
+        const dx = opt.e.clientX - lastPos.x, dy = opt.e.clientY - lastPos.y;
+        canvas.relativePan(new fabric.Point(dx, dy));
+        lastPos = { x: opt.e.clientX, y: opt.e.clientY };
+      });
+      canvas.on('mouse:up', () => {
+        if (!isPanning) return;
+        isPanning = false;
+        canvas.selection = mode === 'select';
+        canvas.defaultCursor = mode === 'pan' ? 'grab' : 'default';
+        updateStatusRight();
+      });
+    }
+
+    function createInitialScene() {
+      historyLocked = true;
+      const title = new fabric.Textbox('Fabric.js\nInteractive Canvas', {
+        left: 235, top: 130, width: 340, originX: 'center', originY: 'center',
+        fill: '#17233a', fontFamily: 'Arial', fontSize: 41, fontWeight: 'bold', lineHeight: .95,
+        textAlign: 'left', stroke: null
+      });
+      ensureMeta(title, '제목 텍스트');
+      const sub = new fabric.Textbox('선택·이동·크기조절·회전·더블클릭 텍스트 편집', {
+        left: 235, top: 235, width: 340, originX: 'center', originY: 'center',
+        fill: '#68778e', fontFamily: 'Malgun Gothic', fontSize: 16, lineHeight: 1.35,
+        textAlign: 'left', stroke: null
+      });
+      ensureMeta(sub, '설명 텍스트');
+      const grad = new fabric.Rect({
+        left: 650, top: 205, width: 330, height: 250, rx: 28, ry: 28,
+        originX: 'center', originY: 'center', stroke: '#fff', strokeWidth: 5,
+        shadow: new fabric.Shadow({ color: 'rgba(33,62,118,.24)', blur: 24, offsetX: 9, offsetY: 13 }),
+        fill: new fabric.Gradient({ type:'linear', coords:{x1:-165,y1:-125,x2:165,y2:125}, colorStops:[{offset:0,color:'#2457d6'},{offset:.5,color:'#745ee5'},{offset:1,color:'#39b99b'}] })
+      });
+      ensureMeta(grad, '그라디언트 카드');
+      const circle = new fabric.Circle({ left: 585, top: 155, radius: 43, originX:'center', originY:'center', fill:'#fff', opacity:.92, stroke:null });
+      ensureMeta(circle, '흰색 원');
+      const f = new fabric.Text('F', { left:585, top:155, originX:'center', originY:'center', fill:'#2457d6', fontFamily:'Arial', fontWeight:'bold', fontSize:46, stroke:null });
+      ensureMeta(f, 'F 아이콘');
+      const cardText = new fabric.Textbox('OBJECT MODEL\n+ EVENTS\n+ SERIALIZATION', { left:690, top:210, width:180, originX:'center', originY:'center', fill:'#fff', fontFamily:'Arial', fontSize:21, fontWeight:'bold', lineHeight:1.3, stroke:null });
+      ensureMeta(cardText, '카드 텍스트');
+      const guide = new fabric.Textbox('왼쪽 도구에서 오브젝트를 추가하고\n오른쪽 속성·필터·레이어를 시험하세요.', { left:480, top:470, width:610, originX:'center', originY:'center', fill:'#465873', fontFamily:'Malgun Gothic', fontSize:19, textAlign:'center', lineHeight:1.5, stroke:null });
+      ensureMeta(guide, '사용 안내');
+      canvas.add(title, sub, grad, circle, f, cardText, guide);
+      historyLocked = false;
+      canvas.requestRenderAll();
+      commitHistory('initial', true);
+      updateUI();
+    }
+
+    function init() {
+      if (!window.fabric) {
+        $('#libVersion').textContent = 'Fabric.js 로드 실패';
+        setStatus('Fabric.js CDN 연결 실패', true);
+        alert('Fabric.js를 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근 정책을 확인하세요.');
+        return;
+      }
+      $('#libVersion').textContent = `Fabric.js ${fabric.version || '7.x'}`;
+      // name/demoId를 복제·JSON 저장·복원 과정에서도 보존합니다.
+      if (fabric.FabricObject) {
+        fabric.FabricObject.customProperties = [
+          ...new Set([...(fabric.FabricObject.customProperties || []), ...namedProps])
+        ];
+      }
+      canvas = new fabric.Canvas('fabricCanvas', {
+        width: 960,
+        height: 600,
+        backgroundColor: 'rgba(255,255,255,0)',
+        preserveObjectStacking: true,
+        selection: true,
+        selectionColor: 'rgba(36,87,214,.15)',
+        selectionBorderColor: '#2457d6',
+        selectionLineWidth: 1,
+        fireRightClick: true,
+        stopContextMenu: true,
+        targetFindTolerance: 5,
+        enableRetinaScaling: true
+      });
+      setupBrush();
+      bindCanvasEvents();
+      bindEvents();
+      createInitialScene();
+      setMode('select');
+      setStatus('Fabric.js 초기화 완료');
+      logEvent('ready', null, `Fabric.js ${fabric.version || '7.x'} · Canvas 960×600`);
+      setTimeout(() => { if (isMobileLayout()) fitCanvasToMobile(); }, 80);
+    }
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (isMobileLayout()) fitCanvasToMobile(); else if (canvas) canvas.calcOffset(); }, 120);
+    });
+
+    window.addEventListener('load', () => {
+      try { init(); }
+      catch (err) {
+        console.error(err);
+        $('#libVersion').textContent = '초기화 오류';
+        setStatus(`초기화 오류: ${err.message || err}`, true);
+        alert(`Fabric.js 샘플 초기화 중 오류가 발생했습니다.\n${err.message || err}`);
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
