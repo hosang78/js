@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Dexie.js Feature Lab — IndexedDB 실습</title>
+  <!-- 온라인 데모용 CDN. 폐쇄망에서는 아래 URL을 ./assets/dexie.min.js 로 교체해 사용하세요. -->
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.4.4/dist/dexie.min.js"></script>
+  <style>
+    :root{--ink:#162033;--muted:#6d7788;--line:#dce4ed;--paper:#f6f8fb;--card:#fff;--navy:#143963;--blue:#176ee8;--cyan:#4dd7d9;--green:#158b62;--amber:#d88910;--red:#d84d5e;--shadow:0 10px 30px rgba(24,42,70,.08);--radius:18px}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--paper);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;color:var(--ink);line-height:1.5}
+    button,input,select,textarea{font:inherit} button{cursor:pointer} a{color:inherit} .wrap{width:min(1420px,calc(100% - 32px));margin:0 auto}
+    .topbar{position:sticky;top:0;z-index:20;background:rgba(246,248,251,.92);border-bottom:1px solid rgba(220,228,237,.85);backdrop-filter:blur(12px)}.topbar .wrap{display:flex;align-items:center;justify-content:space-between;min-height:66px;gap:18px}.brand{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:-.4px}.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--blue),#775cf1);color:#fff;box-shadow:0 7px 15px rgba(23,110,232,.25)}.nav{display:flex;gap:4px;overflow:auto}.nav a{padding:8px 10px;text-decoration:none;color:var(--muted);font-size:13px;font-weight:750;white-space:nowrap;border-radius:8px}.nav a:hover{background:#eaf2ff;color:var(--blue)}
+    .hero{padding:48px 0 24px;background:radial-gradient(800px 400px at 8% -20%,rgba(77,215,217,.25),transparent 65%),radial-gradient(700px 350px at 90% -30%,rgba(23,110,232,.2),transparent 70%)}.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #bdd5ff;border-radius:999px;background:#eff6ff;color:#285da9;font-size:12px;font-weight:800}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(21,139,98,.12)}h1{font-size:clamp(30px,4vw,52px);line-height:1.08;letter-spacing:-1.9px;margin:16px 0 14px;max-width:900px}.hero p{max-width:850px;color:#526174;margin:0;font-size:16px}.hero-bottom{display:flex;align-items:end;justify-content:space-between;gap:22px;margin-top:28px;flex-wrap:wrap}.capabilities{display:flex;gap:8px;flex-wrap:wrap}.cap{padding:7px 10px;background:#fff;border:1px solid var(--line);box-shadow:0 4px 14px rgba(24,42,70,.05);font-size:12px;font-weight:800;border-radius:8px;color:#425168}.legend{font-size:12px;color:var(--muted)}
+    main{padding:22px 0 52px}.grid{display:grid;gap:18px}.two{grid-template-columns:1.2fr .8fr}.three{grid-template-columns:repeat(3,1fr)}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 20px 0}.card-title{margin:0;font-size:16px;letter-spacing:-.25px}.card-sub{margin:3px 0 0;color:var(--muted);font-size:12px}.card-body{padding:18px 20px 20px}.section-label{display:flex;align-items:center;gap:8px;margin:28px 0 12px;color:#334359;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.8px}.section-label:after{content:"";height:1px;flex:1;background:var(--line)}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{padding:15px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,#fff,#fbfcfe)}.stat .n{font-size:25px;font-weight:900;letter-spacing:-1px}.stat .l{margin-top:2px;color:var(--muted);font-size:12px;font-weight:700}.stat.live{border-color:#b9e7db;background:#f3fffb}.stat.live .n{color:var(--green)}
+    .schema-list{display:grid;gap:9px}.schema-row{display:grid;grid-template-columns:145px 1fr;gap:12px;padding:11px 12px;border:1px solid var(--line);background:#fbfcfe;border-radius:11px}.schema-row strong{font-size:13px}.schema-row code{font-size:11px;color:#5b687a;overflow:auto;white-space:nowrap}.mini{font-size:11px;color:var(--muted)}
+    .button-row{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid #ccd8e5;background:#fff;color:#253448;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:850;transition:.16s transform,.16s background,.16s border-color}.btn:hover{transform:translateY(-1px);background:#f4f8ff;border-color:#9fc3f8}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.primary:hover{background:#0f5fc9}.btn.dark{background:#263750;border-color:#263750;color:#fff}.btn.warning{background:#fff8ec;border-color:#f1c983;color:#9a5c03}.btn.danger{background:#fff4f5;border-color:#f3b9c1;color:#b42c3d}.btn.ghost{border-color:transparent;background:transparent;color:var(--blue);padding:7px 5px}.btn:disabled{opacity:.48;cursor:not-allowed;transform:none}
+    .form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.field{display:grid;gap:5px}.field.span2{grid-column:span 2}.field.span4{grid-column:span 4}label{font-size:11px;font-weight:850;color:#516075}input,select,textarea{border:1px solid #cfd9e4;background:#fff;border-radius:9px;padding:9px 10px;color:var(--ink);outline:none;min-width:0}textarea{min-height:74px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:#6fa7f2;box-shadow:0 0 0 3px rgba(23,110,232,.12)}
+    .query-strip{display:grid;grid-template-columns:1.5fr repeat(3,.8fr) auto;gap:9px;align-items:end}.query-note{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#f4f8ff;color:#4e6380;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap;overflow:auto}
+    .table-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 10px;flex-wrap:wrap}.table-meta{font-size:12px;color:var(--muted)}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}.data-table{width:100%;border-collapse:collapse;min-width:1000px}.data-table th{position:sticky;top:0;background:#f6f9fc;color:#5a687b;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;border-bottom:1px solid var(--line)}.data-table td{padding:11px 12px;border-bottom:1px solid #edf1f5;font-size:12px;vertical-align:middle}.data-table tr:last-child td{border-bottom:none}.data-table tr:hover td{background:#fbfdff}.check{width:15px;height:15px}.title-cell{font-weight:850;max-width:290px}.muted{color:var(--muted)}.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:#eef4fb;color:#47617d;font-size:10px;font-weight:800;margin:1px}.status{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:850}.status:before{content:"";width:6px;height:6px;border-radius:50%}.s-todo{background:#edf2f8;color:#53687e}.s-todo:before{background:#8392a4}.s-progress{background:#eff6ff;color:#2a66ae}.s-progress:before{background:#3d8df5}.s-done{background:#effbf5;color:#167853}.s-done:before{background:#29b77c}.priority{font-size:10px;font-weight:900}.p-high{color:#c74356}.p-medium{color:#b7780e}.p-low{color:#58809d}.row-actions{display:flex;gap:4px}.icon-btn{border:0;background:transparent;border-radius:7px;padding:5px;color:#5a6d83}.icon-btn:hover{background:#eaf2ff;color:var(--blue)}
+    .layout-main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px}.detail-empty{color:var(--muted);font-size:13px;padding:12px 0}.detail{display:grid;gap:12px}.detail-title{font-size:18px;font-weight:900;letter-spacing:-.5px}.detail-desc{font-size:13px;color:#526174;white-space:pre-wrap}.kv{display:grid;grid-template-columns:95px 1fr;gap:8px;font-size:12px}.kv b{color:#647187}.divider{height:1px;background:var(--line);margin:3px 0}.attachment{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border:1px solid var(--line);border-radius:9px;font-size:11px}
+    .operation-list{display:grid;gap:8px}.operation{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:#fcfdff}.operation b{font-size:12px}.operation span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.audit{display:grid;gap:7px;max-height:300px;overflow:auto}.audit-row{display:grid;grid-template-columns:76px 1fr;gap:8px;font-size:11px;padding:8px 0;border-bottom:1px dashed #e2e8ef}.audit-row:last-child{border-bottom:0}.audit-row time{color:#758196;font-variant-numeric:tabular-nums}.audit-row b{display:block;font-size:11px}.audit-row span{color:#687689}
+    .code{margin:0;max-height:300px;overflow:auto;padding:14px;background:#111d2d;color:#d8e9ff;border-radius:12px;font:11px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}.code .muted-code{color:#7892af}.health{display:grid;gap:8px}.health-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:8px 0;border-bottom:1px dashed #e0e7ee}.health-row:last-child{border:0}.good{color:var(--green);font-weight:850}.bad{color:var(--red);font-weight:850}.pill{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:99px;background:#edf7ff;color:#396e9c;font-size:10px;font-weight:850}.api-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.api{border:1px solid var(--line);padding:10px;border-radius:11px;background:#fbfcfe}.api b{font-size:12px}.api p{margin:3px 0 0;color:var(--muted);font-size:10px}.footer{padding:18px 0 32px;color:#78869a;font-size:11px;text-align:center}
+    .toast{position:fixed;right:22px;bottom:22px;z-index:50;max-width:min(440px,calc(100% - 44px));padding:12px 14px;background:#17273d;color:#fff;border-radius:12px;box-shadow:0 14px 36px rgba(14,29,49,.28);font-size:12px;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:.22s}.toast.show{opacity:1;transform:none}.toast.error{background:#9d2e3d}.toast.success{background:#176a52}
+    .modal{position:fixed;inset:0;background:rgba(18,31,49,.42);display:none;align-items:center;justify-content:center;padding:18px;z-index:60}.modal.show{display:flex}.modal-card{width:min(680px,100%);max-height:85vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(10,22,38,.3)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:17px 19px;border-bottom:1px solid var(--line)}.modal-head h3{margin:0;font-size:15px}.modal-body{padding:19px}.close{border:0;background:transparent;font-size:22px;color:#657386}.empty{padding:28px;text-align:center;color:var(--muted)}
+    @media(max-width:1100px){.two,.layout-main{grid-template-columns:1fr}.three{grid-template-columns:repeat(2,1fr)}.detail-card{order:-1}.query-strip{grid-template-columns:1fr 1fr 1fr}.query-strip .search{grid-column:span 3}.query-strip .btn{justify-self:start}}@media(max-width:720px){.topbar .wrap{min-height:58px}.nav{display:none}.hero{padding-top:30px}.stat-grid{grid-template-columns:repeat(2,1fr)}.three{grid-template-columns:1fr}.form-grid{grid-template-columns:repeat(2,1fr)}.field.span2{grid-column:span 2}.field.span4{grid-column:span 2}.query-strip{grid-template-columns:1fr 1fr}.query-strip .search{grid-column:span 2}.query-strip .btn{grid-column:span 2;width:100%}.schema-row{grid-template-columns:1fr}.wrap{width:min(100% - 20px,1420px)}.card-head,.card-body{padding-left:14px;padding-right:14px}.hero p{font-size:14px}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap">
+      <div class="brand"><span class="brand-mark">D</span> Dexie.js Feature Lab</div>
+      <nav class="nav">
+        <a href="#database">데이터베이스</a><a href="#write">쓰기·트랜잭션</a><a href="#query">인덱스 쿼리</a><a href="#monitor">라이브 모니터</a><a href="#backup">백업·복원</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow"><span class="dot"></span> Browser IndexedDB · Dexie 4.4.4</span>
+      <h1>로컬 데이터베이스를<br>실제로 조작해 보는 Dexie.js 실습장</h1>
+      <p>작업 관리 데이터를 예제로 IndexedDB의 스키마 버전, 인덱스, CRUD, 다중값·복합 인덱스, 트랜잭션, Hook, Live Query, Blob 첨부, 일괄 처리, JSON 백업·복원을 한 페이지에 구성했습니다. 모든 데이터는 현재 브라우저의 동일 출처(origin)에 저장됩니다.</p>
+      <div class="hero-bottom">
+        <div class="capabilities">
+          <span class="cap">Promise / async</span><span class="cap">Schema versioning</span><span class="cap">MultiEntry index</span><span class="cap">Compound index</span><span class="cap">Transactions</span><span class="cap">Hooks</span><span class="cap">liveQuery</span><span class="cap">Blob</span>
+        </div>
+        <span class="legend">DB 이름: <b>DexieFeatureLabDB</b></span>
+      </div>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <section id="database">
+      <div class="section-label">01 · DATABASE STATUS &amp; SCHEMA</div>
+      <div class="grid two">
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">실시간 데이터베이스 현황</h2><p class="card-sub">Dexie.liveQuery() 구독으로 데이터 변경 시 자동 갱신</p></div><span id="dbStatus" class="pill">연결 확인 중</span></div>
+          <div class="card-body">
+            <div class="stat-grid">
+              <div class="stat live"><div class="n" id="statTotal">–</div><div class="l">전체 작업</div></div>
+              <div class="stat"><div class="n" id="statTodo">–</div><div class="l">할 일</div></div>
+              <div class="stat"><div class="n" id="statProgress">–</div><div class="l">진행 중</div></div>
+              <div class="stat"><div class="n" id="statDone">–</div><div class="l">완료</div></div>
+            </div>
+            <div class="health" style="margin-top:16px">
+              <div class="health-row"><span>IndexedDB 지원</span><b id="healthIdb">확인 중</b></div>
+              <div class="health-row"><span>Dexie 라이브러리</span><b id="healthDexie">확인 중</b></div>
+              <div class="health-row"><span>저장소 추정 사용량</span><b id="healthStorage">확인 중</b></div>
+              <div class="health-row"><span>데이터베이스 버전</span><b id="healthVersion">확인 중</b></div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">버전별 스키마 선언</h2><p class="card-sub">v1 기본 테이블 → v2 인덱스·감사·첨부·설정 추가</p></div><button class="btn ghost" data-modal="schemaModal">전체 코드</button></div>
+          <div class="card-body"><div class="schema-list">
+            <div class="schema-row"><strong>tasks</strong><code>++id, &amp;uid, title, status, priority, dueDate, *tags, [status+priority], [status+dueDate], meta.category</code></div>
+            <div class="schema-row"><strong>tags</strong><code>++id, &amp;name, color</code></div>
+            <div class="schema-row"><strong>attachments</strong><code>++id, taskId, createdAt</code></div>
+            <div class="schema-row"><strong>audit</strong><code>++id, timestamp, action, taskId</code></div>
+            <div class="schema-row"><strong>settings</strong><code>key</code></div>
+          </div><p class="mini" style="margin:12px 0 0">표기법: <b>++</b> 자동 증가 기본키 · <b>&amp;</b> 고유 인덱스 · <b>*</b> 배열 각 요소 인덱싱 · <b>[a+b]</b> 복합 인덱스</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="write">
+      <div class="section-label">02 · WRITE OPERATIONS &amp; TRANSACTIONS</div>
+      <div class="grid two">
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">작업 생성 · add() · put() · Blob 첨부</h2><p class="card-sub">creating / updating Hook이 생성·수정 시각과 검색용 텍스트를 자동 보완</p></div></div>
+          <div class="card-body">
+            <form id="taskForm" class="form-grid">
+              <div class="field span2"><label for="taskTitle">작업명 *</label><input id="taskTitle" required placeholder="예: 회원조합 데이터 품질 점검" /></div>
+              <div class="field"><label for="taskOwner">담당자</label><input id="taskOwner" placeholder="예: 김수협" value="김수협" /></div>
+              <div class="field"><label for="taskDue">마감일</label><input id="taskDue" type="date" /></div>
+              <div class="field"><label for="taskStatus">상태</label><select id="taskStatus"><option value="todo">할 일</option><option value="progress">진행 중</option><option value="done">완료</option></select></div>
+              <div class="field"><label for="taskPriority">우선순위</label><select id="taskPriority"><option value="high">높음</option><option value="medium" selected>보통</option><option value="low">낮음</option></select></div>
+              <div class="field"><label for="taskCategory">분류 (중첩 키)</label><select id="taskCategory"><option value="업무자동화">업무자동화</option><option value="회원지원">회원지원</option><option value="데이터">데이터</option><option value="교육">교육</option></select></div>
+              <div class="field"><label for="taskTags">태그 (쉼표 구분)</label><input id="taskTags" placeholder="예: AI, 보고서, 우선" /></div>
+              <div class="field span4"><label for="taskDesc">설명</label><textarea id="taskDesc" placeholder="선택 입력 — 상세 설명은 IndexedDB 객체에 함께 저장됩니다."></textarea></div>
+              <div class="field span2"><label for="taskFile">첨부 파일 (선택)</label><input id="taskFile" type="file" /></div>
+              <div class="field span2" style="align-content:end"><div class="button-row"><button class="btn primary" type="submit">➕ add()로 저장</button><button class="btn" id="btnUpsert" type="button">♻️ put() 업서트 예시</button></div></div>
+            </form>
+          </div>
+        </article>
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">일괄 처리 · 원자적 트랜잭션</h2><p class="card-sub">한 트랜잭션 안에서 여러 테이블을 함께 변경하고, 오류 발생 시 전체 롤백</p></div></div>
+          <div class="card-body"><div class="operation-list">
+            <div class="operation"><div><b>샘플 데이터 재생성</b><span>clear() + bulkAdd() + 다중 테이블 transaction()</span></div><button class="btn" id="btnSeed">샘플 채우기</button></div>
+            <div class="operation"><div><b>랜덤 작업 8건 추가</b><span>bulkAdd() · multiEntry 태그 · 복합 인덱스 데이터</span></div><button class="btn" id="btnBulkAdd">8건 추가</button></div>
+            <div class="operation"><div><b>진행 중 작업 일괄 완료</b><span>where().equals().modify()</span></div><button class="btn" id="btnBulkComplete">일괄 완료</button></div>
+            <div class="operation"><div><b>롤백 동작 확인</b><span>의도적 오류 발생 → 이전 쓰기도 커밋되지 않음</span></div><button class="btn warning" id="btnRollback">롤백 시연</button></div>
+            <div class="operation"><div><b>완료 작업 삭제</b><span>Collection.primaryKeys() + bulkDelete() + 첨부 파일 정리</span></div><button class="btn danger" id="btnDeleteDone">완료 삭제</button></div>
+          </div><div class="query-note" id="lastOperation">await db.transaction('rw', db.tasks, db.audit, async () =&gt; { ... })</div></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="query">
+      <div class="section-label">03 · INDEXED QUERY BUILDER</div>
+      <article class="card">
+        <div class="card-head"><div><h2 class="card-title">인덱스 · Collection · 페이지네이션</h2><p class="card-sub">조건을 바꾸면 해당 Dexie Query API와 결과가 즉시 바뀝니다. 자유 텍스트/복수 조건은 읽어온 Collection에 filter()로 추가 적용됩니다.</p></div><div class="button-row"><button class="btn" id="btnQuerySamples">쿼리 레시피</button><button class="btn" id="btnRefresh">새로고침</button></div></div>
+        <div class="card-body">
+          <div class="query-strip">
+            <div class="field search"><label for="qSearch">통합 텍스트 검색</label><input id="qSearch" placeholder="제목·담당자·태그·설명 (Collection.filter)" /></div>
+            <div class="field"><label for="qStatus">상태</label><select id="qStatus"><option value="all">전체</option><option value="todo">할 일</option><option value="progress">진행 중</option><option value="done">완료</option></select></div>
+            <div class="field"><label for="qPriority">우선순위</label><select id="qPriority"><option value="all">전체</option><option value="high">높음</option><option value="medium">보통</option><option value="low">낮음</option></select></div>
+            <div class="field"><label for="qTag">다중값 태그</label><select id="qTag"><option value="all">전체</option></select></div>
+            <button class="btn primary" id="btnApplyQuery">검색 적용</button>
+          </div>
+          <div class="query-note" id="queryRecipe">db.tasks.orderBy('dueDate').toArray()</div>
+          <div class="table-tools"><span class="table-meta" id="tableMeta">조회 준비 중</span><div class="button-row"><button class="btn" id="btnPrev">← 이전</button><button class="btn" id="btnNext">다음 →</button><button class="btn" id="btnSelected">선택 항목 bulkGet()</button></div></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th><input class="check" id="checkAll" type="checkbox" aria-label="전체 선택"></th><th>작업</th><th>상태</th><th>우선순위</th><th>담당자</th><th>태그 (MultiEntry)</th><th>마감일</th><th>API</th></tr></thead><tbody id="taskTable"></tbody></table></div>
+        </div>
+      </article>
+    </section>
+
+    <section id="monitor">
+      <div class="section-label">04 · LIVE QUERY, HOOKS &amp; INSPECTION</div>
+      <div class="layout-main">
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">선택 레코드 검사기</h2><p class="card-sub">mapToClass()로 매핑된 TaskRecord의 계산 속성과 첨부 Blob 메타데이터를 확인</p></div><button class="btn ghost" id="btnClearSelection">선택 해제</button></div>
+          <div class="card-body" id="detailPanel"><div class="detail-empty">표에서 행을 클릭하면 원본 레코드와 연결된 첨부 파일이 표시됩니다.</div></div>
+        </article>
+        <aside class="grid" style="gap:18px">
+          <article class="card">
+            <div class="card-head"><div><h2 class="card-title">Hook 이벤트</h2><p class="card-sub">creating · updating · deleting</p></div></div>
+            <div class="card-body"><div class="health"><div class="health-row"><span>creating</span><b id="hookCreating">0</b></div><div class="health-row"><span>updating</span><b id="hookUpdating">0</b></div><div class="health-row"><span>deleting</span><b id="hookDeleting">0</b></div></div><p class="mini" style="margin:10px 0 0">Hook은 표시용 카운터와 자동 메타데이터 보정을 수행합니다. 감사 로그는 명시적인 쓰기 작업에서 별도 테이블에 저장합니다.</p></div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><h2 class="card-title">감사 로그</h2><p class="card-sub">audit 테이블 · orderBy().reverse().limit()</p></div><button class="btn ghost" id="btnAuditRefresh">갱신</button></div>
+            <div class="card-body"><div class="audit" id="auditList"><div class="empty">로그를 불러오는 중</div></div></div>
+          </article>
+        </aside>
+      </div>
+    </section>
+
+    <section id="backup">
+      <div class="section-label">05 · BACKUP, RESTORE &amp; API CHEAT SHEET</div>
+      <div class="grid two">
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">JSON 백업 · 복원 · DB 삭제</h2><p class="card-sub">이 페이지는 별도 애드온 없이 테이블 배열을 직렬화한 간단한 백업 예시입니다.</p></div></div>
+          <div class="card-body"><div class="operation-list">
+            <div class="operation"><div><b>전체 데이터 JSON 내보내기</b><span>각 테이블 toArray() → Blob 다운로드</span></div><button class="btn" id="btnExport">내보내기</button></div>
+            <div class="operation"><div><b>JSON 복원 (현재 데이터 대체)</b><span>파일 검증 → clear() → bulkAdd()</span></div><label class="btn" for="importFile">복원 파일 선택</label><input hidden id="importFile" type="file" accept="application/json,.json"></div>
+            <div class="operation"><div><b>브라우저 DB 완전 초기화</b><span>db.delete() 후 DB 인스턴스 재생성</span></div><button class="btn danger" id="btnNuke">DB 삭제</button></div>
+          </div><p class="mini" style="margin:13px 0 0">첨부 Blob은 JSON으로 안전하게 직렬화할 수 없으므로 이 단순 백업 예시에서는 파일 메타데이터만 포함됩니다. Blob까지 이식하려면 Dexie의 dexie-export-import 애드온 등 Blob 지원 백업 방식을 사용해야 합니다.</p></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">실습에 포함된 핵심 API</h2><p class="card-sub">실제 페이지에서 호출되는 메서드 중심</p></div><button class="btn ghost" data-modal="apiModal">코드 보기</button></div>
+          <div class="card-body"><div class="api-grid">
+            <div class="api"><b>Table CRUD</b><p>add · put · get · update · delete · clear</p></div><div class="api"><b>Bulk</b><p>bulkAdd · bulkGet · bulkDelete</p></div><div class="api"><b>Where</b><p>equals · startsWithIgnoreCase · anyOf</p></div><div class="api"><b>Collection</b><p>filter · modify · count · primaryKeys</p></div><div class="api"><b>Ordering</b><p>orderBy · reverse · limit</p></div><div class="api"><b>Database</b><p>version · transaction · close · delete</p></div><div class="api"><b>Reactive</b><p>Dexie.liveQuery · subscribe</p></div><div class="api"><b>Events</b><p>hook creating · updating · deleting</p></div>
+          </div></div>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-label">06 · RUNTIME LOG</div>
+      <article class="card"><div class="card-body"><pre class="code" id="runtimeLog"><span class="muted-code">// 초기화 로그가 여기에 표시됩니다.</span></pre></div></article>
+    </section>
+  </main>
+
+  <footer class="footer">Dexie.js Feature Lab · Local IndexedDB learning sample · 페이지 데이터는 브라우저별·출처별로 분리되어 저장됩니다.</footer>
+  <div id="toast" class="toast"></div>
+
+  <div id="schemaModal" class="modal"><div class="modal-card"><div class="modal-head"><h3>schema.js — 버전 및 스키마 선언</h3><button class="close" data-close>×</button></div><div class="modal-body"><pre class="code" id="schemaCode"></pre></div></div></div>
+  <div id="apiModal" class="modal"><div class="modal-card"><div class="modal-head"><h3>이 페이지에서 사용하는 Dexie API 예시</h3><button class="close" data-close>×</button></div><div class="modal-body"><pre class="code" id="apiCode"></pre></div></div></div>
+  <div id="queryModal" class="modal"><div class="modal-card"><div class="modal-head"><h3>인덱스 쿼리 레시피</h3><button class="close" data-close>×</button></div><div class="modal-body"><pre class="code" id="queryCode"></pre></div></div></div>
+
+  <script>
+  (() => {
+    'use strict';
+    const DB_NAME = 'DexieFeatureLabDB';
+    const PAGE_SIZE = 8;
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+    const state = { db:null, page:0, filtered:[], selectedId:null, selectedRows:new Set(), liveSub:null, hook:{creating:0, updating:0, deleting:0} };
+
+    const schemaText = `// Dexie v4 Browser / UMD 예시
+const db = new Dexie('DexieFeatureLabDB');
+
+db.version(1).stores({
+  tasks: '++id, &uid, title, status, priority, dueDate, createdAt, owner, *tags, [status+priority]',
+  tags: '++id, &name'
+});
+
+db.version(2).stores({
+  tasks: '++id, &uid, title, status, priority, dueDate, createdAt, updatedAt, owner, archived, *tags, [status+priority], [status+dueDate], [owner+status], meta.category',
+  tags: '++id, &name, color',
+  attachments: '++id, taskId, createdAt',
+  audit: '++id, timestamp, action, taskId',
+  settings: 'key'
+}).upgrade(tx =>
+  tx.table('tasks').toCollection().modify({ archived: false })
+);`;
+
+    const apiText = `// 1) 단일 CRUD
+const id = await db.tasks.add(task);       // INSERT, 중복 기본키면 오류
+await db.tasks.put({ ...task, id });       // INSERT 또는 기본키 기준 UPDATE
+await db.tasks.update(id, { status: 'done' });
+await db.tasks.delete(id);
+
+// 2) 인덱스 / 복합 인덱스 / 다중값 인덱스
+await db.tasks.where('status').equals('todo').toArray();
+await db.tasks.where('[status+priority]').equals(['todo', 'high']).toArray();
+await db.tasks.where('tags').equals('AI').toArray(); // *tags
+await db.tasks.where('title').startsWithIgnoreCase('회').toArray();
+
+// 3) Collection 후처리와 일괄 수정
+await db.tasks.where('status').equals('progress').modify({ status: 'done' });
+const ids = await db.tasks.where('status').equals('done').primaryKeys();
+await db.tasks.bulkDelete(ids);
+
+// 4) 여러 테이블 원자적 변경
+await db.transaction('rw', db.tasks, db.audit, async () => {
+  const taskId = await db.tasks.add(task);
+  await db.audit.add({ action: '생성', taskId, timestamp: new Date().toISOString() });
+});
+
+// 5) 반응형 조회
+const sub = Dexie.liveQuery(() => db.tasks.count())
+  .subscribe({ next: count => console.log(count) });
+// sub.unsubscribe();`;
+
+    const queryText = `// 단일 인덱스
+await db.tasks.where('status').equals('todo').toArray();
+
+// 복합 인덱스: 스키마에 [status+priority]가 선언되어 있어야 함
+await db.tasks.where('[status+priority]').equals(['progress', 'high']).toArray();
+
+// 다중값(MultiEntry) 인덱스: 스키마의 *tags
+await db.tasks.where('tags').equals('AI').toArray();
+
+// 대소문자 무시 접두 검색
+await db.tasks.where('title').startsWithIgnoreCase('회원').toArray();
+
+// 여러 키 중 하나(anyOf)
+await db.tasks.where('status').anyOf('todo', 'progress').toArray();
+
+// 정렬 / 역순 / 제한
+await db.tasks.orderBy('dueDate').reverse().limit(5).toArray();
+
+// IndexedDB 인덱스로 표현하기 어려운 조건은 Collection.filter()로 보완
+await db.tasks.where('status').equals('todo')
+  .filter(task => task.tags.includes('AI') && task.owner.includes('김'))
+  .toArray();`;
+    $('#schemaCode').textContent = schemaText;
+    $('#apiCode').textContent = apiText;
+    $('#queryCode').textContent = queryText;
+
+    function esc(v='') { return String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    function now(){ return new Date().toISOString(); }
+    function isoDate(offset=0){ const d=new Date(); d.setDate(d.getDate()+offset); return d.toISOString().slice(0,10); }
+    function uid(){ return (crypto?.randomUUID?.() || `u-${Date.now()}-${Math.random().toString(16).slice(2)}`); }
+    function fmtDate(value){ if(!value) return '–'; try{return new Intl.DateTimeFormat('ko-KR',{month:'short',day:'numeric'}).format(new Date(value));}catch{return value;} }
+    function fmtTime(value){ if(!value) return '–'; try{return new Intl.DateTimeFormat('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date(value));}catch{return value;} }
+    function fmtBytes(n=0){ if(n<1024)return `${n} B`; if(n<1024*1024)return `${(n/1024).toFixed(1)} KB`;return `${(n/1024/1024).toFixed(1)} MB`;}
+    function log(message, type='info') { const el=$('#runtimeLog'); const stamp=new Date().toLocaleTimeString('ko-KR',{hour12:false}); const safe=esc(message); const line=`<span class="${type==='error'?'bad':type==='success'?'good':''}">[${stamp}] ${safe}</span>`; el.innerHTML = `${line}\n`+el.innerHTML; }
+    let toastTimer; function toast(message, type='') { const el=$('#toast'); clearTimeout(toastTimer); el.textContent=message; el.className=`toast show ${type}`; toastTimer=setTimeout(()=>el.className='toast',3100); }
+    function setOp(code){ $('#lastOperation').textContent=code; log(code); }
+
+    class TaskRecord {
+      get isOverdue(){ return this.status !== 'done' && this.dueDate && this.dueDate < isoDate(0); }
+      get displayPriority(){ return ({high:'높음',medium:'보통',low:'낮음'})[this.priority] || this.priority; }
+    }
+
+    function configureDB(){
+      if (!window.Dexie) throw new Error('Dexie를 불러오지 못했습니다. 네트워크 연결 또는 CDN URL을 확인하세요.');
+      const db = new Dexie(DB_NAME);
+      db.version(1).stores({
+        tasks:'++id,&uid,title,status,priority,dueDate,createdAt,owner,*tags,[status+priority]',
+        tags:'++id,&name'
+      });
+      db.version(2).stores({
+        tasks:'++id,&uid,title,status,priority,dueDate,createdAt,updatedAt,owner,archived,*tags,[status+priority],[status+dueDate],[owner+status],meta.category',
+        tags:'++id,&name,color',
+        attachments:'++id,taskId,createdAt',
+        audit:'++id,timestamp,action,taskId',
+        settings:'key'
+      }).upgrade(tx => tx.table('tasks').toCollection().modify({archived:false}));
+      db.tasks.mapToClass(TaskRecord);
+      db.tasks.hook('creating', (primKey, obj) => {
+        state.hook.creating++;
+        obj.createdAt ||= now(); obj.updatedAt ||= obj.createdAt; obj.archived ??= false;
+        obj.searchText = makeSearchText(obj);
+        renderHookCounts();
+      });
+      db.tasks.hook('updating', (changes, primKey, current) => {
+        state.hook.updating++;
+        changes.updatedAt = now(); changes.searchText = makeSearchText({...current,...changes});
+        renderHookCounts();
+      });
+      db.tasks.hook('deleting', () => { state.hook.deleting++; renderHookCounts(); });
+      db.on('blocked', () => { toast('다른 탭에서 DB 연결을 닫아야 스키마 변경을 완료할 수 있습니다.','error'); log('blocked 이벤트: 다른 탭의 DB 연결이 열려 있습니다.','error'); });
+      db.on('versionchange', () => { db.close(); toast('다른 창의 DB 버전 변경을 감지하여 연결을 닫았습니다.','error'); log('versionchange 이벤트: db.close() 실행'); });
+      return db;
+    }
+    function makeSearchText(t){ return [t.title,t.owner,t.description,(t.tags||[]).join(' '),t.meta?.category].filter(Boolean).join(' ').toLowerCase(); }
+    function renderHookCounts(){ $('#hookCreating').textContent=state.hook.creating; $('#hookUpdating').textContent=state.hook.updating; $('#hookDeleting').textContent=state.hook.deleting; }
+
+    async function init(){
+      try {
+        $('#healthIdb').textContent = 'indexedDB' in window ? '지원됨' : '미지원'; $('#healthIdb').className = 'good';
+        state.db = configureDB();
+        await state.db.open();
+        $('#dbStatus').textContent='연결됨 · liveQuery 활성'; $('#healthDexie').textContent=`Dexie ${Dexie.semVer || '4.x'}`; $('#healthDexie').className='good'; $('#healthVersion').textContent=`v${state.db.verno}`; $('#healthVersion').className='good';
+        log(`DB open 완료: ${DB_NAME}, schema version ${state.db.verno}`,'success');
+        await ensureDefaultTags();
+        startLiveQuery();
+        await refreshTagOptions(); await runQuery(); await refreshAudit(); await updateStorage();
+      } catch(err) {
+        console.error(err); $('#dbStatus').textContent='연결 실패'; $('#dbStatus').style.background='#fff0f2'; $('#dbStatus').style.color='#a72d3d'; $('#healthDexie').textContent='실패'; $('#healthDexie').className='bad';
+        toast(err.message || 'IndexedDB 초기화에 실패했습니다.','error'); log(err.stack || String(err),'error');
+      }
+    }
+    async function ensureDefaultTags(){
+      const tags=[
+        {name:'AI',color:'#4b83e8'},{name:'보고서',color:'#7b61d9'},{name:'회원조합',color:'#1a9e7b'},{name:'데이터',color:'#d78b15'},
+        {name:'긴급',color:'#d5485d'},{name:'교육',color:'#3c95bf'},{name:'보안',color:'#724d9b'},{name:'자동화',color:'#357f5b'}
+      ];
+      for(const tag of tags){ if(!await state.db.tags.where('name').equals(tag.name).first()) await state.db.tags.add(tag); }
+    }
+    function startLiveQuery(){
+      state.liveSub?.unsubscribe?.();
+      state.liveSub = Dexie.liveQuery(async () => {
+        const [total,todo,progress,done] = await Promise.all([
+          state.db.tasks.count(),state.db.tasks.where('status').equals('todo').count(),state.db.tasks.where('status').equals('progress').count(),state.db.tasks.where('status').equals('done').count()
+        ]); return {total,todo,progress,done};
+      }).subscribe({
+        next: async s => { $('#statTotal').textContent=s.total; $('#statTodo').textContent=s.todo; $('#statProgress').textContent=s.progress; $('#statDone').textContent=s.done; log(`liveQuery 발행: 전체 ${s.total}건`); await refreshTagOptions(true); await runQuery(false); await refreshAudit(); updateStorage(); },
+        error: err => { log(`liveQuery 오류: ${err.message}`,'error'); }
+      });
+    }
+    async function updateStorage(){
+      try { if(navigator.storage?.estimate){const e=await navigator.storage.estimate();$('#healthStorage').textContent=`${fmtBytes(e.usage||0)} / ${fmtBytes(e.quota||0)}`;$('#healthStorage').className='good';}else{$('#healthStorage').textContent='브라우저 미지원';} } catch(e){$('#healthStorage').textContent='확인 불가';} }
+
+    const statusLabel={todo:'할 일',progress:'진행 중',done:'완료'};
+    const priorityLabel={high:'높음',medium:'보통',low:'낮음'};
+    function statusBadge(v){return `<span class="status s-${v}">${statusLabel[v]||v}</span>`}
+    function priorityBadge(v){return `<span class="priority p-${v}">${priorityLabel[v]||v}</span>`}
+
+    async function audit(action, taskId=null, note='') { await state.db.audit.add({timestamp:now(),action,taskId,note}); }
+    function randomTask(i=0){
+      const titles=['어선 안전 알림 데이터 점검','회원조합 요청사항 분류','수산물 유통 지표 시각화','AI 업무지원 가이드 정리','정책보험 상담 이력 분석','문서 자동화 템플릿 검토','내부 보안 교육 자료 제작','데이터 품질 기준 수립'];
+      const owners=['김수협','이바다','박어업','최해양']; const tags=['AI','보고서','회원조합','데이터','긴급','교육','보안','자동화'];
+      const title=titles[(i+Math.floor(Math.random()*titles.length))%titles.length]; const status=['todo','progress','done'][Math.floor(Math.random()*3)]; const priority=['high','medium','low'][Math.floor(Math.random()*3)];
+      return {uid:uid(),title:`${title} ${Math.floor(Math.random()*90+10)}`,owner:owners[Math.floor(Math.random()*owners.length)],status,priority,dueDate:isoDate(Math.floor(Math.random()*28)-4),tags:[tags[Math.floor(Math.random()*tags.length)],tags[Math.floor(Math.random()*tags.length)]].filter((x,j,a)=>a.indexOf(x)===j),description:'Dexie.js 기능 시연을 위해 생성된 샘플 레코드입니다.',meta:{category:['업무자동화','회원지원','데이터','교육'][Math.floor(Math.random()*4)]}};
+    }
+    async function seedData(){
+      const samples=[
+        {uid:uid(),title:'회원조합 데이터 품질 점검',owner:'김수협',status:'progress',priority:'high',dueDate:isoDate(2),tags:['데이터','회원조합','긴급'],description:'회원조합별 누락값과 중복 등록 건을 집계하고 정정 절차를 안내합니다.',meta:{category:'데이터'}},
+        {uid:uid(),title:'AI 업무 자동화 과제 정리',owner:'이바다',status:'todo',priority:'high',dueDate:isoDate(5),tags:['AI','자동화','보고서'],description:'부서별 후보 과제를 파악하고 우선순위 기준을 적용합니다.',meta:{category:'업무자동화'}},
+        {uid:uid(),title:'정책보험 안내 교육자료 검토',owner:'박어업',status:'done',priority:'medium',dueDate:isoDate(-2),tags:['교육','회원조합'],description:'고령 어업인 이해도에 맞춘 용어와 사례를 검토합니다.',meta:{category:'교육'}},
+        {uid:uid(),title:'수산물 유통 보고서 초안 작성',owner:'최해양',status:'todo',priority:'medium',dueDate:isoDate(9),tags:['보고서','데이터'],description:'월간 위판·유통 핵심 지표 초안을 만듭니다.',meta:{category:'데이터'}},
+        {uid:uid(),title:'내부 보안 점검 체크리스트',owner:'김수협',status:'progress',priority:'high',dueDate:isoDate(1),tags:['보안','긴급'],description:'계정 권한과 문서 반출 절차 점검 항목을 정리합니다.',meta:{category:'업무자동화'}},
+        {uid:uid(),title:'조합원 상담 FAQ 업데이트',owner:'이바다',status:'done',priority:'low',dueDate:isoDate(-7),tags:['회원조합','AI'],description:'자주 묻는 질문을 최근 문의 기준으로 보완합니다.',meta:{category:'회원지원'}},
+        {uid:uid(),title:'해양 안전 데이터 연계 검토',owner:'박어업',status:'todo',priority:'medium',dueDate:isoDate(13),tags:['데이터','자동화'],description:'외부 공개 데이터의 갱신 주기와 필드 매핑을 검토합니다.',meta:{category:'업무자동화'}},
+        {uid:uid(),title:'보고서 배포 이력 관리',owner:'최해양',status:'progress',priority:'low',dueDate:isoDate(4),tags:['보고서','보안'],description:'배포 대상과 버전 정보를 추적할 수 있도록 정리합니다.',meta:{category:'교육'}}
+      ];
+      await state.db.transaction('rw', state.db.tasks,state.db.attachments,state.db.audit,state.db.settings, async()=>{
+        await Promise.all([state.db.tasks.clear(),state.db.attachments.clear(),state.db.audit.clear(),state.db.settings.clear()]);
+        await state.db.tasks.bulkAdd(samples);
+        await state.db.settings.put({key:'seededAt',value:now()});
+        await audit('샘플 데이터 재생성',null,`${samples.length}건 tasks.bulkAdd()`);
+      });
+      setOp("await db.transaction('rw', tasks, attachments, audit, settings, async () => { await tasks.clear(); await tasks.bulkAdd(samples); })");
+      toast('샘플 작업 8건을 재생성했습니다.','success');
+    }
+
+    async function createTask(event){
+      event.preventDefault(); const title=$('#taskTitle').value.trim(); if(!title)return;
+      const file=$('#taskFile').files[0]; const tags=$('#taskTags').value.split(',').map(x=>x.trim()).filter(Boolean); const task={uid:uid(),title,owner:$('#taskOwner').value.trim()||'미지정',status:$('#taskStatus').value,priority:$('#taskPriority').value,dueDate:$('#taskDue').value||null,tags,description:$('#taskDesc').value.trim(),meta:{category:$('#taskCategory').value}};
+      try{
+        let taskId;
+        await state.db.transaction('rw',state.db.tasks,state.db.attachments,state.db.audit,async()=>{
+          taskId=await state.db.tasks.add(task);
+          if(file){ await state.db.attachments.add({taskId,name:file.name,type:file.type||'application/octet-stream',size:file.size,blob:file,createdAt:now()}); await state.db.tasks.update(taskId,{attachmentCount:1}); }
+          await audit('작업 생성',taskId,`add()${file?' + Blob attachment':''}`);
+        });
+        $('#taskForm').reset(); $('#taskOwner').value='김수협'; $('#taskPriority').value='medium';
+        setOp("await db.transaction('rw', tasks, attachments, audit, async () => { const id = await tasks.add(task); ... })");
+        toast(`작업 #${taskId} 저장 완료`,'success');
+      }catch(err){toast(`저장 실패: ${err.message}`,'error');log(err.stack||err.message,'error');}
+    }
+    async function upsertExample(){
+      const uidKey='demo-upsert-record'; const existing=await state.db.tasks.where('uid').equals(uidKey).first();
+      const task={...(existing||{}),uid:uidKey,title:'put() 업서트 데모 레코드',owner:'Dexie Lab',status:existing?.status==='done'?'todo':'done',priority:'low',dueDate:isoDate(6),tags:['자동화','AI'],description:'동일한 기본키가 있으면 갱신하고, 없으면 새로 삽입합니다.',meta:{category:'업무자동화'}};
+      const id=await state.db.tasks.put(task); await audit('put() 업서트',id,existing?'기존 작업 갱신':'새 작업 삽입');
+      setOp(`const id = await db.tasks.put({ ...task, ${existing?'id:'+existing.id+',':''} uid: 'demo-upsert-record' });`); toast(`put() 완료: #${id} ${existing?'갱신':'삽입'}`,'success');
+    }
+    async function addBulk(){ const rows=Array.from({length:8},(_,i)=>randomTask(i)); try{await state.db.transaction('rw',state.db.tasks,state.db.audit,async()=>{await state.db.tasks.bulkAdd(rows);await audit('랜덤 작업 일괄 추가',null,'bulkAdd(8)');});setOp('await db.tasks.bulkAdd(Array.from({ length: 8 }, createTask));');toast('랜덤 작업 8건을 추가했습니다.','success');}catch(e){toast(e.message,'error');}}
+    async function bulkComplete(){ const c=state.db.tasks.where('status').equals('progress'); const count=await c.count(); if(!count)return toast('진행 중인 작업이 없습니다.'); await state.db.transaction('rw',state.db.tasks,state.db.audit,async()=>{await c.modify({status:'done'});await audit('진행 중 일괄 완료',null,`modify() ${count}건`);});setOp("await db.tasks.where('status').equals('progress').modify({ status: 'done' });");toast(`${count}건을 완료 상태로 변경했습니다.`,'success'); }
+    async function rollbackDemo(){ const marker=`ROLLBACK-${Date.now()}`; try{await state.db.transaction('rw',state.db.tasks,state.db.audit,async()=>{await state.db.tasks.add({...randomTask(),title:marker});await audit('롤백 시연 기록',null,marker);throw new Error('의도적으로 transaction을 중단했습니다.');});}catch(e){const found=await state.db.tasks.where('title').equals(marker).first();setOp("await db.transaction('rw', tasks, audit, async () => { await tasks.add(...); throw new Error('rollback'); })");toast(found?'주의: 롤백 검증 실패':'롤백 확인: 작업과 감사 로그가 모두 커밋되지 않았습니다.','success');log(`rollback demo: marker exists = ${!!found}`);}}
+    async function deleteDone(){ const ids=await state.db.tasks.where('status').equals('done').primaryKeys(); if(!ids.length)return toast('삭제할 완료 작업이 없습니다.'); const okay=confirm(`완료 작업 ${ids.length}건과 연결 첨부를 삭제할까요?`); if(!okay)return; await state.db.transaction('rw',state.db.tasks,state.db.attachments,state.db.audit,async()=>{const atts=await state.db.attachments.where('taskId').anyOf(ids).primaryKeys(); if(atts.length)await state.db.attachments.bulkDelete(atts);await state.db.tasks.bulkDelete(ids);await audit('완료 작업 일괄 삭제',null,`bulkDelete(${ids.length})`);});state.selectedRows.clear();state.selectedId=null;renderDetail();setOp("const ids = await db.tasks.where('status').equals('done').primaryKeys(); await db.tasks.bulkDelete(ids);");toast(`${ids.length}건을 삭제했습니다.`,'success');}
+
+    function getFilters(){return {q:$('#qSearch').value.trim().toLowerCase(),status:$('#qStatus').value,priority:$('#qPriority').value,tag:$('#qTag').value};}
+    async function runQuery(resetPage=true){ if(!state.db?.isOpen?.())return; const f=getFilters(); if(resetPage)state.page=0; let result,recipe;
+      try{
+        if(f.status!=='all' && f.priority!=='all'){ result=await state.db.tasks.where('[status+priority]').equals([f.status,f.priority]).toArray(); recipe=`db.tasks.where('[status+priority]').equals(['${f.status}', '${f.priority}'])`; }
+        else if(f.status!=='all'){ result=await state.db.tasks.where('status').equals(f.status).toArray(); recipe=`db.tasks.where('status').equals('${f.status}')`; }
+        else if(f.priority!=='all'){ result=await state.db.tasks.where('priority').equals(f.priority).toArray(); recipe=`db.tasks.where('priority').equals('${f.priority}')`; }
+        else if(f.tag!=='all'){ result=await state.db.tasks.where('tags').equals(f.tag).toArray(); recipe=`db.tasks.where('tags').equals('${f.tag}')  // MultiEntry index`; }
+        else { result=await state.db.tasks.orderBy('dueDate').toArray(); recipe=`db.tasks.orderBy('dueDate')`; }
+        // 통합 텍스트 검색은 여러 필드를 비교하므로 Collection.filter()로 후처리합니다.
+        if(f.q) { result=result.filter(t => (t.searchText||makeSearchText(t)).includes(f.q)); recipe += `.filter(task => task.searchText.includes('${f.q}'))`; }
+        // 복합/상태/우선순위 인덱스가 기준일 때 태그 조건을 추가 적용합니다.
+        if(f.tag!=='all' && !(f.status==='all'&&f.priority==='all')){result=result.filter(t=>(t.tags||[]).includes(f.tag));recipe += `.filter(task => task.tags.includes('${f.tag}'))`;}
+        result.sort((a,b)=>String(a.dueDate||'9999').localeCompare(String(b.dueDate||'9999')) || b.createdAt?.localeCompare(a.createdAt));
+        state.filtered=result; const pages=Math.max(1,Math.ceil(result.length/PAGE_SIZE)); if(state.page>=pages)state.page=pages-1; renderTable();$('#queryRecipe').textContent=recipe+'.toArray()';
+      }catch(e){log(e.stack||e.message,'error');toast(`쿼리 오류: ${e.message}`,'error');}
+    }
+    function renderTable(){const total=state.filtered.length; const start=state.page*PAGE_SIZE;const slice=state.filtered.slice(start,start+PAGE_SIZE);$('#tableMeta').textContent=`${total}건 중 ${total?start+1:0}–${Math.min(start+PAGE_SIZE,total)} 표시 · ${state.page+1}/${Math.max(1,Math.ceil(total/PAGE_SIZE))} 페이지`;
+      $('#btnPrev').disabled=state.page===0;$('#btnNext').disabled=start+PAGE_SIZE>=total; $('#checkAll').checked=slice.length>0&&slice.every(t=>state.selectedRows.has(t.id));
+      $('#taskTable').innerHTML=slice.length?slice.map(t=>`<tr data-id="${t.id}" class="task-row"><td><input class="check row-check" type="checkbox" data-check-id="${t.id}" ${state.selectedRows.has(t.id)?'checked':''} aria-label="${esc(t.title)} 선택"></td><td class="title-cell"><span title="${esc(t.description||'')}">${esc(t.title)}</span>${t.attachmentCount?` <span class="tag">📎 ${t.attachmentCount}</span>`:''}${t.isOverdue?` <span class="tag" style="background:#fff1f2;color:#b52d41">마감 지남</span>`:''}<div class="muted" style="font-size:10px;margin-top:2px">${esc(t.meta?.category||'미분류')} · #${t.id}</div></td><td>${statusBadge(t.status)}</td><td>${priorityBadge(t.priority)}</td><td>${esc(t.owner)}</td><td>${(t.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</td><td>${fmtDate(t.dueDate)}</td><td><div class="row-actions"><button class="icon-btn" data-action="view" data-id="${t.id}" title="상세 보기">⌕</button><button class="icon-btn" data-action="toggle" data-id="${t.id}" title="완료 전환">✓</button><button class="icon-btn" data-action="delete" data-id="${t.id}" title="삭제">⌫</button></div></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty">조건에 맞는 작업이 없습니다.</div></td></tr>`;
+    }
+    async function refreshTagOptions(preserve=true){const current=$('#qTag').value; const tags=await state.db.tags.orderBy('name').toArray(); const known=new Set(tags.map(t=>t.name)); const taskTags=await state.db.tasks.toCollection().each(t=>(t.tags||[]).forEach(x=>known.add(x))); const items=[...known].sort((a,b)=>a.localeCompare(b,'ko'));$('#qTag').innerHTML=`<option value="all">전체</option>${items.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}`;if(preserve&&[...known,'all'].includes(current))$('#qTag').value=current;}
+    async function refreshAudit(render=true){if(!state.db?.isOpen?.())return; const rows=await state.db.audit.orderBy('timestamp').reverse().limit(12).toArray(); if(render)$('#auditList').innerHTML=rows.length?rows.map(a=>`<div class="audit-row"><time>${fmtTime(a.timestamp)}</time><div><b>${esc(a.action)}</b><span>${a.taskId?`task #${a.taskId} · `:''}${esc(a.note||'')}</span></div></div>`).join(''):`<div class="empty">아직 감사 로그가 없습니다.</div>`;}
+
+    async function showDetail(id){const t=await state.db.tasks.get(Number(id)); if(!t)return;state.selectedId=t.id;const atts=await state.db.attachments.where('taskId').equals(t.id).toArray();renderDetail(t,atts);}
+    function renderDetail(t=null,atts=[]){if(!t&&state.selectedId){showDetail(state.selectedId);return;}if(!t){$('#detailPanel').innerHTML='<div class="detail-empty">표에서 행을 클릭하면 원본 레코드와 연결된 첨부 파일이 표시됩니다.</div>';return;}$('#detailPanel').innerHTML=`<div class="detail"><div><div class="detail-title">${esc(t.title)}</div><div style="margin-top:6px">${statusBadge(t.status)} ${priorityBadge(t.priority)} ${(t.tags||[]).map(x=>`<span class="tag">${esc(x)}</span>`).join('')}</div></div><div class="detail-desc">${esc(t.description||'설명 없음')}</div><div class="divider"></div><div class="kv"><b>기본키 / UID</b><span>#${t.id} · <span class="muted">${esc(t.uid)}</span></span></div><div class="kv"><b>담당자 / 분류</b><span>${esc(t.owner)} · ${esc(t.meta?.category||'–')}</span></div><div class="kv"><b>마감 / 상태</b><span>${fmtDate(t.dueDate)} · ${statusLabel[t.status]}</span></div><div class="kv"><b>생성 / 수정</b><span>${fmtTime(t.createdAt)} / ${fmtTime(t.updatedAt)}</span></div><div class="kv"><b>객체 매핑</b><span><code>TaskRecord</code> · isOverdue = <b class="${t.isOverdue?'bad':'good'}">${String(!!t.isOverdue)}</b></span></div><div class="divider"></div><b style="font-size:12px">첨부 파일 (Blob)</b>${atts.length?atts.map(a=>`<div class="attachment"><span>📎 ${esc(a.name)} <span class="muted">(${fmtBytes(a.size)})</span></span><button class="btn" style="padding:5px 7px" data-download-attachment="${a.id}">열기</button></div>`).join(''):'<span class="muted" style="font-size:12px">첨부 파일 없음</span>'}<div class="button-row"><button class="btn" data-action="toggle" data-id="${t.id}">완료 상태 전환</button><button class="btn danger" data-action="delete" data-id="${t.id}">이 작업 삭제</button></div></div>`;}
+    async function toggleTask(id){const t=await state.db.tasks.get(Number(id));if(!t)return;const next=t.status==='done'?'todo':'done';await state.db.transaction('rw',state.db.tasks,state.db.audit,async()=>{await state.db.tasks.update(t.id,{status:next});await audit('작업 상태 전환',t.id,`${statusLabel[t.status]} → ${statusLabel[next]}`);});setOp(`await db.tasks.update(${t.id}, { status: '${next}' });`);toast(`작업을 ${statusLabel[next]} 상태로 변경했습니다.`,'success');if(state.selectedId===t.id)showDetail(t.id);}
+    async function deleteTask(id){const t=await state.db.tasks.get(Number(id));if(!t)return;const yes=confirm(`“${t.title}” 작업을 삭제할까요?`);if(!yes)return;await state.db.transaction('rw',state.db.tasks,state.db.attachments,state.db.audit,async()=>{const a=await state.db.attachments.where('taskId').equals(t.id).primaryKeys();if(a.length)await state.db.attachments.bulkDelete(a);await state.db.tasks.delete(t.id);await audit('작업 삭제',t.id,t.title);});state.selectedRows.delete(t.id);if(state.selectedId===t.id){state.selectedId=null;renderDetail();}setOp(`await db.tasks.delete(${t.id});`);toast('작업을 삭제했습니다.','success');}
+    async function selectedBulkGet(){const ids=[...state.selectedRows];if(!ids.length)return toast('표에서 하나 이상 선택하세요.');const rows=await state.db.tasks.bulkGet(ids);const valid=rows.filter(Boolean);$('#apiCode').textContent=`// bulkGet 결과 (${valid.length}건)\n${JSON.stringify(valid,null,2)}`;$('#apiModal').classList.add('show');setOp(`const rows = await db.tasks.bulkGet([${ids.join(', ')}]);`);}
+    async function downloadAttachment(id){const a=await state.db.attachments.get(Number(id));if(!a?.blob)return toast('첨부 Blob을 찾지 못했습니다.','error');const url=URL.createObjectURL(a.blob);const link=document.createElement('a');link.href=url;link.download=a.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+    async function exportData(){try{const [tasks,tags,audit,settings,attachments]=await Promise.all([state.db.tasks.toArray(),state.db.tags.toArray(),state.db.audit.toArray(),state.db.settings.toArray(),state.db.attachments.toArray()]);const safeAttachments=attachments.map(({blob,...meta})=>({...meta,blobExcluded:true}));const payload={format:'DexieFeatureLab-JSON',exportedAt:now(),dbVersion:state.db.verno,tables:{tasks,tags,audit,settings,attachments:safeAttachments}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`dexie-feature-lab-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setOp('await Promise.all(db.tables.map(table => table.toArray()))  // JSON export');toast('JSON 백업 파일을 생성했습니다.','success');}catch(e){toast(e.message,'error');}}
+    async function importData(file){if(!file)return;try{const raw=await file.text();const p=JSON.parse(raw);if(p?.format!=='DexieFeatureLab-JSON'||!p.tables)throw new Error('DexieFeatureLab JSON 형식이 아닙니다.');const t=p.tables;const yes=confirm('현재 데이터를 지우고 백업 데이터를 복원할까요?');if(!yes){$('#importFile').value='';return;}await state.db.transaction('rw',state.db.tasks,state.db.tags,state.db.audit,state.db.settings,state.db.attachments,async()=>{await Promise.all([state.db.tasks.clear(),state.db.tags.clear(),state.db.audit.clear(),state.db.settings.clear(),state.db.attachments.clear()]);if(t.tasks?.length)await state.db.tasks.bulkAdd(t.tasks);if(t.tags?.length)await state.db.tags.bulkAdd(t.tags);if(t.audit?.length)await state.db.audit.bulkAdd(t.audit);if(t.settings?.length)await state.db.settings.bulkAdd(t.settings);if(t.attachments?.length)await state.db.attachments.bulkAdd(t.attachments.map(a=>({...a,blob:null,restoredWithoutBlob:true})));await audit('JSON 복원',null,`tasks ${t.tasks?.length||0}건`);});await ensureDefaultTags();setOp('await db.transaction(\'rw\', ...db.tables, async () => { await table.clear(); await table.bulkAdd(records); })');toast('JSON 복원이 완료되었습니다. 첨부 파일 내용은 복원되지 않습니다.','success');}catch(e){toast(`복원 실패: ${e.message}`,'error');log(e.stack||e.message,'error');}finally{$('#importFile').value='';}}
+    async function nukeDatabase(){const yes=confirm('DexieFeatureLabDB를 브라우저에서 완전히 삭제할까요? 이 작업은 되돌릴 수 없습니다.');if(!yes)return;try{state.liveSub?.unsubscribe();state.db.close();await state.db.delete();state.db=configureDB();await state.db.open();await ensureDefaultTags();startLiveQuery();await refreshTagOptions();await runQuery();await refreshAudit();toast('DB를 삭제하고 빈 DB를 새로 열었습니다.','success');log('db.delete() 완료','success');}catch(e){toast(e.message,'error');}}
+
+    function bind(){
+      $('#taskForm').addEventListener('submit',createTask);$('#btnUpsert').addEventListener('click',upsertExample);$('#btnSeed').addEventListener('click',seedData);$('#btnBulkAdd').addEventListener('click',addBulk);$('#btnBulkComplete').addEventListener('click',bulkComplete);$('#btnRollback').addEventListener('click',rollbackDemo);$('#btnDeleteDone').addEventListener('click',deleteDone);
+      $('#btnApplyQuery').addEventListener('click',()=>runQuery());$('#btnRefresh').addEventListener('click',()=>runQuery(false));['#qSearch','#qStatus','#qPriority','#qTag'].forEach(s=>$(s).addEventListener(s==='#qSearch'?'keydown':'change',e=>{if(e.type==='keydown'&&e.key!=='Enter')return;runQuery();}));
+      $('#btnPrev').addEventListener('click',()=>{state.page--;renderTable();});$('#btnNext').addEventListener('click',()=>{state.page++;renderTable();});$('#btnSelected').addEventListener('click',selectedBulkGet);$('#btnQuerySamples').addEventListener('click',()=>$('#queryModal').classList.add('show'));
+      $('#checkAll').addEventListener('change',e=>{const slice=state.filtered.slice(state.page*PAGE_SIZE,state.page*PAGE_SIZE+PAGE_SIZE);slice.forEach(t=>e.target.checked?state.selectedRows.add(t.id):state.selectedRows.delete(t.id));renderTable();});
+      $('#taskTable').addEventListener('click',e=>{const check=e.target.closest('.row-check');if(check){const id=Number(check.dataset.checkId);check.checked?state.selectedRows.add(id):state.selectedRows.delete(id);renderTable();return;}const action=e.target.closest('[data-action]');if(action){const id=action.dataset.id;if(action.dataset.action==='view')showDetail(id);if(action.dataset.action==='toggle')toggleTask(id);if(action.dataset.action==='delete')deleteTask(id);return;}const row=e.target.closest('tr[data-id]');if(row)showDetail(row.dataset.id);});
+      $('#detailPanel').addEventListener('click',e=>{const action=e.target.closest('[data-action]');if(action){if(action.dataset.action==='toggle')toggleTask(action.dataset.id);if(action.dataset.action==='delete')deleteTask(action.dataset.id);}const dl=e.target.closest('[data-download-attachment]');if(dl)downloadAttachment(dl.dataset.downloadAttachment);});
+      $('#btnClearSelection').addEventListener('click',()=>{state.selectedId=null;renderDetail();});$('#btnAuditRefresh').addEventListener('click',()=>refreshAudit());$('#btnExport').addEventListener('click',exportData);$('#importFile').addEventListener('change',e=>importData(e.target.files[0]));$('#btnNuke').addEventListener('click',nukeDatabase);
+      $$('[data-modal]').forEach(b=>b.addEventListener('click',()=>$('#'+b.dataset.modal).classList.add('show')));$$('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.modal').classList.remove('show')));$$('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')}));
+    }
+    bind(); init();
+  })();
+  </script>
+</body>
+</html>
