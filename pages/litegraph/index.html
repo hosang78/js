@@ -2,483 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>LiteGraph.js</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litegraph.js@0.7.18/css/litegraph.css" />
-<script src="https://cdn.jsdelivr.net/npm/litegraph.js@0.7.18/build/litegraph.min.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-    --series-4: #008300;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .lg-wrap {
-    width: 100%;
-    height: 320px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .lg-wrap canvas { width: 100%; height: 100%; display: block; }
-  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; font-size: 13px; }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  .info-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    margin-top: 10px;
-  }
-  .result-box {
-    background: #eefcf3;
-    border: 1px solid #bfead0;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
-    margin-top: 10px;
-    font-weight: 600;
-    color: #0b6b3a;
-  }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-    max-height: 280px;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
-  .flow-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .flow-col { flex: 1; min-width: 260px; }
-  .flow-col-label { font-size: 12.5px; color: #555; margin-bottom: 6px; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
-
-  <h1>LiteGraph.js 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>LiteGraph.js</strong>는 Rete.js나 Drawflow처럼 노드 기반 흐름을 만드는 라이브러리지만,
-    HTML5 <strong>Canvas 위에 자체 렌더러와 실행 엔진을 모두 내장</strong>하고 있다는 점이 다릅니다.
-    DOM 요소를 직접 그리지 않고 캔버스에 노드·소켓·연결선·위젯까지 전부 그려줍니다.
-    <ul>
-      <li>Canvas 기반 내장 렌더러 — 노드 생성부터 드래그 연결, 캔버스 확대/축소·이동까지 기본 제공</li>
-      <li><code class="inline">graph.start()</code>로 그래프를 매 프레임(기본 60fps)마다 실행하는
-        실시간 실행 루프 — Rete.js의 "요청 시 계산"과 달리 계속 돌아가는 라이브 시뮬레이션에 가까움</li>
-      <li>노드 안에 슬라이더·숫자·버튼 같은 위젯을 내장 지원, 데이터 연결과 이벤트(EVENT/ACTION) 연결을
-        점선/실선으로 구분해서 그려줌</li>
-      <li>그래프 전체를 JSON으로 직렬화(<code class="inline">serialize</code>)하고 복원(<code class="inline">configure</code>)</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      통계·절차와 무관합니다. LiteGraph.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는 사용하지
-      않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 그래프 에디터 (Canvas 내장 렌더러)</h2>
-    <div class="desc">
-      "위판장" 노드의 출력 소켓(오른쪽 점)을 "경매장" 노드의 입력 소켓(왼쪽 점)으로 드래그해 연결해보세요.
-      캔버스 빈 곳을 드래그하면 화면이 이동하고, 마우스 휠로 확대/축소됩니다 — 전부 LiteGraph.js가
-      기본으로 제공하는 기능입니다.
-    </div>
-    <div id="flow1" class="lg-wrap"><canvas></canvas></div>
-    <div class="info-box" id="info1">아직 "위판장" → "경매장" 연결이 없습니다.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const graph = new LGraph();
-const canvas = new LGraphCanvas(canvasEl, graph);  // 렌더러 + 인터랙션이 내장되어 있음
-
-function MarketNode() {
-  this.addInput('in', 'number');
-  this.addOutput('out', 'number');
-}
-MarketNode.title = '위판장';
-LiteGraph.registerNodeType('custom/market', MarketNode);
-
-const market = LiteGraph.createNode('custom/market');
-market.pos = [250, 90];
-graph.add(market);
-
-// 소켓을 마우스로 드래그하면 ConnectionPlugin 없이도 바로 연결된다
-market.connect(0, auction, 0);   // 코드로 직접 연결할 수도 있음</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 내장 위젯 + 실시간 실행 루프</h2>
-    <div class="desc">
-      슬라이더를 움직여보세요. <code class="inline">graph.start()</code>가 매 프레임 그래프 전체를
-      다시 실행하기 때문에, 별도의 재계산 트리거 없이도 "합계" 노드가 값을 즉시 반영합니다. 합계 노드는
-      <code class="inline">onDrawForeground</code>로 결과 숫자를 캔버스에 직접 그립니다 — Canvas
-      기반이라 노드 안에 원하는 그래픽을 자유롭게 그릴 수 있습니다.
-    </div>
-    <div id="flow2" class="lg-wrap" style="height:260px;"><canvas></canvas></div>
-    <div class="result-box" id="result2">총 위판량: -</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>function BoatNode(title) {
-  this.addOutput('catch', 'number');
-  this.addWidget('slider', 'kg', 120, (v) =&gt; { this.properties.value = v; },
-    { min: 0, max: 500, precision: 0 });
-  this.properties = { value: 120 };
-}
-BoatNode.prototype.onExecute = function() {
-  this.setOutputData(0, this.properties.value);   // 매 프레임 호출됨
-};
-
-function SumNode() {
-  this.addInput('a', 'number');
-  this.addInput('b', 'number');
-  this.addOutput('sum', 'number');
-}
-SumNode.prototype.onExecute = function() {
-  const total = Math.round((this.getInputData(0) || 0) + (this.getInputData(1) || 0));
-  this.setOutputData(0, total);
-  this._total = total;
-};
-SumNode.prototype.onDrawForeground = function(ctx) {
-  ctx.fillStyle = '#0b6b3a';
-  ctx.fillText(this._total + ' kg', 10, this.size[1] - 10);
-};
-
-graph.start();  // requestAnimationFrame 루프로 매 프레임 onExecute 호출</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 이벤트 / 액션 트리거 노드</h2>
-    <div class="desc">
-      데이터가 아니라 "신호"를 전달하는 연결입니다. "경매 시작" 버튼을 눌러보세요. 데이터 연결(위 섹션의
-      실선)과 달리 이벤트 연결은 점선으로 그려지고, 버튼을 누를 때만 신호가 흐릅니다.
-    </div>
-    <div id="flow3" class="lg-wrap" style="height:220px;"><canvas></canvas></div>
-    <div class="info-box" id="info3">아직 경매가 시작되지 않았습니다.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>function AuctionStartNode() {
-  this.addOutput('start', LiteGraph.EVENT);         // 이벤트 출력
-  this.addWidget('button', '경매 시작', null, () =&gt; {
-    this.triggerSlot(0);                            // 버튼 클릭 시 신호 발생
-  });
-}
-
-function AuctionLogNode() {
-  this.addInput('trigger', LiteGraph.ACTION);        // 액션 입력
-  this.count = 0;
-}
-AuctionLogNode.prototype.onAction = function(action, param) {
-  this.count++;                                      // 신호가 도착할 때만 실행됨
-  this.setDirtyCanvas(true);
-};
-
-start.connect(0, log, 0);  // EVENT → ACTION 연결은 캔버스에 점선으로 표시된다</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 직렬화 (serialize / configure)</h2>
-    <div class="desc">현재 그래프를 JSON으로 내보낸 뒤, 완전히 새로운 그래프에 그대로 불러와 복원합니다.</div>
-    <div class="controls">
-      <button id="btn-export">내보내기 (serialize)</button>
-      <button id="btn-import">가져오기 (configure) →</button>
-    </div>
-    <div class="flow-row">
-      <div class="flow-col">
-        <div class="flow-col-label">원본 그래프</div>
-        <div id="flow4a" class="lg-wrap" style="height:220px;"><canvas></canvas></div>
-      </div>
-      <div class="flow-col">
-        <div class="flow-col-label">복원된 그래프</div>
-        <div id="flow4b" class="lg-wrap" style="height:220px;"><canvas></canvas></div>
-      </div>
-    </div>
-    <div class="info-box" id="info4">아직 내보내지 않았습니다.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const json = graphA.serialize();          // 그래프 → 직렬화 가능한 객체
-localStorage.setItem('flow', JSON.stringify(json));
-
-const restored = JSON.parse(localStorage.getItem('flow'));
-graphB.configure(restored);               // 새 그래프에 그대로 복원</pre>
-    </details>
-  </section>
-
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
 <script>
-window.__pageErrors = [];
-window.addEventListener('error', (e) => window.__pageErrors.push(e.message));
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-function setupCanvas(wrapEl) {
-  const canvasEl = wrapEl.querySelector('canvas');
-  canvasEl.width = wrapEl.clientWidth;
-  canvasEl.height = wrapEl.clientHeight;
-  const graph = new LGraph();
-  const canvas = new LGraphCanvas(canvasEl, graph);
-  canvas.show_info = false;
-  return { graph, canvas };
-}
-
-function registerCommonNodeTypes() {
-  if (LiteGraph.registered_node_types['custom/market']) return; // 한 번만 등록
-
-  function InOutNode() {
-    this.addInput('in', 'number');
-    this.addOutput('out', 'number');
-  }
-  InOutNode.prototype.onExecute = function() {
-    this.setOutputData(0, this.getInputData(0));
-  };
-
-  function MarketNode() { InOutNode.call(this); }
-  MarketNode.title = '위판장';
-  MarketNode.prototype = Object.create(InOutNode.prototype);
-  LiteGraph.registerNodeType('custom/market', MarketNode);
-
-  function AuctionNode() { InOutNode.call(this); }
-  AuctionNode.title = '경매장';
-  AuctionNode.prototype = Object.create(InOutNode.prototype);
-  LiteGraph.registerNodeType('custom/auction', AuctionNode);
-
-  function BoatNode() {
-    this.addOutput('catch', 'number');
-    this.addWidget('slider', 'kg', 120, (v) => { this.properties.value = v; }, { min: 0, max: 500, precision: 0 });
-    this.properties = { value: 120 };
-  }
-  BoatNode.title = '어선';
-  BoatNode.prototype.onExecute = function() { this.setOutputData(0, this.properties.value); };
-  LiteGraph.registerNodeType('custom/boat', BoatNode);
-
-  function SumNode() {
-    this.addInput('a', 'number');
-    this.addInput('b', 'number');
-    this.addOutput('sum', 'number');
-    this.size = [160, 70];
-    this._total = 0;
-  }
-  SumNode.title = '합계';
-  SumNode.prototype.onExecute = function() {
-    const total = Math.round((this.getInputData(0) || 0) + (this.getInputData(1) || 0));
-    this.setOutputData(0, total);
-    this._total = total;
-  };
-  SumNode.prototype.onDrawForeground = function(ctx) {
-    if (this.flags.collapsed) return;
-    ctx.fillStyle = '#8be3ae';
-    ctx.font = '13px sans-serif';
-    ctx.fillText(this._total + ' kg', 10, this.size[1] - 12);
-  };
-  LiteGraph.registerNodeType('custom/sum', SumNode);
-
-  function AuctionStartNode() {
-    this.addOutput('start', LiteGraph.EVENT);
-    this.addWidget('button', '경매 시작', null, () => { this.triggerSlot(0); });
-  }
-  AuctionStartNode.title = '경매 시작 버튼';
-  LiteGraph.registerNodeType('custom/auctionstart', AuctionStartNode);
-
-  function AuctionLogNode() {
-    this.addInput('trigger', LiteGraph.ACTION);
-    this.count = 0;
-    this.size = [170, 60];
-  }
-  AuctionLogNode.title = '경매 로그';
-  AuctionLogNode.prototype.onAction = function() {
-    this.count++;
-    this.setDirtyCanvas(true);
-    window.__section3TriggerCount = this.count;
-    document.getElementById('info3').textContent = `경매 시작 신호가 ${this.count}번 도착했습니다.`;
-  };
-  AuctionLogNode.prototype.onDrawForeground = function(ctx) {
-    if (this.flags.collapsed) return;
-    ctx.fillStyle = '#8be3ae';
-    ctx.font = '13px sans-serif';
-    ctx.fillText('수신 횟수: ' + this.count, 10, this.size[1] - 12);
-  };
-  LiteGraph.registerNodeType('custom/auctionlog', AuctionLogNode);
-}
-
-function main() {
-  registerCommonNodeTypes();
-
-  // ---- 섹션 1 ----
-  {
-    const { graph, canvas } = setupCanvas(document.getElementById('flow1'));
-    const boat = LiteGraph.createNode('custom/boat');
-    boat.title = '어선 입고';
-    boat.pos = [30, 40];
-    graph.add(boat);
-
-    const market = LiteGraph.createNode('custom/market');
-    market.pos = [280, 40];
-    graph.add(market);
-
-    const auction = LiteGraph.createNode('custom/auction');
-    auction.title = '경매장';
-    auction.pos = [520, 150];
-    graph.add(auction);
-
-    boat.connect(0, market, 0);
-    // market -> auction 은 의도적으로 미연결 (사용자가 드래그로 연결)
-
-    const info1 = document.getElementById('info1');
-    market.onConnectionsChange = function(type, slotIndex, isConnected) {
-      if (type === LiteGraph.OUTPUT && isConnected) {
-        info1.textContent = '"위판장" → "경매장" 연결 완료!';
-      }
-    };
-
-    graph.start();
-    window.__flow1 = { graph, canvas, boat, market, auction };
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
   }
 
-  // ---- 섹션 2 ----
-  {
-    const { graph, canvas } = setupCanvas(document.getElementById('flow2'));
-    const boat1 = LiteGraph.createNode('custom/boat');
-    boat1.title = '정민호';
-    boat1.pos = [20, 20];
-    graph.add(boat1);
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    const boat2 = LiteGraph.createNode('custom/boat');
-    boat2.title = '대양호';
-    boat2.pos = [20, 140];
-    graph.add(boat2);
-
-    const sum = LiteGraph.createNode('custom/sum');
-    sum.pos = [280, 80];
-    graph.add(sum);
-
-    boat1.connect(0, sum, 0);
-    boat2.connect(0, sum, 1);
-
-    graph.start();
-
-    const resultBox = document.getElementById('result2');
-    setInterval(() => {
-      resultBox.textContent = `총 위판량: ${sum._total} kg`;
-    }, 200);
-
-    window.__flow2 = { graph, canvas, boat1, boat2, sum };
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
   }
 
-  // ---- 섹션 3 ----
-  {
-    const { graph, canvas } = setupCanvas(document.getElementById('flow3'));
-    const start = LiteGraph.createNode('custom/auctionstart');
-    start.pos = [30, 40];
-    graph.add(start);
-
-    const log = LiteGraph.createNode('custom/auctionlog');
-    log.pos = [320, 50];
-    graph.add(log);
-
-    start.connect(0, log, 0);
-    graph.start();
-    window.__flow3 = { graph, canvas, start, log };
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
   }
 
-  // ---- 섹션 4 ----
-  {
-    const a = setupCanvas(document.getElementById('flow4a'));
-    const b = setupCanvas(document.getElementById('flow4b'));
-
-    const boat = LiteGraph.createNode('custom/boat');
-    boat.title = '어선';
-    boat.pos = [30, 30];
-    a.graph.add(boat);
-
-    const market = LiteGraph.createNode('custom/market');
-    market.pos = [230, 30];
-    a.graph.add(market);
-
-    boat.connect(0, market, 0);
-    a.graph.start();
-    b.graph.start();
-
-    const info4 = document.getElementById('info4');
-    let lastJson = null;
-    document.getElementById('btn-export').addEventListener('click', () => {
-      lastJson = a.graph.serialize();
-      info4.textContent = `내보내기 완료 (노드 ${lastJson.nodes.length}개, 연결 ${lastJson.links.length}개). "가져오기"를 눌러 복원하세요.`;
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
-    document.getElementById('btn-import').addEventListener('click', () => {
-      if (!lastJson) {
-        info4.textContent = '먼저 "내보내기"를 눌러주세요.';
-        return;
-      }
-      b.graph.clear();
-      b.graph.configure(lastJson);
-      info4.textContent = `복원 완료: 노드 ${b.graph._nodes.length}개, 연결 ${Object.keys(b.graph.links).length}개.`;
-    });
-
-    window.__flow4 = { a, b };
   }
 
-  window.__ready = true;
-}
-
-try {
-  main();
-} catch (e) {
-  window.__pageErrors.push('main() error: ' + e.message + '\n' + (e.stack || ''));
-  window.__ready = true;
-}
+  frame.src = './' + available[0].key + '/index.html';
+})();
 </script>
 </body>
 </html>

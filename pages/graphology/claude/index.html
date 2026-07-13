@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Graphology</title>
+<script src="https://cdn.jsdelivr.net/npm/graphology@0.26.0/dist/graphology.umd.min.js"></script>
+<style>
+  :root {
+    --series-1: #2a78d6;
+    --series-2: #1baf7a;
+    --series-3: #eda100;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .layout-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .graph-wrap {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fcfcfb;
+    flex-shrink: 0;
+  }
+  .graph-wrap svg { display: block; }
+  .side-col { flex: 1; min-width: 220px; }
+  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  select, input[type="text"] {
+    padding: 7px 9px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.danger { background: #e34948; }
+  button.danger:hover { background: #c73b3a; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+  }
+  .node circle { fill: var(--series-1); stroke: #fff; stroke-width: 2; cursor: pointer; }
+  .node text { font-size: 12px; fill: #222; pointer-events: none; }
+  .node.selected circle { stroke: #205fb0; stroke-width: 3; }
+  .node.on-path circle { fill: #e34948; }
+  .node.dim circle { fill: #d8dbe0; }
+  .edge line { stroke: #c3c2b7; stroke-width: 1.6; }
+  .edge.on-path line { stroke: #e34948; stroke-width: 3; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Graphology 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Graphology</strong>는 그래프(노드+엣지) 데이터를 다루기 위한 자료구조·API 라이브러리입니다.
+    그림을 그려주진 않고, 노드·엣지를 만들고 탐색하고 계산하는 "데이터 레이어"를 담당합니다.
+    <ul>
+      <li>노드·엣지 생성/수정/삭제, 속성(attribute) 관리</li>
+      <li><code class="inline">neighbors()</code>, <code class="inline">degree()</code> 등으로 그래프 순회·질의</li>
+      <li>그래프 API 위에서 직접 구현한 너비 우선 탐색(BFS) 최단 경로</li>
+      <li><code class="inline">export()</code> / <code class="inline">import()</code>로 그래프를 JSON으로 저장·복원</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 유통 네트워크는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      유통 구조와 무관합니다. 그래프는 별도 렌더링 라이브러리 없이 이 페이지에서 직접 그린 간단한
+      SVG로 표시합니다(WebGL 렌더링이 궁금하다면 같은 개발팀의 Sigma.js 페이지를 참고하세요).
+      Graphology(CDN) 하나만 사용하고 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 그래프 생성/조작</h2>
+    <div class="desc">노드·엣지를 추가/삭제하고 이름(속성)을 바꿔봅니다.</div>
+    <div class="layout-row">
+      <div class="graph-wrap"><svg id="svg1" width="380" height="300" viewBox="0 0 380 300"></svg></div>
+      <div class="side-col">
+        <div class="controls">
+          <input type="text" id="s1-newnode" placeholder="새 위판장 이름" style="width:140px;" />
+          <button id="s1-addnode">노드 추가</button>
+        </div>
+        <div class="controls">
+          <select id="s1-from"></select>
+          <span>—</span>
+          <select id="s1-to"></select>
+          <button id="s1-addedge">엣지 연결</button>
+        </div>
+        <div class="controls">
+          <select id="s1-target"></select>
+          <button class="danger" id="s1-removenode">선택 노드 삭제</button>
+        </div>
+        <div class="result-box" id="s1-result"></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const graph = new graphology.Graph();
+graph.addNode("market1", { label: "1번 위판장" });
+graph.addNode("market2", { label: "2번 위판장" });
+graph.addEdge("market1", "market2");
+
+graph.setNodeAttribute("market1", "label", "새 이름");
+graph.dropNode("market2"); // 연결된 엣지도 함께 삭제됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 순회 및 질의</h2>
+    <div class="desc">노드를 클릭하면 이웃 노드, 차수(degree), 연결된 엣지 목록을 보여줍니다.</div>
+    <div class="layout-row">
+      <div class="graph-wrap"><svg id="svg2" width="380" height="300" viewBox="0 0 380 300"></svg></div>
+      <div class="side-col">
+        <div class="result-box" id="s2-result">노드를 클릭해보세요.</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const neighbors = graph.neighbors("broker2");        // 이웃 노드 id 배열
+const degree = graph.degree("broker2");               // 연결된 엣지 수
+graph.forEachEdge("broker2", (edge, attrs, source, target) => {
+  console.log(source, "→", target);
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 최단 경로 탐색 (BFS)</h2>
+    <div class="desc">출발/도착 노드를 고르면 <code class="inline">neighbors()</code>만으로 직접 구현한 너비 우선 탐색으로 최단 경로를 찾아 강조합니다.</div>
+    <div class="layout-row">
+      <div class="graph-wrap"><svg id="svg3" width="380" height="300" viewBox="0 0 380 300"></svg></div>
+      <div class="side-col">
+        <div class="controls">
+          <select id="s3-from"></select>
+          <span>→</span>
+          <select id="s3-to"></select>
+          <button id="s3-find">경로 찾기</button>
+        </div>
+        <div class="result-box" id="s3-result">출발/도착 노드를 고르고 버튼을 눌러보세요.</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>function shortestPath(graph, start, end) {
+  const queue = [start];
+  const visited = new Set([start]);
+  const parent = new Map();
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (current === end) break;
+    graph.forEachNeighbor(current, (neighbor) => {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        parent.set(neighbor, current);
+        queue.push(neighbor);
+      }
+    });
+  }
+
+  if (!visited.has(end)) return null; // 경로 없음
+  const path = [end];
+  while (path[path.length - 1] !== start) path.push(parent.get(path[path.length - 1]));
+  return path.reverse();
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 직렬화 / 역직렬화</h2>
+    <div class="desc">
+      현재 그래프를 JSON으로 내보낸 뒤, 완전히 새로운 그래프 인스턴스로 가져와서 노드·엣지·속성이
+      그대로 복원되는지 확인합니다. (노드를 추가한 뒤 내보내면 새 노드도 함께 저장됩니다.)
+    </div>
+    <div class="controls">
+      <input type="text" id="s4-newnode" placeholder="내보내기 전 노드 추가" style="width:160px;" />
+      <button id="s4-addnode">노드 추가</button>
+      <button id="s4-export">내보내기 (export)</button>
+      <button id="s4-import">가져오기 (import) →</button>
+    </div>
+    <div class="layout-row">
+      <div class="side-col">
+        <div>원본 그래프</div>
+        <div class="graph-wrap"><svg id="svg4a" width="340" height="260" viewBox="0 0 340 260"></svg></div>
+      </div>
+      <div class="side-col">
+        <div>가져온(복원된) 그래프</div>
+        <div class="graph-wrap"><svg id="svg4b" width="340" height="260" viewBox="0 0 340 260"></svg></div>
+      </div>
+    </div>
+    <pre id="s4-json" style="max-height:140px;"></pre>
+    <div class="result-box" id="s4-result"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const data = graph.export(); // { nodes: [...], edges: [...], attributes: {...} }
+const json = JSON.stringify(data);
+
+const restored = new graphology.Graph();
+restored.import(JSON.parse(json));</pre>
+    </details>
+  </section>
+
+<script>
+  // ---- SVG render helper ----
+  function renderGraph(svgEl, graph, positions, { selected, dim, pathNodes, pathEdges } = {}) {
+    while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+    const NS = "http://www.w3.org/2000/svg";
+
+    graph.forEachEdge((edge, attrs, source, target) => {
+      const ps = positions[source], pt = positions[target];
+      if (!ps || !pt) return;
+      const g = document.createElementNS(NS, "g");
+      g.setAttribute("class", "edge" + (pathEdges && pathEdges.has(edge) ? " on-path" : ""));
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("x1", ps.x); line.setAttribute("y1", ps.y);
+      line.setAttribute("x2", pt.x); line.setAttribute("y2", pt.y);
+      g.appendChild(line);
+      svgEl.appendChild(g);
+    });
+
+    graph.forEachNode((node, attrs) => {
+      const p = positions[node];
+      if (!p) return;
+      let cls = "node";
+      if (selected === node) cls += " selected";
+      if (pathNodes && pathNodes.has(node)) cls += " on-path";
+      else if (dim) cls += " dim";
+      const g = document.createElementNS(NS, "g");
+      g.setAttribute("class", cls);
+      g.setAttribute("data-node", node);
+      const circle = document.createElementNS(NS, "circle");
+      circle.setAttribute("cx", p.x); circle.setAttribute("cy", p.y); circle.setAttribute("r", 16);
+      g.appendChild(circle);
+      const text = document.createElementNS(NS, "text");
+      text.setAttribute("x", p.x); text.setAttribute("y", p.y + 30);
+      text.setAttribute("text-anchor", "middle");
+      text.textContent = attrs.label || node;
+      g.appendChild(text);
+      svgEl.appendChild(g);
+    });
+  }
+
+  function circlePositions(nodeIds, cx, cy, radius) {
+    const pos = {};
+    nodeIds.forEach((id, i) => {
+      const angle = (i / nodeIds.length) * 2 * Math.PI - Math.PI / 2;
+      pos[id] = { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+    });
+    return pos;
+  }
+
+  function fillSelect(selectEl, graph) {
+    selectEl.innerHTML = "";
+    graph.forEachNode((node, attrs) => {
+      const opt = document.createElement("option");
+      opt.value = node;
+      opt.textContent = attrs.label || node;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  // ---- 1. 그래프 생성/조작 ----
+  const graph1 = new graphology.Graph();
+  [["market1", "1번 위판장"], ["market2", "2번 위판장"], ["broker1", "중도매인 A"], ["retail1", "소매상 1"]]
+    .forEach(([id, label]) => graph1.addNode(id, { label }));
+  graph1.addEdge("market1", "broker1");
+  graph1.addEdge("market2", "broker1");
+  graph1.addEdge("broker1", "retail1");
+
+  let s1Positions = {};
+  function relayout1() {
+    s1Positions = circlePositions(graph1.nodes(), 190, 150, 100);
+  }
+  function redraw1() {
+    relayout1();
+    renderGraph(document.getElementById("svg1"), graph1, s1Positions);
+    fillSelect(document.getElementById("s1-from"), graph1);
+    fillSelect(document.getElementById("s1-to"), graph1);
+    fillSelect(document.getElementById("s1-target"), graph1);
+    document.getElementById("s1-result").textContent = `노드 ${graph1.order}개 · 엣지 ${graph1.size}개`;
+  }
+  redraw1();
+
+  document.getElementById("s1-addnode").onclick = () => {
+    const name = document.getElementById("s1-newnode").value.trim();
+    if (!name) return;
+    const id = "n" + Date.now();
+    graph1.addNode(id, { label: name });
+    document.getElementById("s1-newnode").value = "";
+    redraw1();
+  };
+  document.getElementById("s1-addedge").onclick = () => {
+    const from = document.getElementById("s1-from").value;
+    const to = document.getElementById("s1-to").value;
+    if (!from || !to || from === to) return;
+    if (!graph1.hasEdge(from, to)) graph1.addEdge(from, to);
+    redraw1();
+  };
+  document.getElementById("s1-removenode").onclick = () => {
+    const target = document.getElementById("s1-target").value;
+    if (!target) return;
+    graph1.dropNode(target);
+    redraw1();
+  };
+
+  // ---- 2. 순회 및 질의 ----
+  const graph2 = new graphology.Graph();
+  [["market1","1번 위판장"],["market2","2번 위판장"],["broker1","중도매인 A"],["broker2","중도매인 B"],
+   ["retail1","소매상 1"],["retail2","소매상 2"],["export1","수출업체"]]
+    .forEach(([id, label]) => graph2.addNode(id, { label }));
+  [["market1","broker1"],["market1","broker2"],["market2","broker2"],["broker1","retail1"],
+   ["broker2","retail1"],["broker2","retail2"],["broker2","export1"]]
+    .forEach(([a, b]) => graph2.addEdge(a, b));
+  const pos2 = circlePositions(graph2.nodes(), 190, 150, 110);
+  const svg2 = document.getElementById("svg2");
+  renderGraph(svg2, graph2, pos2);
+  svg2.addEventListener("click", (e) => {
+    const g = e.target.closest(".node");
+    if (!g) return;
+    const node = g.getAttribute("data-node");
+    const neighbors = graph2.neighbors(node);
+    const degree = graph2.degree(node);
+    const edgeList = [];
+    graph2.forEachEdge(node, (edge, attrs, source, target) => {
+      const other = source === node ? target : source;
+      edgeList.push(`${graph2.getNodeAttribute(node, "label")} — ${graph2.getNodeAttribute(other, "label")}`);
+    });
+    document.getElementById("s2-result").textContent =
+      `"${graph2.getNodeAttribute(node, "label")}"\n` +
+      `이웃 노드: ${neighbors.map((n) => graph2.getNodeAttribute(n, "label")).join(", ") || "없음"}\n` +
+      `차수(degree): ${degree}\n` +
+      `연결된 엣지:\n  ${edgeList.join("\n  ")}`;
+    renderGraph(svg2, graph2, pos2, { selected: node });
+  });
+
+  // ---- 3. 최단 경로 (BFS) ----
+  const graph3 = new graphology.Graph();
+  [["market1","1번 위판장"],["market2","2번 위판장"],["broker1","중도매인 A"],["broker2","중도매인 B"],
+   ["retail1","소매상 1"],["retail2","소매상 2"],["export1","수출업체"]]
+    .forEach(([id, label]) => graph3.addNode(id, { label }));
+  [["market1","broker1"],["market1","broker2"],["broker1","retail1"],
+   ["broker2","retail1"],["broker2","retail2"],["retail2","export1"]]
+    .forEach(([a, b]) => graph3.addEdge(a, b));
+  const pos3 = circlePositions(graph3.nodes(), 190, 150, 110);
+  const svg3 = document.getElementById("svg3");
+  renderGraph(svg3, graph3, pos3);
+  fillSelect(document.getElementById("s3-from"), graph3);
+  fillSelect(document.getElementById("s3-to"), graph3);
+  document.getElementById("s3-to").selectedIndex = graph3.order - 1;
+
+  function shortestPath(graph, start, end) {
+    if (start === end) return [start];
+    const queue = [start];
+    const visited = new Set([start]);
+    const parent = new Map();
+    while (queue.length) {
+      const current = queue.shift();
+      let stop = false;
+      graph.forEachNeighbor(current, (neighbor) => {
+        if (stop || visited.has(neighbor)) return;
+        visited.add(neighbor);
+        parent.set(neighbor, current);
+        if (neighbor === end) stop = true;
+        queue.push(neighbor);
+      });
+      if (stop) break;
+    }
+    if (!visited.has(end)) return null;
+    const path = [end];
+    while (path[path.length - 1] !== start) path.push(parent.get(path[path.length - 1]));
+    return path.reverse();
+  }
+
+  document.getElementById("s3-find").onclick = () => {
+    const from = document.getElementById("s3-from").value;
+    const to = document.getElementById("s3-to").value;
+    const path = shortestPath(graph3, from, to);
+    if (!path) {
+      document.getElementById("s3-result").textContent = "두 노드 사이에 경로가 없습니다.";
+      renderGraph(svg3, graph3, pos3);
+      return;
+    }
+    const pathNodes = new Set(path);
+    const pathEdges = new Set();
+    for (let i = 0; i < path.length - 1; i++) {
+      const edge = graph3.edge(path[i], path[i + 1]) || graph3.edge(path[i + 1], path[i]);
+      if (edge) pathEdges.add(edge);
+    }
+    renderGraph(svg3, graph3, pos3, { pathNodes, pathEdges, dim: true });
+    document.getElementById("s3-result").textContent =
+      `최단 경로 (${path.length - 1}단계): ` + path.map((n) => graph3.getNodeAttribute(n, "label")).join(" → ");
+  };
+
+  // ---- 4. 직렬화/역직렬화 ----
+  const graph4 = new graphology.Graph();
+  [["market1","1번 위판장"],["broker1","중도매인 A"],["retail1","소매상 1"]]
+    .forEach(([id, label]) => graph4.addNode(id, { label }));
+  graph4.addEdge("market1", "broker1");
+  graph4.addEdge("broker1", "retail1");
+
+  function redraw4a() {
+    const pos = circlePositions(graph4.nodes(), 170, 130, 90);
+    renderGraph(document.getElementById("svg4a"), graph4, pos);
+  }
+  redraw4a();
+
+  document.getElementById("s4-addnode").onclick = () => {
+    const name = document.getElementById("s4-newnode").value.trim();
+    if (!name) return;
+    const id = "n" + Date.now();
+    graph4.addNode(id, { label: name });
+    if (graph4.order > 1) {
+      const nodes = graph4.nodes();
+      graph4.addEdge(id, nodes[0]);
+    }
+    document.getElementById("s4-newnode").value = "";
+    redraw4a();
+  };
+
+  let lastExportedJson = null;
+  document.getElementById("s4-export").onclick = () => {
+    const data = graph4.export();
+    lastExportedJson = JSON.stringify(data, null, 2);
+    document.getElementById("s4-json").textContent = lastExportedJson;
+    document.getElementById("s4-result").textContent = `내보내기 완료: 노드 ${data.nodes.length}개, 엣지 ${data.edges.length}개`;
+  };
+
+  document.getElementById("s4-import").onclick = () => {
+    if (!lastExportedJson) {
+      document.getElementById("s4-result").textContent = "먼저 내보내기를 눌러주세요.";
+      return;
+    }
+    const restored = new graphology.Graph();
+    restored.import(JSON.parse(lastExportedJson));
+    const pos = circlePositions(restored.nodes(), 170, 130, 90);
+    renderGraph(document.getElementById("svg4b"), restored, pos);
+    document.getElementById("s4-result").textContent =
+      `가져오기 완료: 노드 ${restored.order}개, 엣지 ${restored.size}개 (원본과 별개의 새 Graph 인스턴스)`;
+  };
+</script>
+
+</body>
+</html>

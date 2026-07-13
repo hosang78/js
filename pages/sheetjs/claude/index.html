@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>SheetJS CE</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13.5px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button.secondary {
+    background: #fff;
+    color: #4f7dff;
+    border: 1px solid #4f7dff;
+  }
+  input[type="file"] {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  table.preview {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-top: 10px;
+  }
+  table.preview th, table.preview td {
+    border: 1px solid #eee;
+    padding: 6px 8px;
+    text-align: left;
+  }
+  table.preview th {
+    background: #f4f6fa;
+    color: #555;
+  }
+  table.preview tr:nth-child(even) { background: #fafbfc; }
+  .table-wrap { overflow-x: auto; }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 110px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  .status-msg {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>SheetJS CE 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>SheetJS CE</strong>(Community Edition, 예전 이름 "xlsx")는 브라우저에서 서버 없이
+    <strong>엑셀 파일을 읽고 쓸 수 있게</strong> 해주는 라이브러리입니다. 표 형태 데이터를 다루는
+    거의 모든 화면(다운로드/업로드, 일괄 등록 등)에 쓰입니다.
+    <ul>
+      <li>엑셀(.xlsx) 파일을 선택하면 내용을 파싱해서 JS 배열/JSON으로 바로 사용 가능</li>
+      <li>JS 배열(JSON)을 엑셀 파일로 만들어 바로 다운로드 가능</li>
+      <li>워크북 하나에 여러 시트(sheet)를 담아 내보낼 수 있음</li>
+      <li>CSV 텍스트 ↔ 표 데이터 상호 변환 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 실적 데이터는 SheetJS 학습용으로 만든 <strong>가상의 샘플</strong>이며,
+      실제 수협중앙회의 통계가 아닙니다. 이 페이지는 SheetJS CE(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다. 업로드한 파일은 브라우저 안에서만
+      처리되고 서버로 전송되지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 엑셀 파일 읽기</h2>
+    <div class="desc">.xlsx 파일을 선택하면 첫 번째 시트 내용을 파싱해서 아래에 표로 보여줍니다.</div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+    <div class="table-wrap"><div id="readResult">파일을 선택해보세요.</div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const buf = await file.arrayBuffer();
+const workbook = XLSX.read(buf);
+const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = XLSX.utils.sheet_to_json(firstSheet); // [{컬럼명: 값, ...}, ...]</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 표 데이터 → 엑셀 다운로드</h2>
+    <div class="desc">아래 가상의 "위판 실적" 표를 엑셀 파일로 내보냅니다.</div>
+    <div class="table-wrap" id="table2"></div>
+    <button id="downloadBtn2">엑셀 다운로드</button>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const sheet = XLSX.utils.json_to_sheet(rows); // JSON 배열 -> 시트
+const workbook = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(workbook, sheet, '위판실적');
+XLSX.writeFile(workbook, '위판실적.xlsx');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 여러 시트로 내보내기</h2>
+    <div class="desc">같은 데이터를 위판장별로 나눠서, 워크북 하나에 시트 여러 개로 담아 내보냅니다.</div>
+    <button id="downloadBtn3">위판장별 시트로 내보내기</button>
+    <div class="status-msg" id="status3">버튼을 누르면 위판장 수만큼 시트가 담긴 엑셀 파일이 만들어집니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const workbook = XLSX.utils.book_new();
+for (const market of markets) {
+  const marketRows = rows.filter((r) => r.위판장 === market);
+  const sheet = XLSX.utils.json_to_sheet(marketRows);
+  XLSX.utils.book_append_sheet(workbook, sheet, market.slice(0, 31)); // 시트명 31자 제한
+}
+XLSX.writeFile(workbook, '위판장별_실적.xlsx');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. CSV 붙여넣기 → 표 변환</h2>
+    <div class="desc">CSV 텍스트를 붙여넣고 "변환"을 누르면 표로 보여주고, 엑셀로도 저장할 수 있습니다.</div>
+    <textarea id="csvInput">어종,수량(kg),단가
+고등어,320,4500
+갈치,180,8200
+오징어,95,12000</textarea>
+    <button id="convertBtn4">변환</button>
+    <button id="downloadBtn4" class="secondary" disabled>엑셀로 저장</button>
+    <div class="table-wrap"><div id="csvResult"></div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const workbook = XLSX.read(csvText, { type: 'string' });
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = XLSX.utils.sheet_to_json(sheet);</pre>
+    </details>
+  </section>
+
+  <script>
+    function renderTable(container, rows) {
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<div style="color:#999;font-size:13px;">표시할 데이터가 없습니다.</div>';
+        return;
+      }
+      const cols = Object.keys(rows[0]);
+      let html = '<table class="preview"><thead><tr>' + cols.map((c) => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+      rows.forEach((r) => {
+        html += '<tr>' + cols.map((c) => `<td>${r[c] ?? ''}</td>`).join('') + '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ---------- 1. 엑셀 파일 읽기 ----------
+    const readResult = document.getElementById('readResult');
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      readResult.textContent = '읽는 중...';
+      const buf = await file.arrayBuffer();
+      const workbook = XLSX.read(buf);
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet);
+      renderTable(readResult, rows);
+    });
+
+    // ---------- 2. 표 -> 엑셀 다운로드 ----------
+    const SAMPLE_ROWS = [
+      { 날짜: '2026-07-02', 위판장: '부산공동어시장', 어종: '고등어', '수량(kg)': 320, 금액: 1440000 },
+      { 날짜: '2026-07-03', 위판장: '목포수산시장', 어종: '갈치', '수량(kg)': 180, 금액: 1476000 },
+      { 날짜: '2026-07-04', 위판장: '통영수산시장', 어종: '오징어', '수량(kg)': 95, 금액: 1140000 },
+      { 날짜: '2026-07-05', 위판장: '부산공동어시장', 어종: '새우', '수량(kg)': 60, 금액: 1080000 },
+      { 날짜: '2026-07-06', 위판장: '여수수산시장', 어종: '꽃게', '수량(kg)': 110, 금액: 1705000 },
+      { 날짜: '2026-07-07', 위판장: '목포수산시장', 어종: '전복', '수량(kg)': 25, 금액: 1050000 },
+    ];
+    renderTable(document.getElementById('table2'), SAMPLE_ROWS);
+
+    document.getElementById('downloadBtn2').addEventListener('click', () => {
+      const sheet = XLSX.utils.json_to_sheet(SAMPLE_ROWS);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, '위판실적');
+      XLSX.writeFile(workbook, 'wipan-report.xlsx'); // 일부 브라우저는 다운로드에서 한글 파일명을 깨뜨려서 영문으로 지정
+    });
+
+    // ---------- 3. 여러 시트로 내보내기 ----------
+    const status3 = document.getElementById('status3');
+    document.getElementById('downloadBtn3').addEventListener('click', () => {
+      const markets = [...new Set(SAMPLE_ROWS.map((r) => r.위판장))];
+      const workbook = XLSX.utils.book_new();
+      markets.forEach((market) => {
+        const marketRows = SAMPLE_ROWS.filter((r) => r.위판장 === market);
+        const sheet = XLSX.utils.json_to_sheet(marketRows);
+        XLSX.utils.book_append_sheet(workbook, sheet, market.slice(0, 31));
+      });
+      XLSX.writeFile(workbook, 'wipan-report-by-market.xlsx');
+      status3.textContent = `${markets.length}개 시트(${markets.join(', ')})로 내보냈습니다.`;
+    });
+
+    // ---------- 4. CSV -> 표 변환 ----------
+    const csvInput = document.getElementById('csvInput');
+    const csvResult = document.getElementById('csvResult');
+    const downloadBtn4 = document.getElementById('downloadBtn4');
+    let csvRows = [];
+
+    document.getElementById('convertBtn4').addEventListener('click', () => {
+      const workbook = XLSX.read(csvInput.value, { type: 'string' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      csvRows = XLSX.utils.sheet_to_json(sheet);
+      renderTable(csvResult, csvRows);
+      downloadBtn4.disabled = csvRows.length === 0;
+    });
+
+    downloadBtn4.addEventListener('click', () => {
+      if (csvRows.length === 0) return;
+      const sheet = XLSX.utils.json_to_sheet(csvRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, sheet, 'Sheet1');
+      XLSX.writeFile(workbook, 'csv-to-excel.xlsx');
+    });
+  </script>
+</body>
+</html>

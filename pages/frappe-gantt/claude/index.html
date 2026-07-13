@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Frappe Gantt</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt@1.2.2/dist/frappe-gantt.css" />
+<script src="https://cdn.jsdelivr.net/npm/frappe-gantt@1.2.2/dist/frappe-gantt.umd.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .gantt-wrap {
+    overflow-x: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+  }
+  .task-info {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+  }
+  .view-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .view-btns button {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .view-btns button:hover { background: #eef2ff; }
+  .view-btns button.active {
+    background: #4f7dff;
+    color: #fff;
+    border-color: #4f7dff;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend i {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  /* custom_class 로 지정한 클래스에 프레피 간트의 CSS 변수를 덮어써서 상태별 색상 구분 */
+  .bar-wrapper.status-done { --g-bar-color: #2ecc71; --g-progress-color: #1e8449; }
+  .bar-wrapper.status-progress { --g-bar-color: #f5a623; --g-progress-color: #b8790a; }
+  .bar-wrapper.status-delayed { --g-bar-color: #e74c3c; --g-progress-color: #a93226; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Frappe Gantt 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Frappe Gantt</strong>는 프로젝트의 작업(Task)과 일정, 선후 의존관계를 막대(Bar) 형태로
+    시각화하는 오픈소스 간트차트 라이브러리입니다. (ERPNext 개발팀이 만듦)
+    <ul>
+      <li>작업 배열(id/이름/시작일/종료일/진행률/의존관계)만 넘기면 차트를 자동으로 그려줌</li>
+      <li>마우스로 막대를 드래그하면 일정이 바뀌고, 진행률 핸들을 끌면 진행률이 바뀜 (readonly 옵션으로 잠글 수도 있음)</li>
+      <li>Day/Week/Month/Year 등 다양한 시간 단위(view mode)로 전환 가능</li>
+      <li>클릭/일정변경/진행률변경 등 이벤트에 콜백을 연결할 수 있음</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 예시들은 Frappe Gantt 문법 학습용으로 만든 <strong>가상의 샘플 일정</strong>이며,
+      수협중앙회의 실제 사업/공정과는 무관합니다. 이 페이지는 Frappe Gantt(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 차트 · 의존관계 · 진행률 · 클릭 이벤트</h2>
+    <div class="desc">
+      작업 간 선후 관계(화살표)와 진행률(막대 안 채워진 부분)을 함께 표현합니다.
+      막대를 클릭하면 <code>on_click</code> 콜백으로 상세 정보를 아래에 표시합니다.
+      막대를 드래그하면 <code>on_date_change</code> 콜백이 호출됩니다.
+    </div>
+    <div class="gantt-wrap"><div id="gantt1"></div></div>
+    <div class="task-info" id="info1">막대를 클릭하거나 드래그해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const tasks = [
+  { id: 't1', name: '부지 선정 및 인허가', start: '2026-07-13', end: '2026-07-24', progress: 100 },
+  { id: 't2', name: '설계 및 도면 작성', start: '2026-07-25', end: '2026-08-07', progress: 70, dependencies: 't1' },
+  { id: 't3', name: '착공 및 기초공사', start: '2026-08-08', end: '2026-08-21', progress: 30, dependencies: 't2' },
+  { id: 't4', name: '골조 및 마감공사', start: '2026-08-22', end: '2026-09-18', progress: 0,  dependencies: 't3' },
+  { id: 't5', name: '설비 반입 및 시운전', start: '2026-09-19', end: '2026-09-30', progress: 0, dependencies: 't4' },
+  { id: 't6', name: '준공검사 및 개소식', start: '2026-10-01', end: '2026-10-05', progress: 0, dependencies: 't5' },
+];
+
+new Gantt('#gantt1', tasks, {
+  view_mode: 'Week',
+  on_click: (task) => { /* 상세 정보 표시 */ },
+  on_date_change: (task, start, end) => { /* 일정 변경 처리 */ },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 뷰 모드 전환 (View Mode)</h2>
+    <div class="desc">같은 데이터를 Quarter Day / Half Day / Day / Week / Month / Year 단위로 바꿔볼 수 있습니다.</div>
+    <div class="view-btns" id="viewBtns"></div>
+    <div class="gantt-wrap"><div id="gantt2"></div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const gantt2 = new Gantt('#gantt2', tasks, { view_mode: 'Week' });
+
+// 버튼 클릭 시
+gantt2.change_view_mode('Month');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 커스텀 색상 (custom_class)</h2>
+    <div class="desc">
+      작업(task)에 <code>custom_class</code>를 지정하고 CSS 변수(<code>--g-bar-color</code>)를 덮어써서
+      상태별로 막대 색을 다르게 표시할 수 있습니다. 예시: 위판장별 시설 점검 상태
+    </div>
+    <div class="legend">
+      <span><i style="background:#2ecc71"></i>완료</span>
+      <span><i style="background:#f5a623"></i>진행중</span>
+      <span><i style="background:#e74c3c"></i>지연</span>
+    </div>
+    <div class="gantt-wrap"><div id="gantt3"></div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const tasks = [
+  { id: 's1', name: '부산공동어시장 점검', start: '2026-07-13', end: '2026-07-17', progress: 100, custom_class: 'status-done' },
+  { id: 's2', name: '목포 위판장 점검',   start: '2026-07-15', end: '2026-07-22', progress: 55,  custom_class: 'status-progress' },
+  { id: 's3', name: '포항 위판장 점검',   start: '2026-07-13', end: '2026-07-20', progress: 20,  custom_class: 'status-delayed' },
+  { id: 's4', name: '여수 위판장 점검',   start: '2026-07-18', end: '2026-07-25', progress: 40,  custom_class: 'status-progress' },
+  { id: 's5', name: '통영 위판장 점검',   start: '2026-07-13', end: '2026-07-19', progress: 100, custom_class: 'status-done' },
+];
+
+/* CSS */
+.bar-wrapper.status-done { --g-bar-color: #2ecc71; }
+.bar-wrapper.status-progress { --g-bar-color: #f5a623; }
+.bar-wrapper.status-delayed { --g-bar-color: #e74c3c; }</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 1. 기본 차트 ----------
+    const baseTasks = [
+      { id: 't1', name: '부지 선정 및 인허가', start: '2026-07-13', end: '2026-07-24', progress: 100 },
+      { id: 't2', name: '설계 및 도면 작성', start: '2026-07-25', end: '2026-08-07', progress: 70, dependencies: 't1' },
+      { id: 't3', name: '착공 및 기초공사', start: '2026-08-08', end: '2026-08-21', progress: 30, dependencies: 't2' },
+      { id: 't4', name: '골조 및 마감공사', start: '2026-08-22', end: '2026-09-18', progress: 0, dependencies: 't3' },
+      { id: 't5', name: '설비 반입 및 시운전', start: '2026-09-19', end: '2026-09-30', progress: 0, dependencies: 't4' },
+      { id: 't6', name: '준공검사 및 개소식', start: '2026-10-01', end: '2026-10-05', progress: 0, dependencies: 't5' },
+    ];
+
+    const info1 = document.getElementById('info1');
+
+    new Gantt('#gantt1', baseTasks, {
+      view_mode: 'Week',
+      on_click: (task) => {
+        info1.textContent = `[${task.name}] ${task.start} ~ ${task.end} · 진행률 ${task.progress}%`;
+      },
+      on_date_change: (task, start, end) => {
+        info1.textContent = `[${task.name}] 일정이 변경됨 → ${date_to_str(start)} ~ ${date_to_str(end)}`;
+      },
+    });
+
+    function date_to_str(d) {
+      const dt = new Date(d);
+      return dt.toISOString().slice(0, 10);
+    }
+
+    // ---------- 2. 뷰 모드 전환 ----------
+    const eduTasks = [
+      { id: 'e1', name: '온라인 사전교육', start: '2026-07-15', end: '2026-07-16', progress: 100 },
+      { id: 'e2', name: '현장 실습교육', start: '2026-07-20', end: '2026-07-24', progress: 50, dependencies: 'e1' },
+      { id: 'e3', name: '평가 및 수료식', start: '2026-07-27', end: '2026-07-28', progress: 0, dependencies: 'e2' },
+    ];
+
+    const gantt2 = new Gantt('#gantt2', eduTasks, { view_mode: 'Week' });
+
+    const viewModes = ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month', 'Year'];
+    const viewBtns = document.getElementById('viewBtns');
+    viewModes.forEach((mode) => {
+      const btn = document.createElement('button');
+      btn.textContent = mode;
+      if (mode === 'Week') btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        gantt2.change_view_mode(mode);
+        document.querySelectorAll('#viewBtns button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      viewBtns.appendChild(btn);
+    });
+
+    // ---------- 3. 커스텀 색상 ----------
+    const statusTasks = [
+      { id: 's1', name: '부산공동어시장 점검', start: '2026-07-13', end: '2026-07-17', progress: 100, custom_class: 'status-done' },
+      { id: 's2', name: '목포 위판장 점검', start: '2026-07-15', end: '2026-07-22', progress: 55, custom_class: 'status-progress' },
+      { id: 's3', name: '포항 위판장 점검', start: '2026-07-13', end: '2026-07-20', progress: 20, custom_class: 'status-delayed' },
+      { id: 's4', name: '여수 위판장 점검', start: '2026-07-18', end: '2026-07-25', progress: 40, custom_class: 'status-progress' },
+      { id: 's5', name: '통영 위판장 점검', start: '2026-07-13', end: '2026-07-19', progress: 100, custom_class: 'status-done' },
+    ];
+
+    new Gantt('#gantt3', statusTasks, { view_mode: 'Week' });
+  </script>
+</body>
+</html>

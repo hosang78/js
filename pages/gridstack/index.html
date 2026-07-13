@@ -2,332 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>GridStack.js</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12.6.0/dist/gridstack.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/gridstack@12.6.0/dist/gridstack-all.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: #555;
-    margin-bottom: 12px;
-  }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  button:hover { background: #3d67e0; }
-  .status-msg {
-    margin-top: 10px;
-    font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
-  }
-  .grid-stack {
-    background: #fafbfc;
-    border: 1px solid #eee;
-    border-radius: 8px;
-  }
-  .widget-card {
-    width: 100%;
-    height: 100%;
     box-sizing: border-box;
-    padding: 10px 14px;
-    background: #fff;
-    border: 1px solid #e1e0d9;
-    border-radius: 8px;
-    overflow: auto;
   }
-  .widget-card .title { font-size: 12px; color: #888; margin-bottom: 4px; }
-  .widget-card .value { font-size: 20px; font-weight: 700; color: #2a78d6; }
-  .widget-card .subvalue { font-size: 12px; color: #555; }
-  .widget-card ul { margin: 0; padding-left: 16px; font-size: 12.5px; color: #444; }
-  .widget-card .close-btn {
-    float: right;
-    background: none;
-    border: none;
-    color: #aaa;
-    font-size: 14px;
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f5f6f8;
+    color: #555;
+    font-size: 13px;
     cursor: pointer;
-    padding: 0 2px;
   }
-  .widget-card .close-btn:hover { color: #e34948; background: none; }
-  pre.layout-json {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 11px;
-    margin-top: 10px;
-    max-height: 220px;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>GridStack.js 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>GridStack.js</strong>는 카드(위젯)를 격자 위에 배치하고, 마우스로 끌어서 옮기거나
-    모서리를 끌어서 크기를 바꿀 수 있게 해주는 대시보드용 그리드 레이아웃 라이브러리입니다.
-    jQuery 같은 별도 의존성 없이 동작합니다.
-    <ul>
-      <li><code>GridStack.init()</code> 한 번으로 <code>.grid-stack-item</code> 카드들이 드래그·리사이즈 가능해짐</li>
-      <li><code>addWidget()</code>/<code>removeWidget()</code>으로 위젯을 코드에서 추가·삭제 가능</li>
-      <li><code>compact()</code>로 위젯 사이 빈 칸을 자동으로 채워 정렬</li>
-      <li><code>save()</code>/<code>load()</code>로 현재 배치를 JSON으로 뽑아내고 그대로 복원 가능</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판량·시세·조합원 수 등은 GridStack.js 학습용으로 만든 <strong>가상의 샘플 데이터</strong>이며,
-      실제 수협중앙회의 통계가 아닙니다. 이 페이지는 GridStack.js(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 그리드 + 드래그 · 리사이즈</h2>
-    <div class="desc">카드를 마우스로 끌면 위치가 바뀌고, 카드 오른쪽 아래 모서리를 끌면 크기가 바뀝니다. 직접 옮기거나 크기를 바꿔보세요 — 아래 상태창에 마지막 변경 내용이 표시됩니다.</div>
-    <div class="status-msg" id="status1">아직 변경 없음</div>
-    <div class="grid-stack" id="grid1" style="margin-top:10px;"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const grid1 = GridStack.init({ column: 12, cellHeight: 70, margin: 8 }, '#grid1');
-
-grid1.on('change', (event, items) => {
-  const item = items[0];
-  status1.textContent = `위젯이 (x:${item.x}, y:${item.y}, w:${item.w}, h:${item.h}) 로 바뀜`;
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 위젯 추가 · 삭제</h2>
-    <div class="desc">버튼을 누르면 어종 시세 카드가 랜덤하게 추가됩니다. 각 카드의 × 버튼으로 개별 삭제할 수 있습니다.</div>
-    <div class="controls"><button id="addWidgetBtn">위젯 추가</button></div>
-    <div class="grid-stack" id="grid2"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>// v9+는 XSS 방지를 위해 content를 기본적으로 textContent로 넣는다.
-// 우리가 직접 만든 HTML을 그대로 렌더링하려면 renderCB를 innerHTML로 바꿔줘야 한다.
-GridStack.renderCB = (el, w) => { if (el && w?.content) el.innerHTML = w.content; };
-
-const grid2 = GridStack.init({ column: 12, cellHeight: 70, margin: 8 }, '#grid2');
-
-grid2.addWidget({
-  w: 3, h: 2,
-  content: `&lt;div class="widget-card"&gt;
-    &lt;button class="close-btn"&gt;×&lt;/button&gt;
-    &lt;div class="title"&gt;고등어 시세&lt;/div&gt;
-    &lt;div class="value"&gt;3,200원/kg&lt;/div&gt;
-  &lt;/div&gt;`,
-});
-
-// × 버튼 클릭 시 해당 위젯 제거
-gridEl.addEventListener('click', (e) => {
-  if (e.target.classList.contains('close-btn')) {
-    grid2.removeWidget(e.target.closest('.grid-stack-item'));
-  }
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 빈 공간 자동 정렬 (compact)</h2>
-    <div class="desc">아래 위젯들은 일부러 빈 칸을 남기고 배치했습니다. "정렬" 버튼을 누르면 <code>compact()</code>가 빈 칸을 채우며 위젯들을 위로 밀어 올립니다.</div>
-    <div class="controls"><button id="compactBtn">정렬</button></div>
-    <div class="grid-stack" id="grid3"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const grid3 = GridStack.init({ column: 12, cellHeight: 70, margin: 8 }, '#grid3');
-// 위젯들이 gs-y 값에 일부러 빈틈을 두고 배치되어 있음
-
-document.getElementById('compactBtn').addEventListener('click', () => {
-  grid3.compact(); // 빈 칸을 자동으로 채워 위로 정렬
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 레이아웃 저장 · 불러오기 (save / load)</h2>
-    <div class="desc">위젯을 자유롭게 옮기거나 크기를 바꾼 뒤 "레이아웃 저장"을 누르면 현재 배치가 JSON으로 추출됩니다. 배치를 흐트러뜨린 다음 "저장한 레이아웃 불러오기"를 누르면 그대로 복원됩니다.</div>
-    <div class="controls">
-      <button id="saveLayoutBtn">레이아웃 저장</button>
-      <button id="loadLayoutBtn">저장한 레이아웃 불러오기</button>
-    </div>
-    <div class="grid-stack" id="grid4"></div>
-    <pre class="layout-json" id="layoutJson">저장된 레이아웃 없음</pre>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const grid4 = GridStack.init({ column: 12, cellHeight: 70, margin: 8 }, '#grid4');
-
-let savedLayout = null;
-document.getElementById('saveLayoutBtn').addEventListener('click', () => {
-  savedLayout = grid4.save(); // 현재 x/y/w/h/내용을 배열로 추출
-});
-document.getElementById('loadLayoutBtn').addEventListener('click', () => {
-  if (savedLayout) grid4.load(savedLayout); // 저장해둔 배치로 복원
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    function widgetCard(title, value, subvalue, closable) {
-      return `<div class="widget-card">
-        ${closable ? '<button class="close-btn">×</button>' : ''}
-        <div class="title">${title}</div>
-        <div class="value">${value}</div>
-        ${subvalue ? `<div class="subvalue">${subvalue}</div>` : ''}
-      </div>`;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    // GridStack v9+는 기본적으로 content를 innerHTML이 아닌 textContent로 넣어서(XSS 방지 기본값)
-    // 태그가 그대로 이스케이프되어 보인다. 이 페이지의 위젯 내용은 사용자 입력이 아닌 우리가 직접
-    // 만든 HTML이므로, innerHTML로 렌더링하도록 명시적으로 바꿔준다.
-    GridStack.renderCB = (el, w) => {
-      if (el && w?.content) el.innerHTML = w.content;
-    };
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    // ---------- 1. 기본 그리드 + 드래그·리사이즈 ----------
-    const grid1 = GridStack.init({ column: 12, cellHeight: 70, margin: 8, float: true }, '#grid1');
-    grid1.load([
-      { x: 0, y: 0, w: 4, h: 2, content: widgetCard('부산공동어시장 오늘 위판량', '480kg', '전일 대비 +12%') },
-      { x: 4, y: 0, w: 4, h: 2, content: widgetCard('갈치 시세', '8,500원/kg', '전일 대비 -3%') },
-      { x: 8, y: 0, w: 4, h: 2, content: widgetCard('이번달 조합원 수', '1,204명', '신규 18명') },
-      {
-        x: 0, y: 2, w: 6, h: 3,
-        content: `<div class="widget-card"><div class="title">최근 위판 이력</div><ul>
-          <li>고등어 320kg — 10분 전</li>
-          <li>갈치 180kg — 5시간 전</li>
-          <li>오징어 95kg — 1일 전</li>
-        </ul></div>`,
-      },
-    ]);
-    const status1 = document.getElementById('status1');
-    grid1.on('change', (event, items) => {
-      if (!items || !items.length) return;
-      const item = items[0];
-      status1.textContent = `위젯이 (x:${item.x}, y:${item.y}, w:${item.w}, h:${item.h}) 로 바뀜`;
-    });
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-    // ---------- 2. 위젯 추가·삭제 ----------
-    const grid2 = GridStack.init({ column: 12, cellHeight: 70, margin: 8, float: true }, '#grid2');
-    const speciesPool = [
-      { name: '고등어', price: '3,200원/kg' },
-      { name: '갈치', price: '8,500원/kg' },
-      { name: '오징어', price: '6,100원/kg' },
-      { name: '새우', price: '15,000원/kg' },
-      { name: '전복', price: '42,000원/kg' },
-      { name: '꽃게', price: '11,300원/kg' },
-    ];
-    document.getElementById('addWidgetBtn').addEventListener('click', () => {
-      const s = speciesPool[Math.floor(Math.random() * speciesPool.length)];
-      grid2.addWidget({ w: 3, h: 2, content: widgetCard(`${s.name} 시세`, s.price, null, true) });
-    });
-    document.getElementById('grid2').addEventListener('click', (e) => {
-      if (e.target.classList.contains('close-btn')) {
-        const item = e.target.closest('.grid-stack-item');
-        grid2.removeWidget(item);
-      }
-    });
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    // ---------- 3. 빈 공간 자동 정렬 ----------
-    const grid3 = GridStack.init({ column: 12, cellHeight: 70, margin: 8, float: true }, '#grid3');
-    grid3.load([
-      { x: 0, y: 0, w: 3, h: 2, content: widgetCard('노량진', '210kg') },
-      { x: 6, y: 1, w: 3, h: 2, content: widgetCard('통영', '150kg') },
-      { x: 0, y: 4, w: 3, h: 2, content: widgetCard('여수', '190kg') },
-      { x: 9, y: 2, w: 3, h: 2, content: widgetCard('목포', '210kg') },
-    ]);
-    document.getElementById('compactBtn').addEventListener('click', () => {
-      grid3.compact();
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
+  }
 
-    // ---------- 4. 레이아웃 저장·불러오기 ----------
-    const grid4 = GridStack.init({ column: 12, cellHeight: 70, margin: 8, float: true }, '#grid4');
-    grid4.load([
-      { x: 0, y: 0, w: 4, h: 2, id: 'a', content: widgetCard('위판량', '480kg') },
-      { x: 4, y: 0, w: 4, h: 2, id: 'b', content: widgetCard('평균 단가', '5,400원/kg') },
-      { x: 8, y: 0, w: 4, h: 2, id: 'c', content: widgetCard('조합원 수', '1,204명') },
-    ]);
-    let savedLayout = null;
-    const layoutJson = document.getElementById('layoutJson');
-    document.getElementById('saveLayoutBtn').addEventListener('click', () => {
-      savedLayout = grid4.save();
-      layoutJson.textContent = JSON.stringify(
-        savedLayout.map((w) => ({ id: w.id, x: w.x, y: w.y, w: w.w, h: w.h })),
-        null,
-        2
-      );
-    });
-    document.getElementById('loadLayoutBtn').addEventListener('click', () => {
-      if (!savedLayout) {
-        layoutJson.textContent = '먼저 "레이아웃 저장"을 눌러주세요.';
-        return;
-      }
-      grid4.load(savedLayout);
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

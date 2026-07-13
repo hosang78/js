@@ -2,298 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>IMask</title>
-<script src="https://cdn.jsdelivr.net/npm/imask@7.6.1/dist/imask.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
+    box-sizing: border-box;
   }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: #555;
-    margin-bottom: 12px;
-  }
-  label { display: block; font-size: 13px; color: #444; margin-bottom: 4px; }
-  input[type="text"] {
-    padding: 9px 11px;
+  #tab-bar button {
+    padding: 8px 16px;
     border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    width: 260px;
-    max-width: 100%;
-  }
-  input[type="text"]:focus { outline: 2px solid #4f7dff33; border-color: #4f7dff; }
-  .field { margin-bottom: 14px; }
-  .result-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f5f6f8;
+    color: #555;
     font-size: 13px;
-    margin-top: 10px;
+    cursor: pointer;
   }
-  .result-box div { margin-bottom: 3px; }
-  .result-box div:last-child { margin-bottom: 0; }
-  .badge {
-    display: inline-block;
-    font-size: 11.5px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-weight: 700;
-  }
-  .badge.ok { background: #e2f7ea; color: #1a7a3f; }
-  .badge.no { background: #fdeaea; color: #b93a3a; }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
-
-  <h1>IMask 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>IMask</strong>는 별도 의존성이 없는 순수 자바스크립트 입력 마스킹(input mask) 라이브러리입니다.
-    사용자가 입력창에 타이핑하는 즉시 지정한 형식(전화번호, 통화, 날짜 등)에 맞춰 값을 자동으로 정리해줍니다.
-    <ul>
-      <li>고정된 패턴 마스크(예: <code class="inline">000-00-00000</code>)</li>
-      <li>천단위 콤마·최소/최대값이 있는 숫자 마스크</li>
-      <li>입력값에 따라 여러 패턴 중 알맞은 것을 자동으로 고르는 동적(dynamic) 마스크</li>
-      <li>달력 유효성까지 검사하는 날짜 마스크</li>
-      <li><code class="inline">value</code>/<code class="inline">unmaskedValue</code>/<code class="inline">typedValue</code> 세 가지 값 형태를 실시간으로 비교</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 사업자등록번호·단가·전화번호·등록일은 이 페이지를 위해 만든 <strong>가상의 예시 입력값</strong>이며,
-      실제 수협중앙회 조합원 정보와 무관합니다. IMask(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
-      사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 패턴 마스크</h2>
-    <div class="desc">가상 위판장 사업자등록번호 형식(000-00-00000)입니다. 숫자만 입력해도 하이픈이 자동으로 채워집니다.</div>
-    <div class="field">
-      <label for="i1">사업자등록번호</label>
-      <input type="text" id="i1" placeholder="000-00-00000" />
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>IMask(document.getElementById("i1"), {
-  mask: "000-00-00000"
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 숫자 마스크 (천단위 콤마)</h2>
-    <div class="desc">가상 위판 단가(원/kg)입니다. 천 단위마다 콤마가 자동으로 붙고, 0~1,000,000 범위를 벗어나는 값은 입력되지 않습니다.</div>
-    <div class="field">
-      <label for="i2">위판 단가 (원/kg)</label>
-      <input type="text" id="i2" placeholder="0" />
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>IMask(document.getElementById("i2"), {
-  mask: Number,
-  thousandsSeparator: ",",
-  scale: 0,
-  signed: false,
-  min: 0,
-  max: 1000000
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 동적 마스크 — 전화번호 자동 판별</h2>
-    <div class="desc">
-      숫자만 입력하면 앞자리에 따라 휴대전화(010-0000-0000), 서울 지역전화(02-000-0000), 그 외 지역전화(000-000-0000)
-      형식 중 알맞은 것을 자동으로 골라줍니다.
-    </div>
-    <div class="field">
-      <label for="i3">연락처</label>
-      <input type="text" id="i3" placeholder="010-0000-0000" />
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>IMask(document.getElementById("i3"), {
-  mask: [
-    { mask: "000-0000-0000", startsWith: "01" },
-    { mask: "00-000-0000", startsWith: "02" },
-    { mask: "000-000-0000" }
-  ],
-  dispatch: (appended, dynamicMasked) => {
-    const num = (dynamicMasked.value + appended).replace(/\D/g, "");
-    if (num.indexOf("02") === 0) return dynamicMasked.compiledMasks[1];
-    if (num.indexOf("01") === 0) return dynamicMasked.compiledMasks[0];
-    return dynamicMasked.compiledMasks[2];
-  }
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 날짜 마스크</h2>
-    <div class="desc">가상 조합원 등록일입니다(2015-01-01 ~ 2035-12-31). 실제로 없는 날짜(예: 13월, 32일)는 입력되지 않습니다.</div>
-    <div class="field">
-      <label for="i4">등록일 (일.월.년)</label>
-      <input type="text" id="i4" placeholder="dd.mm.yyyy" />
-    </div>
-    <div class="result-box" id="result4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>IMask(document.getElementById("i4"), {
-  mask: Date,
-  min: new Date(2015, 0, 1),
-  max: new Date(2035, 11, 31)
-});
-// 참고: blocks/pattern을 직접 지정해 Y·m·d를 커스텀 MaskedRange로
-// 재정의하면(예: blocks:{Y:{...},m:{...},d:{...}}) 완전한 날짜를
-// 입력해도 마지막 한 글자가 씹히는 현상을 실제로 확인했습니다(IMask
-// 7.6.1). min/max만 지정하고 기본 blocks를 그대로 쓰면 정상 동작합니다.</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>5. value / unmaskedValue / typedValue 비교</h2>
-    <div class="desc">
-      같은 입력값이라도 세 가지 형태로 읽을 수 있습니다: 화면에 보이는 <code class="inline">value</code>,
-      구분자를 뺀 순수 숫자 <code class="inline">unmaskedValue</code>, 실제 자바스크립트 타입(숫자)인
-      <code class="inline">typedValue</code>. 완성 여부도 함께 표시합니다.
-    </div>
-    <div class="field">
-      <label for="i5">가상 위판 중량 (kg)</label>
-      <input type="text" id="i5" placeholder="0" />
-    </div>
-    <div class="result-box" id="result5"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const mask5 = IMask(document.getElementById("i5"), {
-  mask: Number,
-  thousandsSeparator: ",",
-  scale: 0,
-  min: 0,
-  max: 9999
-});
-
-mask5.on("accept", () => {
-  console.log(mask5.value);          // "1,234" (화면 표시용 문자열)
-  console.log(mask5.unmaskedValue);  // "1234"  (구분자 제거)
-  console.log(mask5.typedValue);     // 1234    (실제 number 타입)
-  console.log(mask5.masked.isComplete); // 4자리를 다 채웠는지 여부
-});</pre>
-    </details>
-  </section>
-
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
 <script>
-  // ---- 1. 기본 패턴 마스크 ----
-  IMask(document.getElementById("i1"), {
-    mask: "000-00-00000"
-  });
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  // ---- 2. 숫자 마스크 ----
-  IMask(document.getElementById("i2"), {
-    mask: Number,
-    thousandsSeparator: ",",
-    scale: 0,
-    signed: false,
-    min: 0,
-    max: 1000000
-  });
-
-  // ---- 3. 동적 마스크 ----
-  IMask(document.getElementById("i3"), {
-    mask: [
-      { mask: "000-0000-0000", startsWith: "01" },
-      { mask: "00-000-0000", startsWith: "02" },
-      { mask: "000-000-0000" }
-    ],
-    dispatch: (appended, dynamicMasked) => {
-      const num = (dynamicMasked.value + appended).replace(/\D/g, "");
-      if (num.indexOf("02") === 0) return dynamicMasked.compiledMasks[1];
-      if (num.indexOf("01") === 0) return dynamicMasked.compiledMasks[0];
-      return dynamicMasked.compiledMasks[2];
-    }
-  });
-
-  // ---- 4. 날짜 마스크 ----
-  const mask4 = window.mask4 = IMask(document.getElementById("i4"), {
-    mask: Date,
-    min: new Date(2015, 0, 1),
-    max: new Date(2035, 11, 31)
-  });
-  const result4 = document.getElementById("result4");
-  function updateResult4() {
-    result4.innerHTML = `완성 여부: <span class="badge ${mask4.masked.isComplete ? 'ok' : 'no'}">${mask4.masked.isComplete ? '완성' : '미완성'}</span>`;
-    if (mask4.masked.isComplete && mask4.typedValue) {
-      result4.innerHTML += `<div>선택된 날짜: ${mask4.typedValue.toDateString()}</div>`;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
   }
-  mask4.on("accept", updateResult4);
-  updateResult4();
 
-  // ---- 5. value/unmaskedValue/typedValue ----
-  const mask5 = window.mask5 = IMask(document.getElementById("i5"), {
-    mask: Number,
-    thousandsSeparator: ",",
-    scale: 0,
-    min: 0,
-    max: 9999
-  });
-  const result5 = document.getElementById("result5");
-  function updateResult5() {
-    result5.innerHTML = `
-      <div>value: "${mask5.value}"</div>
-      <div>unmaskedValue: "${mask5.unmaskedValue}"</div>
-      <div>typedValue: ${JSON.stringify(mask5.typedValue)}</div>
-      <div>완성 여부: <span class="badge ${mask5.masked.isComplete ? 'ok' : 'no'}">${mask5.masked.isComplete ? '완성' : '미완성'}</span></div>
-    `;
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
+
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
   }
-  mask5.on("accept", updateResult5);
-  updateResult5();
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
+
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
+    });
+  }
+
+  frame.src = './' + available[0].key + '/index.html';
+})();
 </script>
-
 </body>
 </html>

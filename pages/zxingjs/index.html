@@ -2,445 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>ZXing JS</title>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.23.0/umd/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .layout-row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-  .code-frame {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 10px;
-    background: #fafbfc;
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .code-frame img { display: block; max-width: 160px; }
-  .code-frame .fmt-label { font-size: 12px; color: #888; margin-bottom: 6px; }
-  .side-col { flex: 1; min-width: 200px; }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-    align-items: center;
     font-size: 13px;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
-  button.ghost:hover { background: #f2f2f2; }
-  input[type="file"] { font-size: 13px; }
-  .result-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13.5px;
-    color: #2c3e91;
-    font-weight: 600;
-    min-height: 20px;
-  }
-  .result-box.error { background: #fff0f0; border-color: #f3c9c9; color: #c23b3b; }
-  .fmt-result {
-    margin-top: 6px;
-    font-size: 12.5px;
-    color: #2c3e91;
-    min-height: 18px;
-  }
-  .overlay-wrap { position: relative; display: inline-block; }
-  .overlay-wrap canvas { position: absolute; top: 0; left: 0; }
-  .video-wrap {
-    width: 100%;
-    max-width: 420px;
-    background: #000;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .video-wrap video { width: 100%; display: block; }
-  .scan-log {
-    margin-top: 10px;
-    font-size: 12.5px;
-    max-height: 140px;
-    overflow-y: auto;
-  }
-  .scan-log div { padding: 4px 0; border-bottom: 1px solid #eee; }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>ZXing JS 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>ZXing JS</strong>는 QR 코드·바코드를 이미지나 웹캠 영상에서 읽어내는(디코딩하는) 라이브러리입니다.
-    유명한 Java용 ZXing 라이브러리를 자바스크립트로 옮긴 것입니다.
-    <ul>
-      <li>이미지 파일이나 <code>&lt;img&gt;</code>/<code>&lt;canvas&gt;</code> 요소에서 코드를 읽어 텍스트로 반환</li>
-      <li>QR 코드 외에도 Data Matrix, Aztec 같은 여러 2차원 코드 포맷을 자동으로 구분해서 인식</li>
-      <li>인식 결과에는 코드의 위치(모서리 좌표)도 함께 담겨 있어 화면에 표시 가능</li>
-      <li>웹캠 영상을 계속 읽어서 코드가 나타나는 순간 자동으로 인식(연속 스캔)</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 QR/바코드 예시는 ZXing JS 학습용으로 만든 <strong>가상의 위판 등록번호</strong>이며,
-      실제 수협중앙회의 코드 체계가 아닙니다. 이 페이지는 핵심 라이브러리 <code>@zxing/library</code>(CDN)와
-      브라우저 전용 API를 제공하는 공식 애드온 <code>@zxing/browser</code>(CDN)를 함께 사용합니다.
-      다른 외부 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 이미지에서 QR 코드 디코딩</h2>
-    <div class="desc">아래는 이 페이지가 직접 만든 예시 QR 코드입니다. "디코딩하기"를 누르면 이미지 안의 텍스트를 읽어옵니다. 직접 이미지를 올려서 시도해볼 수도 있습니다.</div>
-    <div class="layout-row">
-      <div class="code-frame"><img id="qrImg1" alt="예시 QR 코드" /></div>
-      <div class="side-col">
-        <div class="controls">
-          <button id="decodeBtn1">디코딩하기</button>
-        </div>
-        <div class="result-box" id="result1">아직 디코딩 안 함</div>
-        <div class="controls" style="margin-top:14px;">
-          <span>내 이미지로 시도:</span>
-          <input type="file" id="fileInput1" accept="image/*" />
-        </div>
-        <div class="result-box" id="fileResult1">파일을 선택해보세요.</div>
-      </div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const reader = new ZXingBrowser.BrowserQRCodeReader();
-const result = await reader.decodeFromImageElement(imgEl);
-result.getText(); // 디코딩된 문자열
-
-// 사용자가 올린 파일의 경우
-const url = URL.createObjectURL(file);
-const result2 = await reader.decodeFromImageUrl(url);</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 여러 2D 바코드 포맷 자동 인식</h2>
-    <div class="desc">같은 등록번호를 QR / Data Matrix / Aztec 세 가지 포맷으로 각각 만들었습니다. 포맷을 지정하지 않아도 <code>BrowserMultiFormatReader</code>가 알아서 어떤 포맷인지 구분해 읽습니다.</div>
-    <div class="controls"><button id="decodeAllBtn2">전체 인식하기</button></div>
-    <div class="layout-row">
-      <div class="code-frame">
-        <div class="fmt-label">QR_CODE</div>
-        <img id="qrImg2" alt="QR" />
-        <div class="fmt-result" id="fmtResult2-qr"></div>
-      </div>
-      <div class="code-frame">
-        <div class="fmt-label">DATA_MATRIX</div>
-        <img id="dmImg2" alt="Data Matrix" />
-        <div class="fmt-result" id="fmtResult2-dm"></div>
-      </div>
-      <div class="code-frame">
-        <div class="fmt-label">AZTEC</div>
-        <img id="azImg2" alt="Aztec" />
-        <div class="fmt-result" id="fmtResult2-az"></div>
-      </div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const reader = new ZXingBrowser.BrowserMultiFormatReader();
-// 포맷을 지정하지 않으면 QR/DataMatrix/Aztec/PDF417 등을 모두 시도해봄
-const result = await reader.decodeFromImageElement(someImgEl);
-ZXing.BarcodeFormat[result.getBarcodeFormat()]; // 'QR_CODE' | 'DATA_MATRIX' | 'AZTEC' ...</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 인식 결과의 모서리 좌표 표시</h2>
-    <div class="desc">디코딩 결과에는 코드의 위치를 나타내는 좌표들(<code>resultPoints</code>)이 들어 있습니다. QR 코드는 보통 특징점(파인더 패턴) 3곳의 좌표가 담깁니다. "위치 표시하기"를 누르면 이미지 위에 그 위치를 점으로 찍어줍니다.</div>
-    <div class="controls"><button id="pointsBtn3">위치 표시하기</button></div>
-    <div class="overlay-wrap" id="overlayWrap3">
-      <img id="qrImg3" alt="QR" />
-      <canvas id="overlayCanvas3"></canvas>
-    </div>
-    <div class="result-box" id="result3" style="margin-top:10px;">아직 인식 안 함</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const result = await reader.decodeFromImageElement(imgEl);
-const points = result.getResultPoints(); // QR은 보통 3개(파인더 패턴), 포맷에 따라 개수가 다름
-
-points.forEach((p) => {
-  ctx.beginPath();
-  ctx.arc(p.getX(), p.getY(), 5, 0, Math.PI * 2);
-  ctx.fillStyle = 'red';
-  ctx.fill();
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 웹캠으로 실시간 스캔</h2>
-    <div class="desc">카메라로 QR/바코드를 비추면 실시간으로 인식합니다. 브라우저가 카메라 접근 권한을 요청합니다 (카메라가 없거나 거부하면 안내 메시지가 표시됩니다).</div>
-    <div class="controls">
-      <button id="startCamBtn4">카메라 시작</button>
-      <button class="ghost" id="stopCamBtn4">카메라 중지</button>
-    </div>
-    <div class="video-wrap"><video id="video4" muted playsinline></video></div>
-    <div class="result-box" id="status4" style="margin-top:10px;">카메라를 시작해보세요.</div>
-    <div class="scan-log" id="scanLog4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const reader = new ZXingBrowser.BrowserMultiFormatReader();
-
-const controls = await reader.decodeFromVideoDevice(
-  undefined, // 첫 번째로 찾은 카메라 사용
-  videoEl,
-  (result, error) => {
-    if (result) console.log('인식됨:', result.getText());
-    // error는 프레임마다 코드가 안 보일 때도 계속 발생하므로 보통 무시
-  },
-);
-
-// 스캔 중지
-controls.stop();</pre>
-    </details>
-  </section>
-
-  <script>
-    // hints를 안 주면(undefined) 내부에서 hints.get(...)을 그대로 호출해 에러가 나므로
-    // 빈 Map이라도 반드시 넘겨줘야 한다. (버전에 따라 발생하는 실제 동작)
-    const EMPTY_HINTS = new Map();
-
-    function renderMatrixToDataUrl(matrix, scale, quiet) {
-      const w = matrix.getWidth();
-      const h = matrix.getHeight();
-      const canvas = document.createElement('canvas');
-      canvas.width = w * scale + quiet * 2;
-      canvas.height = h * scale + quiet * 2;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#000';
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          if (matrix.get(x, y)) ctx.fillRect(quiet + x * scale, quiet + y * scale, scale, scale);
-        }
-      }
-      return canvas.toDataURL('image/png');
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    function loadImg(imgEl, src) {
-      return new Promise((resolve) => {
-        imgEl.onload = resolve;
-        imgEl.src = src;
-      });
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
+
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
     }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    const REG_CODE = 'WP-2026-0713-01';
-
-    async function init() {
-      // ---------- 1. 이미지에서 QR 코드 디코딩 ----------
-      const qrWriter = new ZXing.QRCodeWriter();
-      const qrMatrix1 = qrWriter.encode(REG_CODE, ZXing.BarcodeFormat.QR_CODE, 0, 0, EMPTY_HINTS);
-      const qrImg1 = document.getElementById('qrImg1');
-      await loadImg(qrImg1, renderMatrixToDataUrl(qrMatrix1, 6, 16));
-
-      const result1 = document.getElementById('result1');
-      document.getElementById('decodeBtn1').addEventListener('click', async () => {
-        try {
-          const reader = new ZXingBrowser.BrowserQRCodeReader();
-          const result = await reader.decodeFromImageElement(qrImg1);
-          result1.className = 'result-box';
-          result1.textContent = `디코딩 결과: "${result.getText()}"`;
-        } catch (e) {
-          result1.className = 'result-box error';
-          result1.textContent = '디코딩 실패: 코드를 찾지 못했습니다.';
-        }
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
       });
+      tabBar.appendChild(btn);
+    });
+  }
 
-      const fileResult1 = document.getElementById('fileResult1');
-      document.getElementById('fileInput1').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const url = URL.createObjectURL(file);
-        try {
-          const reader = new ZXingBrowser.BrowserQRCodeReader();
-          const result = await reader.decodeFromImageUrl(url);
-          fileResult1.className = 'result-box';
-          fileResult1.textContent = `디코딩 결과: "${result.getText()}"`;
-        } catch (err) {
-          fileResult1.className = 'result-box error';
-          fileResult1.textContent = '이 이미지에서 QR 코드를 찾지 못했습니다.';
-        } finally {
-          URL.revokeObjectURL(url);
-        }
-      });
-
-      // ---------- 2. 여러 2D 바코드 포맷 자동 인식 ----------
-      const dmWriter = new ZXing.DataMatrixWriter();
-      const azWriter = new ZXing.AztecCodeWriter();
-      const qrMatrix2 = qrWriter.encode(REG_CODE, ZXing.BarcodeFormat.QR_CODE, 0, 0, EMPTY_HINTS);
-      const dmMatrix2 = dmWriter.encode(REG_CODE, ZXing.BarcodeFormat.DATA_MATRIX, 0, 0, EMPTY_HINTS);
-      const azMatrix2 = azWriter.encode(REG_CODE, ZXing.BarcodeFormat.AZTEC, 0, 0, EMPTY_HINTS);
-
-      const qrImg2 = document.getElementById('qrImg2');
-      const dmImg2 = document.getElementById('dmImg2');
-      const azImg2 = document.getElementById('azImg2');
-      await Promise.all([
-        loadImg(qrImg2, renderMatrixToDataUrl(qrMatrix2, 6, 16)),
-        loadImg(dmImg2, renderMatrixToDataUrl(dmMatrix2, 6, 16)),
-        loadImg(azImg2, renderMatrixToDataUrl(azMatrix2, 6, 16)),
-      ]);
-
-      document.getElementById('decodeAllBtn2').addEventListener('click', async () => {
-        const reader = new ZXingBrowser.BrowserMultiFormatReader();
-        const targets = [
-          { img: qrImg2, out: document.getElementById('fmtResult2-qr') },
-          { img: dmImg2, out: document.getElementById('fmtResult2-dm') },
-          { img: azImg2, out: document.getElementById('fmtResult2-az') },
-        ];
-        for (const t of targets) {
-          try {
-            const result = await reader.decodeFromImageElement(t.img);
-            const fmt = ZXing.BarcodeFormat[result.getBarcodeFormat()];
-            t.out.textContent = `✔ ${fmt}: "${result.getText()}"`;
-          } catch (e) {
-            t.out.textContent = '✘ 인식 실패';
-          }
-        }
-      });
-
-      // ---------- 3. 인식 결과의 모서리 좌표 표시 ----------
-      const qrImg3 = document.getElementById('qrImg3');
-      const qrMatrix3 = qrWriter.encode(REG_CODE, ZXing.BarcodeFormat.QR_CODE, 0, 0, EMPTY_HINTS);
-      await loadImg(qrImg3, renderMatrixToDataUrl(qrMatrix3, 6, 16));
-
-      const result3 = document.getElementById('result3');
-      document.getElementById('pointsBtn3').addEventListener('click', async () => {
-        try {
-          const reader = new ZXingBrowser.BrowserQRCodeReader();
-          const result = await reader.decodeFromImageElement(qrImg3);
-          const canvas = document.getElementById('overlayCanvas3');
-          canvas.width = qrImg3.clientWidth;
-          canvas.height = qrImg3.clientHeight;
-          const scaleX = qrImg3.clientWidth / qrImg3.naturalWidth;
-          const scaleY = qrImg3.clientHeight / qrImg3.naturalHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = '#e34948';
-          result.getResultPoints().forEach((p) => {
-            ctx.beginPath();
-            ctx.arc(p.getX() * scaleX, p.getY() * scaleY, 5, 0, Math.PI * 2);
-            ctx.fill();
-          });
-          result3.className = 'result-box';
-          result3.textContent = `"${result.getText()}" 인식됨 · 위치 좌표 ${result.getResultPoints().length}개 표시`;
-        } catch (e) {
-          result3.className = 'result-box error';
-          result3.textContent = '인식 실패';
-        }
-      });
-
-      // ---------- 4. 웹캠으로 실시간 스캔 ----------
-      const status4 = document.getElementById('status4');
-      const scanLog4 = document.getElementById('scanLog4');
-      const video4 = document.getElementById('video4');
-      let controls4 = null;
-      let camReader4 = null;
-
-      document.getElementById('startCamBtn4').addEventListener('click', async () => {
-        if (controls4) return;
-        try {
-          const devices = await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();
-          if (!devices.length) {
-            status4.className = 'result-box error';
-            status4.textContent = '사용 가능한 카메라를 찾지 못했습니다.';
-            return;
-          }
-          camReader4 = new ZXingBrowser.BrowserMultiFormatReader();
-          controls4 = await camReader4.decodeFromVideoDevice(undefined, video4, (result) => {
-            if (result) {
-              const entry = document.createElement('div');
-              entry.textContent = `${new Date().toLocaleTimeString()} — "${result.getText()}"`;
-              scanLog4.prepend(entry);
-            }
-          });
-          status4.className = 'result-box';
-          status4.textContent = '카메라 스캔 중... QR/바코드를 비춰보세요.';
-        } catch (e) {
-          status4.className = 'result-box error';
-          status4.textContent = '카메라를 사용할 수 없습니다 (권한 거부 또는 미지원 환경).';
-        }
-      });
-
-      document.getElementById('stopCamBtn4').addEventListener('click', () => {
-        if (controls4) {
-          controls4.stop();
-          controls4 = null;
-        }
-        status4.className = 'result-box';
-        status4.textContent = '카메라를 중지했습니다.';
-      });
-    }
-
-    init();
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

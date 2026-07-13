@@ -2,365 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>Fabric.js</title>
-<script src="https://cdn.jsdelivr.net/npm/fabric@7.4.0/dist/index.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .canvas-wrap {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    display: inline-block;
-    background: #fafbfc;
-  }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-    align-items: center;
     font-size: 13px;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  button.ghost {
-    background: #fff;
-    color: #333;
-    border: 1px solid #ccc;
-  }
-  button.ghost:hover { background: #f2f2f2; }
-  button.danger { background: #e34948; }
-  button.danger:hover { background: #c93b3a; }
-  .swatch {
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #ddd;
-    cursor: pointer;
-    padding: 0;
-  }
-  select, input[type="range"] {
-    padding: 6px 8px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 13px;
-  }
-  .status-msg {
-    margin-top: 10px;
-    font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
-  }
-  pre.layout-json {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 11px;
-    margin-top: 10px;
-    max-height: 160px;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>Fabric.js 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>Fabric.js</strong>는 HTML <code>&lt;canvas&gt;</code> 위에 도형·텍스트·이미지를 올려놓고,
-    마우스로 선택·이동·크기조절·회전까지 할 수 있게 해주는 캔버스 조작 라이브러리입니다.
-    <ul>
-      <li><code>new fabric.Canvas(el)</code> 위에 <code>Rect</code>/<code>Circle</code>/<code>Textbox</code> 등을 <code>add()</code></li>
-      <li>추가한 객체는 클릭해서 선택하고, 모서리 핸들로 크기·회전, 드래그로 이동 가능</li>
-      <li><code>isDrawingMode</code>를 켜면 마우스로 자유롭게 선을 그리는 모드로 전환</li>
-      <li><code>toJSON()</code>/<code>loadFromJSON()</code>으로 캔버스 상태를 저장·복원, <code>toDataURL()</code>로 이미지 추출</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판장 배치도는 Fabric.js 학습용으로 만든 <strong>가상의 예시</strong>이며,
-      실제 수협중앙회의 배치 도면이 아닙니다. 이 페이지는 Fabric.js(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 도형 추가 + 선택 · 이동 · 크기조절</h2>
-    <div class="desc">버튼으로 구역(사각형)·매대(원)·라벨(텍스트)을 추가해보세요. 캔버스 위 도형을 클릭하면 선택되고, 모서리 핸들로 크기와 회전을, 드래그로 위치를 바꿀 수 있습니다.</div>
-    <div class="controls">
-      <button id="addRectBtn">구역(사각형) 추가</button>
-      <button id="addCircleBtn">매대(원) 추가</button>
-      <button id="addTextBtn">라벨(텍스트) 추가</button>
-    </div>
-    <div class="canvas-wrap"><canvas id="canvas1" width="560" height="320"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const canvas = new fabric.Canvas('canvas1');
-
-document.getElementById('addRectBtn').addEventListener('click', () => {
-  const rect = new fabric.Rect({ left: 80, top: 80, width: 120, height: 70, fill: '#2a78d6' });
-  canvas.add(rect);
-  canvas.setActiveObject(rect); // 추가하자마자 선택 상태로
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 자유 그리기 모드</h2>
-    <div class="desc">배치도 위에 구역 경계선을 손으로 그어봅니다. 색상과 굵기를 바꿀 수 있습니다.</div>
-    <div class="controls">
-      <button id="toggleDrawBtn">그리기 모드 켜기</button>
-      <span>색상</span>
-      <input type="color" id="brushColor" value="#e34948" />
-      <span>굵기</span>
-      <input type="range" id="brushWidth" min="1" max="20" value="4" />
-      <button class="ghost" id="clearDrawBtn">그린 선 지우기</button>
-    </div>
-    <div class="canvas-wrap"><canvas id="canvas2" width="560" height="320"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>canvas.isDrawingMode = true;
-canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-canvas.freeDrawingBrush.color = '#e34948';
-canvas.freeDrawingBrush.width = 4;</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 선택 객체 속성 편집</h2>
-    <div class="desc">도형을 하나 선택한 뒤 색상을 눌러보세요. 선택된 도형의 채우기 색이 바로 바뀝니다.</div>
-    <div class="controls">
-      <span>채우기 색:</span>
-      <button class="swatch" style="background:#2a78d6" data-color="#2a78d6"></button>
-      <button class="swatch" style="background:#1baf7a" data-color="#1baf7a"></button>
-      <button class="swatch" style="background:#eda100" data-color="#eda100"></button>
-      <button class="swatch" style="background:#e34948" data-color="#e34948"></button>
-      <button class="danger" id="deleteBtn">선택 삭제</button>
-    </div>
-    <div class="canvas-wrap"><canvas id="canvas3" width="560" height="320"></canvas></div>
-    <div class="status-msg" id="status3">도형을 선택해보세요.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>canvas.on('selection:created', (e) => updateStatus(e.selected[0]));
-canvas.on('selection:updated', (e) => updateStatus(e.selected[0]));
-
-swatchBtn.addEventListener('click', () => {
-  const active = canvas.getActiveObject();
-  if (!active) return;
-  active.set('fill', swatchBtn.dataset.color);
-  canvas.renderAll(); // 색을 바꾼 뒤엔 다시 그려줘야 화면에 반영됨
-});
-
-deleteBtn.addEventListener('click', () => {
-  const active = canvas.getActiveObject();
-  if (active) canvas.remove(active);
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 저장 · 불러오기 + PNG 내보내기</h2>
-    <div class="desc">배치도를 자유롭게 편집한 뒤 저장하고, 다시 편집해서 흐트러뜨린 다음 불러와서 복원해보세요. PNG로도 내보낼 수 있습니다.</div>
-    <div class="controls">
-      <button id="saveBtn4">배치도 저장</button>
-      <button class="ghost" id="loadBtn4">저장한 배치도 불러오기</button>
-      <button class="ghost" id="exportBtn4">PNG로 내보내기</button>
-    </div>
-    <div class="canvas-wrap"><canvas id="canvas4" width="560" height="320"></canvas></div>
-    <pre class="layout-json" id="layoutJson4">저장된 배치도 없음</pre>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>let saved = null;
-saveBtn.addEventListener('click', () => { saved = canvas.toJSON(); });
-
-loadBtn.addEventListener('click', async () => {
-  if (saved) await canvas.loadFromJSON(saved); // 비동기로 복원
-  canvas.renderAll();
-});
-
-exportBtn.addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = canvas.toDataURL({ format: 'png' });
-  a.download = 'wipan-layout.png'; // 한글 파일명은 브라우저에서 깨질 수 있어 영문으로 지정
-  a.click();
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    function seedLayout(canvas) {
-      canvas.add(new fabric.Rect({ left: 30, top: 30, width: 160, height: 100, fill: '#2a78d6', stroke: '#184f95', strokeWidth: 1 }));
-      canvas.add(new fabric.Textbox('위판장 A구역', { left: 40, top: 68, width: 140, fontSize: 13, fill: '#fff' }));
-      canvas.add(new fabric.Circle({ left: 260, top: 40, radius: 40, fill: '#1baf7a' }));
-      canvas.add(new fabric.Textbox('매대 1', { left: 270, top: 72, width: 60, fontSize: 12, fill: '#fff' }));
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    // ---------- 1. 도형 추가 + 선택·이동·크기조절 ----------
-    const canvas1 = new fabric.Canvas('canvas1');
-    seedLayout(canvas1);
-    document.getElementById('addRectBtn').addEventListener('click', () => {
-      const rect = new fabric.Rect({ left: 80, top: 180, width: 120, height: 70, fill: '#2a78d6', stroke: '#184f95', strokeWidth: 1 });
-      canvas1.add(rect);
-      canvas1.setActiveObject(rect);
-    });
-    document.getElementById('addCircleBtn').addEventListener('click', () => {
-      const circle = new fabric.Circle({ left: 280, top: 190, radius: 36, fill: '#1baf7a' });
-      canvas1.add(circle);
-      canvas1.setActiveObject(circle);
-    });
-    document.getElementById('addTextBtn').addEventListener('click', () => {
-      const text = new fabric.Textbox('새 라벨', { left: 400, top: 200, width: 120, fontSize: 15, fill: '#0b0b0b' });
-      canvas1.add(text);
-      canvas1.setActiveObject(text);
-    });
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    // ---------- 2. 자유 그리기 모드 ----------
-    const canvas2 = new fabric.Canvas('canvas2');
-    seedLayout(canvas2);
-    canvas2.freeDrawingBrush = new fabric.PencilBrush(canvas2);
-    canvas2.freeDrawingBrush.color = document.getElementById('brushColor').value;
-    canvas2.freeDrawingBrush.width = Number(document.getElementById('brushWidth').value);
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-    const toggleDrawBtn = document.getElementById('toggleDrawBtn');
-    toggleDrawBtn.addEventListener('click', () => {
-      canvas2.isDrawingMode = !canvas2.isDrawingMode;
-      toggleDrawBtn.textContent = canvas2.isDrawingMode ? '그리기 모드 끄기' : '그리기 모드 켜기';
-    });
-    document.getElementById('brushColor').addEventListener('input', (e) => {
-      canvas2.freeDrawingBrush.color = e.target.value;
-    });
-    document.getElementById('brushWidth').addEventListener('input', (e) => {
-      canvas2.freeDrawingBrush.width = Number(e.target.value);
-    });
-    document.getElementById('clearDrawBtn').addEventListener('click', () => {
-      canvas2.getObjects('path').forEach((p) => canvas2.remove(p));
-      canvas2.renderAll();
-    });
-
-    // ---------- 3. 선택 객체 속성 편집 ----------
-    const canvas3 = new fabric.Canvas('canvas3');
-    seedLayout(canvas3);
-    const status3 = document.getElementById('status3');
-    function updateStatus3(obj) {
-      if (!obj) {
-        status3.textContent = '도형을 선택해보세요.';
-        return;
-      }
-      const typeLabel = { rect: '사각형', circle: '원', textbox: '텍스트' }[obj.type] || obj.type;
-      status3.textContent = `선택됨: ${typeLabel}`;
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
     }
-    canvas3.on('selection:created', (e) => updateStatus3(e.selected[0]));
-    canvas3.on('selection:updated', (e) => updateStatus3(e.selected[0]));
-    canvas3.on('selection:cleared', () => updateStatus3(null));
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    document.querySelectorAll('.swatch').forEach((btn) => {
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
       btn.addEventListener('click', () => {
-        const active = canvas3.getActiveObject();
-        if (!active) {
-          status3.textContent = '먼저 도형을 선택해주세요.';
-          return;
-        }
-        active.set('fill', btn.dataset.color);
-        canvas3.renderAll();
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
       });
+      tabBar.appendChild(btn);
     });
-    document.getElementById('deleteBtn').addEventListener('click', () => {
-      const active = canvas3.getActiveObject();
-      if (active) {
-        canvas3.remove(active);
-        status3.textContent = '삭제했습니다.';
-      }
-    });
+  }
 
-    // ---------- 4. 저장 · 불러오기 + PNG 내보내기 ----------
-    const canvas4 = new fabric.Canvas('canvas4');
-    seedLayout(canvas4);
-    let saved4 = null;
-    const layoutJson4 = document.getElementById('layoutJson4');
-    document.getElementById('saveBtn4').addEventListener('click', () => {
-      saved4 = canvas4.toJSON();
-      layoutJson4.textContent = JSON.stringify(
-        saved4.objects.map((o) => ({ type: o.type, left: Math.round(o.left), top: Math.round(o.top) })),
-        null,
-        2
-      );
-    });
-    document.getElementById('loadBtn4').addEventListener('click', async () => {
-      if (!saved4) {
-        layoutJson4.textContent = '먼저 "배치도 저장"을 눌러주세요.';
-        return;
-      }
-      await canvas4.loadFromJSON(saved4);
-      canvas4.renderAll();
-    });
-    document.getElementById('exportBtn4').addEventListener('click', () => {
-      const a = document.createElement('a');
-      a.href = canvas4.toDataURL({ format: 'png' });
-      a.download = 'wipan-layout.png';
-      a.click();
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

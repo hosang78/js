@@ -2,299 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>bpmn-js</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/assets/diagram-js.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/assets/bpmn-js.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/assets/bpmn-font/css/bpmn-embedded.css" />
-<script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/bpmn-modeler.production.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  .note {
-    font-size: 12.5px;
     color: #555;
-    background: #f4f6fa;
-    border: 1px solid #e1e0d9;
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: #555;
-    margin-bottom: 12px;
-  }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  button.ghost {
-    background: #fff;
-    color: #333;
-    border: 1px solid #ccc;
-  }
-  button.ghost:hover { background: #f2f2f2; }
-  .diagram-wrap {
-    width: 100%;
-    height: 380px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    background: #fff;
-    position: relative;
-    overflow: hidden;
-  }
-  .status-msg {
-    margin-top: 10px;
-    font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
-  }
-  pre.xml-preview {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 11px;
-    margin-top: 10px;
-    max-height: 200px;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>bpmn-js 핵심 기능 둘러보기</h1>
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
+  }
 
-  <div class="intro">
-    <strong>bpmn-js</strong>는 BPMN 2.0 표준으로 그린 업무 절차 다이어그램을 브라우저에서 보여주고,
-    직접 편집도 할 수 있게 해주는 라이브러리입니다. 다이어그램은 BPMN XML 형식의 텍스트 파일로 저장·복원됩니다.
-    <ul>
-      <li><code>new BpmnJS({ container }).importXML(xml)</code>로 XML을 불러와 다이어그램으로 렌더링</li>
-      <li>왼쪽 팔레트에서 태스크·게이트웨이 등을 끌어다 놓고, 요소끼리 화살표로 연결 가능</li>
-      <li><code>modeling.updateLabel()</code>, <code>modeling.setColor()</code> 같은 API로 코드에서 직접 다이어그램을 수정</li>
-      <li><code>saveXML()</code>으로 현재 다이어그램을 다시 BPMN XML로 추출</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 처리 절차는 bpmn-js 학습용으로 만든 <strong>가상의 예시</strong>이며,
-      실제 수협중앙회의 업무 절차가 아닙니다. 이 페이지는 bpmn-js(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-    <div class="note">
-      ℹ️ 확인된 특이사항: bpmn-js는 원(이벤트)·마름모(게이트웨이)처럼 작은 도형에 붙은 한글 라벨을
-      한 글자씩 세로로 쌓아서 표시하는 경우가 있습니다(예: "접수" → "접"/"수"). 폭이 넉넉한 사각형(태스크)
-      라벨은 문제없이 한 줄로 표시되며, 이는 CDN에서 받은 실제 라이브러리로 직접 확인한 동작입니다.
-    </div>
-  </div>
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-  <section class="block">
-    <h2>1. 기본 다이어그램 뷰어 + 확대·축소</h2>
-    <div class="desc">위판 처리 절차 다이어그램입니다. 버튼으로 확대·축소하거나 전체 화면에 맞출 수 있고, 마우스 휠로도 확대·축소됩니다.</div>
-    <div class="controls">
-      <button class="ghost" id="zoomInBtn1">＋ 확대</button>
-      <button class="ghost" id="zoomOutBtn1">－ 축소</button>
-      <button class="ghost" id="fitBtn1">전체 화면에 맞추기</button>
-    </div>
-    <div class="diagram-wrap" id="canvas1"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const viewer = new BpmnJS({ container: '#canvas1' });
-await viewer.importXML(xml);
-viewer.get('canvas').zoom('fit-viewport');
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-zoomInBtn.addEventListener('click', () => {
-  const canvas = viewer.get('canvas');
-  canvas.zoom(canvas.zoom() + 0.1);
-});</pre>
-    </details>
-  </section>
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-  <section class="block">
-    <h2>2. 인터랙티브 모델러</h2>
-    <div class="desc">왼쪽 팔레트에서 태스크나 게이트웨이를 캔버스로 끌어다 놓아보세요. 기존 요소에 마우스를 올리면 나오는 화살표 아이콘으로 다른 요소와 연결선을 그릴 수 있고, 더블클릭하면 라벨을 바로 수정할 수 있습니다.</div>
-    <div class="diagram-wrap" id="canvas2"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>// BpmnJS(모델러 번들)는 뷰어와 API가 같지만, 팔레트/컨텍스트 패드가 함께 켜져서
-// 사용자가 직접 요소를 추가·연결·수정할 수 있습니다.
-const modeler = new BpmnJS({ container: '#canvas2' });
-await modeler.importXML(xml);
-modeler.get('canvas').zoom('fit-viewport');</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. JS API로 요소 편집</h2>
-    <div class="desc">화면을 직접 조작하지 않고, 코드에서 <code>modeling</code> 서비스로 라벨과 색상을 바꿔봅니다.</div>
-    <div class="controls">
-      <button id="renameBtn3">"검수" → "1차 검수"로 이름 변경</button>
-      <button id="colorBtn3">"위판 등록" 강조 표시</button>
-      <button class="ghost" id="resetBtn3">되돌리기</button>
-    </div>
-    <div class="diagram-wrap" id="canvas3"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const elementRegistry = modeler.get('elementRegistry');
-const modeling = modeler.get('modeling');
-
-renameBtn.addEventListener('click', () => {
-  const task = elementRegistry.get('Task_1');
-  modeling.updateLabel(task, '1차 검수');
-});
-
-colorBtn.addEventListener('click', () => {
-  const task = elementRegistry.get('Task_2');
-  modeling.setColor([task], { fill: '#fff6e5', stroke: '#a15c00' });
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. XML 저장 · 다운로드</h2>
-    <div class="desc">지금 화면의 다이어그램을 BPMN XML 텍스트로 뽑아내거나 <code>.bpmn</code> 파일로 다운로드할 수 있습니다. 캔버스를 자유롭게 편집한 뒤 시도해보세요.</div>
-    <div class="controls">
-      <button id="saveXmlBtn4">XML로 저장</button>
-      <button class="ghost" id="downloadBtn4">.bpmn 파일 다운로드</button>
-    </div>
-    <div class="diagram-wrap" id="canvas4"></div>
-    <pre class="xml-preview" id="xmlPreview4">저장된 XML 없음</pre>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const { xml } = await modeler.saveXML({ format: true });
-xmlPreview.textContent = xml;
-
-const blob = new Blob([xml], { type: 'application/xml' });
-const a = document.createElement('a');
-a.href = URL.createObjectURL(blob);
-a.download = 'wipan-process.bpmn'; // 한글 파일명은 브라우저에서 깨질 수 있어 영문으로 지정
-a.click();</pre>
-    </details>
-  </section>
-
-  <script>
-    (async () => {
-      const xml = await (await fetch('sample-process.bpmn')).text();
-
-      // ---------- 1. 기본 다이어그램 뷰어 ----------
-      const viewer1 = new BpmnJS({ container: '#canvas1' });
-      await viewer1.importXML(xml);
-      viewer1.get('canvas').zoom('fit-viewport');
-      document.getElementById('zoomInBtn1').addEventListener('click', () => {
-        const c = viewer1.get('canvas');
-        c.zoom(c.zoom() + 0.1);
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
       });
-      document.getElementById('zoomOutBtn1').addEventListener('click', () => {
-        const c = viewer1.get('canvas');
-        c.zoom(Math.max(0.2, c.zoom() - 0.1));
-      });
-      document.getElementById('fitBtn1').addEventListener('click', () => {
-        viewer1.get('canvas').zoom('fit-viewport');
-      });
+      tabBar.appendChild(btn);
+    });
+  }
 
-      // ---------- 2. 인터랙티브 모델러 ----------
-      const modeler2 = new BpmnJS({ container: '#canvas2' });
-      await modeler2.importXML(xml);
-      modeler2.get('canvas').zoom('fit-viewport');
-
-      // ---------- 3. JS API로 요소 편집 ----------
-      const modeler3 = new BpmnJS({ container: '#canvas3' });
-      await modeler3.importXML(xml);
-      modeler3.get('canvas').zoom('fit-viewport');
-      const elementRegistry3 = modeler3.get('elementRegistry');
-      const modeling3 = modeler3.get('modeling');
-
-      document.getElementById('renameBtn3').addEventListener('click', () => {
-        const task = elementRegistry3.get('Task_1');
-        modeling3.updateLabel(task, '1차 검수');
-      });
-      document.getElementById('colorBtn3').addEventListener('click', () => {
-        const task = elementRegistry3.get('Task_2');
-        modeling3.setColor([task], { fill: '#fff6e5', stroke: '#a15c00' });
-      });
-      document.getElementById('resetBtn3').addEventListener('click', async () => {
-        await modeler3.importXML(xml);
-        modeler3.get('canvas').zoom('fit-viewport');
-      });
-
-      // ---------- 4. XML 저장 · 다운로드 ----------
-      const modeler4 = new BpmnJS({ container: '#canvas4' });
-      await modeler4.importXML(xml);
-      modeler4.get('canvas').zoom('fit-viewport');
-      const xmlPreview4 = document.getElementById('xmlPreview4');
-
-      document.getElementById('saveXmlBtn4').addEventListener('click', async () => {
-        const { xml: savedXml } = await modeler4.saveXML({ format: true });
-        xmlPreview4.textContent = savedXml;
-      });
-      document.getElementById('downloadBtn4').addEventListener('click', async () => {
-        const { xml: savedXml } = await modeler4.saveXML({ format: true });
-        const blob = new Blob([savedXml], { type: 'application/xml' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'wipan-process.bpmn';
-        a.click();
-      });
-    })();
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

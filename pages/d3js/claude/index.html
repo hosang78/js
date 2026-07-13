@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>D3.js</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+  :root {
+    --surface: #fcfcfb;
+    --page: #f9f9f7;
+    --ink-primary: #0b0b0b;
+    --ink-secondary: #52514e;
+    --ink-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --series-1: #2a78d6;
+    --series-2: #1baf7a;
+    --series-3: #eda100;
+    --series-4: #008300;
+    --series-5: #4a3aa7;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: var(--page);
+    color: var(--ink-primary);
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: var(--ink-secondary);
+    margin-bottom: 12px;
+  }
+  .chart-wrap {
+    width: 100%;
+  }
+  .chart-wrap svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .axis path, .axis line {
+    stroke: var(--axis);
+  }
+  .axis text {
+    fill: var(--ink-muted);
+    font-size: 11px;
+  }
+  .controls {
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: var(--series-1);
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #205fb0; }
+  .legend-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--ink-secondary);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: var(--series-1); }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>D3.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>D3.js</strong>는 완성된 차트를 그려주는 라이브러리가 아니라, 데이터를 SVG(또는 HTML) 요소에
+    직접 연결해서 화면을 조립하는 <strong>저수준 도구 모음</strong>입니다. Chart.js처럼 설정 객체 하나로
+    차트가 나오는 게 아니라, 좌표·크기·눈금을 직접 계산해서 요소를 만들고 붙이는 방식입니다.
+    <ul>
+      <li><code>d3.select</code>/<code>selectAll</code>로 요소를 고르고 <code>.data().join()</code>으로 배열과 연결</li>
+      <li><code>d3.scaleLinear</code>/<code>scaleBand</code>로 "데이터 값 → 픽셀 좌표" 변환 함수를 직접 생성</li>
+      <li>데이터가 바뀌면 새로 생기는 요소(enter)·남는 요소(update)·없어지는 요소(exit)를 각각 다르게 다룰 수 있음</li>
+      <li><code>d3.pie</code>, <code>d3.arc</code> 같은 "제너레이터"가 좌표 계산을 대신해주고, 그리기는 직접 함</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 실적 수치는 D3.js 학습용으로 만든 <strong>가상의 샘플 데이터</strong>이며,
+      실제 수협중앙회의 통계가 아닙니다. 이 페이지는 D3.js(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 선택(Selection)과 데이터 바인딩</h2>
+    <div class="desc">숫자 배열 하나를 SVG의 <code>&lt;rect&gt;</code> 여러 개에 연결합니다. 막대의 너비는 축이나 스케일 없이, 값을 직접 픽셀로 환산해 계산했습니다.</div>
+    <div class="chart-wrap"><svg id="chart1" viewBox="0 0 640 220"></svg></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const data = [130, 150, 190, 210, 260, 480]; // 위판장별 위판량(가상)
+const max = 480;
+
+d3.select('#chart1')
+  .selectAll('rect')
+  .data(data)
+  .join('rect')
+  .attr('x', 0)
+  .attr('y', (d, i) => i * 34)
+  .attr('width', (d) => (d / max) * 560) // 값을 직접 픽셀 너비로 환산
+  .attr('height', 24)
+  .attr('fill', '#2a78d6');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 스케일(Scale)과 축(Axis)</h2>
+    <div class="desc">이번엔 값을 직접 계산하지 않고, <code>d3.scaleBand</code>/<code>scaleLinear</code>로 만든 변환 함수를 쓰고, <code>d3.axisBottom</code>/<code>axisLeft</code>로 눈금까지 자동으로 그립니다.</div>
+    <div class="chart-wrap"><svg id="chart2" viewBox="0 0 640 300"></svg></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const data = [
+  { market: '노량진', value: 130 }, { market: '통영', value: 150 },
+  { market: '여수', value: 190 }, { market: '목포', value: 210 },
+  { market: '포항', value: 260 }, { market: '부산', value: 480 },
+];
+
+const x = d3.scaleBand().domain(data.map((d) => d.market)).range([0, 560]).padding(0.3);
+const y = d3.scaleLinear().domain([0, 480]).range([220, 0]); // 값이 클수록 y는 작아짐(위로)
+
+svg.append('g').call(d3.axisLeft(y));
+svg.append('g').attr('transform', 'translate(0,220)').call(d3.axisBottom(x));
+
+svg.selectAll('rect')
+  .data(data)
+  .join('rect')
+  .attr('x', (d) => x(d.market))
+  .attr('y', (d) => y(d.value))
+  .attr('width', x.bandwidth())
+  .attr('height', (d) => 220 - y(d.value))
+  .attr('fill', '#2a78d6');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. enter · update · exit + 트랜지션</h2>
+    <div class="desc">버튼을 누를 때마다 어종 목록이 랜덤하게 바뀝니다. 새로 나타나는 막대는 아래에서 스르륵 올라오고(enter), 사라지는 막대는 옅어지며 사라지고(exit), 남아있는 막대는 값이 부드럽게 바뀝니다(update).</div>
+    <div class="controls"><button id="reshuffleBtn">어종 목록 다시 뽑기</button></div>
+    <div class="chart-wrap"><svg id="chart3" viewBox="0 0 640 260"></svg></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const x = d3.scaleBand().range([0, 560]).padding(0.3);
+const y = d3.scaleLinear().domain([0, 400]).range([200, 0]);
+
+function render(data) {
+  x.domain(data.map((d) => d.name));
+
+  svg.selectAll('rect')
+    .data(data, (d) => d.name) // name을 키로 써서 같은 항목을 추적
+    .join(
+      (enter) => enter.append('rect')
+        .attr('x', (d) => x(d.name))
+        .attr('y', 200)      // 처음엔 바닥에서
+        .attr('height', 0)   // 높이 0에서 시작
+        .call((e) => e.transition().duration(500)
+          .attr('y', (d) => y(d.value))
+          .attr('height', (d) => 200 - y(d.value))),
+      (update) => update.call((u) => u.transition().duration(500)
+        .attr('x', (d) => x(d.name))
+        .attr('y', (d) => y(d.value))
+        .attr('height', (d) => 200 - y(d.value))),
+      (exit) => exit.transition().duration(300)
+        .attr('height', 0).attr('y', 200).style('opacity', 0).remove(),
+    );
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. pie / arc 제너레이터 — 도넛 차트</h2>
+    <div class="desc"><code>d3.pie()</code>가 값을 각도로 바꿔주고, <code>d3.arc()</code>가 그 각도를 실제 SVG <code>path</code> 좌표로 계산해줍니다. 조각을 그리는 것 자체는 <code>path</code> 요소를 직접 붙이는 일반적인 D3 방식입니다.</div>
+    <div class="chart-wrap"><svg id="chart4" viewBox="0 0 320 260"></svg></div>
+    <div class="legend-row" id="legend4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const data = [
+  { name: '고등어', value: 420 }, { name: '갈치', value: 260 },
+  { name: '오징어', value: 190 }, { name: '새우', value: 140 }, { name: '기타', value: 90 },
+];
+const color = d3.scaleOrdinal()
+  .domain(data.map((d) => d.name))
+  .range(['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7']);
+
+const pieData = d3.pie().value((d) => d.value)(data); // 각 조각의 시작/끝 각도 계산
+const arc = d3.arc().innerRadius(60).outerRadius(100); // 안쪽 반지름을 주면 도넛 모양
+
+svg.selectAll('path')
+  .data(pieData)
+  .join('path')
+  .attr('d', arc)                          // 각도 -> 실제 SVG path 좌표 변환
+  .attr('fill', (d) => color(d.data.name))
+  .attr('stroke', '#fcfcfb')
+  .attr('stroke-width', 2);</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 1. 선택과 데이터 바인딩 ----------
+    (function () {
+      const data = [130, 150, 190, 210, 260, 480];
+      const labels = ['노량진', '통영', '여수', '목포', '포항', '부산'];
+      const max = 480;
+      const svg = d3.select('#chart1');
+
+      svg.selectAll('rect')
+        .data(data)
+        .join('rect')
+        .attr('x', 0)
+        .attr('y', (d, i) => i * 34)
+        .attr('width', (d) => (d / max) * 500)
+        .attr('height', 24)
+        .attr('fill', '#2a78d6');
+
+      svg.selectAll('text.value')
+        .data(data)
+        .join('text')
+        .attr('class', 'value')
+        .attr('x', (d) => (d / max) * 500 + 8)
+        .attr('y', (d, i) => i * 34 + 17)
+        .attr('fill', '#52514e')
+        .attr('font-size', 12)
+        .text((d) => `${d}kg`);
+
+      svg.selectAll('text.label')
+        .data(labels)
+        .join('text')
+        .attr('class', 'label')
+        .attr('x', 4)
+        .attr('y', (d, i) => i * 34 - 4)
+        .attr('fill', '#898781')
+        .attr('font-size', 11)
+        .text((d) => d);
+    })();
+
+    // ---------- 2. 스케일과 축 ----------
+    (function () {
+      const data = [
+        { market: '노량진', value: 130 }, { market: '통영', value: 150 },
+        { market: '여수', value: 190 }, { market: '목포', value: 210 },
+        { market: '포항', value: 260 }, { market: '부산', value: 480 },
+      ];
+      const innerW = 560;
+      const innerH = 220;
+      const svg = d3.select('#chart2');
+      const g = svg.append('g').attr('transform', 'translate(50,10)');
+
+      const x = d3.scaleBand().domain(data.map((d) => d.market)).range([0, innerW]).padding(0.3);
+      const y = d3.scaleLinear().domain([0, 480]).range([innerH, 0]);
+
+      g.append('g').attr('class', 'axis').call(d3.axisLeft(y).ticks(5));
+      g.append('g').attr('class', 'axis').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(x));
+
+      g.selectAll('rect')
+        .data(data)
+        .join('rect')
+        .attr('x', (d) => x(d.market))
+        .attr('y', (d) => y(d.value))
+        .attr('width', x.bandwidth())
+        .attr('height', (d) => innerH - y(d.value))
+        .attr('fill', '#2a78d6')
+        .attr('rx', 3);
+
+      g.selectAll('text.value')
+        .data(data)
+        .join('text')
+        .attr('x', (d) => x(d.market) + x.bandwidth() / 2)
+        .attr('y', (d) => y(d.value) - 6)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#52514e')
+        .attr('font-size', 11)
+        .text((d) => d.value);
+    })();
+
+    // ---------- 3. enter · update · exit ----------
+    (function () {
+      const pool = [
+        { name: '고등어', min: 100, max: 350 },
+        { name: '갈치', min: 80, max: 300 },
+        { name: '오징어', min: 60, max: 250 },
+        { name: '새우', min: 40, max: 180 },
+        { name: '꽃게', min: 50, max: 200 },
+        { name: '전복', min: 20, max: 120 },
+        { name: '방어', min: 70, max: 280 },
+        { name: '광어', min: 30, max: 150 },
+      ];
+      const innerW = 560;
+      const innerH = 200;
+      const svg = d3.select('#chart3');
+      const g = svg.append('g').attr('transform', 'translate(50,10)');
+      const xAxisG = g.append('g').attr('class', 'axis').attr('transform', `translate(0,${innerH})`);
+      const yAxisG = g.append('g').attr('class', 'axis');
+
+      const x = d3.scaleBand().range([0, innerW]).padding(0.3);
+      const y = d3.scaleLinear().domain([0, 350]).range([innerH, 0]);
+      yAxisG.call(d3.axisLeft(y).ticks(5));
+
+      function randomData() {
+        const count = 3 + Math.floor(Math.random() * 4); // 3~6개
+        const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+        return shuffled.map((s) => ({ name: s.name, value: s.min + Math.round(Math.random() * (s.max - s.min)) }));
+      }
+
+      function render(data) {
+        x.domain(data.map((d) => d.name));
+        xAxisG.transition().duration(400).call(d3.axisBottom(x));
+
+        g.selectAll('rect')
+          .data(data, (d) => d.name)
+          .join(
+            (enter) => enter.append('rect')
+              .attr('x', (d) => x(d.name))
+              .attr('width', x.bandwidth())
+              .attr('y', innerH)
+              .attr('height', 0)
+              .attr('fill', '#1baf7a')
+              .attr('rx', 3)
+              .call((e) => e.transition().duration(500)
+                .attr('y', (d) => y(d.value))
+                .attr('height', (d) => innerH - y(d.value))),
+            (update) => update.call((u) => u.transition().duration(500)
+              .attr('x', (d) => x(d.name))
+              .attr('width', x.bandwidth())
+              .attr('y', (d) => y(d.value))
+              .attr('height', (d) => innerH - y(d.value))),
+            (exit) => exit.transition().duration(300)
+              .attr('height', 0).attr('y', innerH).style('opacity', 0).remove(),
+          );
+      }
+
+      render(randomData());
+      document.getElementById('reshuffleBtn').addEventListener('click', () => render(randomData()));
+    })();
+
+    // ---------- 4. pie / arc 도넛 차트 ----------
+    (function () {
+      const data = [
+        { name: '고등어', value: 420 }, { name: '갈치', value: 260 },
+        { name: '오징어', value: 190 }, { name: '새우', value: 140 }, { name: '기타', value: 90 },
+      ];
+      const colorRange = ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'];
+      const color = d3.scaleOrdinal().domain(data.map((d) => d.name)).range(colorRange);
+
+      const svg = d3.select('#chart4');
+      const g = svg.append('g').attr('transform', 'translate(160,130)');
+
+      const pieData = d3.pie().value((d) => d.value).sort(null)(data);
+      const arc = d3.arc().innerRadius(60).outerRadius(100);
+      const total = data.reduce((sum, d) => sum + d.value, 0);
+
+      g.selectAll('path')
+        .data(pieData)
+        .join('path')
+        .attr('d', arc)
+        .attr('fill', (d) => color(d.data.name))
+        .attr('stroke', '#fcfcfb')
+        .attr('stroke-width', 2);
+
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('y', -4)
+        .attr('font-size', 18)
+        .attr('font-weight', 600)
+        .attr('fill', '#0b0b0b')
+        .text(`${total}kg`);
+      g.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('y', 16)
+        .attr('font-size', 11)
+        .attr('fill', '#898781')
+        .text('전체 위판량');
+
+      const legend = document.getElementById('legend4');
+      legend.innerHTML = data
+        .map((d, i) => `<span class="legend-item"><span class="legend-dot" style="background:${colorRange[i]}"></span>${d.name}</span>`)
+        .join('');
+    })();
+  </script>
+</body>
+</html>

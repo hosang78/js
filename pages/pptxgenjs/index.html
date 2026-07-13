@@ -2,354 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>PptxGenJS</title>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .preview-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12.5px;
-    margin-bottom: 12px;
-  }
-  .preview-table th, .preview-table td {
-    border: 1px solid #eee;
-    padding: 6px 8px;
-    text-align: left;
-  }
-  .preview-table th { background: #f4f6fa; color: #555; }
-  button {
-    padding: 8px 14px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
-    cursor: pointer;
-    font-size: 13.5px;
-  }
-  button:hover { background: #3d67e0; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .status-msg {
-    margin-top: 10px;
     font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
+    cursor: pointer;
   }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>PptxGenJS 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>PptxGenJS</strong>는 브라우저에서 서버 없이 <strong>진짜 PowerPoint(.pptx) 파일</strong>을
-    만들어주는 라이브러리입니다. 만들어진 파일은 실제 파워포인트/한컴오피스/키노트 등에서 그대로 열립니다.
-    <ul>
-      <li>슬라이드를 추가하고 제목·본문 텍스트를 배치 가능</li>
-      <li>표(table)를 슬라이드에 바로 삽입 가능</li>
-      <li>막대/파이 등 <strong>파워포인트 네이티브 차트</strong>를 데이터만 주면 생성 (이미지가 아니라 PPT 안에서 편집 가능한 진짜 차트)</li>
-      <li>도형(사각형·화살표 등)으로 간단한 다이어그램 구성 가능</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 실적 데이터는 PptxGenJS 학습용으로 만든 <strong>가상의 샘플</strong>이며,
-      실제 수협중앙회의 통계/보고서가 아닙니다. 이 페이지는 PptxGenJS(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 슬라이드 생성</h2>
-    <div class="desc">제목 슬라이드 + 요약 텍스트 슬라이드, 총 2장짜리 PPTX를 만들어 다운로드합니다.</div>
-    <button id="genBtn1">PPTX 생성 · 다운로드</button>
-    <div class="status-msg" id="status1">버튼을 누르면 파일이 다운로드됩니다.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const pptx = new PptxGenJS();
-
-const title = pptx.addSlide();
-title.addText('2026년 7월 위판 실적 보고 (예시)', { x: 0.5, y: 2, w: 9, h: 1, fontSize: 32, bold: true, align: 'center' });
-title.addText('수협 위판장 5곳 · 가상 샘플 데이터', { x: 0.5, y: 3, w: 9, h: 0.5, fontSize: 16, color: '666666', align: 'center' });
-
-const body = pptx.addSlide();
-body.addText('이번 달 요약', { x: 0.5, y: 0.4, fontSize: 24, bold: true });
-body.addText(
-  [
-    { text: '위판량 전체 1,050kg 처리 (가상)' },
-    { text: '최다 취급 어종: 고등어' },
-    { text: '전월 대비 위판량 소폭 증가 (가상)' },
-  ],
-  { x: 0.5, y: 1.2, w: 9, h: 3, fontSize: 18, bullet: true, lineSpacing: 32 });
-
-await pptx.writeFile({ fileName: 'wipan-report.pptx' });</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 표 삽입</h2>
-    <div class="desc">아래 표를 그대로 슬라이드 안의 표로 넣어 PPTX를 만듭니다.</div>
-    <table class="preview-table">
-      <thead><tr><th>날짜</th><th>위판장</th><th>어종</th><th>수량(kg)</th><th>금액</th></tr></thead>
-      <tbody>
-        <tr><td>2026-07-02</td><td>부산공동어시장</td><td>고등어</td><td>320</td><td>1,440,000</td></tr>
-        <tr><td>2026-07-03</td><td>목포수산시장</td><td>갈치</td><td>180</td><td>1,476,000</td></tr>
-        <tr><td>2026-07-04</td><td>통영수산시장</td><td>오징어</td><td>95</td><td>1,140,000</td></tr>
-      </tbody>
-    </table>
-    <button id="genBtn2">PPTX 생성 · 다운로드</button>
-    <div class="status-msg" id="status2"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const rows = [
-  [{ text: '날짜', options: { bold: true } }, { text: '위판장', options: { bold: true } }, /* ... */],
-  ['2026-07-02', '부산공동어시장', '고등어', '320', '1,440,000'],
-  // ...
-];
-slide.addTable(rows, { x: 0.5, y: 0.6, w: 9, colW: [1.4, 2.4, 1.2, 1.5, 2.5], fontSize: 12, border: { type: 'solid', color: 'DDDDDD' } });</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 네이티브 차트 삽입</h2>
-    <div class="desc">
-      어종별 위판 비중(가상)을 <strong>이미지가 아닌 진짜 파워포인트 차트</strong>로 넣습니다.
-      파워포인트에서 열면 색상·데이터를 직접 편집할 수 있습니다.
-    </div>
-    <button id="genBtn3">PPTX 생성 · 다운로드</button>
-    <div class="status-msg" id="status3"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>slide.addChart(pptx.ChartType.pie, [{
-  name: '어종별 위판 비중',
-  labels: ['고등어', '갈치', '오징어', '새우', '기타'],
-  values: [420, 260, 190, 140, 90],
-}], { x: 1.5, y: 1, w: 7, h: 5, showLegend: true, showValue: true });</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 도형으로 다이어그램 구성</h2>
-    <div class="desc">사각형과 화살표 도형을 이어붙여 간단한 유통 흐름도를 만듭니다.</div>
-    <button id="genBtn4">PPTX 생성 · 다운로드</button>
-    <div class="status-msg" id="status4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const steps = ['어선 조업', '위판장 입고', '경매', '정산'];
-steps.forEach((label, i) => {
-  slide.addShape(pptx.ShapeType.roundRect, { x: 0.5 + i * 2.3, y: 2, w: 1.8, h: 1, fill: { color: '4F7DFF' }, line: { color: '2C3E91' } });
-  slide.addText(label, { x: 0.5 + i * 2.3, y: 2, w: 1.8, h: 1, align: 'center', valign: 'middle', color: 'FFFFFF', fontSize: 14, bold: true });
-  if (i < steps.length - 1) {
-    slide.addShape(pptx.ShapeType.rightArrow, { x: 2.35 + i * 2.3, y: 2.3, w: 0.45, h: 0.4, fill: { color: '898781' } });
-  }
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    function setStatus(el, text, isError) {
-      el.textContent = text;
-      el.style.color = isError ? '#7a1f1f' : '#333';
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    // ---------- 1. 기본 슬라이드 생성 ----------
-    document.getElementById('genBtn1').addEventListener('click', async () => {
-      const btn = document.getElementById('genBtn1');
-      const status = document.getElementById('status1');
-      btn.disabled = true;
-      try {
-        const pptx = new PptxGenJS();
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-        const title = pptx.addSlide();
-        title.addText('2026년 7월 위판 실적 보고 (예시)', { x: 0.5, y: 2, w: 9, h: 1, fontSize: 32, bold: true, align: 'center' });
-        title.addText('수협 위판장 5곳 · 가상 샘플 데이터', { x: 0.5, y: 3, w: 9, h: 0.5, fontSize: 16, color: '666666', align: 'center' });
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-        const body = pptx.addSlide();
-        body.addText('이번 달 요약', { x: 0.5, y: 0.4, fontSize: 24, bold: true });
-        body.addText(
-          [
-            { text: '위판량 전체 1,050kg 처리 (가상)' },
-            { text: '최다 취급 어종: 고등어' },
-            { text: '전월 대비 위판량 소폭 증가 (가상)' },
-          ],
-          { x: 0.5, y: 1.2, w: 9, h: 3, fontSize: 18, bullet: true, lineSpacing: 32 }
-        );
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-        await pptx.writeFile({ fileName: 'wipan-report.pptx' });
-        setStatus(status, '2장짜리 PPTX가 다운로드되었습니다.');
-      } catch (err) {
-        setStatus(status, '오류: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-      }
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
+  }
 
-    // ---------- 2. 표 삽입 ----------
-    document.getElementById('genBtn2').addEventListener('click', async () => {
-      const btn = document.getElementById('genBtn2');
-      const status = document.getElementById('status2');
-      btn.disabled = true;
-      try {
-        const pptx = new PptxGenJS();
-        const slide = pptx.addSlide();
-        slide.addText('위판 실적 (예시)', { x: 0.5, y: 0.3, fontSize: 22, bold: true });
-
-        const headerStyle = { bold: true, fill: { color: 'EEF2FF' }, color: '2C3E91' };
-        const rows = [
-          [
-            { text: '날짜', options: headerStyle },
-            { text: '위판장', options: headerStyle },
-            { text: '어종', options: headerStyle },
-            { text: '수량(kg)', options: headerStyle },
-            { text: '금액', options: headerStyle },
-          ],
-          ['2026-07-02', '부산공동어시장', '고등어', '320', '1,440,000'],
-          ['2026-07-03', '목포수산시장', '갈치', '180', '1,476,000'],
-          ['2026-07-04', '통영수산시장', '오징어', '95', '1,140,000'],
-        ];
-        slide.addTable(rows, {
-          x: 0.5, y: 1, w: 9,
-          colW: [1.5, 2.3, 1.2, 1.5, 2.5],
-          fontSize: 12,
-          border: { type: 'solid', color: 'DDDDDD', pt: 1 },
-        });
-
-        await pptx.writeFile({ fileName: 'wipan-table.pptx' });
-        setStatus(status, '표가 담긴 PPTX가 다운로드되었습니다.');
-      } catch (err) {
-        setStatus(status, '오류: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    // ---------- 3. 네이티브 차트 ----------
-    document.getElementById('genBtn3').addEventListener('click', async () => {
-      const btn = document.getElementById('genBtn3');
-      const status = document.getElementById('status3');
-      btn.disabled = true;
-      try {
-        const pptx = new PptxGenJS();
-        const slide = pptx.addSlide();
-        slide.addText('어종별 위판 비중 (예시)', { x: 0.5, y: 0.3, fontSize: 22, bold: true });
-
-        slide.addChart(
-          pptx.ChartType.pie,
-          [{
-            name: '어종별 위판 비중',
-            labels: ['고등어', '갈치', '오징어', '새우', '기타'],
-            values: [420, 260, 190, 140, 90],
-          }],
-          {
-            x: 1.5, y: 1, w: 7, h: 5,
-            showLegend: true,
-            legendPos: 'b',
-            showValue: true,
-            chartColors: ['2A78D6', '1BAF7A', 'EDA100', '008300', '4A3AA7'],
-          }
-        );
-
-        await pptx.writeFile({ fileName: 'wipan-chart.pptx' });
-        setStatus(status, '차트가 담긴 PPTX가 다운로드되었습니다.');
-      } catch (err) {
-        setStatus(status, '오류: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    // ---------- 4. 도형 다이어그램 ----------
-    document.getElementById('genBtn4').addEventListener('click', async () => {
-      const btn = document.getElementById('genBtn4');
-      const status = document.getElementById('status4');
-      btn.disabled = true;
-      try {
-        const pptx = new PptxGenJS();
-        const slide = pptx.addSlide();
-        slide.addText('수산물 유통 흐름 (예시)', { x: 0.5, y: 0.3, fontSize: 22, bold: true });
-
-        const steps = ['어선 조업', '위판장 입고', '경매', '정산'];
-        steps.forEach((label, i) => {
-          const x = 0.5 + i * 2.3;
-          slide.addShape(pptx.ShapeType.roundRect, {
-            x, y: 2, w: 1.8, h: 1,
-            fill: { color: '4F7DFF' },
-            line: { color: '2C3E91', width: 1 },
-          });
-          slide.addText(label, {
-            x, y: 2, w: 1.8, h: 1,
-            align: 'center', valign: 'middle',
-            color: 'FFFFFF', fontSize: 14, bold: true,
-          });
-          if (i < steps.length - 1) {
-            slide.addShape(pptx.ShapeType.rightArrow, {
-              x: x + 1.85, y: 2.3, w: 0.45, h: 0.4,
-              fill: { color: '898781' },
-            });
-          }
-        });
-
-        await pptx.writeFile({ fileName: 'wipan-diagram.pptx' });
-        setStatus(status, '다이어그램이 담긴 PPTX가 다운로드되었습니다.');
-      } catch (err) {
-        setStatus(status, '오류: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

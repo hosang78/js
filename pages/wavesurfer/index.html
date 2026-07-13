@@ -2,348 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>WaveSurfer.js</title>
-<script src="https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.10/dist/wavesurfer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.10/dist/plugins/regions.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .waveform { margin-bottom: 4px; }
-  .timeline { margin-bottom: 10px; }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-    align-items: center;
     font-size: 13px;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
-  button.ghost:hover { background: #f2f2f2; }
-  button.active { background: #1baf7a; }
-  input[type="range"] { width: 140px; }
-  input[type="number"] {
-    padding: 6px 8px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 13px;
-    width: 70px;
-  }
-  .time-label { font-variant-numeric: tabular-nums; color: #555; min-width: 90px; }
-  .result-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    color: #333;
-    margin-top: 8px;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>WaveSurfer.js 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>WaveSurfer.js</strong>는 오디오 파일을 파형(waveform)으로 그려주고, 재생·구간 선택·확대 같은
-    상호작용을 붙일 수 있는 오디오 플레이어 라이브러리입니다.
-    <ul>
-      <li><code>WaveSurfer.create({ container, url })</code> 한 번으로 파형이 그려지고 재생 가능</li>
-      <li><strong>Regions</strong> 플러그인으로 파형 위에 구간을 드래그로 만들고, 그 구간만 반복 재생 가능</li>
-      <li><code>ws.zoom(pxPerSec)</code>로 파형을 확대·축소</li>
-      <li>재생 속도 조절, 특정 시간으로 이동 같은 세밀한 재생 제어 API 제공</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 실제 음원 파일을 구할 수 없어, 이 페이지 전용으로 만든 <strong>4초짜리 가상의 알림음</strong>
-      (<code>sample-chime.wav</code>, 사인파로 합성한 소리)을 사용합니다. 실제 수협중앙회의 위판 개장
-      알림음이 아닙니다. WaveSurfer.js 핵심 라이브러리(CDN)와 공식 플러그인 Regions(CDN)를
-      함께 사용하고, 다른 외부 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 파형 표시 + 재생 컨트롤</h2>
-    <div class="desc">파형이 그려지면 재생/일시정지할 수 있고, 파형을 클릭하면 그 위치로 바로 이동합니다.</div>
-    <div class="waveform" id="waveform1"></div>
-    <div class="controls">
-      <button id="playBtn1">재생</button>
-      <span class="time-label" id="timeLabel1">0:00 / 0:00</span>
-      <span>볼륨</span>
-      <input type="range" id="volumeSlider1" min="0" max="1" step="0.05" value="1" />
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const ws = WaveSurfer.create({
-  container: '#waveform1',
-  waveColor: '#4f7dff',
-  progressColor: '#2a4fb8',
-  url: 'sample-chime.wav',
-});
-
-playBtn.addEventListener('click', () => ws.playPause());
-ws.on('audioprocess', () => { timeLabel.textContent = formatTime(ws.getCurrentTime()); });
-volumeSlider.addEventListener('input', (e) => ws.setVolume(Number(e.target.value)));</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 구간(리전) 선택 + 반복 재생</h2>
-    <div class="desc">파형 위를 마우스로 드래그해서 구간을 만들어보세요. "반복 재생"을 켜면 그 구간만 계속 반복됩니다.</div>
-    <div class="waveform" id="waveform2"></div>
-    <div class="controls">
-      <button id="playBtn2">재생</button>
-      <button class="ghost" id="loopBtn2">반복 재생 켜기</button>
-      <button class="ghost" id="clearRegionsBtn2">구간 지우기</button>
-    </div>
-    <div class="result-box" id="status2">파형 위를 드래그해서 구간을 만들어보세요.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const regions = WaveSurfer.Regions.create();
-const ws = WaveSurfer.create({ container: '#waveform2', url: 'sample-chime.wav', plugins: [regions] });
-
-regions.enableDragSelection({ color: 'rgba(79,125,255,0.25)' });
-
-let activeRegion = null;
-regions.on('region-created', (region) => { activeRegion = region; });
-
-let looping = false;
-regions.on('region-out', (region) => {
-  if (looping && region === activeRegion) region.play(); // 구간이 끝나면 다시 그 구간부터 재생
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 파형 확대 · 축소</h2>
-    <div class="desc">슬라이더로 파형을 확대·축소합니다. 확대하면 짧은 소리의 세부 모양을 더 자세히 볼 수 있습니다.</div>
-    <div class="waveform" id="waveform3"></div>
-    <div class="controls">
-      <span>확대 배율</span>
-      <input type="range" id="zoomSlider3" min="20" max="400" step="20" value="20" />
-      <span class="time-label" id="zoomLabel3">20px/s</span>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const ws = WaveSurfer.create({ container: '#waveform3', url: 'sample-chime.wav' });
-
-zoomSlider.addEventListener('input', (e) => {
-  ws.zoom(Number(e.target.value)); // 1초를 몇 픽셀로 그릴지 지정
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 재생 속도 조절 + 특정 시간으로 이동</h2>
-    <div class="desc">배속 버튼과, 초 단위로 원하는 지점으로 바로 이동하는 입력창입니다.</div>
-    <div class="waveform" id="waveform4"></div>
-    <div class="controls">
-      <button id="playBtn4">재생</button>
-      <button class="ghost rate-btn" data-rate="0.5">0.5x</button>
-      <button class="ghost rate-btn active" data-rate="1">1x</button>
-      <button class="ghost rate-btn" data-rate="1.5">1.5x</button>
-      <button class="ghost rate-btn" data-rate="2">2x</button>
-    </div>
-    <div class="controls">
-      <span>이동할 시간(초):</span>
-      <input type="number" id="seekInput4" min="0" step="0.1" value="2" />
-      <button class="ghost" id="seekBtn4">이동</button>
-    </div>
-    <div class="result-box" id="status4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>rateBtn.addEventListener('click', () => ws.setPlaybackRate(Number(rateBtn.dataset.rate)));
-
-seekBtn.addEventListener('click', () => {
-  ws.setTime(Number(seekInput.value)); // 초 단위로 절대 이동
-  // 주의: ws.seekTo(x)는 초가 아니라 0~1 사이의 "재생 비율"을 받는 별개의 메서드
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    function formatTime(sec) {
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60);
-      return `${m}:${String(s).padStart(2, '0')}`;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    const AUDIO_URL = 'sample-chime.wav';
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    // ---------- 1. 기본 파형 표시 + 재생 컨트롤 ----------
-    const ws1 = WaveSurfer.create({
-      container: '#waveform1',
-      waveColor: '#4f7dff',
-      progressColor: '#2a4fb8',
-      height: 80,
-      url: AUDIO_URL,
-    });
-    const playBtn1 = document.getElementById('playBtn1');
-    const timeLabel1 = document.getElementById('timeLabel1');
-    playBtn1.addEventListener('click', () => ws1.playPause());
-    ws1.on('play', () => { playBtn1.textContent = '일시정지'; });
-    ws1.on('pause', () => { playBtn1.textContent = '재생'; });
-    function updateTimeLabel1() {
-      timeLabel1.textContent = `${formatTime(ws1.getCurrentTime())} / ${formatTime(ws1.getDuration())}`;
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
     }
-    ws1.on('audioprocess', updateTimeLabel1);
-    ws1.on('ready', updateTimeLabel1);
-    ws1.on('seeking', updateTimeLabel1);
-    document.getElementById('volumeSlider1').addEventListener('input', (e) => {
-      ws1.setVolume(Number(e.target.value));
-    });
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    // ---------- 2. 구간 선택 + 반복 재생 ----------
-    const regions2 = WaveSurfer.Regions.create();
-    const ws2 = WaveSurfer.create({
-      container: '#waveform2',
-      waveColor: '#1baf7a',
-      progressColor: '#0f8a5d',
-      height: 80,
-      url: AUDIO_URL,
-      plugins: [regions2],
-    });
-    ws2.on('ready', () => {
-      regions2.enableDragSelection({ color: 'rgba(79,125,255,0.25)' });
-    });
-
-    const status2 = document.getElementById('status2');
-    let activeRegion2 = null;
-    regions2.on('region-created', (region) => {
-      // 새 구간을 만들면 이전 구간은 지움 (데모를 단순하게 유지)
-      regions2.getRegions().forEach((r) => { if (r !== region) r.remove(); });
-      activeRegion2 = region;
-      status2.textContent = `구간: ${region.start.toFixed(2)}s ~ ${region.end.toFixed(2)}s`;
-    });
-    regions2.on('region-updated', (region) => {
-      if (region === activeRegion2) {
-        status2.textContent = `구간: ${region.start.toFixed(2)}s ~ ${region.end.toFixed(2)}s`;
-      }
-    });
-
-    let looping2 = false;
-    regions2.on('region-out', (region) => {
-      if (looping2 && region === activeRegion2) region.play();
-    });
-
-    document.getElementById('playBtn2').addEventListener('click', () => {
-      if (activeRegion2) {
-        activeRegion2.play();
-      } else {
-        ws2.playPause();
-      }
-    });
-    const loopBtn2 = document.getElementById('loopBtn2');
-    loopBtn2.addEventListener('click', () => {
-      looping2 = !looping2;
-      loopBtn2.textContent = looping2 ? '반복 재생 끄기' : '반복 재생 켜기';
-      loopBtn2.classList.toggle('active', looping2);
-    });
-    document.getElementById('clearRegionsBtn2').addEventListener('click', () => {
-      regions2.clearRegions();
-      activeRegion2 = null;
-      status2.textContent = '파형 위를 드래그해서 구간을 만들어보세요.';
-    });
-
-    // ---------- 3. 확대 · 축소 ----------
-    const ws3 = WaveSurfer.create({
-      container: '#waveform3',
-      waveColor: '#eda100',
-      progressColor: '#a56c00',
-      height: 80,
-      url: AUDIO_URL,
-      minPxPerSec: 20,
-    });
-    const zoomLabel3 = document.getElementById('zoomLabel3');
-    document.getElementById('zoomSlider3').addEventListener('input', (e) => {
-      const px = Number(e.target.value);
-      ws3.zoom(px);
-      zoomLabel3.textContent = `${px}px/s`;
-    });
-
-    // ---------- 4. 재생 속도 + 시간 이동 ----------
-    const ws4 = WaveSurfer.create({
-      container: '#waveform4',
-      waveColor: '#4a3aa7',
-      progressColor: '#2e2470',
-      height: 80,
-      url: AUDIO_URL,
-    });
-    document.getElementById('playBtn4').addEventListener('click', () => ws4.playPause());
-    const status4 = document.getElementById('status4');
-    document.querySelectorAll('.rate-btn').forEach((btn) => {
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.rate-btn').forEach((b) => b.classList.remove('active'));
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        ws4.setPlaybackRate(Number(btn.dataset.rate));
-        status4.textContent = `재생 속도: ${btn.dataset.rate}x`;
       });
+      tabBar.appendChild(btn);
     });
-    document.getElementById('seekBtn4').addEventListener('click', () => {
-      const t = Number(document.getElementById('seekInput4').value);
-      ws4.setTime(t);
-      status4.textContent = `${t.toFixed(1)}초 지점으로 이동했습니다.`;
-    });
-  </script>
+  }
+
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

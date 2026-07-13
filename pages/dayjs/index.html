@@ -2,294 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>Day.js</title>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.21/dayjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.21/plugin/relativeTime.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.21/locale/ko.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  table.preview {
-    width: 100%;
-    border-collapse: collapse;
     font-size: 13px;
-    margin-bottom: 10px;
-  }
-  table.preview th, table.preview td {
-    border: 1px solid #eee;
-    padding: 6px 8px;
-    text-align: left;
-  }
-  table.preview th { background: #f4f6fa; color: #555; width: 40%; }
-  .form-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 10px;
-    font-size: 13px;
-  }
-  input[type="date"], input[type="number"] {
-    padding: 7px 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 13px;
-  }
-  input[type="number"] { width: 80px; }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  .result-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
-    color: #2c3e91;
-    font-weight: 600;
-  }
-  .history-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 10px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 6px;
-    font-size: 13px;
-    background: #fafbfc;
-  }
-  .history-item .rel { color: #4f7dff; font-weight: 600; }
-  .compare-row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .compare-col {
-    flex: 1;
-    min-width: 220px;
-    background: #fafbfc;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 12px;
-  }
-  .compare-col h3 { margin: 0 0 8px; font-size: 13px; color: #888; }
-  .compare-col .val { font-size: 15px; font-weight: 600; }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>Day.js 핵심 기능 둘러보기</h1>
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
+  }
 
-  <div class="intro">
-    <strong>Day.js</strong>는 날짜와 시간을 다루는 아주 가벼운(2KB) 라이브러리입니다.
-    Moment.js와 거의 똑같은 문법을 쓰면서도 훨씬 가볍고, 필요한 기능만 플러그인으로 추가해서 씁니다.
-    <ul>
-      <li><code>format()</code>으로 날짜를 원하는 형식의 문자열로 표현</li>
-      <li><code>add</code>/<code>subtract</code>/<code>diff</code>로 날짜 계산</li>
-      <li>기본 기능은 최소화하고, <code>relativeTime</code>("3일 전") 같은 기능은 플러그인으로 추가</li>
-      <li>로케일(언어) 파일을 불러오면 요일·월 이름이 그 언어로 표시됨</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 일정/이력 데이터는 Day.js 학습용으로 만든 <strong>가상의 샘플</strong>이며,
-      실제 수협중앙회의 일정이 아닙니다. 이 페이지는 Day.js(CDN) 하나만 사용하고
-      (플러그인·로케일 파일도 같은 라이브러리의 일부입니다) 다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-  <section class="block">
-    <h2>1. 기본 포맷팅 · 파싱</h2>
-    <div class="desc">지금 이 순간을 여러 형식으로 표현하고, 문자열을 날짜로 파싱해봅니다.</div>
-    <table class="preview" id="formatTable"></table>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>dayjs().format('YYYY-MM-DD');           // 2026-07-12
-dayjs().format('YYYY년 MM월 DD일 dddd'); // 2026년 07월 12일 Sunday
-dayjs('2026-07-15').isValid();          // true</pre>
-    </details>
-  </section>
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-  <section class="block">
-    <h2>2. 날짜 연산 (add · subtract · diff)</h2>
-    <div class="desc">위판 예정일을 계산해봅니다.</div>
-    <div class="form-row">
-      <span>오늘부터</span>
-      <input type="number" id="addDays" value="7" min="0" />
-      <span>일 후는?</span>
-      <button id="calcAddBtn">계산</button>
-    </div>
-    <div class="result-box" id="addResult"></div>
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    <div class="form-row" style="margin-top:14px;">
-      <span>시작일</span>
-      <input type="date" id="dateA" />
-      <span>종료일</span>
-      <input type="date" id="dateB" />
-      <button id="calcDiffBtn">차이 계산</button>
-    </div>
-    <div class="result-box" id="diffResult">두 날짜를 고르고 버튼을 눌러보세요.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>dayjs().add(7, 'day').format('YYYY-MM-DD (dddd)');
-dayjs('2026-08-01').diff(dayjs('2026-07-12'), 'day'); // 일 단위 차이</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 상대 시간 (relativeTime 플러그인)</h2>
-    <div class="desc">위판 등록 이력을 "n일 전" 같은 상대 시간으로 표시합니다. (지금 보는 시점 기준으로 계산됩니다)</div>
-    <div id="historyList"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>dayjs.extend(dayjs_plugin_relativeTime); // 플러그인 등록
-
-dayjs().subtract(3, 'day').fromNow(); // "3일 전"
-dayjs().add(2, 'hour').fromNow();     // "2시간 후"</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 한국어 로케일</h2>
-    <div class="desc">같은 날짜를 영어 로케일과 한국어 로케일로 각각 표시해서 비교합니다.</div>
-    <div class="compare-row">
-      <div class="compare-col">
-        <h3>기본(영어) 로케일</h3>
-        <div class="val" id="localeEn"></div>
-      </div>
-      <div class="compare-col">
-        <h3>한국어 로케일</h3>
-        <div class="val" id="localeKo"></div>
-      </div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>dayjs().locale('en').format('dddd, MMMM D, YYYY'); // Sunday, July 12, 2026
-dayjs().locale('ko').format('dddd, MMMM D, YYYY');  // 일요일, 7월 12일, 2026</pre>
-    </details>
-  </section>
-
-  <script>
-    dayjs.extend(window.dayjs_plugin_relativeTime);
-    dayjs.locale('ko'); // 이 페이지 전체 기본 로케일을 한국어로 (4번 섹션에서는 영어와 비교하기 위해 별도로 다시 지정함)
-
-    // ---------- 1. 기본 포맷팅 · 파싱 ----------
-    const now = dayjs();
-    const formatTable = document.getElementById('formatTable');
-    const formatRows = [
-      ["dayjs().format('YYYY-MM-DD')", now.format('YYYY-MM-DD')],
-      ["dayjs().format('YYYY년 MM월 DD일 dddd')", now.format('YYYY년 MM월 DD일 dddd')],
-      ["dayjs().format('HH:mm:ss')", now.format('HH:mm:ss')],
-      ["dayjs('2026-07-15').format('YYYY.MM.DD')", dayjs('2026-07-15').format('YYYY.MM.DD')],
-      ["dayjs('이상한문자열').isValid()", String(dayjs('이상한문자열').isValid())],
-    ];
-    formatTable.innerHTML = formatRows
-      .map(([code, result]) => `<tr><th><code>${code}</code></th><td>${result}</td></tr>`)
-      .join('');
-
-    // ---------- 2. 날짜 연산 ----------
-    document.getElementById('calcAddBtn').addEventListener('click', () => {
-      const days = Number(document.getElementById('addDays').value) || 0;
-      const target = dayjs().add(days, 'day');
-      document.getElementById('addResult').textContent =
-        `오늘(${dayjs().format('YYYY-MM-DD')})부터 ${days}일 후는 ${target.format('YYYY-MM-DD (dddd)')} 입니다.`;
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
-    document.getElementById('calcAddBtn').click();
+  }
 
-    const dateA = document.getElementById('dateA');
-    const dateB = document.getElementById('dateB');
-    dateA.value = dayjs().format('YYYY-MM-DD');
-    dateB.value = dayjs().add(14, 'day').format('YYYY-MM-DD');
-
-    document.getElementById('calcDiffBtn').addEventListener('click', () => {
-      const a = dayjs(dateA.value);
-      const b = dayjs(dateB.value);
-      const diffResult = document.getElementById('diffResult');
-      if (!a.isValid() || !b.isValid()) {
-        diffResult.textContent = '날짜를 올바르게 선택해주세요.';
-        return;
-      }
-      const days = b.diff(a, 'day');
-      diffResult.textContent = `${a.format('YYYY-MM-DD')} ~ ${b.format('YYYY-MM-DD')} 는 ${Math.abs(days)}일 차이입니다.`;
-    });
-
-    // ---------- 3. 상대 시간 ----------
-    const historyList = document.getElementById('historyList');
-    const historyItems = [
-      { label: '고등어 320kg 위판 등록', time: dayjs().subtract(30, 'minute') },
-      { label: '갈치 180kg 위판 등록', time: dayjs().subtract(5, 'hour') },
-      { label: '오징어 95kg 위판 등록', time: dayjs().subtract(1, 'day') },
-      { label: '새우 60kg 위판 등록', time: dayjs().subtract(3, 'day') },
-      { label: '전복 25kg 위판 등록', time: dayjs().subtract(2, 'week') },
-      { label: '다음 정기 위판 예정', time: dayjs().add(4, 'day') },
-    ];
-    historyList.innerHTML = historyItems
-      .map(
-        (h) =>
-          `<div class="history-item"><span>${h.label} (${h.time.format('YYYY-MM-DD HH:mm')})</span><span class="rel">${h.time.fromNow()}</span></div>`
-      )
-      .join('');
-
-    // ---------- 4. 로케일 ----------
-    const localeEn = document.getElementById('localeEn');
-    const localeKo = document.getElementById('localeKo');
-    localeEn.textContent = dayjs().locale('en').format('dddd, MMMM D, YYYY');
-    localeKo.textContent = dayjs().locale('ko').format('dddd, MMMM D, YYYY');
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

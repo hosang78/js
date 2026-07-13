@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>SortableJS</title>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  h3 { font-size: 13.5px; margin: 0 0 8px; color: #555; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .sort-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: 480px;
+  }
+  .sort-list li {
+    padding: 10px 12px;
+    border: 1px solid #dde3ee;
+    border-radius: 8px;
+    background: #fafbff;
+    margin-bottom: 6px;
+    font-size: 13.5px;
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sort-list li.sortable-ghost {
+    opacity: 0.4;
+    background: #dbe8ff;
+  }
+  .sort-list li .rank {
+    color: #4f7dff;
+    font-weight: 700;
+    min-width: 20px;
+  }
+  .sort-list li.locked {
+    background: #f1f1f1;
+    color: #999;
+    cursor: not-allowed;
+  }
+  .handle {
+    cursor: grab;
+    color: #aaa;
+    font-size: 15px;
+    letter-spacing: -2px;
+  }
+  .board {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .board .col {
+    flex: 1;
+    min-width: 220px;
+    background: #f4f6fa;
+    border: 1px solid #e3e8f2;
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .board .sort-list { min-height: 60px; max-width: none; }
+  .board .col.done .sort-list li { background: #e9f9ef; border-color: #bfe8cd; }
+  .status-msg {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+    word-break: break-all;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>SortableJS 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>SortableJS</strong>는 목록의 항목을 <strong>드래그해서 순서를 바꾸거나 다른 목록으로 옮길 수 있게</strong>
+    해주는 라이브러리입니다. 우선순위 조정, 칸반 보드, 담기/빼기 화면 등에 널리 쓰입니다.
+    <ul>
+      <li>목록 요소 하나에 <code>new Sortable(el)</code>만 하면 드래그 정렬이 바로 동작 (터치 지원)</li>
+      <li><code>group</code> 옵션으로 여러 목록 사이를 오가며 드래그 가능</li>
+      <li><code>handle</code>(손잡이로만 드래그), <code>filter</code>(특정 항목 고정) 등 세부 제어 가능</li>
+      <li>드래그가 끝나면 <code>onEnd</code> 이벤트와 <code>toArray()</code>로 바뀐 순서를 데이터로 받을 수 있음</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 경매 순서/어선 목록은 SortableJS 학습용으로 만든 <strong>가상의 샘플</strong>이며,
+      실제 수협중앙회의 경매·배정 절차와는 무관합니다. 이 페이지는 SortableJS(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 드래그 정렬 + 순서 데이터 얻기</h2>
+    <div class="desc">
+      가상의 "오늘 경매 순서" 목록입니다. 항목을 드래그해서 순서를 바꾸면
+      <code>onEnd</code> 이벤트로 바뀐 순서를 아래에 표시합니다.
+    </div>
+    <ul class="sort-list" id="list1">
+      <li data-id="고등어"><span class="rank">1</span>고등어 (320kg)</li>
+      <li data-id="갈치"><span class="rank">2</span>갈치 (180kg)</li>
+      <li data-id="오징어"><span class="rank">3</span>오징어 (95kg)</li>
+      <li data-id="새우"><span class="rank">4</span>새우 (60kg)</li>
+      <li data-id="전복"><span class="rank">5</span>전복 (25kg)</li>
+    </ul>
+    <div class="status-msg" id="status1">항목을 드래그해서 순서를 바꿔보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const sortable = new Sortable(document.getElementById('list1'), {
+  animation: 150,
+  onEnd: () => {
+    console.log(sortable.toArray()); // data-id 기준 현재 순서 배열
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 두 목록 간 드래그 이동 (group)</h2>
+    <div class="desc">
+      같은 <code>group</code> 이름을 주면 목록 사이를 오가며 드래그할 수 있습니다.
+      가상의 "출항 대기 어선 → 배정 완료" 화면입니다.
+    </div>
+    <div class="board">
+      <div class="col">
+        <h3>출항 대기</h3>
+        <ul class="sort-list" id="waiting">
+          <li data-id="제101호">제101호 (가상 어선)</li>
+          <li data-id="제102호">제102호 (가상 어선)</li>
+          <li data-id="제103호">제103호 (가상 어선)</li>
+          <li data-id="제105호">제105호 (가상 어선)</li>
+        </ul>
+      </div>
+      <div class="col done">
+        <h3>배정 완료</h3>
+        <ul class="sort-list" id="assigned">
+          <li data-id="제104호">제104호 (가상 어선)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="status-msg" id="status2">어선을 옆 목록으로 끌어다 놓아보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Sortable(waitingEl, { group: 'boats', animation: 150, onEnd: report });
+new Sortable(assignedEl, { group: 'boats', animation: 150 });
+// 같은 group 이름이면 서로 주고받을 수 있음</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 손잡이(handle)로만 드래그 + 고정 항목(filter)</h2>
+    <div class="desc">
+      실수로 끌리는 걸 막으려면 <code>handle</code>로 지정한 부분(⠿)을 잡았을 때만 드래그되게 할 수 있고,
+      <code>filter</code>로 특정 항목(회색 "고정" 항목)은 아예 움직이지 않게 할 수 있습니다.
+    </div>
+    <ul class="sort-list" id="list3">
+      <li class="locked" data-id="공지">📌 오늘 위판 시작 09:00 (고정 항목 — 드래그 불가)</li>
+      <li data-id="선별"><span class="handle">⠿</span>어획물 선별 작업</li>
+      <li data-id="계량"><span class="handle">⠿</span>계량 및 등록</li>
+      <li data-id="진열"><span class="handle">⠿</span>경매장 진열</li>
+      <li data-id="정산"><span class="handle">⠿</span>낙찰 정산 처리</li>
+    </ul>
+    <div class="status-msg" id="status3">⠿ 부분을 잡아야만 드래그됩니다. 글자 부분을 잡으면 안 끌립니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Sortable(listEl, {
+  animation: 150,
+  handle: '.handle',        // 이 선택자 부분을 잡아야만 드래그됨
+  filter: '.locked',        // 이 선택자 항목은 드래그 자체가 안 됨
+  onMove: (evt) => !evt.related.classList.contains('locked'),
+});</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 1. 기본 정렬 ----------
+    const list1 = document.getElementById('list1');
+    const status1 = document.getElementById('status1');
+
+    function refreshRanks() {
+      list1.querySelectorAll('li').forEach((li, i) => {
+        li.querySelector('.rank').textContent = i + 1;
+      });
+    }
+
+    const sortable1 = new Sortable(list1, {
+      animation: 150,
+      onEnd: () => {
+        refreshRanks();
+        status1.textContent = '현재 순서: ' + sortable1.toArray().join(' → ');
+      },
+    });
+
+    // ---------- 2. 두 목록 간 이동 ----------
+    const waiting = document.getElementById('waiting');
+    const assigned = document.getElementById('assigned');
+    const status2 = document.getElementById('status2');
+
+    function reportBoard() {
+      const w = [...waiting.querySelectorAll('li')].map((li) => li.dataset.id);
+      const a = [...assigned.querySelectorAll('li')].map((li) => li.dataset.id);
+      status2.textContent = `출항 대기 ${w.length}척 [${w.join(', ')}] · 배정 완료 ${a.length}척 [${a.join(', ')}]`;
+    }
+
+    new Sortable(waiting, { group: 'boats', animation: 150, onEnd: reportBoard });
+    new Sortable(assigned, { group: 'boats', animation: 150, onEnd: reportBoard });
+
+    // ---------- 3. handle + filter ----------
+    const list3 = document.getElementById('list3');
+    const status3 = document.getElementById('status3');
+
+    const sortable3 = new Sortable(list3, {
+      animation: 150,
+      handle: '.handle',
+      filter: '.locked',
+      onMove: (evt) => !evt.related.classList.contains('locked'),
+      onEnd: () => {
+        status3.textContent = '현재 순서: ' + sortable3.toArray().join(' → ');
+      },
+    });
+  </script>
+</body>
+</html>

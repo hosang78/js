@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Dexie.js</title>
+<script src="https://cdn.jsdelivr.net/npm/dexie@4.4.4/dist/dexie.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .form-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  select, input[type="text"], input[type="number"] {
+    padding: 7px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  input[type="number"] { width: 90px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.secondary {
+    background: #fff;
+    color: #4f7dff;
+    border: 1px solid #4f7dff;
+  }
+  button.danger {
+    background: #fff;
+    color: #c0392b;
+    border: 1px solid #f0b8b8;
+  }
+  table.preview {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-top: 10px;
+  }
+  table.preview th, table.preview td {
+    border: 1px solid #eee;
+    padding: 6px 8px;
+    text-align: left;
+  }
+  table.preview th { background: #f4f6fa; color: #555; }
+  table.preview tr:nth-child(even) { background: #fafbfc; }
+  .table-wrap { overflow-x: auto; }
+  .badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #2c3e91;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .status-msg {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+  }
+  .status-msg.error { background: #ffecec; border-color: #ffc9c9; color: #7a1f1f; }
+  .status-msg.ok { background: #e9f9ef; border-color: #bfe8cd; color: #14532d; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Dexie.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Dexie.js</strong>는 브라우저 내장 데이터베이스인 <strong>IndexedDB</strong>를 다루기 쉽게
+    감싸주는 라이브러리입니다. 서버 없이 브라우저 안에 데이터를 저장하고, 새로고침해도 남아있습니다.
+    <ul>
+      <li>테이블을 정의하고 <code>add</code>/<code>toArray</code>/<code>delete</code>로 CRUD 수행 — 데이터는 IndexedDB에 영구 저장됨</li>
+      <li><code>where()</code>/<code>orderBy()</code>로 조건 검색·정렬 가능</li>
+      <li><code>liveQuery</code>로 데이터가 바뀌면 화면이 자동으로 다시 그려지는 반응형 조회 가능</li>
+      <li><code>transaction</code>으로 여러 테이블에 걸친 작업을 원자적으로 처리(하나 실패하면 전체 취소) 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 접수/재고 데이터는 Dexie.js 학습용으로 만든 <strong>가상의 샘플</strong>이며,
+      실제 수협중앙회의 시스템/재고와는 무관합니다. 데이터는 이 브라우저(기기)에만 저장되고
+      서버로 전송되지 않습니다. 이 페이지는 Dexie.js(CDN) 하나만 사용하고 다른 외부 라이브러리나
+      API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 저장 · 조회 · 삭제 (영속성)</h2>
+    <div class="desc">
+      아래에서 등록한 내용은 <strong>IndexedDB에 저장</strong>되어, 이 페이지를 새로고침해도 사라지지 않습니다.
+      한번 등록해보고 새로고침해서 확인해보세요.
+    </div>
+    <div class="form-row">
+      <select id="addFish">
+        <option>고등어</option><option>갈치</option><option>오징어</option><option>새우</option><option>꽃게</option>
+      </select>
+      <input type="number" id="addQty" placeholder="수량(kg)" value="50" min="1" />
+      <select id="addMarket">
+        <option>부산공동어시장</option><option>목포수산시장</option><option>통영수산시장</option>
+      </select>
+      <button id="addBtn">등록</button>
+      <span class="badge" id="totalBadge">총 0건</span>
+    </div>
+    <div class="table-wrap" id="entriesTable"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const db = new Dexie('WipanDexieDemo');
+db.version(1).stores({ entries: '++id, fish, qty, market, createdAt' });
+
+await db.entries.add({ fish: '고등어', qty: 50, market: '부산공동어시장', createdAt: Date.now() });
+const all = await db.entries.toArray();
+await db.entries.delete(id);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 쿼리 · 정렬</h2>
+    <div class="desc">어종으로 필터링하고, 등록순/수량순으로 정렬해서 조회합니다.</div>
+    <div class="form-row">
+      <select id="filterFish">
+        <option value="">전체 어종</option>
+        <option>고등어</option><option>갈치</option><option>오징어</option><option>새우</option><option>꽃게</option>
+      </select>
+      <select id="sortBy">
+        <option value="createdAt-desc">최근 등록순</option>
+        <option value="qty-desc">수량 많은순</option>
+        <option value="qty-asc">수량 적은순</option>
+      </select>
+    </div>
+    <div class="table-wrap" id="queryTable"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// 어종으로 필터
+const filtered = await db.entries.where('fish').equals('고등어').toArray();
+
+// 수량 많은 순 정렬
+const sorted = await db.entries.orderBy('qty').reverse().toArray();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. liveQuery — 실시간 반응형 조회</h2>
+    <div class="desc">
+      아래 "총 건수"와 "최근 등록 5건"은 <code>liveQuery</code>로 구독하고 있어서,
+      1번 섹션에서 데이터를 추가/삭제하거나 아래 버튼으로 테스트 데이터를 추가하면
+      <strong>새로고침 없이 자동으로</strong> 갱신됩니다.
+    </div>
+    <div class="form-row">
+      <span class="badge" id="liveCountBadge">총 0건</span>
+      <button id="addRandomBtn" class="secondary">테스트용 항목 무작위 추가</button>
+    </div>
+    <div class="table-wrap" id="liveTable"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Dexie.liveQuery(() => db.entries.count())
+  .subscribe((count) => { countBadge.textContent = `총 ${count}건`; });
+
+Dexie.liveQuery(() => db.entries.orderBy('createdAt').reverse().limit(5).toArray())
+  .subscribe((rows) => { renderTable(rows); }); // 다른 곳에서 데이터가 바뀌어도 자동 재실행됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 트랜잭션 — 원자적 처리 · 롤백</h2>
+    <div class="desc">
+      "위판 접수"를 하면 접수 기록 추가와 재고 차감이 <strong>하나의 트랜잭션</strong>으로 묶여서 실행됩니다.
+      재고보다 많은 수량을 접수하려 하면 중간에 실패하고, <strong>둘 다 취소(롤백)</strong>됩니다.
+    </div>
+    <div class="table-wrap" id="stockTable"></div>
+    <div class="form-row">
+      <select id="txFish"></select>
+      <input type="number" id="txQty" placeholder="접수 수량(kg)" value="50" min="1" />
+      <button id="txBtn">위판 접수 (재고 차감)</button>
+      <button id="txFailBtn" class="danger">일부러 재고 초과로 접수해보기</button>
+      <button id="resetStockBtn" class="secondary">재고 초기화</button>
+    </div>
+    <div class="status-msg" id="txStatus">위판 접수를 시도해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>await db.transaction('rw', db.entries, db.stock, async () => {
+  const current = await db.stock.get(fish);
+  if (!current || current.qty < qty) {
+    throw new Error('재고 부족'); // 이 에러가 나면 아래 두 작업 모두 취소됨
+  }
+  await db.stock.update(fish, { qty: current.qty - qty });
+  await db.entries.add({ fish, qty, market: '위판접수', createdAt: Date.now() });
+});</pre>
+    </details>
+  </section>
+
+  <script>
+    const db = new Dexie('WipanDexieDemo');
+    db.version(1).stores({
+      entries: '++id, fish, qty, market, createdAt',
+      stock: 'fish',
+    });
+    db.on('populate', () => {
+      db.stock.bulkAdd([
+        { fish: '고등어', qty: 500 },
+        { fish: '갈치', qty: 300 },
+        { fish: '오징어', qty: 200 },
+        { fish: '새우', qty: 150 },
+        { fish: '꽃게', qty: 120 },
+      ]);
+    });
+
+    function renderTable(container, rows, columns, deletable) {
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<div style="color:#999;font-size:13px;">데이터가 없습니다.</div>';
+        return;
+      }
+      let html = '<table class="preview"><thead><tr>' + columns.map((c) => `<th>${c.label}</th>`).join('') + (deletable ? '<th></th>' : '') + '</tr></thead><tbody>';
+      rows.forEach((r) => {
+        html += '<tr>' + columns.map((c) => `<td>${c.format ? c.format(r[c.field]) : (r[c.field] ?? '')}</td>`).join('');
+        if (deletable) html += `<td><button class="secondary" data-del="${r.id}" style="padding:3px 8px;font-size:12px;">삭제</button></td>`;
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    const ENTRY_COLUMNS = [
+      { label: '날짜', field: 'createdAt', format: (v) => new Date(v).toLocaleString('ko-KR') },
+      { label: '어종', field: 'fish' },
+      { label: '수량(kg)', field: 'qty' },
+      { label: '위판장', field: 'market' },
+    ];
+
+    // ---------- 1. 기본 저장 · 조회 · 삭제 ----------
+    const entriesTable = document.getElementById('entriesTable');
+    const totalBadge = document.getElementById('totalBadge');
+
+    async function refreshEntries() {
+      const rows = await db.entries.orderBy('createdAt').reverse().toArray();
+      renderTable(entriesTable, rows, ENTRY_COLUMNS, true);
+      totalBadge.textContent = `총 ${rows.length}건`;
+    }
+
+    document.getElementById('addBtn').addEventListener('click', async () => {
+      const fish = document.getElementById('addFish').value;
+      const qty = Number(document.getElementById('addQty').value) || 0;
+      const market = document.getElementById('addMarket').value;
+      if (qty <= 0) return;
+      await db.entries.add({ fish, qty, market, createdAt: Date.now() });
+      await refreshEntries();
+      await refreshQuery();
+    });
+
+    entriesTable.addEventListener('click', async (e) => {
+      const id = e.target.getAttribute('data-del');
+      if (!id) return;
+      await db.entries.delete(Number(id));
+      await refreshEntries();
+      await refreshQuery();
+    });
+
+    // ---------- 2. 쿼리 · 정렬 ----------
+    const queryTable = document.getElementById('queryTable');
+
+    async function refreshQuery() {
+      const fishFilter = document.getElementById('filterFish').value;
+      const [sortField, sortDir] = document.getElementById('sortBy').value.split('-');
+
+      let collection = fishFilter
+        ? db.entries.where('fish').equals(fishFilter)
+        : db.entries.orderBy(sortField);
+
+      let rows = await collection.toArray();
+
+      // where().equals()는 정렬이 안 되므로 별도로 정렬 처리
+      rows.sort((a, b) => (sortDir === 'desc' ? b[sortField] - a[sortField] : a[sortField] - b[sortField]));
+
+      renderTable(queryTable, rows, ENTRY_COLUMNS, false);
+    }
+    document.getElementById('filterFish').addEventListener('change', refreshQuery);
+    document.getElementById('sortBy').addEventListener('change', refreshQuery);
+
+    // ---------- 3. liveQuery ----------
+    const liveCountBadge = document.getElementById('liveCountBadge');
+    const liveTable = document.getElementById('liveTable');
+
+    Dexie.liveQuery(() => db.entries.count()).subscribe((count) => {
+      liveCountBadge.textContent = `총 ${count}건`;
+    });
+
+    Dexie.liveQuery(() => db.entries.orderBy('createdAt').reverse().limit(5).toArray()).subscribe((rows) => {
+      renderTable(liveTable, rows, ENTRY_COLUMNS, false);
+    });
+
+    document.getElementById('addRandomBtn').addEventListener('click', async () => {
+      const fishList = ['고등어', '갈치', '오징어', '새우', '꽃게'];
+      const marketList = ['부산공동어시장', '목포수산시장', '통영수산시장'];
+      await db.entries.add({
+        fish: fishList[Math.floor(Math.random() * fishList.length)],
+        qty: 10 + Math.floor(Math.random() * 200),
+        market: marketList[Math.floor(Math.random() * marketList.length)],
+        createdAt: Date.now(),
+      });
+      await refreshEntries();
+      await refreshQuery();
+    });
+
+    // ---------- 4. 트랜잭션 ----------
+    const stockTable = document.getElementById('stockTable');
+    const txStatus = document.getElementById('txStatus');
+    const txFishSelect = document.getElementById('txFish');
+
+    async function refreshStock() {
+      const rows = await db.stock.toArray();
+      renderTable(stockTable, rows, [
+        { label: '어종', field: 'fish' },
+        { label: '남은 재고(kg)', field: 'qty' },
+      ], false);
+
+      txFishSelect.innerHTML = rows.map((r) => `<option value="${r.fish}">${r.fish}</option>`).join('');
+    }
+
+    async function attemptWithdraw(fish, qty) {
+      try {
+        await db.transaction('rw', db.entries, db.stock, async () => {
+          const current = await db.stock.get(fish);
+          if (!current || current.qty < qty) {
+            throw new Error(`재고 부족: ${fish} 남은 재고 ${current ? current.qty : 0}kg, 요청 ${qty}kg`);
+          }
+          await db.stock.update(fish, { qty: current.qty - qty });
+          await db.entries.add({ fish, qty, market: '위판접수(트랜잭션)', createdAt: Date.now() });
+        });
+        txStatus.className = 'status-msg ok';
+        txStatus.textContent = `접수 완료: ${fish} ${qty}kg 재고 차감됨.`;
+      } catch (err) {
+        txStatus.className = 'status-msg error';
+        txStatus.textContent = `트랜잭션 실패 → 전부 롤백됨: ${err.message}`;
+      }
+      await refreshStock();
+      await refreshEntries();
+      await refreshQuery();
+    }
+
+    document.getElementById('txBtn').addEventListener('click', () => {
+      const fish = txFishSelect.value;
+      const qty = Number(document.getElementById('txQty').value) || 0;
+      attemptWithdraw(fish, qty);
+    });
+
+    document.getElementById('txFailBtn').addEventListener('click', () => {
+      const fish = txFishSelect.value;
+      attemptWithdraw(fish, 999999); // 항상 재고 초과라 실패 → 롤백 시연용
+    });
+
+    document.getElementById('resetStockBtn').addEventListener('click', async () => {
+      await db.stock.bulkPut([
+        { fish: '고등어', qty: 500 },
+        { fish: '갈치', qty: 300 },
+        { fish: '오징어', qty: 200 },
+        { fish: '새우', qty: 150 },
+        { fish: '꽃게', qty: 120 },
+      ]);
+      txStatus.className = 'status-msg';
+      txStatus.textContent = '재고를 초기값으로 되돌렸습니다.';
+      await refreshStock();
+    });
+
+    // ---------- 초기 로딩 ----------
+    (async () => {
+      await db.open();
+      await refreshEntries();
+      await refreshQuery();
+      await refreshStock();
+    })();
+  </script>
+</body>
+</html>

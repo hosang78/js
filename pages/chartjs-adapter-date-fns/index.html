@@ -2,412 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>chartjs-adapter-date-fns</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --surface: #fcfcfb;
-    --page: #f9f9f7;
-    --ink-primary: #0b0b0b;
-    --ink-secondary: #52514e;
-    --ink-muted: #898781;
-    --grid: #e1e0d9;
-    --axis: #c3c2b7;
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: var(--page);
-    color: var(--ink-primary);
-    line-height: 1.6;
+    box-sizing: border-box;
   }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: var(--ink-secondary);
-    margin-bottom: 12px;
-  }
-  .chart-wrap {
-    width: 100%;
-    height: 300px;
-    position: relative;
-  }
-  .controls {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f5f6f8;
+    color: #555;
     font-size: 13px;
-  }
-  select, button {
-    padding: 6px 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 13px;
-    background: #fff;
     cursor: pointer;
   }
-  button.active {
-    background: var(--series-1);
-    color: #fff;
-    border-color: var(--series-1);
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: var(--series-1); }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>chartjs-adapter-date-fns 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>chartjs-adapter-date-fns</strong>는 Chart.js가 날짜/시간 축(<code>type: 'time'</code>)을
-    그릴 수 있게 해주는 어댑터입니다. 어댑터 혼자서는 아무것도 그리지 못하고,
-    내부적으로 <strong>date-fns</strong>의 날짜 계산 함수를 이용해 "이 구간엔 눈금을 며칠 단위로 찍을지",
-    "툴팁엔 날짜를 어떤 형식으로 보여줄지"를 Chart.js에게 알려주는 역할을 합니다.
-    <ul>
-      <li>데이터 포인트의 x값으로 <code>Date</code> 객체나 날짜 문자열을 그대로 사용 가능</li>
-      <li>확대/축소 범위에 맞춰 일/주/월/년 눈금 단위를 자동으로 선택</li>
-      <li><code>time.unit</code>, <code>time.displayFormats</code>로 눈금·툴팁 날짜 포맷을 직접 지정 가능</li>
-      <li><code>type: 'time'</code>(실제 시간 간격 비례) vs <code>type: 'timeseries'</code>(데이터 간격을 균등 분포)의 두 가지 시간축 모드</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 실적 수치는 학습용으로 만든 <strong>가상의 샘플 데이터</strong>이며,
-      실제 수협중앙회의 통계가 아닙니다. 이 어댑터는 <strong>Chart.js(CDN) 없이는 동작하지 않아</strong>
-      Chart.js를 함께 불러왔습니다. 날짜 계산에 쓰는 date-fns는 어댑터의 번들 파일(<code>.bundle.min.js</code>) 안에
-      이미 포함되어 있어 별도 CDN으로 추가할 필요가 없습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 시간축</h2>
-    <div class="desc">x값에 실제 <code>Date</code> 객체를 넣으면, <code>type: 'time'</code> 축이 날짜 간격에 맞춰 자동으로 눈금을 찍어줍니다.</div>
-    <div class="chart-wrap"><canvas id="chart1"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new Chart(ctx, {
-  type: 'line',
-  data: {
-    datasets: [{
-      label: '일별 위판 실적',
-      data: [
-        { x: new Date('2026-06-22'), y: 210 },
-        { x: new Date('2026-06-23'), y: 240 },
-        // ...
-      ],
-    }],
-  },
-  options: {
-    scales: {
-      x: { type: 'time', time: { unit: 'day' } }, // 어댑터가 없으면 'time' 타입은 에러가 남
-    },
-  },
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 시간 단위 · 포맷 커스터마이징</h2>
-    <div class="desc">같은 4개월치 데이터를 두고, 눈금 단위(day/week/month)를 바꿔봅니다. 툴팁 날짜 형식도 <code>time.tooltipFormat</code>으로 "2026년 7월 3일"처럼 지정했습니다.</div>
-    <div class="controls">
-      <span>눈금 단위:</span>
-      <button class="unit-btn" data-unit="day">일(day)</button>
-      <button class="unit-btn active" data-unit="week">주(week)</button>
-      <button class="unit-btn" data-unit="month">월(month)</button>
-    </div>
-    <div class="chart-wrap"><canvas id="chart2"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>scales: {
-  x: {
-    type: 'time',
-    time: {
-      unit: 'week',                          // 'day' | 'week' | 'month' 등
-      tooltipFormat: 'yyyy년 M월 d일',        // 툴팁에 보이는 날짜 형식
-      displayFormats: { week: 'M/d', month: 'yyyy.MM' }, // 눈금 라벨 형식
-    },
-  },
-},</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. time vs timeseries — 빈 구간 처리 차이</h2>
-    <div class="desc">
-      위판장은 주말에 쉬어서 데이터에 이틀짜리 공백이 반복됩니다. <strong>time</strong> 모드는 실제 날짜 간격 그대로
-      점을 배치해 주말 구간이 넓게 벌어지고, <strong>timeseries</strong> 모드는 실제 날짜 간격을 무시하고
-      점을 균등하게 배치해 주말 공백이 눈에 띄지 않습니다.
-    </div>
-    <div class="controls">
-      <button class="mode-btn active" data-mode="time">time (실제 간격)</button>
-      <button class="mode-btn" data-mode="timeseries">timeseries (균등 간격)</button>
-    </div>
-    <div class="chart-wrap"><canvas id="chart3"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>// 데이터에 6/27~6/28(토·일)이 없어도 그대로 넣는다
-const gappyData = [
-  { x: new Date('2026-06-25'), y: 250 },
-  { x: new Date('2026-06-26'), y: 300 },
-  { x: new Date('2026-06-29'), y: 230 }, // 6/27, 6/28 없이 바로 월요일로 점프
-  { x: new Date('2026-06-30'), y: 245 },
-];
-
-new Chart(ctx, {
-  type: 'line',
-  data: { datasets: [{ data: gappyData }] },
-  options: {
-    scales: { x: { type: 'timeseries' } }, // 'time' 대신 'timeseries'로 바꾸면 간격이 균등해짐
-  },
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. min / max로 특정 구간만 표시</h2>
-    <div class="desc">전체 4개월 데이터 중, <code>scales.x.min</code>/<code>max</code>로 최근 7일 구간만 잘라서 보여줄 수 있습니다.</div>
-    <div class="controls">
-      <button class="range-btn active" data-range="all">전체 보기</button>
-      <button class="range-btn" data-range="last7">최근 7일만</button>
-    </div>
-    <div class="chart-wrap"><canvas id="chart4"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>chart.options.scales.x.min = '2026-07-06';
-chart.options.scales.x.max = '2026-07-12';
-chart.update(); // 데이터는 그대로 두고 표시 범위만 좁힘</pre>
-    </details>
-  </section>
-
-  <script>
-    function buildDailySeries(startStr, days, base) {
-      const start = new Date(startStr);
-      const out = [];
-      let value = base;
-      for (let i = 0; i < days; i++) {
-        const d = new Date(start);
-        d.setDate(d.getDate() + i);
-        const day = d.getDay();
-        if (day === 0 || day === 6) continue; // 주말(위판 없음)은 건너뜀
-        value += Math.round((Math.random() - 0.4) * 20);
-        value = Math.max(150, Math.min(400, value));
-        out.push({ x: new Date(d), y: value });
-      }
-      return out;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    // ---------- 1. 기본 시간축 ----------
-    const series1 = buildDailySeries('2026-06-22', 14, 220);
-    new Chart(document.getElementById('chart1'), {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: '일별 위판 실적',
-          data: series1,
-          borderColor: '#2a78d6',
-          backgroundColor: '#2a78d6',
-          borderWidth: 2,
-          pointRadius: 4,
-          tension: 0.2,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { type: 'time', time: { unit: 'day', tooltipFormat: 'yyyy년 M월 d일' }, grid: { display: false }, ticks: { color: '#898781' } },
-          y: { beginAtZero: true, grid: { color: '#e1e0d9' }, ticks: { color: '#898781' } },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y}kg` } },
-        },
-      },
-    });
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    // ---------- 2. 시간 단위 · 포맷 ----------
-    const series2 = buildDailySeries('2026-03-16', 120, 220);
-    let chart2Unit = 'week';
-    const chart2 = new Chart(document.getElementById('chart2'), {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: '일별 위판 실적',
-          data: series2,
-          borderColor: '#2a78d6',
-          backgroundColor: '#2a78d6',
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.15,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: chart2Unit,
-              tooltipFormat: 'yyyy년 M월 d일',
-              displayFormats: { day: 'M/d', week: 'M/d', month: 'yyyy.MM' },
-            },
-            grid: { display: false },
-            ticks: { color: '#898781' },
-          },
-          y: { beginAtZero: true, grid: { color: '#e1e0d9' }, ticks: { color: '#898781' } },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y}kg` } },
-        },
-      },
-    });
-    document.querySelectorAll('.unit-btn').forEach((btn) => {
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
+
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.unit-btn').forEach((b) => b.classList.remove('active'));
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        chart2.options.scales.x.time.unit = btn.dataset.unit;
-        chart2.update();
       });
+      tabBar.appendChild(btn);
     });
+  }
 
-    // ---------- 3. time vs timeseries ----------
-    const gappySeries = buildDailySeries('2026-06-15', 28, 240);
-    let chart3Mode = 'time';
-    const chart3 = new Chart(document.getElementById('chart3'), {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: '일별 위판 실적',
-          data: gappySeries,
-          borderColor: '#1baf7a',
-          backgroundColor: '#1baf7a',
-          borderWidth: 2,
-          pointRadius: 4,
-          tension: 0,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            type: chart3Mode,
-            time: { unit: 'day', tooltipFormat: 'yyyy년 M월 d일 (EEE)', displayFormats: { day: 'M/d' } },
-            grid: { display: false },
-            ticks: { color: '#898781' },
-          },
-          y: { beginAtZero: true, grid: { color: '#e1e0d9' }, ticks: { color: '#898781' } },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y}kg` } },
-        },
-      },
-    });
-    document.querySelectorAll('.mode-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.mode-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        chart3.options.scales.x.type = btn.dataset.mode;
-        chart3.update();
-      });
-    });
-
-    // ---------- 4. min / max 구간 표시 ----------
-    const series4 = buildDailySeries('2026-03-16', 120, 220);
-    const chart4 = new Chart(document.getElementById('chart4'), {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: '일별 위판 실적',
-          data: series4,
-          borderColor: '#eda100',
-          backgroundColor: '#eda100',
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.15,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            type: 'time',
-            time: { unit: 'day', tooltipFormat: 'yyyy년 M월 d일', displayFormats: { day: 'M/d' } },
-            grid: { display: false },
-            ticks: { color: '#898781' },
-          },
-          y: { beginAtZero: true, grid: { color: '#e1e0d9' }, ticks: { color: '#898781' } },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y}kg` } },
-        },
-      },
-    });
-    document.querySelectorAll('.range-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.range-btn').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        if (btn.dataset.range === 'last7') {
-          chart4.options.scales.x.min = '2026-07-06';
-          chart4.options.scales.x.max = '2026-07-13';
-        } else {
-          delete chart4.options.scales.x.min;
-          delete chart4.options.scales.x.max;
-        }
-        chart4.update();
-      });
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Signature Pad</title>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@5.1.3/dist/signature_pad.umd.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  canvas.sig-canvas {
+    width: 100%;
+    max-width: 480px;
+    height: 180px;
+    border: 1px dashed #aaa;
+    border-radius: 8px;
+    background: #fff;
+    touch-action: none;
+    display: block;
+  }
+  .btn-row { margin-top: 10px; }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13.5px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button.secondary {
+    background: #fff;
+    color: #4f7dff;
+    border: 1px solid #4f7dff;
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .option-row label { display: flex; align-items: center; gap: 6px; }
+  input[type="color"] {
+    width: 36px;
+    height: 28px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 1px;
+    background: #fff;
+  }
+  .status-msg {
+    margin-top: 10px;
+    font-size: 13px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 20px;
+    color: #333;
+  }
+  .status-msg.error { background: #ffecec; border-color: #ffc9c9; color: #7a1f1f; }
+  .status-msg.ok { background: #e9f9ef; border-color: #bfe8cd; color: #14532d; }
+  .capture-result {
+    margin-top: 10px;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 12.5px;
+  }
+  .capture-result img { max-width: 100%; display: block; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Signature Pad 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Signature Pad</strong>는 캔버스 위에 마우스나 손가락(터치)으로
+    <strong>부드러운 손글씨 서명</strong>을 그릴 수 있게 해주는 라이브러리입니다.
+    전자 계약서, 인수확인서, 동의서 같은 화면에서 서명란을 만들 때 씁니다.
+    <ul>
+      <li>베지어 곡선 보간으로 실제 펜처럼 부드러운 선이 그려짐 (마우스/터치/펜 모두 지원)</li>
+      <li>서명 결과를 PNG/JPEG/SVG 이미지로 바로 추출 가능(<code>toDataURL</code>)</li>
+      <li>펜 색상·굵기 등을 옵션으로 조절 가능</li>
+      <li>획 단위 데이터(<code>toData</code>)를 이용해 한 획 되돌리기(undo), 빈 서명 검증(<code>isEmpty</code>) 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 "위판물 인수확인 서명"은 Signature Pad 학습용으로 만든 <strong>가상의 샘플 화면</strong>이며,
+      실제 수협중앙회의 서식/절차가 아닙니다. 이 페이지는 Signature Pad(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 서명 · 지우기 · PNG 저장</h2>
+    <div class="desc">
+      아래 서명란에 마우스(또는 손가락)로 서명해보세요. "이미지로 변환"을 누르면 서명이 PNG 이미지로 추출됩니다.
+    </div>
+    <canvas id="pad1" class="sig-canvas"></canvas>
+    <div class="btn-row">
+      <button id="clearBtn1" class="secondary">지우기</button>
+      <button id="toImageBtn1">이미지로 변환</button>
+      <button id="downloadBtn1" class="secondary" disabled>PNG 다운로드</button>
+    </div>
+    <div class="capture-result" id="result1">변환된 서명 이미지가 여기 표시됩니다</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const canvas = document.getElementById('pad1');
+const pad = new SignaturePad(canvas);
+
+pad.clear();                      // 지우기
+const dataUrl = pad.toDataURL();  // PNG data URL로 추출
+
+// 다운로드
+const link = document.createElement('a');
+link.download = 'signature.png';
+link.href = dataUrl;
+link.click();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 펜 색상 · 굵기 옵션</h2>
+    <div class="desc">
+      <code>penColor</code>, <code>minWidth</code>/<code>maxWidth</code> 옵션을 실시간으로 바꿔가며 그려보세요.
+      굵기는 필압(그리는 속도)에 따라 min~max 사이에서 자동으로 변합니다.
+    </div>
+    <div class="option-row">
+      <label>펜 색상 <input type="color" id="penColor" value="#1a3fa8" /></label>
+      <label>굵기
+        <select id="penWidth">
+          <option value="thin">얇게 (0.5~1.5)</option>
+          <option value="normal" selected>보통 (0.5~2.5)</option>
+          <option value="thick">굵게 (2~5)</option>
+        </select>
+      </label>
+    </div>
+    <canvas id="pad2" class="sig-canvas"></canvas>
+    <div class="btn-row">
+      <button id="clearBtn2" class="secondary">지우기</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const pad = new SignaturePad(canvas, {
+  penColor: '#1a3fa8',
+  minWidth: 0.5,
+  maxWidth: 2.5,
+});
+
+// 실시간 변경도 가능
+pad.penColor = '#c0392b';
+pad.minWidth = 2;
+pad.maxWidth = 5;</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 한 획 되돌리기 · 빈 서명 검증</h2>
+    <div class="desc">
+      가상의 "위판물 인수확인" 제출 화면입니다. <code>toData()</code>로 획 배열을 얻어 마지막 획만 지우는
+      되돌리기를 구현하고, 제출 시 <code>isEmpty()</code>로 서명 없이 제출하는 걸 막습니다.
+    </div>
+    <canvas id="pad3" class="sig-canvas"></canvas>
+    <div class="btn-row">
+      <button id="undoBtn" class="secondary">한 획 되돌리기</button>
+      <button id="clearBtn3" class="secondary">지우기</button>
+      <button id="submitBtn">인수확인 제출</button>
+    </div>
+    <div class="status-msg" id="status3">서명 후 제출을 눌러보세요. (가상 예시 — 실제로 제출되지 않습니다)</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// 한 획 되돌리기
+const data = pad.toData();   // 획(stroke) 배열
+data.pop();                  // 마지막 획 제거
+pad.fromData(data);          // 다시 그리기
+
+// 빈 서명 검증
+if (pad.isEmpty()) {
+  alert('서명을 해주세요.');
+}</pre>
+    </details>
+  </section>
+
+  <script>
+    // 캔버스는 CSS 크기와 실제 픽셀 크기가 다르면 선이 어긋나므로,
+    // devicePixelRatio 기준으로 실제 픽셀 크기를 맞춰주는 것이 공식 권장 패턴
+    function resizeCanvas(canvas, pad) {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const data = pad ? pad.toData() : null;
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvas.offsetHeight * ratio;
+      canvas.getContext('2d').scale(ratio, ratio);
+      if (pad) {
+        pad.clear();
+        if (data) pad.fromData(data);
+      }
+    }
+
+    // ---------- 1. 기본 서명 ----------
+    const canvas1 = document.getElementById('pad1');
+    const pad1 = new SignaturePad(canvas1);
+    resizeCanvas(canvas1, pad1);
+
+    const result1 = document.getElementById('result1');
+    const downloadBtn1 = document.getElementById('downloadBtn1');
+    let lastDataUrl = null;
+
+    document.getElementById('clearBtn1').addEventListener('click', () => {
+      pad1.clear();
+      result1.textContent = '변환된 서명 이미지가 여기 표시됩니다';
+      downloadBtn1.disabled = true;
+    });
+
+    document.getElementById('toImageBtn1').addEventListener('click', () => {
+      if (pad1.isEmpty()) {
+        result1.textContent = '먼저 서명을 해주세요.';
+        return;
+      }
+      lastDataUrl = pad1.toDataURL('image/png');
+      result1.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = lastDataUrl;
+      result1.appendChild(img);
+      downloadBtn1.disabled = false;
+    });
+
+    downloadBtn1.addEventListener('click', () => {
+      if (!lastDataUrl) return;
+      const link = document.createElement('a');
+      link.download = 'signature.png'; // 일부 브라우저는 data URL 다운로드에서 한글 파일명을 깨뜨려서 영문으로 지정
+      link.href = lastDataUrl;
+      link.click();
+    });
+
+    // ---------- 2. 펜 옵션 ----------
+    const canvas2 = document.getElementById('pad2');
+    const pad2 = new SignaturePad(canvas2, { penColor: '#1a3fa8', minWidth: 0.5, maxWidth: 2.5 });
+    resizeCanvas(canvas2, pad2);
+
+    const WIDTH_PRESETS = {
+      thin: { minWidth: 0.5, maxWidth: 1.5 },
+      normal: { minWidth: 0.5, maxWidth: 2.5 },
+      thick: { minWidth: 2, maxWidth: 5 },
+    };
+
+    document.getElementById('penColor').addEventListener('input', (e) => {
+      pad2.penColor = e.target.value;
+    });
+    document.getElementById('penWidth').addEventListener('change', (e) => {
+      const preset = WIDTH_PRESETS[e.target.value];
+      pad2.minWidth = preset.minWidth;
+      pad2.maxWidth = preset.maxWidth;
+    });
+    document.getElementById('clearBtn2').addEventListener('click', () => pad2.clear());
+
+    // ---------- 3. 되돌리기 · 검증 ----------
+    const canvas3 = document.getElementById('pad3');
+    const pad3 = new SignaturePad(canvas3);
+    resizeCanvas(canvas3, pad3);
+
+    const status3 = document.getElementById('status3');
+
+    document.getElementById('undoBtn').addEventListener('click', () => {
+      const data = pad3.toData();
+      if (data.length === 0) {
+        status3.className = 'status-msg';
+        status3.textContent = '되돌릴 획이 없습니다.';
+        return;
+      }
+      data.pop();
+      pad3.fromData(data);
+      status3.className = 'status-msg';
+      status3.textContent = `마지막 획을 지웠습니다. (남은 획: ${data.length}개)`;
+    });
+
+    document.getElementById('clearBtn3').addEventListener('click', () => {
+      pad3.clear();
+      status3.className = 'status-msg';
+      status3.textContent = '서명란을 비웠습니다.';
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      if (pad3.isEmpty()) {
+        status3.className = 'status-msg error';
+        status3.textContent = '서명이 비어 있습니다. 서명 후 제출해주세요. (isEmpty() === true)';
+        return;
+      }
+      const strokes = pad3.toData().length;
+      status3.className = 'status-msg ok';
+      status3.textContent = `인수확인 서명이 접수되었습니다. (가상 예시 — 획 ${strokes}개, 실제 전송 없음)`;
+    });
+
+    // 창 크기가 바뀌면 캔버스 픽셀 크기 재조정 (그려둔 서명은 유지)
+    window.addEventListener('resize', () => {
+      resizeCanvas(canvas1, pad1);
+      resizeCanvas(canvas2, pad2);
+      resizeCanvas(canvas3, pad3);
+    });
+  </script>
+</body>
+</html>

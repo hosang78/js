@@ -2,361 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>vis-network</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-network@10.1.0/styles/vis-network.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/vis-network@10.1.0/standalone/umd/vis-network.min.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --surface-1: #fcfcfb;
-    --text-primary: #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted: #898781;
-    --border-hairline: rgba(11,11,11,0.10);
-    --series-1: #2a78d6; /* blue */
-    --series-2: #1baf7a; /* aqua */
-    --series-3: #eda100; /* yellow */
-    --series-4: #008300; /* green */
-    --series-5: #4a3aa7; /* violet */
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: var(--surface-1);
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-  }
-  .net {
-    width: 100%;
-    height: 360px;
-    border: 1px solid var(--border-hairline);
-    border-radius: 8px;
-    background: var(--surface-1);
-  }
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-top: 10px;
-    font-size: 12.5px;
-    color: var(--text-secondary);
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-swatch { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
-  .controls { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; align-items: center; }
-  .controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  .info-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
+    color: #555;
     font-size: 13px;
-    margin-top: 10px;
-    min-height: 20px;
+    cursor: pointer;
   }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>vis-network 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>vis-network</strong>는 노드(점)와 엣지(선)로 이루어진 네트워크·관계도를 그려주는 라이브러리입니다.
-    물리 시뮬레이션으로 노드들이 자연스럽게 퍼지도록 배치하거나, 조직도처럼 계층 구조로 정렬할 수 있습니다.
-    <ul>
-      <li>물리 시뮬레이션 기반 자동 배치 네트워크 그래프</li>
-      <li><code>layout.hierarchical</code>로 위→아래 계층형(조직도) 배치</li>
-      <li>그룹별 색상 구분 + 클릭 시 연결된 노드만 강조</li>
-      <li>체크박스로 특정 그룹의 노드·엣지를 표시/숨김</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 유통 흐름도·조직도는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      조직·유통 구조와 무관합니다. vis-network(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는 사용하지
-      않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 네트워크 그래프 (물리 시뮬레이션)</h2>
-    <div class="desc">가상 수산물 유통 흐름입니다. 노드를 드래그하거나 빈 곳을 드래그해 확대·이동해보세요.</div>
-    <div id="net1" class="net"></div>
-    <div class="legend">
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>위판장</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-2)"></span>중도매인</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>소매상</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-4)"></span>수출업체</div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const nodes = new vis.DataSet([
-  { id: 1, label: "1번 위판장", group: "market" },
-  { id: 2, label: "2번 위판장", group: "market" },
-  { id: 3, label: "중도매인 A", group: "broker" },
-  // ...
-]);
-const edges = new vis.DataSet([
-  { from: 1, to: 3 }, { from: 2, to: 3 }, /* ... */
-]);
-
-new vis.Network(container, { nodes, edges }, {
-  groups: {
-    market: { color: { background: "#2a78d6" } },
-    broker: { color: { background: "#1baf7a" } },
-    retail: { color: { background: "#eda100" } },
-    export:  { color: { background: "#008300" } }
-  },
-  physics: { stabilization: true }
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 계층형 레이아웃 (조직도)</h2>
-    <div class="desc">가상 수협 조직도입니다. <code>layout.hierarchical</code>로 위에서 아래로 단계별 정렬됩니다. 단계(깊이)는 파란색 하나를 진하기로 구분해 표현했습니다.</div>
-    <div id="net2" class="net"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new vis.Network(container, { nodes, edges }, {
-  layout: {
-    hierarchical: {
-      direction: "UD",       // Up to Down
-      sortMethod: "directed",
-      levelSeparation: 80,
-      nodeSpacing: 130
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
-  },
-  physics: false,
-  edges: { arrows: "to" }
-});</pre>
-    </details>
-  </section>
+  }
 
-  <section class="block">
-    <h2>3. 그룹별 색상 + 클릭 시 연결 노드 강조</h2>
-    <div class="desc">가상 조합원 네트워크입니다. 노드를 클릭하면 그 노드와 직접 연결된 노드·엣지만 진하게 남고 나머지는 흐려집니다.</div>
-    <div id="net3" class="net"></div>
-    <div class="legend">
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>조합원</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-2)"></span>위판장</div>
-      <div class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>가공업체</div>
-    </div>
-    <div class="info-box" id="info3">노드를 클릭해보세요.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>network.on("click", (params) => {
-  if (params.nodes.length === 0) {
-    // 빈 곳 클릭 → 원상태로 복귀
-    nodes.forEach((n) => nodes.update({ id: n.id, opacity: 1 }));
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
+
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
     return;
   }
-  const clickedId = params.nodes[0];
-  const connected = new Set([clickedId, ...network.getConnectedNodes(clickedId)]);
-  nodes.forEach((n) => {
-    nodes.update({ id: n.id, opacity: connected.has(n.id) ? 1 : 0.15 });
-  });
-});</pre>
-    </details>
-  </section>
 
-  <section class="block">
-    <h2>4. 그룹 필터링</h2>
-    <div class="desc">체크박스를 끄면 해당 그룹의 노드와 그 노드에 연결된 엣지가 그래프에서 사라집니다.</div>
-    <div class="controls">
-      <label><input type="checkbox" class="grp4" value="market" checked /> <span class="legend-swatch" style="background:var(--series-1)"></span> 위판장</label>
-      <label><input type="checkbox" class="grp4" value="broker" checked /> <span class="legend-swatch" style="background:var(--series-2)"></span> 중도매인</label>
-      <label><input type="checkbox" class="grp4" value="retail" checked /> <span class="legend-swatch" style="background:var(--series-3)"></span> 소매상</label>
-    </div>
-    <div id="net4" class="net"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const allNodes = new vis.DataSet([ /* ... */ ]);
-const view = new vis.DataView(allNodes, {
-  filter: (node) => activeGroups.has(node.group)
-});
-new vis.Network(container, { nodes: view, edges }, options);
-
-checkbox.addEventListener("change", () => {
-  activeGroups[checkbox.checked ? "add" : "delete"](checkbox.value);
-  view.refresh(); // 필터를 다시 적용
-});</pre>
-    </details>
-  </section>
-
-<script>
-  // ---- 1. 기본 네트워크 그래프 (물리 시뮬레이션) ----
-  const nodes1 = new vis.DataSet([
-    { id: 1, label: "1번 위판장", group: "market" },
-    { id: 2, label: "2번 위판장", group: "market" },
-    { id: 3, label: "중도매인 A", group: "broker" },
-    { id: 4, label: "중도매인 B", group: "broker" },
-    { id: 5, label: "중도매인 C", group: "broker" },
-    { id: 6, label: "소매상 1", group: "retail" },
-    { id: 7, label: "소매상 2", group: "retail" },
-    { id: 8, label: "수출업체", group: "export" }
-  ]);
-  const edges1 = new vis.DataSet([
-    { from: 1, to: 3 }, { from: 1, to: 4 }, { from: 2, to: 4 }, { from: 2, to: 5 },
-    { from: 3, to: 6 }, { from: 4, to: 6 }, { from: 4, to: 7 }, { from: 5, to: 7 }, { from: 5, to: 8 }
-  ]);
-  const network1 = window.network1 = new vis.Network(document.getElementById("net1"), { nodes: nodes1, edges: edges1 }, {
-    groups: {
-      market: { color: { background: "#2a78d6", border: "#1c5cab" }, font: { color: "#0b0b0b" } },
-      broker: { color: { background: "#1baf7a", border: "#0d7a52" }, font: { color: "#0b0b0b" } },
-      retail: { color: { background: "#eda100", border: "#a56e00" }, font: { color: "#0b0b0b" } },
-      export: { color: { background: "#008300", border: "#005900" }, font: { color: "#0b0b0b" } }
-    },
-    edges: { color: "#c3c2b7", smooth: { type: "continuous" } },
-    physics: { stabilization: true, barnesHut: { springLength: 110 } }
-  });
-
-  // ---- 2. 계층형 레이아웃 (조직도) ----
-  const nodes2 = new vis.DataSet([
-    { id: 1, label: "가상 총회", level: 0, color: { background: "#86b6ef", border: "#5598e7" } },
-    { id: 2, label: "가상 이사회", level: 1, color: { background: "#5598e7", border: "#2a78d6" } },
-    { id: 3, label: "가상 감사위원회", level: 1, color: { background: "#5598e7", border: "#2a78d6" } },
-    { id: 4, label: "가상 상임이사", level: 2, color: { background: "#2a78d6", border: "#184f95" } },
-    { id: 5, label: "위판사업부", level: 3, color: { background: "#184f95", border: "#0d366b" }, font: { color: "#fff" } },
-    { id: 6, label: "유통사업부", level: 3, color: { background: "#184f95", border: "#0d366b" }, font: { color: "#fff" } },
-    { id: 7, label: "조합원지원부", level: 3, color: { background: "#184f95", border: "#0d366b" }, font: { color: "#fff" } }
-  ]);
-  const edges2 = new vis.DataSet([
-    { from: 1, to: 2 }, { from: 1, to: 3 }, { from: 2, to: 4 },
-    { from: 4, to: 5 }, { from: 4, to: 6 }, { from: 4, to: 7 }
-  ]);
-  const network2 = window.network2 = new vis.Network(document.getElementById("net2"), { nodes: nodes2, edges: edges2 }, {
-    layout: {
-      hierarchical: {
-        direction: "UD",
-        sortMethod: "directed",
-        levelSeparation: 80,
-        nodeSpacing: 130
-      }
-    },
-    physics: false,
-    edges: { arrows: "to", color: "#c3c2b7" }
-  });
-
-  // ---- 3. 그룹별 색상 + 클릭 강조 ----
-  const nodes3 = new vis.DataSet([
-    { id: 1, label: "조합원 A", group: "member" },
-    { id: 2, label: "조합원 B", group: "member" },
-    { id: 3, label: "조합원 C", group: "member" },
-    { id: 4, label: "1번 위판장", group: "market" },
-    { id: 5, label: "2번 위판장", group: "market" },
-    { id: 6, label: "가공업체 X", group: "factory" },
-    { id: 7, label: "가공업체 Y", group: "factory" }
-  ]);
-  const edges3 = new vis.DataSet([
-    { id: "e1", from: 1, to: 4 }, { id: "e2", from: 2, to: 4 }, { id: "e3", from: 2, to: 5 },
-    { id: "e4", from: 3, to: 5 }, { id: "e5", from: 4, to: 6 }, { id: "e6", from: 5, to: 7 }
-  ]);
-  const network3 = window.network3 = new vis.Network(document.getElementById("net3"), { nodes: nodes3, edges: edges3 }, {
-    groups: {
-      member: { color: { background: "#2a78d6", border: "#1c5cab" } },
-      market: { color: { background: "#1baf7a", border: "#0d7a52" } },
-      factory: { color: { background: "#eda100", border: "#a56e00" } }
-    },
-    edges: { color: "#c3c2b7" },
-    physics: { stabilization: true }
-  });
-  const info3 = document.getElementById("info3");
-  network3.on("click", (params) => {
-    if (params.nodes.length === 0) {
-      nodes3.forEach((n) => nodes3.update({ id: n.id, opacity: 1 }));
-      edges3.forEach((e) => edges3.update({ id: e.id, color: "#c3c2b7" }));
-      info3.textContent = "노드를 클릭해보세요.";
-      return;
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
     }
-    const clickedId = params.nodes[0];
-    const connectedNodeIds = network3.getConnectedNodes(clickedId);
-    const connectedEdgeIds = network3.getConnectedEdges(clickedId);
-    const highlighted = new Set([clickedId, ...connectedNodeIds]);
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    nodes3.forEach((n) => nodes3.update({ id: n.id, opacity: highlighted.has(n.id) ? 1 : 0.15 }));
-    edges3.forEach((e) => edges3.update({ id: e.id, color: connectedEdgeIds.includes(e.id) ? "#4f7dff" : "#e1e0d9" }));
-
-    const clickedLabel = nodes3.get(clickedId).label;
-    const connectedLabels = connectedNodeIds.map((id) => nodes3.get(id).label).join(", ");
-    info3.textContent = `"${clickedLabel}"와 직접 연결된 노드: ${connectedLabels || "없음"}`;
-  });
-
-  // ---- 4. 그룹 필터링 ----
-  const nodes4 = new vis.DataSet([
-    { id: 1, label: "1번 위판장", group: "market" },
-    { id: 2, label: "2번 위판장", group: "market" },
-    { id: 3, label: "중도매인 A", group: "broker" },
-    { id: 4, label: "중도매인 B", group: "broker" },
-    { id: 5, label: "소매상 1", group: "retail" },
-    { id: 6, label: "소매상 2", group: "retail" }
-  ]);
-  const edges4 = new vis.DataSet([
-    { from: 1, to: 3 }, { from: 2, to: 4 }, { from: 3, to: 5 }, { from: 4, to: 6 }, { from: 3, to: 6 }
-  ]);
-  const activeGroups4 = new Set(["market", "broker", "retail"]);
-  const view4 = new vis.DataView(nodes4, {
-    filter: (node) => activeGroups4.has(node.group)
-  });
-  const network4 = window.network4 = new vis.Network(document.getElementById("net4"), { nodes: view4, edges: edges4 }, {
-    groups: {
-      market: { color: { background: "#2a78d6", border: "#1c5cab" } },
-      broker: { color: { background: "#1baf7a", border: "#0d7a52" } },
-      retail: { color: { background: "#eda100", border: "#a56e00" } }
-    },
-    edges: { color: "#c3c2b7" },
-    physics: { stabilization: true }
-  });
-  document.querySelectorAll(".grp4").forEach((cb) => {
-    cb.addEventListener("change", () => {
-      if (cb.checked) activeGroups4.add(cb.value);
-      else activeGroups4.delete(cb.value);
-      view4.refresh();
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
-  });
-</script>
+  }
 
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

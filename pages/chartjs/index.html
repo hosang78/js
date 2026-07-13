@@ -2,344 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>Chart.js</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --surface: #fcfcfb;
-    --page: #f9f9f7;
-    --ink-primary: #0b0b0b;
-    --ink-secondary: #52514e;
-    --ink-muted: #898781;
-    --grid: #e1e0d9;
-    --axis: #c3c2b7;
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-    --series-4: #008300;
-    --series-5: #4a3aa7;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: var(--page);
-    color: var(--ink-primary);
-    line-height: 1.6;
+    box-sizing: border-box;
   }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f5f6f8;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
   }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: var(--surface);
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: var(--ink-secondary);
-    margin-bottom: 12px;
-  }
-  .chart-wrap {
-    width: 100%;
-    height: 320px;
-    position: relative;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: var(--series-1); }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>Chart.js 핵심 기능 둘러보기</h1>
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
+  }
 
-  <div class="intro">
-    <strong>Chart.js</strong>는 캔버스 기반으로 막대·선·도넛 등 기본 차트 타입을 간단한 설정 객체로
-    그려주는 라이브러리입니다. 반응형 크기 조절과 애니메이션, 툴팁이 기본 내장돼 있고
-    플러그인으로 그리기 동작을 직접 확장할 수 있습니다.
-    <ul>
-      <li><code>new Chart(ctx, { type, data, options })</code> 한 번의 호출로 차트 생성</li>
-      <li><code>options.plugins.tooltip.callbacks</code>로 툴팁에 표시되는 문구를 직접 커스터마이즈</li>
-      <li>차트 그리기 전/후에 개입하는 <strong>플러그인</strong>을 등록해 캔버스에 커스텀 요소를 추가 가능</li>
-      <li>한 차트 안에 <code>type</code>이 다른 데이터셋(막대+선)을 섞은 <strong>혼합 차트</strong> 지원</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 실적 수치는 Chart.js 학습용으로 만든 <strong>가상의 샘플 데이터</strong>이며,
-      실제 수협중앙회의 통계가 아닙니다. 이 페이지는 Chart.js(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-  <section class="block">
-    <h2>1. 막대 차트</h2>
-    <div class="desc">위판장별 위판량(가상)을 비교합니다. 막대 위에 값을 직접 표시했습니다.</div>
-    <div class="chart-wrap"><canvas id="chart1"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new Chart(document.getElementById('chart1'), {
-  type: 'bar',
-  data: {
-    labels: ['노량진', '통영', '여수', '목포', '포항', '부산'],
-    datasets: [{
-      data: [130, 150, 190, 210, 260, 480],
-      backgroundColor: '#2a78d6',
-      borderRadius: 4,
-      maxBarThickness: 28,
-    }],
-  },
-  options: {
-    indexAxis: 'y',
-    scales: { x: { beginAtZero: true } },
-    plugins: { legend: { display: false } },
-  },
-});</pre>
-    </details>
-  </section>
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-  <section class="block">
-    <h2>2. 다중 계열 선 차트 + 커스텀 툴팁</h2>
-    <div class="desc">어종별 월별 위판량(가상) 추이입니다. 마우스를 올리면 <code>tooltip.callbacks</code>로 만든 "kg" 단위가 붙은 문구가 뜹니다.</div>
-    <div class="chart-wrap"><canvas id="chart2"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new Chart(document.getElementById('chart2'), {
-  type: 'line',
-  data: {
-    labels: ['2월', '3월', '4월', '5월', '6월', '7월'],
-    datasets: [
-      { label: '고등어', data: [120, 150, 170, 210, 260, 300], borderColor: '#2a78d6' },
-      { label: '갈치',   data: [90, 100, 95, 110, 130, 140],  borderColor: '#1baf7a' },
-      { label: '오징어', data: [60, 70, 85, 100, 90, 95],    borderColor: '#eda100' },
-    ],
-  },
-  options: {
-    interaction: { mode: 'index', intersect: false }, // 점 위가 아니어도 그래프 어디서든 툴팁이 뜨게
-    plugins: {
-      tooltip: {
-        callbacks: {
-          // 기본 "라벨: 값" 대신 단위를 붙인 문구로 교체
-          label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}kg`,
-        },
-      },
-    },
-  },
-});</pre>
-    </details>
-  </section>
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-  <section class="block">
-    <h2>3. 도넛 차트 + 커스텀 플러그인</h2>
-    <div class="desc">어종별 위판 비중(가상)입니다. 도넛 가운데 총합을 표시하는 부분은 Chart.js 기본 기능이 아니라, 직접 만든 플러그인이 캔버스에 그려 넣은 것입니다.</div>
-    <div class="chart-wrap"><canvas id="chart3"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const centerTextPlugin = {
-  id: 'centerText',
-  afterDraw(chart) {
-    const { ctx, chartArea: { left, right, top, bottom } } = chart;
-    const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = '600 20px sans-serif';
-    ctx.fillStyle = '#0b0b0b';
-    ctx.fillText(`${total}kg`, (left + right) / 2, (top + bottom) / 2 - 8);
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#898781';
-    ctx.fillText('전체 위판량', (left + right) / 2, (top + bottom) / 2 + 12);
-    ctx.restore();
-  },
-};
-
-new Chart(document.getElementById('chart3'), {
-  type: 'doughnut',
-  data: {
-    labels: ['고등어', '갈치', '오징어', '새우', '기타'],
-    datasets: [{ data: [420, 260, 190, 140, 90], backgroundColor: [...] }],
-  },
-  options: { cutout: '70%' },
-  plugins: [centerTextPlugin], // 이 차트에서만 쓰는 플러그인
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 혼합 차트 (막대 + 선)</h2>
-    <div class="desc">월별 위판 실적(막대)과 목표치(선)를 같은 축(kg) 위에 겹쳐 그립니다. 한 차트에 서로 다른 <code>type</code>의 데이터셋을 섞을 수 있는 Chart.js의 혼합 차트 기능입니다.</div>
-    <div class="chart-wrap"><canvas id="chart4"></canvas></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new Chart(document.getElementById('chart4'), {
-  data: {
-    labels: ['2월', '3월', '4월', '5월', '6월', '7월'],
-    datasets: [
-      { type: 'bar',  label: '실적', data: [210, 240, 260, 250, 300, 320], backgroundColor: '#2a78d6' },
-      { type: 'line', label: '목표', data: [220, 220, 250, 270, 280, 300], borderColor: '#1baf7a' },
-    ],
-  },
-  options: {
-    scales: { y: { beginAtZero: true } }, // 두 데이터셋이 같은 y축을 공유 (축 2개 아님)
-  },
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
-    const axisColor = getComputedStyle(document.documentElement).getPropertyValue('--axis').trim();
-    const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--ink-muted').trim();
-    const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--ink-secondary').trim();
-
-    Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Malgun Gothic', sans-serif";
-    Chart.defaults.color = mutedColor;
-
-    // ---------- 1. 막대 차트 ----------
-    new Chart(document.getElementById('chart1'), {
-      type: 'bar',
-      data: {
-        labels: ['노량진수산시장', '통영수산시장', '여수수산시장', '목포수산시장', '포항죽도시장', '부산공동어시장'],
-        datasets: [{
-          data: [130, 150, 190, 210, 260, 480],
-          backgroundColor: '#2a78d6',
-          borderRadius: 4,
-          maxBarThickness: 28,
-        }],
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: mutedColor } },
-          y: { grid: { display: false }, ticks: { color: secondaryColor } },
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x}kg` } },
-        },
-      },
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
+  }
 
-    // ---------- 2. 다중 계열 선 차트 ----------
-    new Chart(document.getElementById('chart2'), {
-      type: 'line',
-      data: {
-        labels: ['2월', '3월', '4월', '5월', '6월', '7월'],
-        datasets: [
-          { label: '고등어', data: [120, 150, 170, 210, 260, 300], borderColor: '#2a78d6', backgroundColor: '#2a78d6', borderWidth: 2, pointRadius: 4, tension: 0.25 },
-          { label: '갈치', data: [90, 100, 95, 110, 130, 140], borderColor: '#1baf7a', backgroundColor: '#1baf7a', borderWidth: 2, pointRadius: 4, tension: 0.25 },
-          { label: '오징어', data: [60, 70, 85, 100, 90, 95], borderColor: '#eda100', backgroundColor: '#eda100', borderWidth: 2, pointRadius: 4, tension: 0.25 },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: mutedColor } },
-          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: mutedColor } },
-        },
-        plugins: {
-          legend: { position: 'top', labels: { color: secondaryColor, usePointStyle: true } },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}kg` } },
-        },
-      },
-    });
-
-    // ---------- 3. 도넛 차트 + 커스텀 플러그인 ----------
-    const centerTextPlugin = {
-      id: 'centerText',
-      afterDraw(chart) {
-        const { ctx, chartArea: { left, right, top, bottom } } = chart;
-        const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = "600 20px -apple-system, sans-serif";
-        ctx.fillStyle = '#0b0b0b';
-        ctx.fillText(`${total}kg`, (left + right) / 2, (top + bottom) / 2 - 8);
-        ctx.font = "12px -apple-system, sans-serif";
-        ctx.fillStyle = '#898781';
-        ctx.fillText('전체 위판량', (left + right) / 2, (top + bottom) / 2 + 12);
-        ctx.restore();
-      },
-    };
-
-    new Chart(document.getElementById('chart3'), {
-      type: 'doughnut',
-      data: {
-        labels: ['고등어', '갈치', '오징어', '새우', '기타'],
-        datasets: [{
-          data: [420, 260, 190, 140, 90],
-          backgroundColor: ['#2a78d6', '#1baf7a', '#eda100', '#008300', '#4a3aa7'],
-          borderColor: '#fcfcfb',
-          borderWidth: 2,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '70%',
-        plugins: {
-          legend: { position: 'bottom', labels: { color: secondaryColor, usePointStyle: true } },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}kg` } },
-        },
-      },
-      plugins: [centerTextPlugin],
-    });
-
-    // ---------- 4. 혼합 차트 ----------
-    new Chart(document.getElementById('chart4'), {
-      data: {
-        labels: ['2월', '3월', '4월', '5월', '6월', '7월'],
-        datasets: [
-          { type: 'bar', label: '실적', data: [210, 240, 260, 250, 300, 320], backgroundColor: '#2a78d6', maxBarThickness: 28, order: 2 },
-          { type: 'line', label: '목표', data: [220, 220, 250, 270, 280, 300], borderColor: '#1baf7a', backgroundColor: '#1baf7a', borderWidth: 2, pointRadius: 4, order: 1 },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: mutedColor } },
-          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: mutedColor } },
-        },
-        plugins: {
-          legend: { position: 'top', labels: { color: secondaryColor, usePointStyle: true } },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}kg` } },
-        },
-      },
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

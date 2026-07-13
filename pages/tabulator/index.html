@@ -2,267 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>Tabulator</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tabulator-tables@6.5.2/dist/css/tabulator.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/tabulator-tables@6.5.2/dist/js/tabulator.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .status-msg {
-    margin-top: 10px;
     font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
+    cursor: pointer;
   }
-  .tabulator {
-    font-size: 13px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #eee;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>Tabulator 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>Tabulator</strong>는 정렬·검색·편집·페이지네이션이 되는 <strong>인터랙티브 데이터 테이블</strong>을
-    JSON 배열만 주면 바로 만들어주는 라이브러리입니다. 엑셀처럼 대량의 표 데이터를 다루는 화면에 적합합니다.
-    <ul>
-      <li>컬럼 헤더를 클릭하면 자동으로 정렬됨</li>
-      <li>컬럼별로 헤더 필터(검색창)를 붙여 실시간으로 좁혀볼 수 있음</li>
-      <li>셀을 더블클릭하면 그 자리에서 값을 수정(inline editing) 가능</li>
-      <li>대량 데이터를 페이지 단위로 나누거나(pagination), 특정 컬럼 값으로 그룹핑 가능</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 거래 내역은 Tabulator 학습용으로 만든 <strong>가상의 샘플 데이터</strong>이며,
-      실제 수협중앙회의 거래 기록이 아닙니다. 이 페이지는 Tabulator(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 테이블 · 정렬</h2>
-    <div class="desc">컬럼 헤더를 클릭해보세요. 오름차순/내림차순으로 정렬됩니다.</div>
-    <div id="table1"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new Tabulator('#table1', {
-  data: rows,
-  layout: 'fitColumns',
-  columns: [
-    { title: '날짜', field: 'date', sorter: 'date' },
-    { title: '위판장', field: 'market' },
-    { title: '어종', field: 'fish' },
-    { title: '수량(kg)', field: 'qty', sorter: 'number', hozAlign: 'right' },
-    { title: '금액', field: 'amount', sorter: 'number', hozAlign: 'right',
-      formatter: 'money', formatterParams: { symbol: '', precision: 0 } },
-  ],
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 헤더 필터 (컬럼별 검색)</h2>
-    <div class="desc">각 컬럼 제목 아래 입력칸에 검색어를 입력하면 실시간으로 표가 좁혀집니다.</div>
-    <div id="table2"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>{ title: '위판장', field: 'market', headerFilter: 'input' },
-{ title: '어종', field: 'fish', headerFilter: 'list',
-  headerFilterParams: { valuesLookup: true, clearable: true } },</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 셀 편집</h2>
-    <div class="desc">
-      "상태" 컬럼을 클릭하면 드롭다운으로 값을 바꿀 수 있고, "비고" 컬럼은 더블클릭해서 텍스트를 직접 입력할 수 있습니다.
-    </div>
-    <div id="table3"></div>
-    <div class="status-msg" id="editStatus">셀을 편집해보세요.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>{ title: '상태', field: 'status', editor: 'list',
-  editorParams: { values: ['대기', '정산완료'] } },
-{ title: '비고', field: 'memo', editor: 'input' },
-
-table.on('cellEdited', (cell) => {
-  console.log(cell.getField(), '->', cell.getValue());
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 그룹핑 · 페이지네이션</h2>
-    <div class="desc">위판장별로 그룹지어 보여주고, 한 페이지에 8건씩 나눠서 표시합니다.</div>
-    <div id="table4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new Tabulator('#table4', {
-  data: rows,
-  groupBy: 'market',
-  pagination: true,
-  paginationSize: 8,
-  columns: [ /* ... */ ],
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    // 가상의 위판 거래 내역 샘플 데이터 (실제 수협중앙회 거래 기록 아님)
-    const MARKETS = ['부산공동어시장', '목포수산시장', '통영수산시장', '여수수산시장', '포항죽도시장', '노량진수산시장'];
-    const FISH = ['고등어', '갈치', '오징어', '새우', '꽃게', '전복'];
-    const UNIT_PRICE = { 고등어: 4500, 갈치: 8200, 오징어: 12000, 새우: 18000, 꽃게: 15500, 전복: 42000 };
-
-    function buildRows() {
-      const rows = [];
-      let id = 1;
-      for (let d = 1; d <= 24; d++) {
-        const market = MARKETS[d % MARKETS.length];
-        const fish = FISH[(d * 3) % FISH.length];
-        const qty = 20 + ((d * 17) % 300);
-        const price = UNIT_PRICE[fish];
-        const day = String(1 + (d % 28)).padStart(2, '0');
-        rows.push({
-          id: id++,
-          date: `2026-07-${day}`,
-          market,
-          fish,
-          qty,
-          price,
-          amount: qty * price,
-          status: d % 3 === 0 ? '대기' : '정산완료',
-          memo: '',
-        });
-      }
-      return rows;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
+  }
 
-    const ROWS = buildRows();
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    const moneyFmt = { formatter: 'money', formatterParams: { symbol: '', precision: 0, thousand: ',' }, hozAlign: 'right' };
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-    // ---------- 1. 기본 테이블 · 정렬 ----------
-    new Tabulator('#table1', {
-      data: ROWS,
-      layout: 'fitColumns',
-      height: '320px',
-      columns: [
-        { title: '날짜', field: 'date', sorter: 'date', width: 110 },
-        { title: '위판장', field: 'market' },
-        { title: '어종', field: 'fish', width: 90 },
-        { title: '수량(kg)', field: 'qty', sorter: 'number', hozAlign: 'right', width: 100 },
-        { title: '금액', field: 'amount', sorter: 'number', ...moneyFmt },
-      ],
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
+
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
+  }
 
-    // ---------- 2. 헤더 필터 ----------
-    new Tabulator('#table2', {
-      data: ROWS,
-      layout: 'fitColumns',
-      height: '320px',
-      columns: [
-        { title: '날짜', field: 'date', sorter: 'date', width: 110, headerFilter: 'input' },
-        { title: '위판장', field: 'market', headerFilter: 'list', headerFilterParams: { valuesLookup: true, clearable: true } },
-        { title: '어종', field: 'fish', width: 90, headerFilter: 'list', headerFilterParams: { valuesLookup: true, clearable: true } },
-        { title: '수량(kg)', field: 'qty', sorter: 'number', hozAlign: 'right', width: 100 },
-        { title: '금액', field: 'amount', sorter: 'number', ...moneyFmt },
-      ],
-    });
-
-    // ---------- 3. 셀 편집 ----------
-    const editStatus = document.getElementById('editStatus');
-    const table3 = new Tabulator('#table3', {
-      data: ROWS.map((r) => ({ ...r })),
-      layout: 'fitColumns',
-      height: '320px',
-      columns: [
-        { title: '날짜', field: 'date', width: 110 },
-        { title: '위판장', field: 'market' },
-        { title: '어종', field: 'fish', width: 90 },
-        {
-          title: '상태', field: 'status', width: 100,
-          editor: 'list', editorParams: { values: ['대기', '정산완료'] },
-        },
-        { title: '비고', field: 'memo', editor: 'input' },
-      ],
-    });
-    table3.on('cellEdited', (cell) => {
-      editStatus.textContent = `[${cell.getRow().getData().date} · ${cell.getRow().getData().fish}] ${cell.getField()} → "${cell.getValue()}" 로 변경됨`;
-    });
-
-    // ---------- 4. 그룹핑 · 페이지네이션 ----------
-    new Tabulator('#table4', {
-      data: ROWS,
-      layout: 'fitColumns',
-      height: '420px',
-      groupBy: 'market',
-      pagination: true,
-      paginationSize: 8,
-      columns: [
-        { title: '날짜', field: 'date', sorter: 'date', width: 110 },
-        { title: '어종', field: 'fish', width: 90 },
-        { title: '수량(kg)', field: 'qty', sorter: 'number', hozAlign: 'right', width: 100 },
-        { title: '금액', field: 'amount', sorter: 'number', ...moneyFmt },
-        { title: '상태', field: 'status', width: 90 },
-      ],
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

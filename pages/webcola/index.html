@@ -2,395 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>WebCola</title>
+<title>데모 보기</title>
 <style>
-  :root {
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .layout-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .svg-wrap {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    background: #fcfcfb;
-    flex-shrink: 0;
-  }
-  .svg-wrap svg { display: block; }
-  .node rect { fill: var(--series-1); stroke: #1c5cab; rx: 6; }
-  .node text { font-size: 11px; fill: #fff; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
-  .edge-line { fill: none; stroke: #898781; stroke-width: 1.6; }
-  .guide-line { stroke: #e34948; stroke-width: 1.2; stroke-dasharray: 4 3; }
-  .group-box { fill: #eef2fb; stroke: #b9c9ea; stroke-dasharray: 4 3; rx: 8; }
-  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; font-size: 13px; }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  button.active { background: #205fb0; }
-  .legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12.5px; color: #555; align-items: center; }
-  .legend-line { display: inline-block; width: 22px; height: 0; border-top: 2px dashed; vertical-align: middle; margin-right: 4px; }
-  .info-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    margin-top: 10px;
-  }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>WebCola 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>WebCola</strong>는 force(물리 시뮬레이션) 레이아웃에 <strong>제약(constraint)</strong>을
-    함께 걸 수 있는 그래프 레이아웃 라이브러리입니다. "이 두 노드는 같은 줄에 정렬해라",
-    "이 노드는 저 노드보다 최소 100px 오른쪽에 있어라" 같은 규칙을 강제하면서도 나머지는 자연스럽게
-    힘으로 퍼지게 합니다. 좌표만 계산하고 화면에 그려주지는 않습니다.
-    <ul>
-      <li>겹침 방지(<code class="inline">avoidOverlaps</code>)가 있는 기본 force 레이아웃</li>
-      <li>정렬(alignment)·분리(separation) 제약으로 특정 노드들의 위치 관계를 강제</li>
-      <li>그룹(groups)으로 관련 노드들을 자동으로 박스에 묶기</li>
-      <li>방향성 있는 flow 레이아웃 — 힘으로 퍼지면서도 위→아래 순서는 지킴</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 유통 네트워크는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      유통 구조와 무관합니다. WebCola npm 패키지는 브라우저용 번들 없이 여러 파일로 나뉜 CommonJS로만
-      배포되어 있어, 필요한 코드를 esbuild로 하나로 묶어 빌드한 번들 파일(webcola-bundle.esm.js)을
-      페이지와 함께 담아 사용합니다(CodeMirror 페이지와 같은 방식). WebCola는 좌표만 계산하므로 결과는
-      이 페이지에서 직접 그린 SVG로 표시합니다. 다른 외부 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 force 레이아웃 (겹침 방지)</h2>
-    <div class="desc">가상 위판장 유통 네트워크입니다. 노드끼리 서로 밀어내며 자연스럽게 퍼지고, 겹치지 않습니다.</div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg1" width="480" height="320"></svg></div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const layout = new cola.Layout()
-  .size([480, 320])
-  .nodes(nodes)
-  .links(links)
-  .linkDistance(80)
-  .avoidOverlaps(true)
-  .start(10, 15, 20, 0, false); // keepRunning=false → 동기적으로 계산 완료</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 정렬(alignment) + 분리(separation) 제약</h2>
-    <div class="desc">
-      점선은 제약을 시각화한 안내선입니다. 중도매인 A·B는 같은 가로줄(y좌표)에 정렬되고,
-      1번 위판장과 수출업체는 항상 최소 180px 이상 떨어지도록 강제됩니다.
-    </div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg2" width="480" height="280"></svg></div>
-    </div>
-    <div class="legend">
-      <span><span class="legend-line" style="border-color:#e34948"></span>제약 안내선</span>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const constraints = [
-  // 중도매인 A, B를 같은 y좌표(가로줄)에 정렬
-  { type: "alignment", axis: "y", offsets: [{ node: 1, offset: 0 }, { node: 2, offset: 0 }] },
-  // 1번 위판장(0)과 수출업체(3)는 x축으로 최소 180px 간격
-  { type: "separation", axis: "x", left: 0, right: 3, gap: 180 }
-];
-new cola.Layout().constraints(constraints)./* ... */.start(10, 15, 20, 0, false);</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 그룹(groups) — 노드 묶기</h2>
-    <div class="desc">가상 조합원들을 소속 위판장별로 그룹 박스에 묶습니다. 그룹의 크기와 위치는 안에 든 노드에 맞춰 자동으로 계산됩니다.</div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg3" width="480" height="300"></svg></div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const groups = [
-  { leaves: [0, 1], padding: 12 }, // 1번 위판장 소속 조합원들
-  { leaves: [2, 3], padding: 12 }  // 2번 위판장 소속 조합원들
-];
-new cola.Layout().groups(groups)./* ... */.start(10, 15, 20, 0, false);
-// 계산 후 groups[i].bounds 에 그룹 박스의 x, X, y, Y(좌상단/우하단)가 채워짐</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 방향성 있는 flow 레이아웃</h2>
-    <div class="desc">힘으로 자연스럽게 퍼지면서도, 화살표 방향(위→아래)의 순서만은 항상 지켜집니다. Dagre·ELK.js의 딱딱한 단(rank) 배치와 달리 좌우 위치는 유동적입니다.</div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg4" width="480" height="320"></svg></div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new cola.Layout()
-  .flowLayout("y", 70) // y축 방향으로 최소 70px씩 순서를 지키며 흐름
-  .avoidOverlaps(true)
-  ./* ... */
-  .start(10, 15, 20, 0, false);</pre>
-    </details>
-  </section>
-
-<script type="module">
-  import cola from "./webcola-bundle.esm.js";
-
-  function clearSvg(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
-
-  function drawNode(svg, n) {
-    const NS = "http://www.w3.org/2000/svg";
-    const g = document.createElementNS(NS, "g");
-    g.setAttribute("class", "node");
-    const rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("x", n.x - n.width / 2); rect.setAttribute("y", n.y - n.height / 2);
-    rect.setAttribute("width", n.width); rect.setAttribute("height", n.height);
-    g.appendChild(rect);
-    const text = document.createElementNS(NS, "text");
-    text.setAttribute("x", n.x); text.setAttribute("y", n.y);
-    text.textContent = n.label;
-    g.appendChild(text);
-    svg.appendChild(g);
-  }
-
-  function drawEdge(svg, a, b) {
-    const NS = "http://www.w3.org/2000/svg";
-    const line = document.createElementNS(NS, "line");
-    line.setAttribute("class", "edge-line");
-    line.setAttribute("x1", a.x); line.setAttribute("y1", a.y);
-    line.setAttribute("x2", b.x); line.setAttribute("y2", b.y);
-    svg.appendChild(line);
-  }
-
-  function drawGuideLine(svg, x1, y1, x2, y2) {
-    const NS = "http://www.w3.org/2000/svg";
-    const line = document.createElementNS(NS, "line");
-    line.setAttribute("class", "guide-line");
-    line.setAttribute("x1", x1); line.setAttribute("y1", y1);
-    line.setAttribute("x2", x2); line.setAttribute("y2", y2);
-    svg.appendChild(line);
-  }
-
-  function drawGroupBox(svg, bounds, label) {
-    const NS = "http://www.w3.org/2000/svg";
-    const rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("class", "group-box");
-    rect.setAttribute("x", bounds.x); rect.setAttribute("y", bounds.y);
-    rect.setAttribute("width", bounds.X - bounds.x); rect.setAttribute("height", bounds.Y - bounds.y);
-    svg.insertBefore(rect, svg.firstChild);
-    const text = document.createElementNS(NS, "text");
-    text.setAttribute("x", bounds.x + 8); text.setAttribute("y", bounds.y + 16);
-    text.setAttribute("font-size", "11"); text.setAttribute("fill", "#52514e");
-    text.textContent = label;
-    svg.appendChild(text);
-  }
-
-  // ---- 1. 기본 force 레이아웃 ----
-  function runSection1() {
-    const nodes = [
-      { label: "1번 위판장", width: 90, height: 34 },
-      { label: "2번 위판장", width: 90, height: 34 },
-      { label: "중도매인 A", width: 90, height: 34 },
-      { label: "중도매인 B", width: 90, height: 34 },
-      { label: "소매상 1", width: 80, height: 30 },
-      { label: "소매상 2", width: 80, height: 30 },
-      { label: "수출업체", width: 80, height: 30 }
-    ];
-    const links = [
-      { source: 0, target: 2 }, { source: 0, target: 3 }, { source: 1, target: 3 },
-      { source: 2, target: 4 }, { source: 3, target: 4 }, { source: 3, target: 5 }, { source: 3, target: 6 }
-    ];
-    new cola.Layout()
-      .size([480, 320])
-      .nodes(nodes)
-      .links(links)
-      .linkDistance(85)
-      .avoidOverlaps(true)
-      .start(10, 15, 20, 0, false);
-
-    const svg = document.getElementById("svg1");
-    clearSvg(svg);
-    links.forEach((l) => drawEdge(svg, l.source, l.target)); // start() 이후 source/target이 인덱스가 아닌 노드 객체로 바뀜
-    nodes.forEach((n) => drawNode(svg, n));
-  }
-  runSection1();
-
-  // ---- 2. 정렬 + 분리 제약 ----
-  function runSection2() {
-    const nodes = [
-      { label: "1번 위판장", width: 90, height: 34 },
-      { label: "중도매인 A", width: 90, height: 34 },
-      { label: "중도매인 B", width: 90, height: 34 },
-      { label: "수출업체", width: 80, height: 30 }
-    ];
-    const links = [
-      { source: 0, target: 1 }, { source: 0, target: 2 }, { source: 1, target: 3 }, { source: 2, target: 3 }
-    ];
-    const constraints = [
-      { type: "alignment", axis: "y", offsets: [{ node: 1, offset: 0 }, { node: 2, offset: 0 }] },
-      { type: "separation", axis: "x", left: 0, right: 3, gap: 180 }
-    ];
-    new cola.Layout()
-      .size([480, 280])
-      .nodes(nodes)
-      .links(links)
-      .constraints(constraints)
-      .linkDistance(90)
-      .avoidOverlaps(true)
-      .start(10, 15, 20, 0, false);
-
-    const svg = document.getElementById("svg2");
-    clearSvg(svg);
-    // guide lines: horizontal alignment line through nodes 1&2, and separation gap marker
-    drawGuideLine(svg, 20, nodes[1].y, 460, nodes[1].y);
-    drawGuideLine(svg, nodes[0].x, 15, nodes[0].x, 265);
-    drawGuideLine(svg, nodes[3].x, 15, nodes[3].x, 265);
-    links.forEach((l) => drawEdge(svg, l.source, l.target)); // start() 이후 source/target이 인덱스가 아닌 노드 객체로 바뀜
-    nodes.forEach((n) => drawNode(svg, n));
-  }
-  runSection2();
-
-  // ---- 3. 그룹 ----
-  function runSection3() {
-    const nodes = [
-      { label: "조합원 A", width: 74, height: 28 },
-      { label: "조합원 B", width: 74, height: 28 },
-      { label: "조합원 C", width: 74, height: 28 },
-      { label: "조합원 D", width: 74, height: 28 },
-      { label: "1번 위판장", width: 90, height: 32 },
-      { label: "2번 위판장", width: 90, height: 32 }
-    ];
-    const links = [
-      { source: 0, target: 4 }, { source: 1, target: 4 },
-      { source: 2, target: 5 }, { source: 3, target: 5 },
-      { source: 4, target: 5 }
-    ];
-    const groups = [
-      { leaves: [0, 1], padding: 12 },
-      { leaves: [2, 3], padding: 12 }
-    ];
-    new cola.Layout()
-      .size([480, 300])
-      .nodes(nodes)
-      .links(links)
-      .groups(groups)
-      .linkDistance(70)
-      .avoidOverlaps(true)
-      .start(10, 15, 20, 0, false);
-
-    const svg = document.getElementById("svg3");
-    clearSvg(svg);
-    links.forEach((l) => drawEdge(svg, l.source, l.target)); // start() 이후 source/target이 인덱스가 아닌 노드 객체로 바뀜
-    nodes.forEach((n) => drawNode(svg, n));
-
-    // 그룹 배열의 순서와 groups[i].bounds가 항상 1:1로 대응한다고 가정하지 않고,
-    // 각 그룹의 실제 소속 노드(leaves)가 어느 위판장과 연결되는지 찾아 라벨을 붙인다.
-    function labelForGroup(group) {
-      const members = new Set(group.leaves);
-      for (const l of links) {
-        if (members.has(l.source) && !members.has(l.target)) return l.target.label + " 소속";
-        if (members.has(l.target) && !members.has(l.source)) return l.source.label + " 소속";
-      }
-      return "그룹";
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
-    groups.forEach((g) => drawGroupBox(svg, g.bounds, labelForGroup(g)));
   }
-  runSection3();
 
-  // ---- 4. flow 레이아웃 ----
-  function runSection4() {
-    const nodes = [
-      { label: "1번 위판장", width: 90, height: 32 },
-      { label: "중도매인 A", width: 90, height: 32 },
-      { label: "중도매인 B", width: 90, height: 32 },
-      { label: "소매상", width: 80, height: 30 },
-      { label: "수출업체", width: 80, height: 30 }
-    ];
-    const links = [
-      { source: 0, target: 1 }, { source: 0, target: 2 },
-      { source: 1, target: 3 }, { source: 2, target: 3 }, { source: 2, target: 4 }
-    ];
-    new cola.Layout()
-      .size([480, 320])
-      .nodes(nodes)
-      .links(links)
-      .flowLayout("y", 75)
-      .linkDistance(75)
-      .avoidOverlaps(true)
-      .start(10, 15, 20, 0, false);
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    const svg = document.getElementById("svg4");
-    clearSvg(svg);
-    links.forEach((l) => drawEdge(svg, l.source, l.target)); // start() 이후 source/target이 인덱스가 아닌 노드 객체로 바뀜
-    nodes.forEach((n) => drawNode(svg, n));
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
   }
-  runSection4();
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
+
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
+    });
+  }
+
+  frame.src = './' + available[0].key + '/index.html';
+})();
 </script>
-
 </body>
 </html>

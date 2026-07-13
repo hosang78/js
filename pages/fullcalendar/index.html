@@ -2,244 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>FullCalendar</title>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.21/locales/ko.global.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .status-msg {
-    margin-bottom: 12px;
     font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
+    cursor: pointer;
   }
-  .cal { font-size: 13px; }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>FullCalendar 핵심 기능 둘러보기</h1>
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
+  }
 
-  <div class="intro">
-    <strong>FullCalendar</strong>는 월간·주간·일간·목록 형태의 달력 UI를 통째로 제공하는 라이브러리입니다.
-    일정 표시뿐 아니라 날짜 클릭, 이벤트 드래그 같은 상호작용도 기본 내장돼 있습니다.
-    <ul>
-      <li><code>new FullCalendar.Calendar(el, options)</code> 한 번으로 완성된 달력 UI 생성</li>
-      <li><code>headerToolbar</code> 버튼으로 월간(dayGridMonth)/주간(timeGridWeek)/목록(listWeek) 뷰 전환</li>
-      <li><code>locale: 'ko'</code>로 요일·버튼 문구를 한국어로 표시</li>
-      <li><code>editable: true</code>면 이벤트를 마우스로 끌어 다른 날짜로 옮길 수 있음</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 일정 데이터는 FullCalendar 학습용으로 만든 <strong>가상의 샘플</strong>이며,
-      실제 수협중앙회의 일정이 아닙니다. 이 페이지는 FullCalendar(CDN, Standard Bundle) 하나만 사용하고
-      (한국어 로케일 파일도 같은 라이브러리의 일부입니다) 다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-  <section class="block">
-    <h2>1. 기본 캘린더 + 한국어 로케일</h2>
-    <div class="desc">이번 달 위판 일정을 월간 달력으로 보여줍니다. <code>locale: 'ko'</code>로 요일과 버튼 문구가 한국어로 표시됩니다.</div>
-    <div class="cal" id="calendar1"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const calendar = new FullCalendar.Calendar(document.getElementById('calendar1'), {
-  initialView: 'dayGridMonth',
-  locale: 'ko',
-  events: [
-    { title: '고등어 위판', start: '2026-07-13' },
-    { title: '정기 조합원 총회', start: '2026-07-17' },
-  ],
-});
-calendar.render();</pre>
-    </details>
-  </section>
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-  <section class="block">
-    <h2>2. 뷰 전환 (월간 · 주간 · 목록)</h2>
-    <div class="desc">오른쪽 위 버튼으로 월간/주간/목록 보기를 전환할 수 있습니다.</div>
-    <div class="cal" id="calendar2"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new FullCalendar.Calendar(el, {
-  initialView: 'dayGridMonth',
-  headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,timeGridWeek,listWeek', // 월간/주간/목록 버튼
-  },
-  events: [...],
-}).render();</pre>
-    </details>
-  </section>
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-  <section class="block">
-    <h2>3. 날짜 클릭으로 일정 추가 · 이벤트 클릭으로 삭제</h2>
-    <div class="desc">빈 날짜를 클릭하면 그 날짜에 새 위판 일정이 추가됩니다. 이미 있는 일정을 클릭하면 바로 삭제됩니다.</div>
-    <div class="status-msg" id="status3">날짜나 일정을 클릭해보세요.</div>
-    <div class="cal" id="calendar3"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>let count = 1;
-new FullCalendar.Calendar(el, {
-  dateClick(info) {
-    calendar.addEvent({ title: `새 위판 일정 ${count++}`, start: info.dateStr });
-  },
-  eventClick(info) {
-    info.event.remove(); // 클릭한 이벤트를 바로 삭제
-  },
-}).render();</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 드래그로 일정 이동 (editable)</h2>
-    <div class="desc">일정을 마우스로 끌어서 다른 날짜에 놓아보세요. <code>eventDrop</code>이 이동 전/후 날짜를 알려줍니다.</div>
-    <div class="status-msg" id="status4">일정을 끌어서 옮겨보세요.</div>
-    <div class="cal" id="calendar4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>new FullCalendar.Calendar(el, {
-  editable: true, // 드래그로 이동 가능하게
-  eventDrop(info) {
-    const oldDate = info.oldEvent.startStr;
-    const newDate = info.event.startStr;
-    status.textContent = `"${info.event.title}" 일정을 ${oldDate} → ${newDate} 로 옮겼습니다.`;
-  },
-}).render();</pre>
-    </details>
-  </section>
-
-  <script>
-    const today = '2026-07-12';
-
-    // ---------- 1. 기본 캘린더 + 한국어 로케일 ----------
-    new FullCalendar.Calendar(document.getElementById('calendar1'), {
-      initialView: 'dayGridMonth',
-      initialDate: today,
-      locale: 'ko',
-      height: 'auto',
-      events: [
-        { title: '고등어 위판', start: '2026-07-13' },
-        { title: '갈치 위판', start: '2026-07-14' },
-        { title: '정기 조합원 총회', start: '2026-07-17' },
-        { title: '오징어 위판', start: '2026-07-20' },
-        { title: '위판장 정기 점검', start: '2026-07-24', end: '2026-07-26' },
-      ],
-    }).render();
-
-    // ---------- 2. 뷰 전환 ----------
-    new FullCalendar.Calendar(document.getElementById('calendar2'), {
-      initialView: 'dayGridMonth',
-      initialDate: today,
-      locale: 'ko',
-      height: 'auto',
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listWeek',
-      },
-      events: [
-        { title: '고등어 위판', start: '2026-07-13T06:00:00', end: '2026-07-13T09:00:00' },
-        { title: '갈치 위판', start: '2026-07-14T06:00:00', end: '2026-07-14T09:00:00' },
-        { title: '정기 조합원 총회', start: '2026-07-17T14:00:00', end: '2026-07-17T16:00:00' },
-        { title: '오징어 위판', start: '2026-07-15T06:00:00', end: '2026-07-15T09:00:00' },
-      ],
-    }).render();
-
-    // ---------- 3. 날짜 클릭 추가 · 이벤트 클릭 삭제 ----------
-    const status3 = document.getElementById('status3');
-    let addCount = 1;
-    const calendar3 = new FullCalendar.Calendar(document.getElementById('calendar3'), {
-      initialView: 'dayGridMonth',
-      initialDate: today,
-      locale: 'ko',
-      height: 'auto',
-      events: [{ title: '고등어 위판', start: '2026-07-13' }],
-      dateClick(info) {
-        calendar3.addEvent({ title: `새 위판 일정 ${addCount}`, start: info.dateStr });
-        status3.textContent = `${info.dateStr}에 "새 위판 일정 ${addCount}"을 추가했습니다.`;
-        addCount++;
-      },
-      eventClick(info) {
-        status3.textContent = `"${info.event.title}" 일정을 삭제했습니다.`;
-        info.event.remove();
-      },
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
-    calendar3.render();
+  }
 
-    // ---------- 4. 드래그로 일정 이동 ----------
-    const status4 = document.getElementById('status4');
-    new FullCalendar.Calendar(document.getElementById('calendar4'), {
-      initialView: 'dayGridMonth',
-      initialDate: today,
-      locale: 'ko',
-      height: 'auto',
-      editable: true,
-      events: [
-        { id: 'e1', title: '고등어 위판', start: '2026-07-13' },
-        { id: 'e2', title: '갈치 위판', start: '2026-07-15' },
-      ],
-      eventDrop(info) {
-        const oldDate = info.oldEvent.startStr;
-        const newDate = info.event.startStr;
-        status4.textContent = `"${info.event.title}" 일정을 ${oldDate} → ${newDate} 로 옮겼습니다.`;
-      },
-    }).render();
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

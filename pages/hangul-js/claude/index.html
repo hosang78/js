@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Hangul.js</title>
+<script src="https://cdn.jsdelivr.net/npm/hangul-js@0.2.6/hangul.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  .mono-box {
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    word-break: break-all;
+    min-height: 20px;
+  }
+  .result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .result-item {
+    padding: 8px 12px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fafbfc;
+    font-size: 13.5px;
+  }
+  .no-result {
+    color: #999;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+  .sentence-box {
+    font-size: 15px;
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  mark {
+    background: #fff2a8;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .josa-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .josa-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fafbfc;
+    font-size: 13.5px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Hangul.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Hangul.js</strong>는 한글 문장의 자음/모음을 분리·조합하고, 이를 이용해 검색이나
+    문법 처리(조사 선택 등)를 할 수 있게 해주는 라이브러리입니다.
+    <ul>
+      <li>한글을 자모(초성/중성/종성) 단위로 쪼개거나(<code>disassemble</code>) 다시 합칠 수 있음(<code>assemble</code>)</li>
+      <li>자모 단위로 비교하기 때문에, 글자를 <strong>다 입력하지 않아도</strong>(IME 조합 중이어도) 검색이 가능함</li>
+      <li>문장 안에서 검색어가 있는 위치를 찾아 하이라이트할 수 있음(<code>rangeSearch</code>)</li>
+      <li>받침 유무를 판별해 <strong>은/는, 이/가</strong> 같은 조사를 자동으로 고를 수 있음</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 예시의 위판장/어종 목록은 Hangul.js 학습용으로 만든 <strong>샘플 데이터</strong>이며,
+      수협중앙회의 실제 현황과는 무관합니다. 이 페이지는 Hangul.js(CDN) 하나만 사용하고
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 자모 분리 · 조합</h2>
+    <div class="desc">글자를 입력하면 초성/중성/종성으로 쪼갠 뒤, 다시 합쳐서 원래 글자가 나오는지 보여줍니다.</div>
+    <input type="text" id="input1" placeholder="예: 고등어, 위판장" value="고등어" />
+    <div class="mono-box" id="disassembled">-</div>
+    <div class="mono-box" id="assembled" style="margin-top: 6px;">-</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Hangul.disassemble('고등어');
+// -> ['ㄱ','ㅗ','ㄷ','ㅡ','ㅇ','ㅇ','ㅓ']
+
+Hangul.assemble(['ㄱ','ㅗ','ㄷ','ㅡ','ㅇ','ㅇ','ㅓ']);
+// -> '고등어'</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 미완성 입력도 되는 검색</h2>
+    <div class="desc">
+      자모 단위로 비교하기 때문에 <code>고ㄷ</code>처럼 글자를 끝까지 입력하지 않아도
+      <code>고등어</code>가 결과에 나옵니다. 일반 문자열 검색(<code>indexOf</code>)으로는 안 되는 것입니다.
+    </div>
+    <input type="text" id="input2" placeholder="예: 고ㄷ, 갈ㅊ, 새우" />
+    <div class="result-list" id="results2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const fish = ['고등어', '갈치', '오징어', '새우', '꽃게', '전복'];
+const searcher = new Hangul.Searcher('고ㄷ');
+
+fish.filter((name) => searcher.search(name) >= 0);
+// -> ['고등어']</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 문장 내 검색어 하이라이트</h2>
+    <div class="desc"><code>rangeSearch</code>로 문장 안에서 검색어의 위치를 모두 찾아 강조합니다.</div>
+    <div class="sentence-box" id="sentence">부산위판장과 목포위판장은 전국 위판장 중에서도 거래량이 많은 위판장으로 꼽힌다.</div>
+    <input type="text" id="input3" placeholder="예: 위판장, 거래량" value="위판장" />
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Hangul.rangeSearch(sentence, '위판장');
+// -> [[2,4], [9,11], [17,19], [33,35]] 같은 [시작,끝] 인덱스 배열</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 은/는 조사 자동 선택</h2>
+    <div class="desc">
+      단어가 받침으로 끝나는지(<code>endsWithConsonant</code>) 판별해서 "은/는"을 자동으로 붙입니다.
+      한국어 문장을 자동 생성할 때 자주 쓰는 패턴입니다.
+    </div>
+    <div class="josa-table" id="josaTable"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>function withEunNeun(word) {
+  return word + (Hangul.endsWithConsonant(word) ? '은' : '는');
+}
+
+withEunNeun('전복'); // '전복은' (받침 ㄱ 있음)
+withEunNeun('고등어'); // '고등어는' (받침 없음)</pre>
+    </details>
+  </section>
+
+  <script>
+    // ---------- 1. 자모 분리 · 조합 ----------
+    const input1 = document.getElementById('input1');
+    const disassembledEl = document.getElementById('disassembled');
+    const assembledEl = document.getElementById('assembled');
+
+    function updateDisassemble() {
+      const value = input1.value;
+      const jamo = Hangul.disassemble(value);
+      disassembledEl.textContent = '분리: [' + jamo.join(', ') + ']';
+      assembledEl.textContent = '재조합: ' + Hangul.assemble(jamo);
+    }
+    input1.addEventListener('input', updateDisassemble);
+    updateDisassemble();
+
+    // ---------- 2. 미완성 입력 검색 ----------
+    const fish = ['고등어', '갈치', '오징어', '멸치', '참치', '광어', '우럭', '전어', '삼치', '도미', '새우', '꽃게', '전복', '문어', '낙지'];
+    const input2 = document.getElementById('input2');
+    const results2 = document.getElementById('results2');
+
+    function renderList(container, list) {
+      container.innerHTML = '';
+      if (list.length === 0) {
+        container.innerHTML = '<div class="no-result">검색어를 입력해보세요.</div>';
+        return;
+      }
+      list.forEach((name) => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.textContent = name;
+        container.appendChild(div);
+      });
+    }
+
+    input2.addEventListener('input', () => {
+      const q = input2.value.trim();
+      if (!q) {
+        renderList(results2, []);
+        return;
+      }
+      const searcher = new Hangul.Searcher(q);
+      renderList(results2, fish.filter((name) => searcher.search(name) >= 0));
+    });
+    renderList(results2, []);
+
+    // ---------- 3. 문장 내 하이라이트 ----------
+    const sentenceText = document.getElementById('sentence').textContent;
+    const sentenceEl = document.getElementById('sentence');
+    const input3 = document.getElementById('input3');
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    }
+
+    function renderHighlightSentence() {
+      const q = input3.value.trim();
+      if (!q) {
+        sentenceEl.textContent = sentenceText;
+        return;
+      }
+      const ranges = Hangul.rangeSearch(sentenceText, q);
+      if (ranges.length === 0) {
+        sentenceEl.textContent = sentenceText;
+        return;
+      }
+      let out = '';
+      let cursor = 0;
+      ranges.forEach(([start, end]) => {
+        out += escapeHtml(sentenceText.slice(cursor, start));
+        out += '<mark>' + escapeHtml(sentenceText.slice(start, end + 1)) + '</mark>';
+        cursor = end + 1;
+      });
+      out += escapeHtml(sentenceText.slice(cursor));
+      sentenceEl.innerHTML = out;
+    }
+    input3.addEventListener('input', renderHighlightSentence);
+    renderHighlightSentence();
+
+    // ---------- 4. 은/는 조사 자동 선택 ----------
+    const josaFish = ['고등어', '갈치', '전복', '문어', '꽃게', '오징어'];
+    const josaTable = document.getElementById('josaTable');
+
+    function withEunNeun(word) {
+      return word + (Hangul.endsWithConsonant(word) ? '은' : '는');
+    }
+
+    josaFish.forEach((name) => {
+      const row = document.createElement('div');
+      row.className = 'josa-row';
+      row.innerHTML = `<span>${name}</span><span>${withEunNeun(name)} 오늘 위판량이 많습니다.</span>`;
+      josaTable.appendChild(row);
+    });
+  </script>
+</body>
+</html>

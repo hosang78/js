@@ -2,338 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>diff-match-patch</title>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: #555;
-    margin-bottom: 12px;
-  }
-  .layout-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .col { flex: 1; min-width: 240px; }
-  label { display: block; font-size: 12.5px; color: #666; margin-bottom: 4px; }
-  textarea {
-    width: 100%;
     box-sizing: border-box;
-    padding: 9px 11px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 13.5px;
-    font-family: inherit;
-    resize: vertical;
-    min-height: 64px;
   }
-  input[type="text"] {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 9px 11px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 13.5px;
-  }
-  button {
+  #tab-bar button {
     padding: 8px 16px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f5f6f8;
+    color: #555;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 13px;
-    margin-top: 10px;
   }
-  button:hover { background: #3d67e0; }
-  .diff-output {
-    background: #fafbfc;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 14px;
-    margin-top: 12px;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .diff-ins { background: #e2f7ea; color: #1a7a3f; text-decoration: none; border-radius: 3px; padding: 0 1px; }
-  .diff-del { background: #fdeaea; color: #b93a3a; text-decoration: line-through; border-radius: 3px; padding: 0 1px; }
-  .result-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    margin-top: 12px;
-  }
-  .patch-text {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-size: 11.5px;
-    overflow-x: auto;
-    white-space: pre;
-    margin-top: 10px;
-  }
-  mark.found { background: #ffe58a; border-radius: 3px; padding: 0 1px; }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>diff-match-patch 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>diff-match-patch</strong>는 Google이 만든 텍스트 비교(diff)·근사 검색(match)·패치
-    생성/적용(patch) 라이브러리입니다. 문서 버전 비교, 협업 편집 병합, 오타를 허용하는 검색 등에 쓰입니다.
-    <ul>
-      <li><code class="inline">diff_main()</code>으로 두 텍스트의 차이를 삽입/삭제 조각으로 계산</li>
-      <li><code class="inline">diff_cleanupSemantic()</code>으로 잘게 쪼개진 diff를 사람이 읽기 좋게 정리</li>
-      <li><code class="inline">patch_make()</code> / <code class="inline">patch_apply()</code>로 변경 내용을 다른 텍스트에 병합</li>
-      <li><code class="inline">match_main()</code>으로 오타가 있어도 비슷한 위치를 근사 검색</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 공지사항 문구는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      공지·통계와 무관합니다. diff-match-patch npm 패키지는 브라우저용 번들 없이 CommonJS
-      (<code class="inline">module.exports</code>)로만 배포되어 있어, jsdelivr의 ESM 변환 엔드포인트
-      (<code class="inline">/+esm</code>)로 불러옵니다(Ajv 페이지와 같은 방식). 다른 외부 라이브러리나
-      API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 텍스트 diff + 하이라이트</h2>
-    <div class="desc">가상 위판 공지사항의 개정 전/후 문구를 비교합니다. 초록색은 추가된 부분, 빨간색은 삭제된 부분입니다.</div>
-    <div class="layout-row">
-      <div class="col">
-        <label for="d1a">개정 전</label>
-        <textarea id="d1a">고등어 위판은 매일 새벽 5시에 시작합니다.</textarea>
-      </div>
-      <div class="col">
-        <label for="d1b">개정 후</label>
-        <textarea id="d1b">고등어와 갈치 위판은 매일 새벽 6시에 시작합니다.</textarea>
-      </div>
-    </div>
-    <button id="d1btn">비교하기</button>
-    <div class="diff-output" id="d1out"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const dmp = new DiffMatchPatch();
-const diffs = dmp.diff_main(textA, textB);
-dmp.diff_cleanupSemantic(diffs); // 잘게 쪼개진 조각을 사람이 읽기 좋게 정리
-
-// diffs: [[0, "공통부분"], [-1, "삭제됨"], [1, "추가됨"], ...]
-// 0 = DIFF_EQUAL, -1 = DIFF_DELETE, 1 = DIFF_INSERT</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. diff_cleanupSemantic — 정리 전/후 비교</h2>
-    <div class="desc">
-      <code class="inline">diff_main()</code> 결과를 그대로 쓰면 자잘하게 쪼개진 diff가 나올 수 있습니다.
-      <code class="inline">diff_cleanupSemantic()</code>을 거치면 의미 단위로 뭉쳐져 훨씬 읽기 편해집니다.
-    </div>
-    <div class="layout-row">
-      <div class="col">
-        <label>정리 전 (raw diff_main)</label>
-        <div class="diff-output" id="d2raw"></div>
-      </div>
-      <div class="col">
-        <label>정리 후 (diff_cleanupSemantic)</label>
-        <div class="diff-output" id="d2clean"></div>
-      </div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const rawDiffs = dmp.diff_main(textA, textB);       // 정리 전
-const cleanDiffs = dmp.diff_main(textA, textB);
-dmp.diff_cleanupSemantic(cleanDiffs);                // 정리 후</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. Patch 생성 및 적용</h2>
-    <div class="desc">
-      "원본"과 "수정본"의 차이로 패치를 만든 뒤, 그 패치를 조금 다르게 편집된 "다른 사본"에도 적용해봅니다.
-      오프라인에서 각자 편집한 문서를 나중에 병합하는 상황을 흉내낸 것입니다.
-    </div>
-    <div class="layout-row">
-      <div class="col">
-        <label for="d3orig">원본</label>
-        <textarea id="d3orig">위판 시간: 오전 5시
-장소: 1번 위판장
-담당: 가상 조합원 A</textarea>
-      </div>
-      <div class="col">
-        <label for="d3edit">수정본 (여기서 패치를 만듭니다)</label>
-        <textarea id="d3edit">위판 시간: 오전 6시
-장소: 1번 위판장
-담당: 가상 조합원 A
-비고: 우천시 실내 위판장으로 변경</textarea>
-      </div>
-    </div>
-    <div class="col" style="margin-top:14px;">
-      <label for="d3other">다른 사본 (원본을 살짝 다르게 손댄 상태 — 여기에 패치를 적용합니다)</label>
-      <textarea id="d3other">위판 시간: 오전 5시
-장소: 1번 위판장 (임시 폐쇄중)
-담당: 가상 조합원 A</textarea>
-    </div>
-    <button id="d3btn">패치 만들어 적용하기</button>
-    <div class="patch-text" id="d3patch"></div>
-    <div class="result-box" id="d3result"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const patches = dmp.patch_make(original, edited);
-const patchText = dmp.patch_toText(patches); // 사람이 읽을 수 있는 패치 포맷
-
-const [mergedText, appliedResults] = dmp.patch_apply(patches, otherCopy);
-// appliedResults: 각 패치 조각이 성공적으로 적용됐는지 [true, true, ...]</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 근사 문자열 검색 (오타 허용)</h2>
-    <div class="desc">
-      아래 공지문 안에서 검색어를 찾습니다. 철자가 정확하지 않아도(오타가 있어도) 비슷한 위치를 찾아줍니다.
-    </div>
-    <label for="d4doc">공지문</label>
-    <textarea id="d4doc">가상 위판장 공지: 고등어와 갈치는 냉장 보관, 오징어는 냉동 보관합니다. 문의사항은 조합 사무소로 연락 바랍니다.</textarea>
-    <label for="d4query" style="margin-top:10px;">검색어 (오타를 넣어도 됩니다. 예: 고등오)</label>
-    <input type="text" id="d4query" value="고등오" />
-    <button id="d4btn">찾기</button>
-    <div class="diff-output" id="d4out"></div>
-    <div class="result-box" id="d4result"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const dmp = new DiffMatchPatch();
-dmp.Match_Threshold = 0.5; // 0에 가까울수록 정확히 일치해야 함
-const loc = dmp.match_main(doc, query, approxLocationGuess);
-// loc === -1 이면 못 찾은 것, 아니면 가장 비슷한 위치의 인덱스</pre>
-    </details>
-  </section>
-
-<script type="module">
-  import DiffMatchPatch from "https://cdn.jsdelivr.net/npm/diff-match-patch@1.0.5/+esm";
-
-  function renderDiff(diffs) {
-    return diffs.map(([op, text]) => {
-      const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      if (op === 1) return `<span class="diff-ins">${esc}</span>`;
-      if (op === -1) return `<span class="diff-del">${esc}</span>`;
-      return `<span>${esc}</span>`;
-    }).join("");
-  }
-
-  // ---- 1. 기본 diff ----
-  const dmp1 = new DiffMatchPatch();
-  function runDiff1() {
-    const a = document.getElementById("d1a").value;
-    const b = document.getElementById("d1b").value;
-    const diffs = dmp1.diff_main(a, b);
-    dmp1.diff_cleanupSemantic(diffs);
-    document.getElementById("d1out").innerHTML = renderDiff(diffs);
-  }
-  document.getElementById("d1btn").onclick = runDiff1;
-  runDiff1();
-
-  // ---- 2. cleanup 전/후 비교 ----
-  const dmp2 = new DiffMatchPatch();
-  const textA2 = "조합원 정기총회는 매년 3월 첫째 주 화요일 오전 10시, 본소 대회의실에서 개최합니다.";
-  const textB2 = "조합원 정기총회는 매년 3월 둘째 주 목요일 오후 2시, 본소 2층 대회의실에서 개최합니다.";
-  const rawDiffs = dmp2.diff_main(textA2, textB2);
-  document.getElementById("d2raw").innerHTML = renderDiff(rawDiffs);
-  const cleanDiffs = dmp2.diff_main(textA2, textB2);
-  dmp2.diff_cleanupSemantic(cleanDiffs);
-  document.getElementById("d2clean").innerHTML = renderDiff(cleanDiffs);
-
-  // ---- 3. patch 생성/적용 ----
-  const dmp3 = new DiffMatchPatch();
-  function runPatch() {
-    const orig = document.getElementById("d3orig").value;
-    const edited = document.getElementById("d3edit").value;
-    const other = document.getElementById("d3other").value;
-
-    const patches = dmp3.patch_make(orig, edited);
-    const patchText = dmp3.patch_toText(patches);
-    document.getElementById("d3patch").textContent = patchText || "(변경 사항 없음)";
-
-    const [merged, results] = dmp3.patch_apply(patches, other);
-    const allOk = results.every(Boolean);
-    document.getElementById("d3result").innerHTML = `
-      <div>적용 성공 여부: ${results.map((r) => (r ? "✅" : "❌")).join(" ")} ${allOk ? "(전부 성공)" : "(일부 실패 — 원본이 너무 달라졌을 수 있음)"}</div>
-      <div style="margin-top:6px; white-space:pre-wrap;">병합 결과:\n${merged}</div>
-    `;
-  }
-  document.getElementById("d3btn").onclick = runPatch;
-  runPatch();
-
-  // ---- 4. 근사 검색 ----
-  const dmp4 = new DiffMatchPatch();
-  dmp4.Match_Threshold = 0.5;
-  function runMatch() {
-    const doc = document.getElementById("d4doc").value;
-    const query = document.getElementById("d4query").value;
-    const loc = dmp4.match_main(doc, query, 10);
-    const outEl = document.getElementById("d4out");
-    const resultEl = document.getElementById("d4result");
-    if (loc === -1) {
-      outEl.textContent = doc;
-      resultEl.textContent = "일치하는 위치를 찾지 못했습니다.";
-      return;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
-    const start = Math.max(0, loc);
-    const end = Math.min(doc.length, start + query.length);
-    const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    outEl.innerHTML = esc(doc.slice(0, start)) + `<mark class="found">${esc(doc.slice(start, end))}</mark>` + esc(doc.slice(end));
-    resultEl.textContent = `찾은 위치: ${loc}번째 글자 (검색어: "${query}")`;
   }
-  document.getElementById("d4btn").onclick = runMatch;
-  runMatch();
-</script>
 
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
+
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
+
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
+    });
+  }
+
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

@@ -2,307 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>Observable Plot</title>
-<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/dist/plot.umd.min.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-    --series-4: #008300;
-    --accent-red: #e34948;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
+    font-size: 13px;
+    cursor: pointer;
   }
-  .chart-wrap {
-    background: #fcfcfb;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 12px;
-    overflow-x: auto;
-  }
-  .chart-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .chart-row > .chart-wrap { flex: 1; min-width: 280px; }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-    max-height: 280px;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
-  .col-label { font-size: 12.5px; color: #555; margin-bottom: 6px; font-weight: 600; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
-
-  <h1>Observable Plot 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>Observable Plot</strong>은 D3.js 위에 만들어진 <strong>선언형(grammar-of-graphics)</strong>
-    차트 라이브러리입니다. D3.js처럼 축·스케일·DOM을 직접 조립하는 대신, "어떤 마크를 어떤 데이터에
-    올릴지"만 선언하면 축·스케일·범례를 자동으로 계산해줍니다.
-    <ul>
-      <li>여러 마크(bar, rule, text, line 등)를 배열에 나열하는 것만으로 겹쳐 그리기</li>
-      <li><code class="inline">groupX</code>/<code class="inline">stackY</code> 같은 내장 변환(transform) —
-        원본 데이터를 직접 집계하지 않고 선언만으로 합산·누적 계산</li>
-      <li><code class="inline">facet</code>으로 하나의 스펙에서 소단위(small multiples) 그래프 자동 분할</li>
-      <li>다중 계열 색상 자동 범례, <code class="inline">Plot.tip</code>으로 마우스 오버 툴팁 내장</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      통계와 무관합니다. Observable Plot은 D3.js 위에서 동작하므로 D3.js(CDN)도 함께 로드합니다.
-      다른 외부 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 레이어 마크 조합</h2>
-    <div class="desc">
-      막대(barY) + 기준선(ruleY) + 라벨(text), 세 가지 마크를 배열에 나열하기만 하면 한 좌표계 위에
-      겹쳐 그려집니다. 축과 스케일은 Plot이 데이터 범위를 보고 자동으로 계산합니다.
-    </div>
-    <div class="chart-wrap" id="chart1"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const avg = d3.mean(data, (d) =&gt; d.catch);
-
-Plot.plot({
-  marks: [
-    Plot.barY(data, { x: 'market', y: 'catch', fill: '#2a78d6' }),
-    Plot.ruleY([avg], { stroke: '#e34948', strokeWidth: 2 }),      // 평균 기준선
-    Plot.text([{ market: lastMarket, catch: avg }], {
-      x: 'market', y: avg, text: () =&gt; `평균 ${avg.toFixed(0)}`, dy: -8, fill: '#e34948',
-    }),
-  ],
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 자동 집계 변환 (groupX / stackY)</h2>
-    <div class="desc">
-      왼쪽은 위판장별 <strong>개별 거래 원자료</strong>를 그대로 넣고 <code class="inline">Plot.groupX</code>가
-      합계를 자동 계산한 막대입니다. 오른쪽은 같은 원자료를 어종별로 <code class="inline">Plot.stackY</code>로
-      누적해 구성비를 보여줍니다 — 두 경우 모두 사전에 합계를 직접 계산하지 않았습니다.
-    </div>
-    <div class="chart-row">
-      <div>
-        <div class="col-label">groupX(sum) — 위판장별 합계</div>
-        <div class="chart-wrap" id="chart2a"></div>
-      </div>
-      <div>
-        <div class="col-label">stackY — 어종별 누적</div>
-        <div class="chart-wrap" id="chart2b"></div>
-      </div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>// rawRows: [{ market, catch }, ...] 형태의 개별 거래 원자료 (합계 미리 계산 안 함)
-Plot.plot({
-  marks: [Plot.barY(rawRows, Plot.groupX({ y: 'sum' }, { x: 'market', y: 'catch', fill: '#1baf7a' }))],
-});
-
-// stackRows: [{ market, species, amount }, ...]
-Plot.plot({
-  color: { legend: true, domain: ['고등어', '갈치', '오징어'], range: ['#2a78d6', '#1baf7a', '#eda100'] },
-  marks: [Plot.barY(stackRows, Plot.stackY({ x: 'market', y: 'amount', fill: 'species' }))],
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. facet — 소단위 분할</h2>
-    <div class="desc">
-      <code class="inline">facet</code> 옵션 하나로 어종별 소단위(small multiples) 그래프를 자동으로
-      나눠 그립니다. 반복문 없이 하나의 스펙만 작성했습니다.
-    </div>
-    <div class="chart-wrap" id="chart3"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>Plot.plot({
-  facet: { data, x: 'species' },              // species 값마다 소단위 패널을 자동 생성
-  fx: { domain: ['고등어', '갈치', '오징어'] },  // 패널 순서 고정
-  marks: [Plot.lineY(data, { x: 'day', y: 'price', stroke: '#2a78d6' })],
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 다중 계열 + 자동 범례 + 인터랙티브 tip</h2>
-    <div class="desc">
-      위판장별 일별 시세 추이입니다. 색상은 <code class="inline">stroke: 'market'</code> 채널 하나로
-      지정했을 뿐인데 범례가 자동으로 만들어졌고, <code class="inline">Plot.tip</code>이 마우스를
-      가까이 가져가면 해당 지점의 값을 보여줍니다. 그래프 위에 마우스를 올려보세요.
-    </div>
-    <div class="chart-wrap" id="chart4"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>Plot.plot({
-  color: { legend: true, domain: ['1위판장', '2위판장'], range: ['#2a78d6', '#1baf7a'] },
-  marks: [
-    Plot.lineY(data, { x: 'day', y: 'catch', stroke: 'market' }),
-    Plot.tip(data, Plot.pointerX({ x: 'day', y: 'catch', stroke: 'market' })),  // 마우스 오버 툴팁
-  ],
-});</pre>
-    </details>
-  </section>
-
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
 <script>
-window.__pageErrors = [];
-window.addEventListener('error', (e) => window.__pageErrors.push(e.message));
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-function main() {
-  // ---- 섹션 1: 레이어 마크 조합 ----
-  {
-    const data = [
-      { market: '1위판장', catch: 320 },
-      { market: '2위판장', catch: 210 },
-      { market: '3위판장', catch: 450 },
-      { market: '4위판장', catch: 180 },
-    ];
-    const avg = d3.mean(data, (d) => d.catch);
-    const chart = Plot.plot({
-      width: 640,
-      marks: [
-        Plot.barY(data, { x: 'market', y: 'catch', fill: '#2a78d6' }),
-        Plot.ruleY([avg], { stroke: '#e34948', strokeWidth: 2 }),
-        Plot.text([{ market: data[data.length - 1].market, catch: avg }], {
-          x: 'market', y: avg, text: () => `평균 ${avg.toFixed(0)}kg`, dy: -8, fill: '#e34948',
-        }),
-      ],
-    });
-    document.getElementById('chart1').appendChild(chart);
-    window.__chart1 = chart;
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
   }
 
-  // ---- 섹션 2: groupX / stackY ----
-  {
-    const rawRows = [];
-    ['1위판장', '2위판장', '3위판장'].forEach((m) => {
-      const n = 4 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < n; i++) rawRows.push({ market: m, catch: 20 + Math.random() * 80 });
-    });
-    const chartA = Plot.plot({
-      width: 320,
-      marks: [Plot.barY(rawRows, Plot.groupX({ y: 'sum' }, { x: 'market', y: 'catch', fill: '#1baf7a' }))],
-    });
-    document.getElementById('chart2a').appendChild(chartA);
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    const stackRows = [];
-    ['1위판장', '2위판장', '3위판장'].forEach((m) => {
-      ['고등어', '갈치', '오징어'].forEach((sp, i) => {
-        stackRows.push({ market: m, species: sp, amount: 20 + i * 15 + Math.random() * 20 });
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
+
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
+
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
       });
+      tabBar.appendChild(btn);
     });
-    const chartB = Plot.plot({
-      width: 320,
-      color: { legend: true, domain: ['고등어', '갈치', '오징어'], range: ['#2a78d6', '#1baf7a', '#eda100'] },
-      marks: [Plot.barY(stackRows, Plot.stackY({ x: 'market', y: 'amount', fill: 'species' }))],
-    });
-    document.getElementById('chart2b').appendChild(chartB);
-
-    window.__chart2a = chartA;
-    window.__chart2b = chartB;
   }
 
-  // ---- 섹션 3: facet ----
-  {
-    const data = [];
-    ['고등어', '갈치', '오징어'].forEach((species) => {
-      let price = 100 + Math.random() * 20;
-      for (let d = 1; d <= 14; d++) {
-        price += (Math.random() - 0.45) * 6;
-        data.push({ species, day: d, price: Math.max(50, price) });
-      }
-    });
-    const chart = Plot.plot({
-      width: 720,
-      height: 220,
-      facet: { data, x: 'species' },
-      fx: { domain: ['고등어', '갈치', '오징어'] },
-      marks: [Plot.lineY(data, { x: 'day', y: 'price', stroke: '#2a78d6' })],
-    });
-    document.getElementById('chart3').appendChild(chart);
-    window.__chart3 = chart;
-  }
-
-  // ---- 섹션 4: 다중 계열 + 자동 범례 + tip ----
-  {
-    const data = [];
-    ['1위판장', '2위판장'].forEach((m, i) => {
-      let v = 60 + i * 25;
-      for (let d = 1; d <= 20; d++) {
-        v += (Math.random() - 0.5) * 8;
-        data.push({ market: m, day: d, catch: Math.max(10, v) });
-      }
-    });
-    const chart = Plot.plot({
-      width: 720,
-      color: { legend: true, domain: ['1위판장', '2위판장'], range: ['#2a78d6', '#1baf7a'] },
-      marks: [
-        Plot.lineY(data, { x: 'day', y: 'catch', stroke: 'market' }),
-        Plot.tip(data, Plot.pointerX({ x: 'day', y: 'catch', stroke: 'market' })),
-      ],
-    });
-    document.getElementById('chart4').appendChild(chart);
-    window.__chart4 = chart;
-  }
-
-  window.__ready = true;
-}
-
-try {
-  main();
-} catch (e) {
-  window.__pageErrors.push('main() error: ' + e.message + '\n' + (e.stack || ''));
-  window.__ready = true;
-}
+  frame.src = './' + available[0].key + '/index.html';
+})();
 </script>
 </body>
 </html>

@@ -2,293 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>GSAP</title>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .stage {
-    background: #fafbfc;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 16px;
-    min-height: 90px;
-    position: relative;
-    overflow: hidden;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
-    cursor: pointer;
     font-size: 13px;
-    margin-top: 10px;
-    margin-right: 6px;
+    cursor: pointer;
   }
-  button:hover { background: #3d67e0; }
-  .box1 {
-    width: 60px;
-    height: 60px;
-    border-radius: 10px;
-    background: #4f7dff;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    opacity: 0;
-  }
-
-  .flow-row { display: flex; gap: 10px; flex-wrap: wrap; }
-  .flow-card {
-    flex: 1;
-    min-width: 110px;
-    background: #fff;
-    border: 1px solid #dde3ee;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-    font-size: 12.5px;
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  .flow-card .n { font-size: 18px; font-weight: 700; color: #4f7dff; }
-
-  .stagger-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 8px;
-  }
-  .stagger-item {
-    background: #eef2ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 8px;
-    font-size: 12px;
-    text-align: center;
-    opacity: 0;
-    transform: scale(0.7);
-  }
-
-  .ease-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    font-size: 12.5px;
-  }
-  .ease-track {
-    flex: 1;
-    height: 22px;
-    background: #f0f2f7;
-    border-radius: 11px;
-    position: relative;
-  }
-  .ease-dot {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #4f7dff;
-  }
-  .ease-label { width: 90px; color: #666; }
-
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>GSAP 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>GSAP</strong>(GreenSock Animation Platform)은 웹에서 부드럽고 정교한 애니메이션을
-    만드는 자바스크립트 라이브러리입니다. CSS 애니메이션보다 세밀한 제어와 시퀀스 구성이 쉽습니다.
-    <ul>
-      <li>요소의 위치·크기·투명도 등을 <code>to</code>/<code>from</code>/<code>fromTo</code>로 애니메이션</li>
-      <li><code>Timeline</code>으로 여러 애니메이션을 순서대로/겹쳐서 재생 가능</li>
-      <li><code>stagger</code>로 여러 요소를 살짝씩 시간차를 두고 순차적으로 재생</li>
-      <li>다양한 이징(ease) 함수로 "가속/감속/튕김" 같은 움직임의 느낌을 조절</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 "위판 진행 상황" 카드는 GSAP 학습용으로 만든 <strong>가상의 샘플 화면</strong>이며,
-      실제 수협중앙회의 절차/데이터가 아닙니다. 이 페이지는 GSAP(CDN) 하나만 사용하고
-      다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 트윈 (fromTo)</h2>
-    <div class="desc">버튼을 누르면 박스가 왼쪽 밖에서 나타나 제자리로 이동하며 서서히 나타납니다(fade in).</div>
-    <div class="stage"><div class="box1" id="box1">입고</div></div>
-    <button id="playBtn1">재생</button>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>gsap.fromTo('#box1',
-  { x: -120, opacity: 0 },
-  { x: 0, opacity: 1, duration: 0.8, ease: 'power2.out' }
-);</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 타임라인 (Timeline) — 순서대로 재생</h2>
-    <div class="desc">가상의 "위판 진행 상황" 4단계 카드가 타임라인으로 순서대로 나타납니다.</div>
-    <div class="stage">
-      <div class="flow-row">
-        <div class="flow-card" id="flow1"><div class="n">1</div>입고</div>
-        <div class="flow-card" id="flow2"><div class="n">2</div>경매</div>
-        <div class="flow-card" id="flow3"><div class="n">3</div>낙찰</div>
-        <div class="flow-card" id="flow4"><div class="n">4</div>정산</div>
-      </div>
-    </div>
-    <button id="playBtn2">재생</button>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const tl = gsap.timeline({ paused: true });
-tl.to('#flow1', { opacity: 1, y: 0, duration: 0.4 })
-  .to('#flow2', { opacity: 1, y: 0, duration: 0.4 }, '+=0.1') // 0.1초 텀
-  .to('#flow3', { opacity: 1, y: 0, duration: 0.4 }, '+=0.1')
-  .to('#flow4', { opacity: 1, y: 0, duration: 0.4 }, '+=0.1');
-
-playBtn.addEventListener('click', () => tl.restart());</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. stagger — 여러 요소 순차 등장</h2>
-    <div class="desc">가상의 위판장 6곳 카드가 0.08초씩 시간차를 두고 차례로 나타납니다.</div>
-    <div class="stage">
-      <div class="stagger-grid" id="staggerGrid">
-        <div class="stagger-item">부산공동어시장</div>
-        <div class="stagger-item">목포수산시장</div>
-        <div class="stagger-item">통영수산시장</div>
-        <div class="stagger-item">여수수산시장</div>
-        <div class="stagger-item">포항죽도시장</div>
-        <div class="stagger-item">노량진수산시장</div>
-      </div>
-    </div>
-    <button id="playBtn3">재생</button>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>gsap.to('.stagger-item', {
-  opacity: 1,
-  scale: 1,
-  duration: 0.4,
-  stagger: 0.08, // 요소마다 0.08초씩 지연
-  ease: 'back.out(1.7)',
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 이징(ease) 비교</h2>
-    <div class="desc">같은 거리·시간이어도 이징에 따라 움직임의 느낌이 다릅니다. "출발"을 눌러 4개를 동시에 비교해보세요.</div>
-    <div class="stage" id="easeStage">
-      <div class="ease-row"><span class="ease-label">linear</span><div class="ease-track"><div class="ease-dot" data-ease="none"></div></div></div>
-      <div class="ease-row"><span class="ease-label">power2.out</span><div class="ease-track"><div class="ease-dot" data-ease="power2.out"></div></div></div>
-      <div class="ease-row"><span class="ease-label">bounce.out</span><div class="ease-track"><div class="ease-dot" data-ease="bounce.out"></div></div></div>
-      <div class="ease-row"><span class="ease-label">elastic.out</span><div class="ease-track"><div class="ease-dot" data-ease="elastic.out(1,0.4)"></div></div></div>
-    </div>
-    <button id="playBtn4">출발</button>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>gsap.to(dotEl, { x: trackWidth - 18, duration: 1.2, ease: 'bounce.out' });
-// ease: 'none' | 'power2.out' | 'bounce.out' | 'elastic.out(1,0.4)' 등</pre>
-    </details>
-  </section>
-
-  <script>
-    // ---------- 1. 기본 트윈 ----------
-    function playTween1() {
-      gsap.fromTo('#box1', { x: -120, opacity: 0 }, { x: 0, opacity: 1, duration: 0.8, ease: 'power2.out' });
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
-    document.getElementById('playBtn1').addEventListener('click', playTween1);
-    playTween1();
+  }
 
-    // ---------- 2. 타임라인 ----------
-    const tl2 = gsap.timeline({ paused: true });
-    tl2.to('#flow1', { opacity: 1, y: 0, duration: 0.4 })
-      .to('#flow2', { opacity: 1, y: 0, duration: 0.4 }, '+=0.1')
-      .to('#flow3', { opacity: 1, y: 0, duration: 0.4 }, '+=0.1')
-      .to('#flow4', { opacity: 1, y: 0, duration: 0.4 }, '+=0.1');
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    document.getElementById('playBtn2').addEventListener('click', () => tl2.restart());
-    tl2.play();
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-    // ---------- 3. stagger ----------
-    function playStagger() {
-      gsap.fromTo('.stagger-item',
-        { opacity: 0, scale: 0.7 },
-        { opacity: 1, scale: 1, duration: 0.4, stagger: 0.08, ease: 'back.out(1.7)' }
-      );
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
     }
-    document.getElementById('playBtn3').addEventListener('click', playStagger);
-    playStagger();
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    // ---------- 4. 이징 비교 ----------
-    function playEaseRace() {
-      document.querySelectorAll('.ease-dot').forEach((dot) => {
-        gsap.killTweensOf(dot);
-        gsap.set(dot, { x: 0 });
-        const track = dot.closest('.ease-track');
-        const maxX = track.clientWidth - dot.clientWidth - 4;
-        gsap.to(dot, { x: maxX, duration: 1.2, ease: dot.dataset.ease });
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
       });
-    }
-    document.getElementById('playBtn4').addEventListener('click', playEaseRace);
-  </script>
+      tabBar.appendChild(btn);
+    });
+  }
+
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Dagre</title>
+<script src="https://cdn.jsdelivr.net/npm/@dagrejs/dagre@3.0.0/dist/dagre.min.js"></script>
+<style>
+  :root {
+    --series-1: #2a78d6;
+    --series-2: #1baf7a;
+    --series-3: #eda100;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .layout-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .svg-wrap {
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fcfcfb;
+    flex-shrink: 0;
+  }
+  .svg-wrap svg { display: block; }
+  .node rect { fill: var(--series-1); stroke: #1c5cab; rx: 6; }
+  .node text { font-size: 11px; fill: #fff; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  .edge-line { fill: none; stroke: #898781; stroke-width: 1.6; }
+  .edge-line.alt { stroke: #1baf7a; }
+  .edge-label { font-size: 10.5px; fill: #555; text-anchor: middle; }
+  .edge-label-bg { fill: #fcfcfb; opacity: 0.9; }
+  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.active { background: #205fb0; }
+  .side-col { min-width: 200px; }
+  label.slider-label { display: block; font-size: 12.5px; color: #555; margin-bottom: 4px; }
+  input[type="range"] { width: 100%; }
+  .legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12.5px; color: #555; align-items: center; }
+  .legend-line { display: inline-block; width: 22px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Dagre 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Dagre</strong>는 방향성 있는 그래프(DAG)를 단(rank)별로 배치해주는 레이아웃 엔진입니다.
+    ELK.js처럼 좌표만 계산하고 화면에 그려주지는 않습니다. Mermaid.js 같은 다이어그램 도구의
+    흐름도(flowchart) 레이아웃에도 실제로 쓰입니다.
+    <ul>
+      <li>레이어드 그래프 배치 + 랭크 방향(위→아래, 왼→오 등) 전환</li>
+      <li>엣지에 라벨을 달면 그 라벨이 놓일 공간까지 레이아웃에 반영</li>
+      <li>같은 두 노드를 잇는 다중 엣지, 자기 자신으로 돌아오는 셀프 루프 처리</li>
+      <li>노드 간격·랭크 간격을 조절해 레이아웃 밀도 제어</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 유통 흐름도는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      유통 구조와 무관합니다. Dagre는 좌표만 계산하므로 결과는 이 페이지에서 직접 그린 SVG로
+      표시합니다. Dagre(CDN, <code class="inline">@dagrejs/dagre</code> — 활발히 관리되는 포크판)
+      하나만 사용하고 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 레이어드 그래프 + 랭크 방향</h2>
+    <div class="desc">가상 위판장 유통 흐름입니다. 방향 버튼으로 같은 그래프를 다시 배치해보세요.</div>
+    <div class="controls">
+      <button class="dir-btn active" data-dir="TB">TB (위→아래)</button>
+      <button class="dir-btn" data-dir="BT">BT (아래→위)</button>
+      <button class="dir-btn" data-dir="LR">LR (왼→오)</button>
+      <button class="dir-btn" data-dir="RL">RL (오→왼)</button>
+    </div>
+    <div class="layout-row">
+      <div class="svg-wrap"><svg id="svg1" width="480" height="320"></svg></div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const g = new dagre.graphlib.Graph();
+g.setGraph({ rankdir: "LR" }); // TB / BT / LR / RL
+g.setDefaultEdgeLabel(() => ({}));
+
+g.setNode("market1", { width: 90, height: 34 });
+g.setNode("broker1", { width: 90, height: 34 });
+g.setEdge("market1", "broker1");
+
+dagre.layout(g);
+g.nodes().forEach((id) => console.log(g.node(id).x, g.node(id).y));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 엣지 라벨이 차지하는 레이아웃 공간</h2>
+    <div class="desc">
+      왼쪽은 라벨이 없는 엣지, 오른쪽은 같은 구조에 <code class="inline">label</code>만 추가한 엣지입니다.
+      라벨이 들어갈 자리만큼 랭크(단) 사이 간격이 자동으로 벌어집니다.
+    </div>
+    <div class="layout-row">
+      <div class="side-col">
+        <div style="font-size:12.5px;color:#555;margin-bottom:6px;">라벨 없음</div>
+        <div class="svg-wrap"><svg id="svg2a" width="220" height="240"></svg></div>
+      </div>
+      <div class="side-col">
+        <div style="font-size:12.5px;color:#555;margin-bottom:6px;">라벨 있음</div>
+        <div class="svg-wrap"><svg id="svg2b" width="220" height="240"></svg></div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>g.setEdge("market1", "broker1", { label: "고등어 위주" });
+// 라벨 텍스트 크기만큼 width/height를 지정해두면
+// 레이아웃 계산 시 그 자리를 실제로 비워둔다</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 다중 엣지 + 셀프 루프</h2>
+    <div class="desc">같은 두 노드를 잇는 여러 엣지(수산물 종류별)와, 자기 자신에게 돌아오는 셀프 루프(재작업)를 함께 배치합니다.</div>
+    <div class="layout-row">
+      <div class="svg-wrap"><svg id="svg3" width="480" height="240"></svg></div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const g = new dagre.graphlib.Graph({ multigraph: true });
+g.setEdge("market1", "broker1", { label: "고등어" }, "e1");
+g.setEdge("market1", "broker1", { label: "갈치" }, "e2");   // 같은 두 노드를 잇는 두 번째 엣지
+g.setEdge("broker1", "broker1", { label: "재작업" }, "loop"); // 셀프 루프</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 노드/랭크 간격 조정</h2>
+    <div class="desc">슬라이더로 같은 랭크 안 노드 사이 간격(nodesep)과 랭크 사이 간격(ranksep)을 바꿔보세요.</div>
+    <div class="controls">
+      <div style="flex:1; min-width:180px;">
+        <label class="slider-label">노드 간격 (nodesep): <span id="nodesepVal">40</span>px</label>
+        <input type="range" id="nodesepSlider" min="10" max="120" value="40" />
+      </div>
+      <div style="flex:1; min-width:180px;">
+        <label class="slider-label">랭크 간격 (ranksep): <span id="ranksepVal">50</span>px</label>
+        <input type="range" id="ranksepSlider" min="10" max="150" value="50" />
+      </div>
+    </div>
+    <div class="layout-row">
+      <div class="svg-wrap"><svg id="svg4" width="480" height="280"></svg></div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>g.setGraph({ rankdir: "TB", nodesep: 40, ranksep: 50 });</pre>
+    </details>
+  </section>
+
+<script>
+  function clearSvg(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+
+  function drawNode(svg, x, y, w, h, label) {
+    const NS = "http://www.w3.org/2000/svg";
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "node");
+    const rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("x", x - w / 2); rect.setAttribute("y", y - h / 2);
+    rect.setAttribute("width", w); rect.setAttribute("height", h);
+    g.appendChild(rect);
+    const text = document.createElementNS(NS, "text");
+    text.setAttribute("x", x); text.setAttribute("y", y);
+    text.textContent = label;
+    g.appendChild(text);
+    svg.appendChild(g);
+  }
+
+  function drawEdge(svg, points, cls = "edge-line", label) {
+    const NS = "http://www.w3.org/2000/svg";
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("class", cls);
+    path.setAttribute("d", points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" "));
+    svg.appendChild(path);
+    if (label) {
+      const mid = points[Math.floor(points.length / 2)];
+      const bg = document.createElementNS(NS, "rect");
+      const w = label.length * 8 + 6;
+      bg.setAttribute("class", "edge-label-bg");
+      bg.setAttribute("x", mid.x - w / 2); bg.setAttribute("y", mid.y - 8);
+      bg.setAttribute("width", w); bg.setAttribute("height", 15);
+      svg.appendChild(bg);
+      const text = document.createElementNS(NS, "text");
+      text.setAttribute("class", "edge-label");
+      text.setAttribute("x", mid.x); text.setAttribute("y", mid.y + 3);
+      text.textContent = label;
+      svg.appendChild(text);
+    }
+  }
+
+  function renderGraph(svg, g, { labels = {}, pad = 20, fixedSize = null } = {}) {
+    clearSvg(svg);
+    const graphInfo = g.graph();
+    const w = (fixedSize ? fixedSize.w : graphInfo.width) + pad * 2;
+    const h = (fixedSize ? fixedSize.h : graphInfo.height) + pad * 2;
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+
+    g.edges().forEach((e) => {
+      const edge = g.edge(e);
+      const pts = edge.points.map((p) => ({ x: p.x + pad, y: p.y + pad }));
+      const cls = "edge-line" + (edge.className ? " " + edge.className : "");
+      drawEdge(svg, pts, cls, edge.label);
+    });
+    g.nodes().forEach((id) => {
+      const n = g.node(id);
+      drawNode(svg, n.x + pad, n.y + pad, n.width, n.height, labels[id] || id);
+    });
+  }
+
+  // ---- 1. 랭크 방향 ----
+  function buildGraph1(dir) {
+    const g = new dagre.graphlib.Graph();
+    g.setGraph({ rankdir: dir });
+    g.setDefaultEdgeLabel(() => ({}));
+    [["market1", "1번 위판장"], ["broker1", "중도매인 A"], ["broker2", "중도매인 B"], ["retail1", "소매상"]]
+      .forEach(([id, label]) => g.setNode(id, { width: 90, height: 34, __label: label }));
+    [["market1", "broker1"], ["market1", "broker2"], ["broker1", "retail1"], ["broker2", "retail1"]]
+      .forEach(([a, b]) => g.setEdge(a, b));
+    dagre.layout(g);
+    return g;
+  }
+  function labelsFrom(g) {
+    const out = {};
+    g.nodes().forEach((id) => { out[id] = g.node(id).__label || id; });
+    return out;
+  }
+  function runSection1(dir) {
+    const g = buildGraph1(dir);
+    renderGraph(document.getElementById("svg1"), g, { labels: labelsFrom(g) });
+  }
+  runSection1("TB");
+  document.querySelectorAll(".dir-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".dir-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      runSection1(btn.dataset.dir);
+    });
+  });
+
+  // ---- 2. 엣지 라벨 공간 ----
+  function runSection2() {
+    const gNoLabel = new dagre.graphlib.Graph();
+    gNoLabel.setGraph({ rankdir: "TB" });
+    gNoLabel.setDefaultEdgeLabel(() => ({}));
+    [["market1", "위판장"], ["broker1", "중도매인"]].forEach(([id, l]) => gNoLabel.setNode(id, { width: 80, height: 30, __label: l }));
+    gNoLabel.setEdge("market1", "broker1");
+    dagre.layout(gNoLabel);
+    renderGraph(document.getElementById("svg2a"), gNoLabel, { labels: labelsFrom(gNoLabel) });
+
+    const gLabel = new dagre.graphlib.Graph();
+    gLabel.setGraph({ rankdir: "TB" });
+    gLabel.setDefaultEdgeLabel(() => ({}));
+    [["market1", "위판장"], ["broker1", "중도매인"]].forEach(([id, l]) => gLabel.setNode(id, { width: 80, height: 30, __label: l }));
+    gLabel.setEdge("market1", "broker1", { label: "고등어 위주", width: 60, height: 16 });
+    dagre.layout(gLabel);
+    renderGraph(document.getElementById("svg2b"), gLabel, { labels: labelsFrom(gLabel) });
+  }
+  runSection2();
+
+  // ---- 3. 다중 엣지 + 셀프 루프 ----
+  function runSection3() {
+    const g = new dagre.graphlib.Graph({ multigraph: true });
+    g.setGraph({ rankdir: "LR" });
+    g.setDefaultEdgeLabel(() => ({}));
+    [["market1", "1번 위판장"], ["broker1", "중도매인 A"]].forEach(([id, l]) => g.setNode(id, { width: 90, height: 34, __label: l }));
+    g.setEdge("market1", "broker1", { label: "고등어", width: 40, height: 14 }, "e1");
+    g.setEdge("market1", "broker1", { label: "갈치", width: 32, height: 14, className: "alt" }, "e2");
+    g.setEdge("broker1", "broker1", { label: "재작업", width: 40, height: 14 }, "loop");
+    dagre.layout(g);
+    renderGraph(document.getElementById("svg3"), g, { labels: labelsFrom(g) });
+  }
+  runSection3();
+
+  // ---- 4. 간격 조정 ----
+  function runSection4() {
+    const nodesep = +document.getElementById("nodesepSlider").value;
+    const ranksep = +document.getElementById("ranksepSlider").value;
+    document.getElementById("nodesepVal").textContent = nodesep;
+    document.getElementById("ranksepVal").textContent = ranksep;
+
+    const g = new dagre.graphlib.Graph();
+    g.setGraph({ rankdir: "TB", nodesep, ranksep });
+    g.setDefaultEdgeLabel(() => ({}));
+    [["market1", "1번 위판장"], ["market2", "2번 위판장"], ["broker1", "중도매인 A"], ["broker2", "중도매인 B"], ["retail1", "소매상"]]
+      .forEach(([id, l]) => g.setNode(id, { width: 80, height: 30, __label: l }));
+    [["market1", "broker1"], ["market1", "broker2"], ["market2", "broker2"], ["broker1", "retail1"], ["broker2", "retail1"]]
+      .forEach(([a, b]) => g.setEdge(a, b));
+    dagre.layout(g);
+    renderGraph(document.getElementById("svg4"), g, { labels: labelsFrom(g) });
+  }
+  runSection4();
+  document.getElementById("nodesepSlider").addEventListener("input", runSection4);
+  document.getElementById("ranksepSlider").addEventListener("input", runSection4);
+</script>
+
+</body>
+</html>

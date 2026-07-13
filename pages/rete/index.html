@@ -2,679 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>Rete.js</title>
-<script src="https://cdn.jsdelivr.net/npm/elkjs@0.11.1/lib/elk.bundled.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rete@2.0.6/rete.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rete-area-plugin@2.3.2/rete-area-plugin.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rete-connection-plugin@2.0.5/rete-connection-plugin.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rete-render-utils@2.0.3/rete-render-utils.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rete-engine@2.1.1/rete-engine.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rete-auto-arrange-plugin@2.0.2/rete-auto-arrange-plugin.min.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-    --series-4: #008300;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
-    background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
-    color: #555;
-    margin-bottom: 12px;
-  }
-  .rete-wrap {
-    width: 100%;
-    height: 320px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    background: #fcfcfb;
-    position: relative;
-    overflow: hidden;
-  }
-  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; font-size: 13px; }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  button:hover { background: #3d67e0; }
-  .info-box {
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    margin-top: 10px;
-  }
-  .result-box {
-    background: #eefcf3;
-    border: 1px solid #bfead0;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
-    margin-top: 10px;
-    font-weight: 600;
-    color: #0b6b3a;
-  }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-    max-height: 280px;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
-
-  /* ---- 직접 만든 vanilla 노드 렌더러 스타일 ---- */
-  .rete-node {
-    position: absolute;
-    background: #fff;
-    border: 2px solid #dde2e8;
-    border-radius: 8px;
-    padding: 8px 10px;
-    width: 150px;
     box-sizing: border-box;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    user-select: none;
   }
-  .rete-node.n-boat { border-color: var(--series-1); }
-  .rete-node.n-market { border-color: var(--series-2); }
-  .rete-node.n-op { border-color: var(--series-3); }
-  .rete-node.n-result { border-color: var(--series-4); }
-  .rete-node-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; cursor: grab; }
-  .rete-input-row, .rete-output-row { display: flex; align-items: center; gap: 6px; font-size: 12px; height: 22px; }
-  .rete-output-row { justify-content: flex-end; }
-  .rete-socket {
-    width: 13px; height: 13px; border-radius: 50%;
-    background: #4f7dff; border: 2px solid #fff;
-    box-shadow: 0 0 0 1px #4f7dff;
-    cursor: crosshair; flex-shrink: 0;
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f5f6f8;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
   }
-  .rete-control { margin: 4px 0; }
-  .rete-control input {
-    width: 70px; padding: 3px 5px; border: 1px solid #ccd3dd; border-radius: 5px; font-size: 12px;
-  }
-  .rete-value { font-size: 12px; color: #0b6b3a; font-weight: 700; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
-
-  <h1>Rete.js 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>Rete.js</strong>는 노드 기반 비주얼 에디터를 <strong>직접 만들기 위한 프레임워크</strong>입니다.
-    Drawflow처럼 완성된 에디터를 바로 주는 것이 아니라, "노드를 어떻게 그릴지"는 개발자가 정하고
-    Rete.js는 노드/연결의 데이터 구조와 상호작용(드래그 연결, 확대/축소 등)을 담당합니다.
-    <ul>
-      <li>Scope 기반 플러그인 구조 — NodeEditor · AreaPlugin(캔버스) · ConnectionPlugin(드래그 연결)이 부모-자식으로 연결됨</li>
-      <li>공식 렌더러는 React/Vue/Angular/Svelte용만 있고 순수 JS(vanilla)용은 없어서, 이 페이지는 노드·소켓·연결선을 직접 그리는 최소 렌더러를 만들어 사용</li>
-      <li><strong>rete-engine의 DataflowEngine</strong> — 단순히 그려주기만 하는 게 아니라 노드 그래프를 실제로 "실행"해서 값을 계산</li>
-      <li>rete-auto-arrange-plugin으로 노드 자동 배치</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 어선·위판장 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      조직·통계와 무관합니다. Rete.js 코어 외에 소켓 좌표 추적용 <strong>rete-render-utils</strong>,
-      계산 실행용 <strong>rete-engine</strong>, 자동 배치용 <strong>rete-auto-arrange-plugin</strong>(내부적으로
-      <strong>ELK.js</strong> 사용)을 함께 씁니다. 노드/연결선 자체의 시각적 렌더링은 이 페이지에서 직접
-      작성한 코드입니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 기본 노드 에디터 (직접 만든 vanilla 렌더러)</h2>
-    <div class="desc">
-      "위판장 입고" 노드의 출력 소켓(오른쪽 점)을 "유통센터" 노드의 입력 소켓(왼쪽 점)으로 마우스 드래그해
-      새 연결을 만들어보세요. 노드 제목을 드래그하면 위치도 옮길 수 있습니다.
-    </div>
-    <div id="flow1" class="rete-wrap"></div>
-    <div class="info-box" id="info1">아직 "경매" → "유통센터" 연결이 없습니다.</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>// Rete.js는 렌더러가 없으므로 area.addPipe로 'render' 시그널을 가로채
-// 노드/소켓/연결선을 직접 DOM에 그린다.
-class VanillaRenderPlugin extends Rete.Scope {
-  constructor() { super('vanilla-render'); }
-}
-const render = new VanillaRenderPlugin();
-area.use(render);                                  // area의 자식 Scope로 등록해야
-const socketPosition = ReteRenderUtils.getDOMSocketPosition();
-socketPosition.attach(render);                      // .attach()가 정상 동작한다
-
-render.addPipe((context) =&gt; {
-  if (context.type === 'render') {
-    const { element, type, payload } = context.data;
-    if (type === 'node') renderNode(element, payload);
-    else if (type === 'connection') renderConnection(element, payload);
-  }
-  return context;
-});
-
-// 소켓 DOM을 만든 뒤, ConnectionPlugin이 찾을 수 있도록 'render'를,
-// 좌표 추적을 위해 'rendered'를 area에 순서대로 emit 해줘야 한다.
-const data = { element: socketEl, type: 'socket', side, key, nodeId, payload: socket };
-area.emit({ type: 'render', data }).then(() =&gt; area.emit({ type: 'rendered', data }));</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 데이터플로우 엔진 — 실시간 재계산</h2>
-    <div class="desc">
-      숫자 입력칸은 노드 안에 실제로 내장된 컨트롤(<code class="inline">ClassicPreset.InputControl</code>)입니다.
-      값을 바꾸면 <code class="inline">rete-engine</code>의 <code class="inline">DataflowEngine</code>이
-      "합계" 노드부터 "결과" 노드까지 그래프를 따라가며 실제로 다시 계산합니다.
-    </div>
-    <div id="flow2" class="rete-wrap" style="height:230px;"></div>
-    <div class="result-box" id="result2">총 위판량: -</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>class BoatNode extends ClassicPreset.Node {
-  constructor(label, initial) {
-    super(label);
-    this.addOutput('value', new ClassicPreset.Output(numSocket, '어획량(kg)'));
-    this.addControl('value', new ClassicPreset.InputControl('number', {
-      initial, change: () =&gt; recompute(),   // 값 바뀌면 재계산 트리거
-    }));
-  }
-  data() { return { value: Number(this.controls.value.value) || 0 }; }
-}
-
-class SumNode extends ClassicPreset.Node {
-  constructor() {
-    super('합계');
-    this.addInput('a', new ClassicPreset.Input(numSocket, 'A'));
-    this.addInput('b', new ClassicPreset.Input(numSocket, 'B'));
-    this.addOutput('value', new ClassicPreset.Output(numSocket, '합계'));
-  }
-  // inputs는 연결된 소스 노드들의 data() 반환값을 rete-engine이 재귀적으로 모아준 것
-  data(inputs) {
-    const a = inputs.a ? inputs.a[0] : 0;
-    const b = inputs.b ? inputs.b[0] : 0;
-    return { value: a + b };
-  }
-}
-
-const engine = new ReteEngine.DataflowEngine();
-editor.use(engine);   // editor에 등록해야 nodecreated 시그널을 자동으로 받는다
-
-async function recompute() {
-  engine.reset();                                  // 캐시 초기화
-  const { value } = await engine.fetch(resultNode.id); // 결과 노드까지 재귀적으로 계산
-  resultBox.textContent = `총 위판량: ${value} kg`;
-}</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 다단계 데이터플로우 (재귀 계산)</h2>
-    <div class="desc">
-      어선 4척 → 위판장별 합계 2개 → 총 합계, 3단계로 이어진 그래프입니다. 아무 입력값이나 바꿔보면
-      <code class="inline">DataflowEngine.fetch()</code>가 "총 합계" 노드에서 시작해 앞 단계 노드들의
-      <code class="inline">data()</code>를 재귀적으로 호출하며 전체를 다시 계산하는 것을 볼 수 있습니다.
-    </div>
-    <div id="flow3" class="rete-wrap" style="height:480px;"></div>
-    <div class="result-box" id="result3">총 위판량: -</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>// 어선 1호,2호 → A위판장 합계
-await editor.addConnection(new ClassicPreset.Connection(boat1, 'value', sumA, 'a'));
-await editor.addConnection(new ClassicPreset.Connection(boat2, 'value', sumA, 'b'));
-// 어선 3호,4호 → B위판장 합계
-await editor.addConnection(new ClassicPreset.Connection(boat3, 'value', sumB, 'a'));
-await editor.addConnection(new ClassicPreset.Connection(boat4, 'value', sumB, 'b'));
-// A위판장 합계, B위판장 합계 → 총 합계
-await editor.addConnection(new ClassicPreset.Connection(sumA, 'value', total, 'a'));
-await editor.addConnection(new ClassicPreset.Connection(sumB, 'value', total, 'b'));
-
-// fetch(total)을 호출하면 total → sumA/sumB → boat1~4 순으로
-// 필요한 만큼만 재귀적으로 data()를 호출해 계산한다.
-const { value } = await engine.fetch(total.id);</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 자동 배치 (rete-auto-arrange-plugin + ELK.js)</h2>
-    <div class="desc">
-      노드들이 무작위 위치에 흩어져 있습니다. "자동 정렬" 버튼을 누르면 <code class="inline">rete-auto-arrange-plugin</code>이
-      (내부적으로 ELK.js의 레이어드 알고리즘을 사용해) 흐름 방향에 맞춰 노드 위치를 계산하고, 연결선은 실시간으로 따라 움직입니다.
-    </div>
-    <div class="controls">
-      <button id="btn-scatter">무작위로 흩어놓기</button>
-      <button id="btn-arrange">자동 정렬 (ELK)</button>
-    </div>
-    <div id="flow4" class="rete-wrap" style="height:300px;"></div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const arrange = new ReteAutoArrangePlugin.AutoArrangePlugin();
-area.use(arrange);
-arrange.addPreset(ReteAutoArrangePlugin.Presets.classic.setup());
-
-// 자동 배치 계산에는 노드의 width/height가 필요하다 (직접 지정)
-node.width = 150;
-node.height = 40 + Math.max(inputCount, outputCount) * 22 + 10;
-
-btnArrange.addEventListener('click', () =&gt; arrange.layout());</pre>
-    </details>
-  </section>
-
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
 <script>
-window.__pageErrors = [];
-window.addEventListener('error', (e) => window.__pageErrors.push(e.message));
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-async function main() {
-  const { NodeEditor, ClassicPreset, Scope } = Rete;
-  const { AreaPlugin } = ReteAreaPlugin;
-  const { ConnectionPlugin, Presets: ConnPresets } = ReteConnectionPlugin;
-  const { getDOMSocketPosition, classicConnectionPath } = ReteRenderUtils;
-  const { DataflowEngine } = ReteEngine;
-  const { AutoArrangePlugin, Presets: ArrangePresets } = ReteAutoArrangePlugin;
-
-  // ---- 모든 섹션이 공유하는 vanilla 렌더러 ----
-  function setupEditor(container) {
-    const editor = new NodeEditor();
-    const area = new AreaPlugin(container);
-    const connection = new ConnectionPlugin();
-
-    editor.use(area);
-    area.use(connection);
-    connection.addPreset(ConnPresets.classic.setup());
-
-    class VanillaRenderPlugin extends Scope {
-      constructor() { super('vanilla-render'); }
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
-    const render = new VanillaRenderPlugin();
-    area.use(render);
-    const socketPosition = getDOMSocketPosition();
-    socketPosition.attach(render);
-
-    function renderControl(wrap, control) {
-      wrap.className = 'rete-control';
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.value = control.value;
-      input.addEventListener('pointerdown', (e) => e.stopPropagation());
-      input.addEventListener('input', (e) => control.setValue(Number(e.target.value)));
-      wrap.appendChild(input);
-    }
-
-    function renderNode(element, node) {
-      element.classList.add('rete-node');
-      if (node.kind) element.classList.add('n-' + node.kind);
-      element.innerHTML = '';
-      const title = document.createElement('div');
-      title.className = 'rete-node-title';
-      title.textContent = node.label;
-      element.appendChild(title);
-
-      Object.entries(node.inputs).forEach(([key, input]) => {
-        if (!input) return;
-        const row = document.createElement('div');
-        row.className = 'rete-input-row';
-        const socketEl = document.createElement('div');
-        socketEl.className = 'rete-socket';
-        row.appendChild(socketEl);
-        const label = document.createElement('span');
-        label.textContent = input.label || key;
-        row.appendChild(label);
-        element.appendChild(row);
-        const data = { element: socketEl, type: 'socket', side: 'input', key, nodeId: node.id, payload: input.socket };
-        area.emit({ type: 'render', data }).then(() => area.emit({ type: 'rendered', data }));
-      });
-
-      Object.entries(node.controls).forEach(([key, control]) => {
-        if (!control) return;
-        const wrap = document.createElement('div');
-        renderControl(wrap, control);
-        element.appendChild(wrap);
-      });
-
-      if (node.displayValue !== undefined) {
-        const val = document.createElement('div');
-        val.className = 'rete-value';
-        val.textContent = node.displayValue;
-        element.appendChild(val);
-        node._valueEl = val;
-      }
-
-      Object.entries(node.outputs).forEach(([key, output]) => {
-        if (!output) return;
-        const row = document.createElement('div');
-        row.className = 'rete-output-row';
-        const label = document.createElement('span');
-        label.textContent = output.label || key;
-        row.appendChild(label);
-        const socketEl = document.createElement('div');
-        socketEl.className = 'rete-socket';
-        row.appendChild(socketEl);
-        element.appendChild(row);
-        const data = { element: socketEl, type: 'socket', side: 'output', key, nodeId: node.id, payload: output.socket };
-        area.emit({ type: 'render', data }).then(() => area.emit({ type: 'rendered', data }));
-      });
-    }
-
-    function renderConnection(element, payload) {
-      const { source, target, sourceOutput, targetInput } = payload;
-      element.innerHTML = '';
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.style.cssText = 'position:absolute; overflow:visible; pointer-events:none; width:1px; height:1px;';
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('stroke', '#4f7dff');
-      path.setAttribute('stroke-width', '2.5');
-      path.setAttribute('fill', 'none');
-      svg.appendChild(path);
-      element.appendChild(svg);
-      let startPos = null, endPos = null;
-      function draw() { if (startPos && endPos) path.setAttribute('d', classicConnectionPath([startPos, endPos], 0.3)); }
-      socketPosition.listen(source, 'output', sourceOutput, (pos) => { startPos = pos; draw(); });
-      socketPosition.listen(target, 'input', targetInput, (pos) => { endPos = pos; draw(); });
-    }
-
-    render.addPipe((context) => {
-      if (context.type === 'render') {
-        const { element, type, payload } = context.data;
-        if (type === 'node') renderNode(element, payload);
-        else if (type === 'connection') renderConnection(element, payload);
-      }
-      return context;
-    });
-
-    return { editor, area, connection };
   }
 
-  // ================= 섹션 1: 기본 에디터 =================
-  {
-    const socket = new ClassicPreset.Socket('generic');
-    const { editor, area } = setupEditor(document.getElementById('flow1'));
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-    const n1 = new ClassicPreset.Node('위판장 입고');
-    n1.kind = 'market';
-    n1.addOutput('out', new ClassicPreset.Output(socket, '출고'));
-    await editor.addNode(n1);
-    await area.translate(n1.id, { x: 20, y: 60 });
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-    const n2 = new ClassicPreset.Node('경매');
-    n2.kind = 'op';
-    n2.addInput('in', new ClassicPreset.Input(socket, '입고'));
-    n2.addOutput('out', new ClassicPreset.Output(socket, '낙찰'));
-    await editor.addNode(n2);
-    await area.translate(n2.id, { x: 250, y: 60 });
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-    const n3 = new ClassicPreset.Node('유통센터');
-    n3.kind = 'result';
-    n3.addInput('in', new ClassicPreset.Input(socket, '입고'));
-    await editor.addNode(n3);
-    await area.translate(n3.id, { x: 480, y: 180 });
-
-    await editor.addConnection(new ClassicPreset.Connection(n1, 'out', n2, 'in'));
-
-    const info1 = document.getElementById('info1');
-    editor.addPipe((context) => {
-      if (context.type === 'connectioncreated') {
-        const c = context.data;
-        if (c.source === n2.id && c.target === n3.id) {
-          info1.textContent = '"경매" → "유통센터" 연결 완료!';
-        }
-      }
-      return context;
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
   }
 
-  // ================= 섹션 2: 데이터플로우 엔진 =================
-  {
-    const numSocket = new ClassicPreset.Socket('number');
-    const { editor, area } = setupEditor(document.getElementById('flow2'));
-    const engine = new DataflowEngine();
-    editor.use(engine);
-
-    const resultBox = document.getElementById('result2');
-
-    class BoatNode extends ClassicPreset.Node {
-      constructor(label, initial) {
-        super(label);
-        this.kind = 'boat';
-        this.addOutput('value', new ClassicPreset.Output(numSocket, '어획량(kg)'));
-        this.addControl('value', new ClassicPreset.InputControl('number', { initial, change: () => recompute() }));
-      }
-      data() { return { value: Number(this.controls.value.value) || 0 }; }
-    }
-
-    class SumNode extends ClassicPreset.Node {
-      constructor(label) {
-        super(label);
-        this.kind = 'op';
-        this.addInput('a', new ClassicPreset.Input(numSocket, 'A'));
-        this.addInput('b', new ClassicPreset.Input(numSocket, 'B'));
-        this.addOutput('value', new ClassicPreset.Output(numSocket, '합계'));
-      }
-      data(inputs) {
-        const a = inputs.a ? inputs.a[0] : 0;
-        const b = inputs.b ? inputs.b[0] : 0;
-        return { value: a + b };
-      }
-    }
-
-    class ResultNode extends ClassicPreset.Node {
-      constructor() {
-        super('결과');
-        this.kind = 'result';
-        this.addInput('value', new ClassicPreset.Input(numSocket, '값'));
-      }
-      data(inputs) {
-        const value = inputs.value ? inputs.value[0] : 0;
-        return { value };
-      }
-    }
-
-    const boat1 = new BoatNode('정민호', 120);
-    await editor.addNode(boat1);
-    await area.translate(boat1.id, { x: 20, y: 10 });
-
-    const boat2 = new BoatNode('대양호', 95);
-    await editor.addNode(boat2);
-    await area.translate(boat2.id, { x: 20, y: 150 });
-
-    const sum = new SumNode('합계');
-    await editor.addNode(sum);
-    await area.translate(sum.id, { x: 260, y: 80 });
-
-    const result = new ResultNode();
-    await editor.addNode(result);
-    await area.translate(result.id, { x: 480, y: 80 });
-
-    await editor.addConnection(new ClassicPreset.Connection(boat1, 'value', sum, 'a'));
-    await editor.addConnection(new ClassicPreset.Connection(boat2, 'value', sum, 'b'));
-    await editor.addConnection(new ClassicPreset.Connection(sum, 'value', result, 'value'));
-
-    async function recompute() {
-      engine.reset();
-      const { value } = await engine.fetch(result.id);
-      resultBox.textContent = `총 위판량: ${value} kg`;
-      window.__section2Result = value;
-    }
-    await recompute();
-    window.__section2Recompute = recompute;
-  }
-
-  // ================= 섹션 3: 다단계 데이터플로우 =================
-  {
-    const numSocket = new ClassicPreset.Socket('number');
-    const { editor, area } = setupEditor(document.getElementById('flow3'));
-    const engine = new DataflowEngine();
-    editor.use(engine);
-
-    const resultBox = document.getElementById('result3');
-
-    class BoatNode extends ClassicPreset.Node {
-      constructor(label, initial) {
-        super(label);
-        this.kind = 'boat';
-        this.addOutput('value', new ClassicPreset.Output(numSocket, 'kg'));
-        this.addControl('value', new ClassicPreset.InputControl('number', { initial, change: () => recompute() }));
-      }
-      data() { return { value: Number(this.controls.value.value) || 0 }; }
-    }
-    class SumNode extends ClassicPreset.Node {
-      constructor(label) {
-        super(label);
-        this.kind = 'op';
-        this.addInput('a', new ClassicPreset.Input(numSocket, 'A'));
-        this.addInput('b', new ClassicPreset.Input(numSocket, 'B'));
-        this.addOutput('value', new ClassicPreset.Output(numSocket, '합계'));
-      }
-      data(inputs) {
-        const a = inputs.a ? inputs.a[0] : 0;
-        const b = inputs.b ? inputs.b[0] : 0;
-        return { value: a + b };
-      }
-    }
-    class ResultNode extends ClassicPreset.Node {
-      constructor() {
-        super('총 합계');
-        this.kind = 'result';
-        this.addInput('a', new ClassicPreset.Input(numSocket, 'A위판장'));
-        this.addInput('b', new ClassicPreset.Input(numSocket, 'B위판장'));
-      }
-      data(inputs) {
-        const a = inputs.a ? inputs.a[0] : 0;
-        const b = inputs.b ? inputs.b[0] : 0;
-        return { value: a + b };
-      }
-    }
-
-    const boat1 = new BoatNode('1호', 80);
-    const boat2 = new BoatNode('2호', 65);
-    const boat3 = new BoatNode('3호', 110);
-    const boat4 = new BoatNode('4호', 70);
-    const sumA = new SumNode('A위판장 합계');
-    const sumB = new SumNode('B위판장 합계');
-    const total = new ResultNode();
-
-    await editor.addNode(boat1); await area.translate(boat1.id, { x: 10, y: 0 });
-    await editor.addNode(boat2); await area.translate(boat2.id, { x: 10, y: 110 });
-    await editor.addNode(boat3); await area.translate(boat3.id, { x: 10, y: 220 });
-    await editor.addNode(boat4); await area.translate(boat4.id, { x: 10, y: 330 });
-    await editor.addNode(sumA); await area.translate(sumA.id, { x: 260, y: 40 });
-    await editor.addNode(sumB); await area.translate(sumB.id, { x: 260, y: 260 });
-    await editor.addNode(total); await area.translate(total.id, { x: 510, y: 150 });
-
-    await editor.addConnection(new ClassicPreset.Connection(boat1, 'value', sumA, 'a'));
-    await editor.addConnection(new ClassicPreset.Connection(boat2, 'value', sumA, 'b'));
-    await editor.addConnection(new ClassicPreset.Connection(boat3, 'value', sumB, 'a'));
-    await editor.addConnection(new ClassicPreset.Connection(boat4, 'value', sumB, 'b'));
-    await editor.addConnection(new ClassicPreset.Connection(sumA, 'value', total, 'a'));
-    await editor.addConnection(new ClassicPreset.Connection(sumB, 'value', total, 'b'));
-
-    async function recompute() {
-      engine.reset();
-      const { value } = await engine.fetch(total.id);
-      resultBox.textContent = `총 위판량: ${value} kg`;
-      window.__section3Result = value;
-    }
-    await recompute();
-  }
-
-  // ================= 섹션 4: 자동 배치 =================
-  {
-    const socket = new ClassicPreset.Socket('generic');
-    const container4 = document.getElementById('flow4');
-    const { editor, area } = setupEditor(container4);
-    const arrange = new AutoArrangePlugin();
-    area.use(arrange);
-    arrange.addPreset(ArrangePresets.classic.setup());
-
-    async function addNode(label, kind, nIn, nOut) {
-      const node = new ClassicPreset.Node(label);
-      node.kind = kind;
-      for (let i = 0; i < nIn; i++) node.addInput('in' + i, new ClassicPreset.Input(socket, ''));
-      for (let i = 0; i < nOut; i++) node.addOutput('out' + i, new ClassicPreset.Output(socket, ''));
-      node.width = 150;
-      node.height = 40 + Math.max(nIn, nOut) * 22 + 10;
-      await editor.addNode(node);
-      return node;
-    }
-
-    const boatA = await addNode('어선A', 'boat', 0, 1);
-    const boatB = await addNode('어선B', 'boat', 0, 1);
-    const market = await addNode('위판장', 'market', 2, 1);
-    const auction = await addNode('경매', 'op', 1, 1);
-    const distCenter = await addNode('유통센터', 'op', 1, 1);
-    const retail = await addNode('소매점', 'result', 1, 0);
-
-    await editor.addConnection(new ClassicPreset.Connection(boatA, 'out0', market, 'in0'));
-    await editor.addConnection(new ClassicPreset.Connection(boatB, 'out0', market, 'in1'));
-    await editor.addConnection(new ClassicPreset.Connection(market, 'out0', auction, 'in0'));
-    await editor.addConnection(new ClassicPreset.Connection(auction, 'out0', distCenter, 'in0'));
-    await editor.addConnection(new ClassicPreset.Connection(distCenter, 'out0', retail, 'in0'));
-
-    function scatter() {
-      const w = container4.clientWidth, h = container4.clientHeight;
-      editor.getNodes().forEach((n) => {
-        area.translate(n.id, {
-          x: 20 + Math.random() * Math.max(w - 190, 100),
-          y: 20 + Math.random() * Math.max(h - 120, 80),
-        });
-      });
-    }
-    scatter();
-
-    document.getElementById('btn-scatter').addEventListener('click', scatter);
-    document.getElementById('btn-arrange').addEventListener('click', () => arrange.layout());
-
-    window.__flow4Editor = editor;
-    window.__flow4Arrange = arrange;
-  }
-
-  window.__ready = true;
-}
-
-main().catch((e) => {
-  window.__pageErrors.push('main() error: ' + e.message + '\n' + (e.stack || ''));
-  window.__ready = true;
-});
+  frame.src = './' + available[0].key + '/index.html';
+})();
 </script>
 </body>
 </html>

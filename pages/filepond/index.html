@@ -2,250 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>FilePond</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/filepond@4.32.12/dist/filepond.min.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/filepond@4.32.12/dist/filepond.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/filepond-plugin-image-preview@4.6.12/dist/filepond-plugin-image-preview.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-type@1.2.9/dist/filepond-plugin-file-validate-type.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-size@2.2.8/dist/filepond-plugin-file-validate-size.min.js"></script>
+<title>데모 보기</title>
 <style>
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .lib-note {
-    font-size: 12.5px;
-    color: #7a4b00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-  }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-  }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 13px;
   }
-  button:hover { background: #3d67e0; }
-  .status-msg {
-    margin-top: 10px;
-    font-size: 13px;
-    background: #f0f4ff;
-    border: 1px solid #dbe4ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    min-height: 20px;
-    color: #333;
-    white-space: pre-wrap;
-  }
-  details { margin-top: 10px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1a1d24;
-    color: #d8e0ff;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    margin-top: 8px;
-  }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<script>
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  <h1>FilePond 핵심 기능 둘러보기</h1>
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
+    }
+  }
 
-  <div class="intro">
-    <strong>FilePond</strong>는 파일 업로드 영역을 드래그앤드롭, 미리보기, 진행률 표시까지 갖춘
-    완성된 UI로 만들어주는 라이브러리입니다. 평범한 <code>&lt;input type="file"&gt;</code> 하나를
-    <code>FilePond.create()</code>로 감싸기만 하면 됩니다.
-    <ul>
-      <li>드래그앤드롭 또는 클릭으로 여러 파일을 선택해 목록으로 관리</li>
-      <li>플러그인을 등록하면 이미지 미리보기, 파일 형식·용량 검증 같은 기능이 추가됨</li>
-      <li><code>acceptedFileTypes</code>/<code>maxFileSize</code>로 허용하지 않는 파일을 자동으로 걸러냄</li>
-      <li><code>getFiles()</code>/<code>removeFiles()</code> 같은 API로 코드에서 파일 목록을 직접 제어 가능</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 이 페이지의 업로드는 <strong>실제 서버로 전송되지 않습니다</strong>. 브라우저 안에서만 파일을 선택·미리보기하는
-      학습용 데모이며, 위판 서류/사진 관련 문구도 가상의 예시입니다. FilePond(CDN)와 공식 플러그인
-      (이미지 미리보기, 파일 형식 검증, 파일 크기 검증)만 사용하고 다른 외부 API는 사용하지 않습니다.
-    </div>
-  </div>
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
 
-  <section class="block">
-    <h2>1. 기본 드래그앤드롭 업로드</h2>
-    <div class="desc">위판 관련 서류나 사진을 드래그하거나 클릭해서 여러 개 선택해보세요. 목록에서 개별 파일을 삭제할 수도 있습니다.</div>
-    <input type="file" id="pond1" multiple />
-    <details>
-      <summary>코드 보기</summary>
-      <pre>FilePond.create(document.getElementById('pond1'), {
-  allowMultiple: true,
-  instantUpload: false, // 서버로 자동 업로드하지 않음 (이 데모는 서버가 없음)
-  labelIdle: '파일을 드래그하거나 &lt;span class="filepond--label-action"&gt;찾아보기&lt;/span&gt;',
-});</pre>
-    </details>
-  </section>
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
+  }
 
-  <section class="block">
-    <h2>2. 이미지 미리보기 플러그인</h2>
-    <div class="lib-note">※ 이 섹션은 FilePond 외에 공식 플러그인 FilePondPluginImagePreview를 함께 사용합니다.</div>
-    <div class="desc">사진 파일을 올리면 업로드 전에 바로 썸네일이 보입니다. 이미지가 아닌 파일은 형식 아이콘으로 표시됩니다.</div>
-    <input type="file" id="pond2" multiple accept="image/*" />
-    <details>
-      <summary>코드 보기</summary>
-      <pre>FilePond.registerPlugin(FilePondPluginImagePreview);
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
+    }
+  } catch (e) {
+    // 제목 갱신 실패는 무시
+  }
 
-FilePond.create(document.getElementById('pond2'), {
-  allowMultiple: true,
-  instantUpload: false,
-  acceptedFileTypes: ['image/*'],
-  imagePreviewHeight: 140,
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 파일 형식 · 용량 검증</h2>
-    <div class="lib-note">※ 이 섹션은 FilePond 외에 공식 플러그인 FilePondPluginFileValidateType, FilePondPluginFileValidateSize를 함께 사용합니다.</div>
-    <div class="desc">조합원 신청서 첨부를 가정해, PDF·이미지 파일만 허용하고 2MB를 넘는 파일은 거부합니다. 허용되지 않는 파일을 올리면 빨간 오류 표시가 뜹니다.</div>
-    <input type="file" id="pond3" multiple />
-    <details>
-      <summary>코드 보기</summary>
-      <pre>FilePond.registerPlugin(FilePondPluginFileValidateType, FilePondPluginFileValidateSize);
-
-FilePond.create(document.getElementById('pond3'), {
-  allowMultiple: true,
-  instantUpload: false,
-  acceptedFileTypes: ['application/pdf', 'image/jpeg', 'image/png'],
-  maxFileSize: '2MB',
-  labelFileTypeNotAllowed: '지원하지 않는 파일 형식입니다',
-  fileValidateTypeLabelExpectedTypes: 'PDF 또는 이미지 파일만 가능합니다',
-  labelMaxFileSizeExceeded: '파일 용량이 너무 큽니다',
-  labelMaxFileSize: '최대 {filesize}까지 가능합니다',
-});</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. API로 파일 목록 제어</h2>
-    <div class="desc">파일을 몇 개 올려보고, 버튼으로 코드에서 직접 목록을 확인하거나 한 번에 지워보세요.</div>
-    <input type="file" id="pond4" multiple />
-    <div class="controls">
-      <button id="listFilesBtn">현재 파일 목록 보기</button>
-      <button id="clearFilesBtn">전체 삭제</button>
-    </div>
-    <div class="status-msg" id="status4">아직 확인한 목록 없음</div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const pond4 = FilePond.create(document.getElementById('pond4'), { instantUpload: false });
-
-document.getElementById('listFilesBtn').addEventListener('click', () => {
-  const names = pond4.getFiles().map((f) => f.filename);
-  status4.textContent = names.length ? names.join('\n') : '파일 없음';
-});
-
-document.getElementById('clearFilesBtn').addEventListener('click', () => {
-  pond4.removeFiles();
-});</pre>
-    </details>
-  </section>
-
-  <script>
-    // ---------- 1. 기본 드래그앤드롭 업로드 ----------
-    FilePond.create(document.getElementById('pond1'), {
-      allowMultiple: true,
-      instantUpload: false,
-      labelIdle: '파일을 드래그하거나 <span class="filepond--label-action">찾아보기</span>',
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
+  }
 
-    // ---------- 2. 이미지 미리보기 플러그인 ----------
-    FilePond.registerPlugin(FilePondPluginImagePreview);
-    FilePond.create(document.getElementById('pond2'), {
-      allowMultiple: true,
-      instantUpload: false,
-      acceptedFileTypes: ['image/*'],
-      imagePreviewHeight: 140,
-      labelIdle: '위판 현장 사진을 드래그하거나 <span class="filepond--label-action">찾아보기</span>',
-    });
-
-    // ---------- 3. 파일 형식 · 용량 검증 ----------
-    FilePond.registerPlugin(FilePondPluginFileValidateType, FilePondPluginFileValidateSize);
-    FilePond.create(document.getElementById('pond3'), {
-      allowMultiple: true,
-      instantUpload: false,
-      acceptedFileTypes: ['application/pdf', 'image/jpeg', 'image/png'],
-      maxFileSize: '2MB',
-      labelIdle: '신청서 파일을 드래그하거나 <span class="filepond--label-action">찾아보기</span>',
-      labelFileTypeNotAllowed: '지원하지 않는 파일 형식입니다',
-      fileValidateTypeLabelExpectedTypes: 'PDF 또는 이미지 파일만 가능합니다',
-      labelMaxFileSizeExceeded: '파일 용량이 너무 큽니다',
-      labelMaxFileSize: '최대 {filesize}까지 가능합니다',
-    });
-
-    // ---------- 4. API로 파일 목록 제어 ----------
-    const pond4 = FilePond.create(document.getElementById('pond4'), {
-      allowMultiple: true,
-      instantUpload: false,
-      labelIdle: '파일을 드래그하거나 <span class="filepond--label-action">찾아보기</span>',
-    });
-    const status4 = document.getElementById('status4');
-    document.getElementById('listFilesBtn').addEventListener('click', () => {
-      const names = pond4.getFiles().map((f) => f.filename);
-      status4.textContent = names.length ? `현재 ${names.length}개: ${names.join(', ')}` : '파일 없음';
-    });
-    document.getElementById('clearFilesBtn').addEventListener('click', () => {
-      pond4.removeFiles();
-      status4.textContent = '전체 삭제했습니다.';
-    });
-  </script>
+  frame.src = './' + available[0].key + '/index.html';
+})();
+</script>
 </body>
 </html>

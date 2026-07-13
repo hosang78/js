@@ -2,432 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<title>ELK.js</title>
-<script src="https://cdn.jsdelivr.net/npm/elkjs@0.11.1/lib/elk.bundled.js"></script>
+<title>데모 보기</title>
 <style>
-  :root {
-    --series-1: #2a78d6;
-    --series-2: #1baf7a;
-    --series-3: #eda100;
-  }
-  body {
+  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
+  #tab-bar {
+    display: none;
+    gap: 4px;
+    padding: 8px 12px 0;
+    background: #eef0f3;
+    border-bottom: 1px solid #ddd;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    margin: 0;
-    padding: 24px;
+    box-sizing: border-box;
+  }
+  #tab-bar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     background: #f5f6f8;
-    color: #222;
-    line-height: 1.6;
-  }
-  h1 { margin-top: 0; font-size: 22px; }
-  h2 { font-size: 17px; margin-bottom: 4px; }
-  .intro {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-    font-size: 14px;
-  }
-  .intro ul { margin: 8px 0 0; padding-left: 20px; }
-  .intro li { margin-bottom: 4px; }
-  .disclaimer {
-    font-size: 12.5px;
-    color: #a15c00;
-    background: #fff6e5;
-    border: 1px solid #ffe0a3;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-top: 12px;
-  }
-  section.block {
-    background: #fff;
-    border-radius: 12px;
-    padding: 18px 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    margin-bottom: 20px;
-  }
-  .desc {
-    font-size: 13.5px;
     color: #555;
-    margin-bottom: 12px;
-  }
-  .layout-row { display: flex; gap: 16px; flex-wrap: wrap; }
-  .svg-wrap {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    background: #fcfcfb;
-    flex-shrink: 0;
-  }
-  .svg-wrap svg { display: block; }
-  .node rect { fill: var(--series-1); stroke: #1c5cab; rx: 6; }
-  .node text { font-size: 11px; fill: #fff; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
-  .edge-line { fill: none; stroke: #898781; stroke-width: 1.6; }
-  .edge-line.orth { stroke: #e34948; stroke-width: 2; }
-  .group rect { fill: #eef2fb; stroke: #b9c9ea; stroke-dasharray: 4 3; rx: 8; }
-  .group text { font-size: 11px; fill: #52514e; }
-  .controls { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; font-size: 13px; }
-  button {
-    padding: 7px 13px;
-    border: none;
-    border-radius: 8px;
-    background: #4f7dff;
-    color: #fff;
-    cursor: pointer;
     font-size: 13px;
+    cursor: pointer;
   }
-  button:hover { background: #3d67e0; }
-  button.active { background: #205fb0; }
-  .legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12.5px; color: #555; align-items: center; }
-  .legend-line { display: inline-block; width: 22px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 4px; }
-  details { margin-top: 12px; font-size: 12.5px; }
-  summary { cursor: pointer; color: #4f7dff; }
-  pre {
-    background: #1e1e2e;
-    color: #d9dce8;
-    padding: 12px 14px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
+  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+  #frame-wrap.with-tabs { top: 41px; }
+  iframe { width: 100%; height: 100%; border: none; display: block; }
 </style>
 </head>
 <body>
-
-  <h1>ELK.js 핵심 기능 둘러보기</h1>
-
-  <div class="intro">
-    <strong>ELK.js</strong>(Eclipse Layout Kernel)는 노드와 엣지의 <strong>좌표를 계산해주는</strong>
-    그래프 레이아웃 엔진입니다. 화면에 그려주지는 않고, "이 노드는 여기, 이 엣지는 이렇게 꺾여서
-    지나가라"는 좌표만 알려줍니다. 계산이 무거울 수 있어 내부적으로 Web Worker에서 비동기로 동작합니다.
-    <ul>
-      <li>레이어드(layered) 알고리즘으로 방향성 있는 흐름을 단(layer)별로 배치</li>
-      <li>직교(orthogonal) 엣지 라우팅 — 다른 노드를 피해 꺾어서 지나가는 선의 꺾임점(bend point)까지 계산</li>
-      <li>노드 안에 노드가 들어가는 중첩(컴파운드) 그래프 배치</li>
-      <li>layered/mrtree/radial/force 등 여러 레이아웃 알고리즘 중 선택</li>
-    </ul>
-    <div class="disclaimer">
-      ※ 아래 유통 흐름도는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
-      유통 구조와 무관합니다. ELK.js는 좌표만 계산하므로 결과는 이 페이지에서 직접 그린 간단한 SVG로
-      표시합니다. ELK.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는 사용하지 않습니다.
-    </div>
-  </div>
-
-  <section class="block">
-    <h2>1. 레이어드 레이아웃</h2>
-    <div class="desc">가상 위판장 유통 흐름입니다. ELK가 계산한 x, y 좌표를 그대로 SVG 사각형 위치에 사용합니다.</div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg1" width="520" height="200"></svg></div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>const elk = new ELK();
-const graph = {
-  id: "root",
-  layoutOptions: { "elk.algorithm": "layered", "elk.direction": "RIGHT" },
-  children: [
-    { id: "market1", width: 90, height: 34, labels: [{ text: "1번 위판장" }] },
-    { id: "broker1", width: 90, height: 34, labels: [{ text: "중도매인 A" }] },
-    // ...
-  ],
-  edges: [{ id: "e1", sources: ["market1"], targets: ["broker1"] }]
-};
-
-const result = await elk.layout(graph);
-// result.children[i].x / .y 가 계산된 위치</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>2. 엣지 라우팅 (직교 라우팅 + 꺾임점)</h2>
-    <div class="desc">
-      같은 그래프를 직선 라우팅과 직교(orthogonal) 라우팅으로 각각 계산해봅니다. 빨간 선은 다른 노드를
-      피해 <code class="inline">bendPoints</code>(꺾임점)를 거쳐 돌아가는 경로입니다.
-    </div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg2" width="520" height="220"></svg></div>
-    </div>
-    <div class="legend">
-      <span><span class="legend-line" style="border-color:#898781"></span>직선(POLYLINE) 라우팅</span>
-      <span><span class="legend-line" style="border-color:#e34948"></span>직교(ORTHOGONAL) 라우팅</span>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>layoutOptions: { "elk.algorithm": "layered", "elk.edgeRouting": "ORTHOGONAL" }
-// result.edges[i].sections[0].bendPoints 배열에 꺾임점 좌표가 담김</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>3. 중첩(컴파운드) 그래프</h2>
-    <div class="desc">점선 박스가 하위 그래프를 담은 컴파운드 노드입니다. ELK가 그룹 크기까지 자동으로 계산합니다.</div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg3" width="520" height="220"></svg></div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>{
-  id: "group1",
-  layoutOptions: { "elk.padding": "[top=34,left=12,bottom=12,right=12]" },
-  labels: [{ text: "1번 위판장 소속" }],
-  children: [
-    { id: "member1", width: 70, height: 28, labels: [{ text: "조합원 A" }] },
-    { id: "member2", width: 70, height: 28, labels: [{ text: "조합원 B" }] }
-  ],
-  edges: [{ id: "eg1", sources: ["member1"], targets: ["member2"] }]
-}
-// group1의 width/height는 자식 배치 결과에 맞춰 ELK가 자동으로 정함
-//
-// 주의: member2 → market2처럼 그룹 "안" 노드에서 그룹 "밖" 노드로
-// 가는 엣지는 루트의 elk.hierarchyHandling: "INCLUDE_CHILDREN" 옵션을
-// 켜야 sections(경로 좌표)가 계산됩니다. 꺼두면 sections이 비어있어
-// 좌표를 읽으려다 에러가 납니다.</pre>
-    </details>
-  </section>
-
-  <section class="block">
-    <h2>4. 레이아웃 알고리즘 비교</h2>
-    <div class="desc">같은 그래프를 여러 내장 알고리즘으로 다시 계산해봅니다.</div>
-    <div class="controls">
-      <button class="algo-btn active" data-algo="layered">layered</button>
-      <button class="algo-btn" data-algo="mrtree">mrtree (트리)</button>
-      <button class="algo-btn" data-algo="radial">radial (방사형)</button>
-      <button class="algo-btn" data-algo="force">force (물리 시뮬레이션)</button>
-    </div>
-    <div class="layout-row">
-      <div class="svg-wrap"><svg id="svg4" width="520" height="320"></svg></div>
-    </div>
-    <details>
-      <summary>코드 보기</summary>
-      <pre>graph.layoutOptions["elk.algorithm"] = "mrtree";
-const result = await elk.layout(graph);</pre>
-    </details>
-  </section>
-
+<div id="tab-bar"></div>
+<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
 <script>
-  const elk = new ELK();
+(async function () {
+  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
+  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
+  const sources = [
+    { key: 'claude', label: 'Claude' },
+    { key: 'chatgpt', label: 'ChatGPT' },
+  ];
 
-  function drawNode(svg, x, y, w, h, label, cls = "node") {
-    const NS = "http://www.w3.org/2000/svg";
-    const g = document.createElementNS(NS, "g");
-    g.setAttribute("class", cls);
-    const rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("x", x); rect.setAttribute("y", y);
-    rect.setAttribute("width", w); rect.setAttribute("height", h);
-    g.appendChild(rect);
-    if (label) {
-      const text = document.createElementNS(NS, "text");
-      text.setAttribute("x", x + w / 2); text.setAttribute("y", y + h / 2);
-      text.textContent = label;
-      g.appendChild(text);
+  const available = [];
+  for (const s of sources) {
+    try {
+      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
+      if (res.ok) available.push(s);
+    } catch (e) {
+      // 무시하고 다음 소스 확인
     }
-    svg.appendChild(g);
-    return g;
   }
 
-  function drawGroupLabel(svg, x, y, label) {
-    const NS = "http://www.w3.org/2000/svg";
-    const text = document.createElementNS(NS, "text");
-    text.setAttribute("x", x + 8); text.setAttribute("y", y + 16);
-    text.textContent = label;
-    svg.appendChild(text);
+  const tabBar = document.getElementById('tab-bar');
+  const frame = document.getElementById('content-frame');
+  const frameWrap = document.getElementById('frame-wrap');
+
+  if (available.length === 0) {
+    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+    return;
   }
 
-  function pointsToPath(start, bends, end) {
-    const pts = [start, ...(bends || []), end];
-    return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  }
-
-  function drawEdge(svg, section, cls = "edge-line") {
-    const NS = "http://www.w3.org/2000/svg";
-    const path = document.createElementNS(NS, "path");
-    path.setAttribute("class", cls);
-    path.setAttribute("d", pointsToPath(section.startPoint, section.bendPoints, section.endPoint));
-    svg.appendChild(path);
-  }
-
-  function clearSvg(svg) {
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
-  }
-
-  // ---- 1. 레이어드 레이아웃 ----
-  async function runSection1() {
-    const graph = {
-      id: "root",
-      layoutOptions: { "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.spacing.nodeNode": "24" },
-      children: [
-        { id: "market1", width: 90, height: 34 },
-        { id: "broker1", width: 90, height: 34 },
-        { id: "broker2", width: 90, height: 34 },
-        { id: "retail1", width: 90, height: 34 }
-      ],
-      edges: [
-        { id: "e1", sources: ["market1"], targets: ["broker1"] },
-        { id: "e2", sources: ["market1"], targets: ["broker2"] },
-        { id: "e3", sources: ["broker1"], targets: ["retail1"] },
-        { id: "e4", sources: ["broker2"], targets: ["retail1"] }
-      ]
-    };
-    const labels = { market1: "1번 위판장", broker1: "중도매인 A", broker2: "중도매인 B", retail1: "소매상" };
-    const result = await elk.layout(graph);
-    const svg = document.getElementById("svg1");
-    clearSvg(svg);
-    result.edges.forEach((e) => drawEdge(svg, e.sections[0]));
-    result.children.forEach((c) => drawNode(svg, c.x, c.y, c.width, c.height, labels[c.id]));
-  }
-  runSection1();
-
-  // ---- 2. 엣지 라우팅 비교 ----
-  async function runSection2() {
-    const baseGraph = () => ({
-      id: "root",
-      layoutOptions: { "elk.algorithm": "layered", "elk.direction": "RIGHT", "elk.spacing.nodeNode": "30" },
-      children: [
-        { id: "n1", width: 70, height: 30 },
-        { id: "n2", width: 70, height: 30 },
-        { id: "n3", width: 70, height: 30 },
-        { id: "n4", width: 70, height: 30 }
-      ],
-      edges: [
-        { id: "e1", sources: ["n1"], targets: ["n2"] },
-        { id: "e2", sources: ["n2"], targets: ["n4"] },
-        { id: "e3", sources: ["n1"], targets: ["n3"] },
-        { id: "e4", sources: ["n3"], targets: ["n4"] },
-        { id: "e5", sources: ["n1"], targets: ["n4"] }
-      ]
-    });
-    const labels = { n1: "위판장", n2: "중도매인 A", n3: "중도매인 B", n4: "수출업체" };
-
-    const straight = baseGraph();
-    straight.layoutOptions["elk.edgeRouting"] = "POLYLINE";
-    const rStraight = await elk.layout(straight);
-
-    const orth = baseGraph();
-    orth.layoutOptions["elk.edgeRouting"] = "ORTHOGONAL";
-    const rOrth = await elk.layout(orth);
-
-    const svg = document.getElementById("svg2");
-    clearSvg(svg);
-    rStraight.edges.forEach((e) => drawEdge(svg, e.sections[0], "edge-line"));
-    const e5orth = rOrth.edges.find((e) => e.id === "e5");
-    drawEdge(svg, e5orth.sections[0], "edge-line orth");
-    rStraight.children.forEach((c) => drawNode(svg, c.x, c.y, c.width, c.height, labels[c.id]));
-  }
-  runSection2();
-
-  // ---- 3. 중첩 그래프 ----
-  async function runSection3() {
-    const graph = {
-      id: "root",
-      layoutOptions: {
-        "elk.algorithm": "layered",
-        "elk.direction": "RIGHT",
-        "elk.spacing.nodeNode": "24",
-        "elk.hierarchyHandling": "INCLUDE_CHILDREN"
-      },
-      children: [
-        {
-          id: "group1",
-          layoutOptions: { "elk.padding": "[top=34,left=12,bottom=12,right=12]", "elk.algorithm": "layered" },
-          children: [
-            { id: "member1", width: 74, height: 28 },
-            { id: "member2", width: 74, height: 28 }
-          ],
-          edges: [{ id: "eg1", sources: ["member1"], targets: ["member2"] }]
-        },
-        { id: "market2", width: 90, height: 34 }
-      ],
-      edges: [{ id: "e1", sources: ["member2"], targets: ["market2"] }]
-    };
-    const labels = { member1: "조합원 A", member2: "조합원 B", market2: "위판장" };
-    const groupLabels = { group1: "1번 위판장 소속" };
-    const result = await elk.layout(graph);
-    const svg = document.getElementById("svg3");
-    clearSvg(svg);
-
-    function renderNode(node, offsetX, offsetY) {
-      const x = offsetX + node.x, y = offsetY + node.y;
-      if (node.children && node.children.length) {
-        drawNode(svg, x, y, node.width, node.height, null, "group");
-        drawGroupLabel(svg, x, y, groupLabels[node.id] || node.id);
-        (node.edges || []).forEach((e) => {
-          const sec = e.sections[0];
-          const shifted = {
-            startPoint: { x: sec.startPoint.x + x, y: sec.startPoint.y + y },
-            endPoint: { x: sec.endPoint.x + x, y: sec.endPoint.y + y },
-            bendPoints: (sec.bendPoints || []).map((p) => ({ x: p.x + x, y: p.y + y }))
-          };
-          drawEdge(svg, shifted);
-        });
-        node.children.forEach((child) => renderNode(child, x, y));
-      } else {
-        drawNode(svg, x, y, node.width, node.height, labels[node.id]);
-      }
+  try {
+    const metaRes = await fetch('./meta.json');
+    if (metaRes.ok) {
+      const meta = await metaRes.json();
+      if (meta.name) document.title = meta.name;
     }
-    result.edges.forEach((e) => drawEdge(svg, e.sections[0]));
-    result.children.forEach((c) => renderNode(c, 0, 0));
+  } catch (e) {
+    // 제목 갱신 실패는 무시
   }
-  runSection3();
 
-  // ---- 4. 레이아웃 알고리즘 비교 ----
-  async function runSection4(algo) {
-    const graph = {
-      id: "root",
-      layoutOptions: { "elk.algorithm": algo },
-      children: [
-        { id: "n1", width: 60, height: 28 },
-        { id: "n2", width: 60, height: 28 },
-        { id: "n3", width: 60, height: 28 },
-        { id: "n4", width: 60, height: 28 },
-        { id: "n5", width: 60, height: 28 }
-      ],
-      edges: [
-        { id: "e1", sources: ["n1"], targets: ["n2"] },
-        { id: "e2", sources: ["n1"], targets: ["n3"] },
-        { id: "e3", sources: ["n2"], targets: ["n4"] },
-        { id: "e4", sources: ["n3"], targets: ["n5"] }
-      ]
-    };
-    const labels = { n1: "위판장", n2: "중도매인 A", n3: "중도매인 B", n4: "소매상", n5: "수출업체" };
-    const result = await elk.layout(graph);
-    const svg = document.getElementById("svg4");
-    clearSvg(svg);
-
-    const xs = result.children.flatMap((c) => [c.x, c.x + c.width]);
-    const ys = result.children.flatMap((c) => [c.y, c.y + c.height]);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const pad = 20;
-    const offsetX = pad - minX, offsetY = pad - minY;
-    // force/radial 같은 알고리즘은 결과 크기가 크게 달라지므로 고정 캔버스 대신
-    // 실제 계산된 범위에 맞춰 viewBox를 다시 잡아 잘리지 않게 한다.
-    const w = maxX - minX + pad * 2, h = maxY - minY + pad * 2;
-    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svg.setAttribute("height", Math.min(h, 420));
-
-    result.edges.forEach((e) => {
-      const sec = e.sections && e.sections[0];
-      if (!sec) return;
-      const shifted = {
-        startPoint: { x: sec.startPoint.x + offsetX, y: sec.startPoint.y + offsetY },
-        endPoint: { x: sec.endPoint.x + offsetX, y: sec.endPoint.y + offsetY },
-        bendPoints: (sec.bendPoints || []).map((p) => ({ x: p.x + offsetX, y: p.y + offsetY }))
-      };
-      drawEdge(svg, shifted);
+  if (available.length > 1) {
+    tabBar.style.display = 'flex';
+    frameWrap.classList.add('with-tabs');
+    available.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = s.label;
+      if (i === 0) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        frame.src = './' + s.key + '/index.html';
+        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+      tabBar.appendChild(btn);
     });
-    result.children.forEach((c) => drawNode(svg, c.x + offsetX, c.y + offsetY, c.width, c.height, labels[c.id]));
   }
-  runSection4("layered");
 
-  document.querySelectorAll(".algo-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".algo-btn").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      runSection4(btn.dataset.algo);
-    });
-  });
+  frame.src = './' + available[0].key + '/index.html';
+})();
 </script>
-
 </body>
 </html>
