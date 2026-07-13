@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="WaveSurfer.js v7 핵심 기능과 공식 플러그인을 한 페이지에서 체험하는 종합 샘플" />
+  <title>WaveSurfer.js 종합 기능 샘플</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --bg2: #0b1728;
+      --panel: rgba(16, 31, 51, .88);
+      --panel-2: #101f34;
+      --panel-3: #152740;
+      --line: rgba(148, 163, 184, .18);
+      --text: #edf5ff;
+      --muted: #91a4bb;
+      --accent: #2dd4bf;
+      --accent-2: #38bdf8;
+      --accent-3: #a78bfa;
+      --danger: #fb7185;
+      --warning: #fbbf24;
+      --ok: #34d399;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .28);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% -10%, rgba(56, 189, 248, .16), transparent 32rem),
+        radial-gradient(circle at 100% 0%, rgba(167, 139, 250, .13), transparent 34rem),
+        linear-gradient(180deg, var(--bg), #081523 38%, #06101c);
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+    a { color: inherit; }
+
+    .app-shell { max-width: 1580px; margin: 0 auto; padding: 24px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: center;
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(22, 44, 70, .95), rgba(11, 24, 40, .92));
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -90px -120px auto;
+      width: 330px;
+      height: 330px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(45, 212, 191, .16), transparent 68%);
+      pointer-events: none;
+    }
+    .eyebrow { color: var(--accent); font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(28px, 4vw, 46px); line-height: 1.08; letter-spacing: -.045em; }
+    .hero p { max-width: 850px; margin: 0; color: var(--muted); line-height: 1.72; }
+    .version-card {
+      min-width: 210px;
+      padding: 18px;
+      border: 1px solid rgba(45, 212, 191, .25);
+      border-radius: 18px;
+      background: rgba(7, 17, 31, .52);
+    }
+    .version-card strong { display: block; font-size: 22px; margin-bottom: 5px; }
+    .version-card span { color: var(--muted); font-size: 13px; }
+
+    .tabs {
+      position: sticky;
+      top: 10px;
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+      margin: 20px 0;
+      padding: 8px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(7, 17, 31, .82);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .18);
+    }
+    .tab-btn {
+      flex: 0 0 auto;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 750;
+      transition: .18s ease;
+    }
+    .tab-btn:hover { color: var(--text); background: rgba(148, 163, 184, .08); }
+    .tab-btn.active { color: #04151a; background: linear-gradient(135deg, var(--accent), #7dd3fc); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fade .2s ease; }
+    @keyframes fade { from { opacity: .45; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(320px, .75fr); gap: 18px; }
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .stack { display: grid; gap: 18px; }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, .15);
+    }
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 18px 20px 0;
+    }
+    .card-title { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+    .card-sub { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .card-body { padding: 18px 20px 20px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border: 1px solid rgba(56, 189, 248, .24);
+      border-radius: 999px;
+      color: #a5e7ff;
+      background: rgba(56, 189, 248, .08);
+      font-size: 11px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .badge.ok { color: #9ff6d2; border-color: rgba(52, 211, 153, .25); background: rgba(52, 211, 153, .08); }
+    .badge.warn { color: #ffe18a; border-color: rgba(251, 191, 36, .26); background: rgba(251, 191, 36, .08); }
+
+    .source-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; }
+    .input, .select, .textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      outline: none;
+      color: var(--text);
+      background: rgba(4, 13, 25, .68);
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .textarea { min-height: 150px; resize: vertical; line-height: 1.55; }
+    .input:focus, .select:focus, .textarea:focus { border-color: rgba(45, 212, 191, .62); box-shadow: 0 0 0 3px rgba(45, 212, 191, .1); }
+    .select option { background: #0c1a2b; }
+    .file-input { display: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 40px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: linear-gradient(180deg, rgba(35, 55, 79, .95), rgba(24, 41, 62, .95));
+      cursor: pointer;
+      font-weight: 750;
+      font-size: 13px;
+      transition: transform .15s, border-color .15s, background .15s;
+      user-select: none;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(125, 211, 252, .38); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: .42; cursor: not-allowed; }
+    .btn.primary { border-color: transparent; color: #052025; background: linear-gradient(135deg, var(--accent), #7dd3fc); }
+    .btn.danger { border-color: rgba(251, 113, 133, .28); color: #ffd1da; background: rgba(251, 113, 133, .11); }
+    .btn.ghost { background: rgba(148, 163, 184, .055); }
+    .btn.active { border-color: rgba(45, 212, 191, .55); background: rgba(45, 212, 191, .14); color: #bafcef; }
+    .icon-btn { width: 42px; padding: 0; font-size: 17px; }
+
+    .wave-stage {
+      position: relative;
+      overflow: hidden;
+      margin-top: 16px;
+      border: 1px solid rgba(148, 163, 184, .16);
+      border-radius: 16px;
+      background:
+        linear-gradient(rgba(56, 189, 248, .03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, .03) 1px, transparent 1px),
+        rgba(2, 10, 20, .76);
+      background-size: 32px 32px;
+    }
+    #waveform { min-height: 190px; }
+    #waveform::part(wrapper) { cursor: crosshair; }
+    #waveform::part(cursor) { box-shadow: 0 0 12px rgba(255,255,255,.35); }
+    #waveform::part(region) { border-radius: 7px; }
+    #waveform::part(region-content) {
+      padding: 4px 7px;
+      border-radius: 6px;
+      color: #fff;
+      background: rgba(2, 6, 23, .7);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    #waveform::part(region-handle) { width: 4px; background: rgba(255,255,255,.68); }
+    #timeline { min-height: 26px; border-top: 1px solid rgba(148,163,184,.12); }
+    #minimap { min-height: 48px; border-top: 1px solid rgba(148,163,184,.12); overflow: hidden; }
+    #spectrogram-wrap { border-top: 1px solid rgba(148,163,184,.12); }
+    #spectrogram { min-height: 185px; overflow: hidden; }
+    .hidden-visual { display: none !important; }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(3, 10, 20, .72);
+      backdrop-filter: blur(5px);
+      opacity: 0;
+      visibility: hidden;
+      transition: .2s;
+      z-index: 4;
+    }
+    .loading-overlay.show { opacity: 1; visibility: visible; }
+    .loader-box { min-width: 230px; text-align: center; }
+    .progress-track { height: 7px; margin-top: 10px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.11); }
+    .progress-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .12s; }
+
+    .transport {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .timebox { min-width: 116px; margin-left: 4px; font-variant-numeric: tabular-nums; font-weight: 800; color: #dff8ff; }
+    .seek-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 13px; }
+    .range { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .small-label { color: var(--muted); font-size: 12px; }
+    .control-grid { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 12px; margin-top: 14px; }
+    .control {
+      padding: 11px;
+      border: 1px solid rgba(148, 163, 184, .13);
+      border-radius: 12px;
+      background: rgba(3, 12, 23, .42);
+    }
+    .control label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 750; }
+    .control output { color: var(--text); }
+
+    .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .divider { height: 1px; margin: 16px 0; background: var(--line); }
+    .section-label { margin: 0 0 9px; color: #bcd0e4; font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+
+    .region-list { display: grid; gap: 8px; max-height: 345px; overflow: auto; padding-right: 3px; }
+    .region-item {
+      display: grid;
+      grid-template-columns: 12px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid rgba(148,163,184,.13);
+      border-radius: 11px;
+      background: rgba(3, 12, 23, .43);
+      cursor: pointer;
+    }
+    .region-item:hover { border-color: rgba(125,211,252,.28); }
+    .region-item.active { border-color: rgba(45,212,191,.58); background: rgba(45,212,191,.08); }
+    .region-color { width: 10px; height: 36px; border-radius: 999px; }
+    .region-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 750; font-size: 13px; }
+    .region-time { margin-top: 4px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .region-actions { display: flex; gap: 5px; }
+    .mini-btn { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
+    .mini-btn:hover { color: var(--text); background: rgba(148,163,184,.08); }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-field label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 750; }
+    .color-input { width: 100%; height: 42px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: rgba(4,13,25,.68); }
+
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(148,163,184,.1); }
+    .switch-row:last-child { border-bottom: 0; }
+    .switch-text strong { display: block; font-size: 13px; }
+    .switch-text small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .switch { position: relative; flex: 0 0 auto; width: 42px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; border-radius: 999px; background: #31435a; cursor: pointer; transition: .2s; }
+    .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; border-radius: 50%; background: #fff; transition: .2s; }
+    .switch input:checked + .slider { background: #1aa997; }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+
+    .event-log {
+      height: 330px;
+      overflow: auto;
+      padding: 12px;
+      border: 1px solid rgba(148,163,184,.13);
+      border-radius: 12px;
+      background: #030b16;
+      color: #b7c9dc;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .log-line { display: grid; grid-template-columns: 70px 128px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px dashed rgba(148,163,184,.08); }
+    .log-time { color: #607994; }
+    .log-event { color: #62e6d1; }
+    .log-data { overflow-wrap: anywhere; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .metric { padding: 13px; border: 1px solid rgba(148,163,184,.13); border-radius: 12px; background: rgba(3,12,23,.42); }
+    .metric span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .metric strong { display: block; margin-top: 7px; font-size: 20px; font-variant-numeric: tabular-nums; }
+
+    .recorder-stage, .channel-stage { min-height: 160px; padding: 14px; border: 1px solid rgba(148,163,184,.15); border-radius: 15px; background: rgba(2,10,20,.72); }
+    #record-waveform { min-height: 130px; }
+    #channel-waveform { min-height: 170px; }
+    .record-timer { font-size: 42px; font-weight: 900; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .record-status { color: var(--muted); }
+    .record-dot { display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; background: #52657b; }
+    .recording .record-dot { background: var(--danger); box-shadow: 0 0 0 7px rgba(251,113,133,.1); animation: pulse 1.15s infinite; }
+    @keyframes pulse { 50% { opacity: .45; } }
+
+    .feature-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .feature-table th, .feature-table td { padding: 12px; border-bottom: 1px solid rgba(148,163,184,.12); text-align: left; vertical-align: top; }
+    .feature-table th { color: #c9daeb; background: rgba(148,163,184,.045); }
+    .feature-table td { color: var(--muted); line-height: 1.55; }
+    code { padding: 2px 6px; border-radius: 6px; color: #b7f8ef; background: rgba(45,212,191,.08); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+
+    .drop-zone {
+      padding: 26px;
+      border: 1px dashed rgba(125,211,252,.36);
+      border-radius: 14px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(56,189,248,.035);
+      transition: .18s;
+    }
+    .drop-zone.dragover { border-color: var(--accent); color: #cbfff7; background: rgba(45,212,191,.09); transform: scale(1.003); }
+
+    .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 100; display: grid; gap: 9px; width: min(390px, calc(100vw - 36px)); }
+    .toast { padding: 13px 15px; border: 1px solid rgba(148,163,184,.2); border-radius: 12px; background: rgba(8,21,37,.95); box-shadow: 0 15px 40px rgba(0,0,0,.32); animation: toastIn .22s ease; }
+    .toast.ok { border-color: rgba(52,211,153,.34); }
+    .toast.error { border-color: rgba(251,113,133,.38); }
+    .toast strong { display: block; font-size: 13px; }
+    .toast span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
+
+    footer { padding: 28px 6px 8px; color: #71879e; font-size: 12px; line-height: 1.7; }
+
+    @media (max-width: 1120px) {
+      .grid { grid-template-columns: 1fr; }
+      .control-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .three-col { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 760px) {
+      .app-shell { padding: 12px; }
+      .hero { grid-template-columns: 1fr; padding: 22px; }
+      .version-card { min-width: 0; }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+      .source-row { grid-template-columns: 1fr 1fr; }
+      .source-row .input { grid-column: 1 / -1; }
+      .control-grid { grid-template-columns: 1fr; }
+      .metric-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+      .log-line { grid-template-columns: 60px 100px 1fr; }
+      .card-head, .card-body { padding-left: 14px; padding-right: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Interactive Audio Laboratory</div>
+        <h1>WaveSurfer.js 종합 기능 샘플</h1>
+        <p>파형 재생·탐색, 줌, 타임라인, 미니맵, 호버 시간, 구간 편집, 볼륨 엔벌로프, 스펙트로그램, 마이크 녹음, 스테레오 채널 분리, 파형 이미지·피크 데이터 내보내기를 한 페이지에 통합한 실습용 대시보드.</p>
+      </div>
+      <div class="version-card">
+        <strong>WaveSurfer.js 7.12.8</strong>
+        <span>ES Module · BSD-3-Clause<br />공식 플러그인 8종 적용</span>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="기능 탭">
+      <button class="tab-btn active" data-tab="studio">통합 스튜디오</button>
+      <button class="tab-btn" data-tab="regions">구간·엔벌로프</button>
+      <button class="tab-btn" data-tab="record">마이크 녹음</button>
+      <button class="tab-btn" data-tab="channels">채널 분석</button>
+      <button class="tab-btn" data-tab="events">이벤트·내보내기</button>
+      <button class="tab-btn" data-tab="guide">기능 안내</button>
+    </nav>
+
+    <main>
+      <section id="tab-studio" class="tab-panel active">
+        <div class="grid">
+          <div class="stack">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h2 class="card-title">오디오 소스</h2>
+                  <div class="card-sub">내장 생성 음원, 로컬 파일, URL, 드래그 앤 드롭 지원</div>
+                </div>
+                <span id="sourceBadge" class="badge ok">내장 데모</span>
+              </div>
+              <div class="card-body">
+                <div class="source-row">
+                  <input id="audioUrl" class="input" type="url" placeholder="CORS가 허용된 MP3/WAV/OGG URL 입력" />
+                  <button id="loadUrlBtn" class="btn">URL 불러오기</button>
+                  <label class="btn primary" for="audioFile">파일 선택</label>
+                  <input id="audioFile" class="file-input" type="file" accept="audio/*,video/*" />
+                </div>
+                <div class="button-row" style="margin-top:10px">
+                  <button id="demoBtn" class="btn ghost">내장 스테레오 데모</button>
+                  <button id="shortDemoBtn" class="btn ghost">짧은 음성형 데모</button>
+                  <button id="reloadBtn" class="btn ghost">현재 소스 다시 로드</button>
+                </div>
+                <div id="dropZone" class="drop-zone" style="margin-top:14px">오디오 파일을 이 영역에 끌어다 놓기</div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h2 class="card-title">통합 파형 플레이어</h2>
+                  <div id="trackName" class="card-sub">내장 스테레오 신시사이저 데모</div>
+                </div>
+                <div class="button-row">
+                  <span id="audioStateBadge" class="badge">초기화</span>
+                  <span id="channelBadge" class="badge">- ch</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="wave-stage">
+                  <div id="waveform"></div>
+                  <div id="timeline"></div>
+                  <div id="minimap"></div>
+                  <div id="spectrogram-wrap"><div id="spectrogram"></div></div>
+                  <div id="loadingOverlay" class="loading-overlay">
+                    <div class="loader-box">
+                      <strong id="loadingText">오디오 분석 중 0%</strong>
+                      <div class="progress-track"><div id="loadingFill" class="progress-fill"></div></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="transport">
+                  <button id="stopBtn" class="btn icon-btn" title="정지">■</button>
+                  <button id="backBtn" class="btn icon-btn" title="5초 뒤로">−5</button>
+                  <button id="playBtn" class="btn primary" style="min-width:104px">▶ 재생</button>
+                  <button id="forwardBtn" class="btn icon-btn" title="5초 앞으로">+5</button>
+                  <button id="muteBtn" class="btn icon-btn" title="음소거">🔊</button>
+                  <button id="loopAllBtn" class="btn ghost">전체 반복</button>
+                  <div id="timeDisplay" class="timebox">00:00.000 / 00:00.000</div>
+                </div>
+
+                <div class="seek-row">
+                  <span class="small-label">탐색</span>
+                  <input id="seekRange" class="range" type="range" min="0" max="1000" value="0" />
+                  <span id="progressPct" class="small-label">0.0%</span>
+                </div>
+
+                <div class="control-grid">
+                  <div class="control">
+                    <label>엔벌로프 최대 볼륨 <output id="volumeOutput">80%</output></label>
+                    <input id="volumeRange" class="range" type="range" min="0" max="1" value="0.8" step="0.01" />
+                  </div>
+                  <div class="control">
+                    <label>재생 속도 <output id="rateOutput">1.00×</output></label>
+                    <input id="rateRange" class="range" type="range" min="0.25" max="2" value="1" step="0.05" />
+                  </div>
+                  <div class="control">
+                    <label>줌 <output id="zoomOutput">0 px/s</output></label>
+                    <input id="zoomRange" class="range" type="range" min="0" max="600" value="0" step="5" />
+                  </div>
+                  <div class="control">
+                    <label>파형 높이 <output id="heightOutput">190px</output></label>
+                    <input id="heightRange" class="range" type="range" min="90" max="320" value="190" step="10" />
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <aside class="stack">
+            <article class="card">
+              <div class="card-head">
+                <div>
+                  <h2 class="card-title">빠른 설정</h2>
+                  <div class="card-sub">실시간 <code>setOptions()</code> 적용</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="section-label">파형 렌더링</p>
+                <div class="button-row">
+                  <button class="btn waveform-mode active" data-mode="line">연속 파형</button>
+                  <button class="btn waveform-mode" data-mode="bar">막대</button>
+                  <button class="btn waveform-mode" data-mode="dense">고밀도 막대</button>
+                </div>
+                <div class="divider"></div>
+                <p class="section-label">색상 프리셋</p>
+                <div class="button-row">
+                  <button class="btn theme-preset" data-theme="ocean">Ocean</button>
+                  <button class="btn theme-preset" data-theme="violet">Violet</button>
+                  <button class="btn theme-preset" data-theme="sunset">Sunset</button>
+                  <button class="btn theme-preset" data-theme="mono">Mono</button>
+                </div>
+                <div class="divider"></div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>정규화</strong><small>작은 신호를 파형 높이에 맞춤</small></div>
+                  <label class="switch"><input id="normalizeToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>자동 스크롤</strong><small>재생 헤드를 화면 안에 유지</small></div>
+                  <label class="switch"><input id="autoScrollToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>자동 중앙 정렬</strong><small>재생 헤드를 가운데 배치</small></div>
+                  <label class="switch"><input id="autoCenterToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>드래그 탐색</strong><small>파형을 끌어 재생 위치 변경</small></div>
+                  <label class="switch"><input id="dragSeekToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>상호작용</strong><small>클릭·드래그 탐색 활성화</small></div>
+                  <label class="switch"><input id="interactToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>스펙트로그램</strong><small>주파수 대역 시각화 표시</small></div>
+                  <label class="switch"><input id="spectrogramToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>미니맵</strong><small>전체 음원 탐색기 표시</small></div>
+                  <label class="switch"><input id="minimapToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">오디오 정보</h2><div class="card-sub">디코딩된 AudioBuffer 기준</div></div></div>
+              <div class="card-body">
+                <div class="metric-grid">
+                  <div class="metric"><span>Duration</span><strong id="metricDuration">0.0s</strong></div>
+                  <div class="metric"><span>Channels</span><strong id="metricChannels">-</strong></div>
+                  <div class="metric"><span>Sample rate</span><strong id="metricSampleRate">-</strong></div>
+                  <div class="metric"><span>Samples</span><strong id="metricSamples">-</strong></div>
+                </div>
+                <div class="divider"></div>
+                <div class="button-row">
+                  <button class="btn rate-preset" data-rate="0.5">0.5×</button>
+                  <button class="btn rate-preset" data-rate="0.75">0.75×</button>
+                  <button class="btn rate-preset active" data-rate="1">1×</button>
+                  <button class="btn rate-preset" data-rate="1.25">1.25×</button>
+                  <button class="btn rate-preset" data-rate="1.5">1.5×</button>
+                  <button class="btn rate-preset" data-rate="2">2×</button>
+                </div>
+              </div>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tab-regions" class="tab-panel">
+        <div class="grid">
+          <div class="stack">
+            <article class="card">
+              <div class="card-head">
+                <div><h2 class="card-title">Regions 플러그인</h2><div class="card-sub">영역 드래그 생성, 이동·리사이즈, 마커, 단일 재생, 반복</div></div>
+                <span class="badge">Regions</span>
+              </div>
+              <div class="card-body">
+                <div class="button-row">
+                  <button id="dragSelectionBtn" class="btn active">드래그 생성 ON</button>
+                  <button id="addRegionBtn" class="btn">재생 위치에 3초 구간</button>
+                  <button id="addMarkerBtn" class="btn">현재 위치 마커</button>
+                  <button id="addPresetRegionsBtn" class="btn">예시 구간 복원</button>
+                  <button id="clearRegionsBtn" class="btn danger">전체 삭제</button>
+                </div>
+                <div class="divider"></div>
+                <div id="regionList" class="region-list"></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">구간 JSON 가져오기·내보내기</h2><div class="card-sub">편집 결과 저장 및 재사용 예시</div></div></div>
+              <div class="card-body">
+                <textarea id="regionsJson" class="textarea" spellcheck="false" placeholder="Regions JSON"></textarea>
+                <div class="button-row" style="margin-top:10px">
+                  <button id="refreshRegionJsonBtn" class="btn">현재 구간 → JSON</button>
+                  <button id="importRegionJsonBtn" class="btn primary">JSON → 구간 적용</button>
+                  <button id="downloadRegionJsonBtn" class="btn">JSON 파일 저장</button>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <aside class="stack">
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">선택 구간 편집</h2><div id="selectedRegionId" class="card-sub">선택된 구간 없음</div></div></div>
+              <div class="card-body">
+                <div class="form-field"><label>이름</label><input id="regionName" class="input" placeholder="구간 이름" /></div>
+                <div class="form-grid" style="margin-top:10px">
+                  <div class="form-field"><label>시작(초)</label><input id="regionStart" class="input" type="number" min="0" step="0.01" /></div>
+                  <div class="form-field"><label>종료(초)</label><input id="regionEnd" class="input" type="number" min="0" step="0.01" /></div>
+                </div>
+                <div class="form-grid" style="margin-top:10px">
+                  <div class="form-field"><label>색상</label><input id="regionColor" class="color-input" type="color" value="#2dd4bf" /></div>
+                  <div class="form-field"><label>투명도</label><input id="regionAlpha" class="range" type="range" min="0.08" max="0.65" value="0.25" step="0.01" /></div>
+                </div>
+                <div class="button-row" style="margin-top:14px">
+                  <button id="applyRegionBtn" class="btn primary">변경 적용</button>
+                  <button id="playRegionBtn" class="btn">구간 재생</button>
+                  <button id="loopRegionBtn" class="btn">구간 반복</button>
+                  <button id="deleteRegionBtn" class="btn danger">삭제</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">Envelope 플러그인</h2><div class="card-sub">파형 위 볼륨 자동화 곡선 · 점 드래그·더블클릭 추가</div></div><span class="badge">Envelope</span></div>
+              <div class="card-body">
+                <div class="button-row">
+                  <button id="fadePresetBtn" class="btn">Fade In/Out</button>
+                  <button id="duckPresetBtn" class="btn">중간 Ducking</button>
+                  <button id="pulsePresetBtn" class="btn">펄스 볼륨</button>
+                  <button id="clearEnvelopeBtn" class="btn danger">점 초기화</button>
+                </div>
+                <div class="divider"></div>
+                <div class="button-row">
+                  <button id="addEnvelopePointBtn" class="btn">현재 위치에 점 추가</button>
+                  <button id="envelopeJsonBtn" class="btn">점 데이터 복사</button>
+                </div>
+                <div style="margin-top:13px">
+                  <span class="small-label">현재 보간 볼륨</span>
+                  <strong id="envelopeVolume" style="float:right">0.80</strong>
+                </div>
+                <pre id="envelopePreview" style="max-height:190px;overflow:auto;margin:12px 0 0;padding:12px;border-radius:11px;background:#030b16;color:#9ed8e8;font-size:11px;white-space:pre-wrap">[]</pre>
+              </div>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tab-record" class="tab-panel">
+        <div class="two-col">
+          <article class="card">
+            <div class="card-head"><div><h2 class="card-title">Record 플러그인</h2><div class="card-sub">마이크 입력 실시간 파형, 일시정지, 녹음 결과 재생·저장</div></div><span class="badge warn">HTTPS 또는 localhost 권장</span></div>
+            <div class="card-body">
+              <div id="recordHeader" class="record-status"><span class="record-dot"></span><span id="recordStatusText">대기 중</span></div>
+              <div id="recordTimer" class="record-timer">00:00.000</div>
+              <div class="recorder-stage"><div id="record-waveform"></div></div>
+              <div class="button-row" style="margin-top:14px">
+                <button id="recordStartBtn" class="btn primary">● 녹음 시작</button>
+                <button id="recordPauseBtn" class="btn" disabled>일시정지</button>
+                <button id="recordStopBtn" class="btn danger" disabled>정지</button>
+                <button id="recordPlayBtn" class="btn" disabled>결과 재생</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head"><div><h2 class="card-title">녹음 설정·결과</h2><div class="card-sub">입력 장치와 실시간 파형 모드 선택</div></div></div>
+            <div class="card-body">
+              <div class="form-field"><label>마이크 장치</label><select id="micSelect" class="select"><option value="">기본 마이크</option></select></div>
+              <div class="form-grid" style="margin-top:12px">
+                <div class="form-field"><label>실시간 파형 모드</label><select id="recordMode" class="select"><option value="scrolling">스크롤링 6초</option><option value="continuous">연속 누적 60초</option><option value="raw">원시 실시간 파형</option></select></div>
+                <div class="form-field"><label>오디오 비트레이트</label><select id="recordBitrate" class="select"><option value="64000">64 kbps</option><option value="128000" selected>128 kbps</option><option value="192000">192 kbps</option><option value="256000">256 kbps</option></select></div>
+              </div>
+              <div class="switch-row" style="margin-top:8px">
+                <div class="switch-text"><strong>에코 제거</strong><small>스피커 소리의 마이크 유입 완화</small></div>
+                <label class="switch"><input id="echoCancelToggle" type="checkbox" checked /><span class="slider"></span></label>
+              </div>
+              <div class="switch-row">
+                <div class="switch-text"><strong>소음 억제</strong><small>브라우저 지원 시 배경 소음 감소</small></div>
+                <label class="switch"><input id="noiseSuppressToggle" type="checkbox" checked /><span class="slider"></span></label>
+              </div>
+              <div class="divider"></div>
+              <div class="metric-grid">
+                <div class="metric"><span>MIME</span><strong id="recordMime" style="font-size:13px">-</strong></div>
+                <div class="metric"><span>Size</span><strong id="recordSize">-</strong></div>
+                <div class="metric"><span>Duration</span><strong id="recordDuration">-</strong></div>
+                <div class="metric"><span>Chunks</span><strong id="recordChunks">0</strong></div>
+              </div>
+              <div class="button-row" style="margin-top:14px">
+                <button id="downloadRecordBtn" class="btn" disabled>녹음 파일 저장</button>
+                <button id="loadRecordMainBtn" class="btn primary" disabled>통합 플레이어로 보내기</button>
+                <button id="refreshMicBtn" class="btn">장치 목록 갱신</button>
+              </div>
+              <p class="card-sub" style="margin-bottom:0">브라우저에 따라 WebM/Opus, MP4/AAC 등의 형식으로 저장된다. 진짜 PCM WAV 인코딩은 Record 플러그인의 기본 기능이 아니다.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="tab-channels" class="tab-panel">
+        <div class="grid">
+          <article class="card">
+            <div class="card-head"><div><h2 class="card-title">스테레오 채널 분리 파형</h2><div class="card-sub"><code>splitChannels</code> 옵션으로 좌·우 채널을 독립 렌더링</div></div><span class="badge">Core option</span></div>
+            <div class="card-body">
+              <div class="channel-stage"><div id="channel-waveform"></div></div>
+              <div class="transport">
+                <button id="channelStopBtn" class="btn icon-btn">■</button>
+                <button id="channelPlayBtn" class="btn primary">▶ 채널 재생</button>
+                <button id="channelSyncBtn" class="btn">통합 플레이어 위치 동기화</button>
+                <button id="channelLoadCurrentBtn" class="btn">현재 음원 재분석</button>
+                <span id="channelTime" class="timebox">00:00.000 / 00:00.000</span>
+              </div>
+              <div class="seek-row">
+                <span class="small-label">채널 줌</span>
+                <input id="channelZoomRange" class="range" type="range" min="0" max="500" value="0" step="5" />
+                <span id="channelZoomValue" class="small-label">0 px/s</span>
+              </div>
+            </div>
+          </article>
+
+          <aside class="stack">
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">채널 옵션</h2><div class="card-sub">각 채널별 색상·높이·정규화</div></div></div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-field"><label>Left 파형</label><input id="leftWaveColor" class="color-input" type="color" value="#38bdf8" /></div>
+                  <div class="form-field"><label>Left 진행</label><input id="leftProgressColor" class="color-input" type="color" value="#0e7490" /></div>
+                  <div class="form-field"><label>Right 파형</label><input id="rightWaveColor" class="color-input" type="color" value="#f472b6" /></div>
+                  <div class="form-field"><label>Right 진행</label><input id="rightProgressColor" class="color-input" type="color" value="#be185d" /></div>
+                </div>
+                <div class="control" style="margin-top:12px"><label>채널당 높이 <output id="channelHeightOutput">78px</output></label><input id="channelHeightRange" class="range" type="range" min="45" max="140" value="78" step="2" /></div>
+                <div class="switch-row">
+                  <div class="switch-text"><strong>정규화</strong><small>채널별 최대 진폭 기준 확대</small></div>
+                  <label class="switch"><input id="channelNormalizeToggle" type="checkbox" checked /><span class="slider"></span></label>
+                </div>
+                <button id="applyChannelOptionsBtn" class="btn primary" style="width:100%;margin-top:12px">채널 설정 적용</button>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">활용 예시</h2></div></div>
+              <div class="card-body card-sub" style="font-size:13px;line-height:1.75">
+                좌·우 마이크 비교, 인터뷰 화자 분리, 스테레오 불균형 확인, 현장 소음 방향 분석, 방송·콜 녹취 검수 등에 활용할 수 있다. 실제 음원 편집이나 채널 믹싱 기능은 별도 Web Audio 처리 로직이 필요하다.
+              </div>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tab-events" class="tab-panel">
+        <div class="grid">
+          <article class="card">
+            <div class="card-head"><div><h2 class="card-title">WaveSurfer 이벤트 로그</h2><div class="card-sub">load, loading, decode, ready, play, pause, seeking, interaction, zoom, scroll 등</div></div><button id="clearLogBtn" class="btn">로그 지우기</button></div>
+            <div class="card-body"><div id="eventLog" class="event-log"></div></div>
+          </article>
+
+          <aside class="stack">
+            <article class="card">
+              <div class="card-head"><div><h2 class="card-title">파형·데이터 내보내기</h2><div class="card-sub"><code>exportImage()</code> · <code>exportPeaks()</code></div></div></div>
+              <div class="card-body">
+                <div class="button-row">
+                  <button id="exportPngBtn" class="btn primary">파형 PNG 저장</button>
+                  <button id="exportPeaksBtn" class="btn">Peaks JSON 저장</button>
+                  <button id="copyPeaksBtn" class="btn">Peaks 복사</button>
+                </div>
+                <div class="form-grid" style="margin-top:12px">
+                  <div class="form-field"><label>Peaks 최대 길이</label><select id="peaksLength" class="select"><option value="500">500</option><option value="1000">1,000</option><option value="3000" selected>3,000</option><option value="8000">8,000</option></select></div>
+                  <div class="form-field"><label>이미지 품질</label><select id="imageQuality" class="select"><option value="1" selected>1.0</option><option value="0.9">0.9</option><option value="0.75">0.75</option></select></div>
+                </div>
+                <div class="divider"></div>
+                <button id="copyCurrentStateBtn" class="btn" style="width:100%">현재 플레이어 상태 JSON 복사</button>
+                <pre id="statePreview" style="max-height:255px;overflow:auto;margin:12px 0 0;padding:12px;border-radius:11px;background:#030b16;color:#9ed8e8;font-size:11px;white-space:pre-wrap">{}</pre>
+              </div>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tab-guide" class="tab-panel">
+        <article class="card">
+          <div class="card-head"><div><h2 class="card-title">포함 기능</h2><div class="card-sub">이 샘플에서 직접 실행 가능한 WaveSurfer.js 기능 목록</div></div></div>
+          <div class="card-body" style="overflow:auto">
+            <table class="feature-table">
+              <thead><tr><th>구분</th><th>적용 기능</th><th>주요 API</th></tr></thead>
+              <tbody>
+                <tr><td>Core playback</td><td>재생·일시정지·정지·앞뒤 이동·직접 탐색·전체 반복·음소거·볼륨·속도</td><td><code>playPause</code>, <code>stop</code>, <code>skip</code>, <code>setTime</code>, <code>setVolume</code>, <code>setPlaybackRate</code></td></tr>
+                <tr><td>Loading</td><td>생성 WAV, 로컬 파일, 원격 URL, 드래그 앤 드롭</td><td><code>load</code>, <code>loadBlob</code></td></tr>
+                <tr><td>Rendering</td><td>연속·막대 파형, 높이, 색상, 정규화, 자동 스크롤, 줌</td><td><code>setOptions</code>, <code>zoom</code></td></tr>
+                <tr><td>Regions</td><td>구간·마커 추가, 드래그 생성, 이동, 리사이즈, 반복, JSON 저장</td><td><code>addRegion</code>, <code>enableDragSelection</code>, <code>getRegions</code>, <code>clearRegions</code></td></tr>
+                <tr><td>Envelope</td><td>볼륨 자동화 점, 프리셋, 현재 보간 볼륨, 점 데이터 조회</td><td><code>setPoints</code>, <code>addPoint</code>, <code>getPoints</code></td></tr>
+                <tr><td>Timeline</td><td>시간 눈금과 라벨</td><td><code>TimelinePlugin.create</code></td></tr>
+                <tr><td>Minimap</td><td>전체 파형 개요와 확대 구간 탐색</td><td><code>MinimapPlugin.create</code></td></tr>
+                <tr><td>Hover</td><td>마우스 위치 시간 라벨</td><td><code>HoverPlugin.create</code></td></tr>
+                <tr><td>Zoom</td><td>휠·핀치 확대와 슬라이더 확대</td><td><code>ZoomPlugin.create</code>, <code>zoom</code></td></tr>
+                <tr><td>Spectrogram</td><td>FFT 주파수 히트맵, Mel 스케일, 라벨</td><td><code>SpectrogramPlugin.create</code></td></tr>
+                <tr><td>Record</td><td>마이크 녹음, 실시간 파형, 일시정지·재개, 저장</td><td><code>startRecording</code>, <code>pauseRecording</code>, <code>resumeRecording</code>, <code>stopRecording</code></td></tr>
+                <tr><td>Split channels</td><td>좌·우 채널 독립 파형</td><td><code>splitChannels</code></td></tr>
+                <tr><td>Export</td><td>파형 PNG, 다운샘플링 Peaks JSON, 상태 JSON</td><td><code>exportImage</code>, <code>exportPeaks</code>, <code>getDecodedData</code></td></tr>
+                <tr><td>Events</td><td>주요 코어·플러그인 이벤트 실시간 로그</td><td><code>on</code>, <code>once</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="two-col" style="margin-top:18px">
+          <article class="card"><div class="card-head"><div><h2 class="card-title">실행 유의사항</h2></div></div><div class="card-body card-sub" style="font-size:13px;line-height:1.75">WaveSurfer.js 모듈은 CDN에서 불러오므로 최초 실행 시 인터넷 연결이 필요하다. 원격 URL 음원은 서버가 CORS를 허용해야 한다. 대용량 파일은 브라우저 메모리를 많이 사용할 수 있으므로 사전 생성 Peaks 사용을 고려한다. 마이크 녹음은 보안 정책상 HTTPS 또는 localhost 환경이 가장 안정적이다.</div></article>
+          <article class="card"><div class="card-head"><div><h2 class="card-title">로컬 서버 실행 예시</h2></div></div><div class="card-body"><pre style="margin:0;padding:14px;border-radius:12px;background:#030b16;color:#a7f3d0;overflow:auto"># Python이 설치된 폴더에서
+python -m http.server 8000
+
+# 브라우저
+http://localhost:8000/WaveSurferJS_종합_기능_샘플.html</pre></div></article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      WaveSurfer.js는 오디오 파형 시각화·재생 라이브러리다. 이 샘플의 구간, 엔벌로프, 녹음, 스펙트로그램 기능은 학습·검증 목적이며, 원본 오디오를 실제로 절단·합성·효과 처리하는 편집기는 아니다.
+    </footer>
+  </div>
+
+  <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+  <script type="module">
+    import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/wavesurfer.esm.js'
+    import RegionsPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/regions.esm.js'
+    import TimelinePlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/timeline.esm.js'
+    import MinimapPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/minimap.esm.js'
+    import HoverPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/hover.esm.js'
+    import ZoomPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/zoom.esm.js'
+    import SpectrogramPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/spectrogram.esm.js'
+    import EnvelopePlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/envelope.esm.js'
+    import RecordPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7.12.8/dist/plugins/record.esm.js'
+
+    const $ = (selector, root = document) => root.querySelector(selector)
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)]
+
+    const state = {
+      currentSourceUrl: '',
+      currentObjectUrl: '',
+      currentName: '내장 스테레오 신시사이저 데모',
+      selectedRegion: null,
+      loopRegion: null,
+      loopAll: false,
+      dragSelectionEnabled: true,
+      dragSelectionCleanup: null,
+      readyCount: 0,
+      recordedBlob: null,
+      recordedUrl: '',
+      recordChunks: 0,
+      recordStartedAt: 0,
+      lastRecordDuration: 0,
+      channelLoadedUrl: '',
+      suppressSeekInput: false,
+    }
+
+    const formatTime = (seconds, ms = true) => {
+      if (!Number.isFinite(seconds) || seconds < 0) seconds = 0
+      const h = Math.floor(seconds / 3600)
+      const m = Math.floor((seconds % 3600) / 60)
+      const s = Math.floor(seconds % 60)
+      const milli = Math.floor((seconds % 1) * 1000)
+      const core = h > 0
+        ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+        : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      return ms ? `${core}.${String(milli).padStart(3, '0')}` : core
+    }
+
+    const formatBytes = (bytes) => {
+      if (!Number.isFinite(bytes) || bytes <= 0) return '-'
+      const units = ['B', 'KB', 'MB', 'GB']
+      const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+      return `${(bytes / 1024 ** index).toFixed(index ? 2 : 0)} ${units[index]}`
+    }
+
+    const rgbaFromHex = (hex, alpha = .25) => {
+      const clean = String(hex).replace('#', '')
+      const normalized = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+      const n = Number.parseInt(normalized, 16)
+      if (!Number.isFinite(n)) return `rgba(45, 212, 191, ${alpha})`
+      return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+    }
+
+    const hexFromCssColor = (color) => {
+      if (!color) return '#2dd4bf'
+      if (color.startsWith('#')) return color.slice(0, 7)
+      const nums = color.match(/[\d.]+/g)?.map(Number) || []
+      if (nums.length < 3) return '#2dd4bf'
+      return `#${nums.slice(0, 3).map((n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')).join('')}`
+    }
+
+    const alphaFromCssColor = (color) => {
+      const nums = color?.match(/[\d.]+/g)?.map(Number) || []
+      return nums.length >= 4 ? nums[3] : .25
+    }
+
+    const toast = (title, message = '', type = '') => {
+      const el = document.createElement('div')
+      el.className = `toast ${type}`
+      const strong = document.createElement('strong')
+      strong.textContent = title
+      const span = document.createElement('span')
+      span.textContent = message
+      el.append(strong, span)
+      $('#toastStack').append(el)
+      setTimeout(() => el.remove(), 4200)
+    }
+
+    const logEvent = (event, data = '') => {
+      const line = document.createElement('div')
+      line.className = 'log-line'
+      const now = new Date()
+      const text = typeof data === 'string' ? data : JSON.stringify(data)
+      line.innerHTML = `<span class="log-time">${now.toLocaleTimeString('ko-KR', { hour12: false })}</span><span class="log-event">${event}</span><span class="log-data"></span>`
+      line.lastElementChild.textContent = text
+      const log = $('#eventLog')
+      log.prepend(line)
+      while (log.children.length > 240) log.lastElementChild.remove()
+    }
+
+    const downloadBlob = (blob, filename) => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1500)
+    }
+
+    const copyText = async (text) => {
+      try {
+        await navigator.clipboard.writeText(text)
+        toast('클립보드 복사 완료', '텍스트를 붙여넣어 사용할 수 있다.', 'ok')
+      } catch {
+        const area = document.createElement('textarea')
+        area.value = text
+        area.style.position = 'fixed'
+        area.style.opacity = '0'
+        document.body.appendChild(area)
+        area.select()
+        document.execCommand('copy')
+        area.remove()
+        toast('클립보드 복사 완료', '브라우저 호환 방식으로 복사했다.', 'ok')
+      }
+    }
+
+    const writeAscii = (view, offset, text) => {
+      for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i))
+    }
+
+    function createSynthWav({ duration = 24, sampleRate = 32000, speechLike = false } = {}) {
+      const channels = 2
+      const frames = Math.floor(duration * sampleRate)
+      const bytesPerSample = 2
+      const blockAlign = channels * bytesPerSample
+      const buffer = new ArrayBuffer(44 + frames * blockAlign)
+      const view = new DataView(buffer)
+
+      writeAscii(view, 0, 'RIFF')
+      view.setUint32(4, 36 + frames * blockAlign, true)
+      writeAscii(view, 8, 'WAVE')
+      writeAscii(view, 12, 'fmt ')
+      view.setUint32(16, 16, true)
+      view.setUint16(20, 1, true)
+      view.setUint16(22, channels, true)
+      view.setUint32(24, sampleRate, true)
+      view.setUint32(28, sampleRate * blockAlign, true)
+      view.setUint16(32, blockAlign, true)
+      view.setUint16(34, 16, true)
+      writeAscii(view, 36, 'data')
+      view.setUint32(40, frames * blockAlign, true)
+
+      const clamp = (value) => Math.max(-1, Math.min(1, value))
+      let offset = 44
+      for (let i = 0; i < frames; i++) {
+        const t = i / sampleRate
+        const beatPhase = (t * 2) % 1
+        const kick = Math.exp(-beatPhase * 18) * Math.sin(2 * Math.PI * (68 - 34 * beatPhase) * t)
+        const hat = beatPhase < .065 ? (Math.random() * 2 - 1) * Math.exp(-beatPhase * 60) : 0
+        const section = Math.floor(t / 4) % 6
+        const chordRoots = [110, 130.81, 146.83, 164.81, 146.83, 130.81]
+        const root = chordRoots[section]
+        const sideLfo = Math.sin(2 * Math.PI * .17 * t)
+        const padEnv = .52 + .48 * Math.sin(Math.PI * ((t % 4) / 4))
+
+        let left
+        let right
+        if (speechLike) {
+          const syllable = Math.max(0, Math.sin(2 * Math.PI * (2.7 + .18 * Math.sin(t)) * t))
+          const formant1 = Math.sin(2 * Math.PI * (180 + 25 * Math.sin(t * .7)) * t)
+          const formant2 = .46 * Math.sin(2 * Math.PI * (620 + 90 * Math.sin(t * .33)) * t)
+          const formant3 = .22 * Math.sin(2 * Math.PI * (1250 + 130 * Math.cos(t * .41)) * t)
+          const consonant = Math.random() * .18 * (syllable < .2 ? 1 : .15)
+          const voice = (formant1 + formant2 + formant3 + consonant) * syllable * .35
+          left = voice + .08 * Math.sin(2 * Math.PI * 90 * t)
+          right = voice * .88 + .1 * Math.sin(2 * Math.PI * 210 * t + .5)
+        } else {
+          const padL = Math.sin(2 * Math.PI * root * t) + .45 * Math.sin(2 * Math.PI * root * 1.5 * t) + .24 * Math.sin(2 * Math.PI * root * 2 * t)
+          const padR = Math.sin(2 * Math.PI * root * 1.25 * t + .32) + .42 * Math.sin(2 * Math.PI * root * 1.875 * t) + .2 * Math.sin(2 * Math.PI * root * 2.5 * t)
+          const leadGate = ((t * 4) % 1) < .62 ? 1 : .18
+          const lead = .2 * Math.sin(2 * Math.PI * (root * 2 * (1 + .006 * Math.sin(t * 4))) * t) * leadGate
+          left = .24 * padL * padEnv + .2 * kick + .07 * hat + lead * (.72 + .28 * sideLfo)
+          right = .24 * padR * padEnv + .18 * kick + .07 * hat + lead * (.72 - .28 * sideLfo)
+        }
+
+        const fade = Math.min(1, t / .25, (duration - t) / .45)
+        view.setInt16(offset, clamp(left * fade) * 32767, true)
+        view.setInt16(offset + 2, clamp(right * fade) * 32767, true)
+        offset += blockAlign
+      }
+      return new Blob([buffer], { type: 'audio/wav' })
+    }
+
+    const regionsPlugin = RegionsPlugin.create()
+    const timelinePlugin = TimelinePlugin.create({
+      container: '#timeline',
+      height: 26,
+      style: { color: '#8ca8c2', fontSize: '10px' },
+    })
+    const minimapPlugin = MinimapPlugin.create({
+      container: '#minimap',
+      height: 48,
+      waveColor: '#244a63',
+      progressColor: '#2dd4bf',
+      overlayColor: 'rgba(125, 211, 252, .12)',
+      barWidth: 2,
+      barGap: 1,
+    })
+    const hoverPlugin = HoverPlugin.create({
+      lineColor: '#f8fafc',
+      lineWidth: 1,
+      labelBackground: '#0b1728',
+      labelColor: '#e6f7ff',
+      labelSize: 11,
+      formatTimeCallback: (seconds) => formatTime(seconds),
+    })
+    const zoomPlugin = ZoomPlugin.create({
+      exponentialZooming: true,
+      maxZoom: 1200,
+      iterations: 26,
+      deltaThreshold: 3,
+    })
+    const spectrogramPlugin = SpectrogramPlugin.create({
+      container: '#spectrogram',
+      height: 185,
+      labels: true,
+      labelsColor: '#b8d2e9',
+      labelsHzColor: '#7391ad',
+      labelsBackground: 'rgba(3, 11, 22, .72)',
+      fftSamples: 1024,
+      scale: 'mel',
+      colorMap: 'roseus',
+      gainDB: 18,
+      rangeDB: 75,
+      useWebWorker: true,
+    })
+    const envelopePlugin = EnvelopePlugin.create({
+      volume: .8,
+      lineColor: 'rgba(251, 191, 36, .88)',
+      lineWidth: 3,
+      dragLine: true,
+      dragPointSize: 12,
+      dragPointFill: '#07111f',
+      dragPointStroke: '#fbbf24',
+      points: [
+        { time: 0, volume: .8 },
+        { time: 1, volume: .8 },
+      ],
+    })
+
+    const wavesurfer = WaveSurfer.create({
+      container: '#waveform',
+      height: 190,
+      waveColor: '#2a7790',
+      progressColor: '#2dd4bf',
+      cursorColor: '#f8fafc',
+      cursorWidth: 2,
+      normalize: true,
+      dragToSeek: { debounceTime: 60 },
+      autoScroll: true,
+      autoCenter: true,
+      hideScrollbar: false,
+      fillParent: true,
+      minPxPerSec: 0,
+      sampleRate: 16000,
+      plugins: [regionsPlugin, timelinePlugin, minimapPlugin, hoverPlugin, zoomPlugin, spectrogramPlugin, envelopePlugin],
+    })
+
+    const mainEvents = ['init', 'load', 'decode', 'ready', 'play', 'pause', 'finish', 'seeking', 'interaction', 'click', 'dblclick', 'dragstart', 'dragend', 'zoom', 'scroll', 'redrawcomplete', 'resize', 'error']
+    mainEvents.forEach((event) => {
+      wavesurfer.on(event, (...args) => {
+        const mapped = args.map((arg) => {
+          if (arg instanceof Event) return arg.type
+          if (typeof arg === 'number') return Number(arg.toFixed(4))
+          if (arg instanceof Error) return arg.message
+          return arg
+        })
+        logEvent(event, mapped.length <= 1 ? mapped[0] ?? '' : mapped)
+      })
+    })
+
+    wavesurfer.on('loading', (percent) => {
+      $('#loadingOverlay').classList.add('show')
+      $('#loadingFill').style.width = `${percent}%`
+      $('#loadingText').textContent = `오디오 분석 중 ${Math.round(percent)}%`
+      if (Math.round(percent) % 10 === 0) logEvent('loading', `${Math.round(percent)}%`)
+    })
+
+    wavesurfer.on('ready', (duration) => {
+      state.readyCount += 1
+      $('#loadingOverlay').classList.remove('show')
+      $('#audioStateBadge').textContent = '준비 완료'
+      $('#audioStateBadge').className = 'badge ok'
+      $('#trackName').textContent = state.currentName
+      updateAudioMetrics()
+      updateTimeUI(wavesurfer.getCurrentTime())
+      setupDefaultRegions()
+      setEnvelopePreset('fade')
+      refreshRegionJson()
+      updateStatePreview()
+      toast('오디오 준비 완료', `${state.currentName} · ${formatTime(duration, false)}`, 'ok')
+    })
+
+    wavesurfer.on('error', (error) => {
+      $('#loadingOverlay').classList.remove('show')
+      $('#audioStateBadge').textContent = '오류'
+      $('#audioStateBadge').className = 'badge warn'
+      toast('오디오 로드 오류', error?.message || String(error), 'error')
+    })
+
+    wavesurfer.on('play', () => {
+      $('#playBtn').textContent = 'Ⅱ 일시정지'
+      $('#audioStateBadge').textContent = '재생 중'
+      $('#audioStateBadge').className = 'badge ok'
+    })
+    wavesurfer.on('pause', () => {
+      $('#playBtn').textContent = '▶ 재생'
+      $('#audioStateBadge').textContent = '일시정지'
+      $('#audioStateBadge').className = 'badge'
+    })
+    wavesurfer.on('finish', () => {
+      if (state.loopAll) wavesurfer.play(0)
+      else $('#playBtn').textContent = '▶ 재생'
+    })
+    wavesurfer.on('timeupdate', updateTimeUI)
+
+    function updateTimeUI(currentTime) {
+      const duration = wavesurfer.getDuration() || 0
+      $('#timeDisplay').textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`
+      const progress = duration ? currentTime / duration : 0
+      if (!state.suppressSeekInput) $('#seekRange').value = String(Math.round(progress * 1000))
+      $('#progressPct').textContent = `${(progress * 100).toFixed(1)}%`
+      updateStatePreview(false)
+    }
+
+    function updateAudioMetrics() {
+      const data = wavesurfer.getDecodedData()
+      const duration = wavesurfer.getDuration() || 0
+      $('#metricDuration').textContent = `${duration.toFixed(1)}s`
+      $('#metricChannels').textContent = data?.numberOfChannels ?? '-'
+      $('#metricSampleRate').textContent = data ? `${(data.sampleRate / 1000).toFixed(1)}k` : '-'
+      $('#metricSamples').textContent = data ? data.length.toLocaleString('ko-KR') : '-'
+      $('#channelBadge').textContent = `${data?.numberOfChannels ?? '-'} ch`
+    }
+
+    async function loadAudioSource({ url, blob, name, badge = '사용자 음원', preserveObject = false }) {
+      try {
+        wavesurfer.stop()
+        regionsPlugin.clearRegions()
+        setFlatEnvelope(.8)
+        state.selectedRegion = null
+        state.loopRegion = null
+        state.readyCount = 0
+        renderRegionList()
+        $('#audioStateBadge').textContent = '로딩 중'
+        $('#audioStateBadge').className = 'badge warn'
+        $('#sourceBadge').textContent = badge
+        $('#trackName').textContent = name
+        $('#loadingOverlay').classList.add('show')
+        $('#loadingFill').style.width = '0%'
+
+        let sourceUrl = url
+        if (blob) {
+          if (state.currentObjectUrl && !preserveObject) URL.revokeObjectURL(state.currentObjectUrl)
+          sourceUrl = URL.createObjectURL(blob)
+          state.currentObjectUrl = sourceUrl
+        } else if (!preserveObject && state.currentObjectUrl) {
+          URL.revokeObjectURL(state.currentObjectUrl)
+          state.currentObjectUrl = ''
+        }
+        state.currentSourceUrl = sourceUrl
+        state.currentName = name
+        await wavesurfer.load(sourceUrl)
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    async function loadDefaultDemo(short = false) {
+      const blob = createSynthWav(short
+        ? { duration: 13, sampleRate: 32000, speechLike: true }
+        : { duration: 24, sampleRate: 32000, speechLike: false })
+      await loadAudioSource({
+        blob,
+        name: short ? '내장 음성형 합성 데모' : '내장 스테레오 신시사이저 데모',
+        badge: short ? '음성형 데모' : '내장 데모',
+      })
+      await loadChannelSource(state.currentSourceUrl)
+    }
+
+    const regionPalette = [
+      'rgba(45, 212, 191, .26)',
+      'rgba(56, 189, 248, .25)',
+      'rgba(167, 139, 250, .26)',
+      'rgba(251, 113, 133, .24)',
+      'rgba(251, 191, 36, .24)',
+      'rgba(52, 211, 153, .24)',
+    ]
+
+    function setupDefaultRegions() {
+      regionsPlugin.clearRegions()
+      const duration = wavesurfer.getDuration()
+      if (!duration) return
+      const regionDefs = duration < 16
+        ? [
+            { id: 'intro', start: .4, end: Math.min(3.2, duration), content: 'Intro', color: regionPalette[0] },
+            { id: 'speech-a', start: Math.min(3.7, duration * .3), end: Math.min(7.4, duration * .58), content: 'Speech A', color: regionPalette[1] },
+            { id: 'speech-b', start: Math.min(8, duration * .62), end: Math.min(11.8, duration - .5), content: 'Speech B', color: regionPalette[2] },
+          ]
+        : [
+            { id: 'intro', start: .5, end: 4, content: 'Intro', color: regionPalette[0] },
+            { id: 'verse', start: 4, end: 8, content: 'Verse', color: regionPalette[1] },
+            { id: 'chorus', start: 8, end: 12, content: 'Chorus', color: regionPalette[2] },
+            { id: 'bridge', start: 12, end: 16, content: 'Bridge', color: regionPalette[3] },
+            { id: 'outro', start: 16, end: Math.min(21.5, duration - .3), content: 'Outro', color: regionPalette[4] },
+          ]
+      regionDefs.filter((r) => r.end > r.start).forEach((region) => regionsPlugin.addRegion({ ...region, minLength: .2, contentEditable: true }))
+      regionsPlugin.addRegion({ id: 'marker-drop', start: Math.min(duration * .5, duration - .1), content: 'MARK', color: 'rgba(251, 191, 36, .92)', resize: false })
+      enableDragSelection(true)
+      renderRegionList()
+    }
+
+    function enableDragSelection(enabled) {
+      state.dragSelectionCleanup?.()
+      state.dragSelectionCleanup = null
+      state.dragSelectionEnabled = enabled
+      $('#dragSelectionBtn').classList.toggle('active', enabled)
+      $('#dragSelectionBtn').textContent = `드래그 생성 ${enabled ? 'ON' : 'OFF'}`
+      if (enabled && wavesurfer.getDuration()) {
+        state.dragSelectionCleanup = regionsPlugin.enableDragSelection({
+          color: 'rgba(56, 189, 248, .22)',
+          minLength: .15,
+          content: '새 구간',
+          contentEditable: true,
+        })
+      }
+    }
+
+    function selectRegion(region) {
+      state.selectedRegion = region
+      const isMarker = Math.abs(region.end - region.start) < .0001
+      $('#selectedRegionId').textContent = `${region.id}${isMarker ? ' · 마커' : ''}`
+      $('#regionName').value = typeof region.content === 'string' ? region.content : region.content?.textContent || ''
+      $('#regionStart').value = region.start.toFixed(2)
+      $('#regionEnd').value = region.end.toFixed(2)
+      $('#regionColor').value = hexFromCssColor(region.color)
+      $('#regionAlpha').value = alphaFromCssColor(region.color)
+      renderRegionList()
+    }
+
+    function renderRegionList() {
+      const list = $('#regionList')
+      const regions = regionsPlugin.getRegions()
+      list.innerHTML = ''
+      if (!regions.length) {
+        list.innerHTML = '<div class="card-sub">등록된 구간이 없다. 파형을 드래그하거나 새 구간 버튼을 눌러 추가한다.</div>'
+        return
+      }
+      regions.sort((a, b) => a.start - b.start).forEach((region, index) => {
+        const item = document.createElement('div')
+        item.className = `region-item ${state.selectedRegion === region ? 'active' : ''}`
+        const isMarker = Math.abs(region.end - region.start) < .0001
+        const name = typeof region.content === 'string' ? region.content : region.content?.textContent || (isMarker ? '마커' : `구간 ${index + 1}`)
+        item.innerHTML = `
+          <span class="region-color" style="background:${region.color}"></span>
+          <div><div class="region-name"></div><div class="region-time">${formatTime(region.start)}${isMarker ? '' : ` ~ ${formatTime(region.end)} · ${(region.end - region.start).toFixed(2)}초`}</div></div>
+          <div class="region-actions"><button class="mini-btn play" title="재생">▶</button><button class="mini-btn remove" title="삭제">×</button></div>`
+        $('.region-name', item).textContent = name
+        item.addEventListener('click', () => selectRegion(region))
+        $('.play', item).addEventListener('click', (event) => {
+          event.stopPropagation()
+          region.play(true)
+        })
+        $('.remove', item).addEventListener('click', (event) => {
+          event.stopPropagation()
+          if (state.selectedRegion === region) state.selectedRegion = null
+          region.remove()
+        })
+        list.appendChild(item)
+      })
+    }
+
+    const regionEvents = ['region-created', 'region-updated', 'region-removed', 'region-in', 'region-out', 'region-content-changed']
+    regionEvents.forEach((event) => {
+      regionsPlugin.on(event, (region, side) => {
+        logEvent(event, { id: region.id, start: +region.start.toFixed(3), end: +region.end.toFixed(3), side })
+        if (event === 'region-created' && !region.content) region.setContent('새 구간')
+        if (event === 'region-removed' && state.selectedRegion === region) state.selectedRegion = null
+        if (event === 'region-out' && state.loopRegion === region) region.play(true)
+        renderRegionList()
+        refreshRegionJson()
+      })
+    })
+    regionsPlugin.on('region-clicked', (region, event) => {
+      event.stopPropagation()
+      selectRegion(region)
+    })
+    regionsPlugin.on('region-double-clicked', (region, event) => {
+      event.stopPropagation()
+      state.loopRegion = state.loopRegion === region ? null : region
+      toast(state.loopRegion ? '구간 반복 활성화' : '구간 반복 해제', region.id, 'ok')
+      if (state.loopRegion) region.play(true)
+    })
+
+    function refreshRegionJson() {
+      const data = regionsPlugin.getRegions().sort((a, b) => a.start - b.start).map((region) => ({
+        id: region.id,
+        start: +region.start.toFixed(3),
+        end: +region.end.toFixed(3),
+        color: region.color,
+        content: typeof region.content === 'string' ? region.content : region.content?.textContent || '',
+        drag: region.drag,
+        resize: region.resize,
+      }))
+      $('#regionsJson').value = JSON.stringify(data, null, 2)
+    }
+
+    function setFlatEnvelope(volume = .8) {
+      const duration = Math.max(wavesurfer.getDuration() || 0, 1)
+      const safeVolume = Math.min(1, Math.max(0, Number.isFinite(volume) ? volume : .8))
+      envelopePlugin.setPoints([
+        { time: 0, volume: safeVolume },
+        { time: duration, volume: safeVolume },
+      ])
+    }
+
+    function setEnvelopePreset(type) {
+      const duration = wavesurfer.getDuration()
+      if (!duration) return
+      let points = []
+      if (type === 'fade') {
+        points = [
+          { time: 0, volume: 0 },
+          { time: Math.min(1.6, duration * .1), volume: .8 },
+          { time: Math.max(duration - 2.2, duration * .7), volume: .8 },
+          { time: duration, volume: 0 },
+        ]
+      } else if (type === 'duck') {
+        points = [
+          { time: 0, volume: .8 },
+          { time: duration * .35, volume: .8 },
+          { time: duration * .42, volume: .2 },
+          { time: duration * .58, volume: .2 },
+          { time: duration * .65, volume: .8 },
+          { time: duration, volume: .8 },
+        ]
+      } else if (type === 'pulse') {
+        const count = 10
+        points = Array.from({ length: count + 1 }, (_, i) => ({ time: duration * (i / count), volume: i % 2 ? .25 : .9 }))
+      }
+      envelopePlugin.setPoints(points)
+      updateEnvelopePreview(points)
+    }
+
+    function updateEnvelopePreview(points = envelopePlugin.getPoints()) {
+      $('#envelopePreview').textContent = JSON.stringify(points.map(({ id, time, volume }) => ({ id, time: +time.toFixed(3), volume: +volume.toFixed(3) })), null, 2)
+    }
+
+    envelopePlugin.on('points-change', (points) => {
+      logEvent('envelope:points-change', `${points.length} points`)
+      updateEnvelopePreview(points)
+    })
+    envelopePlugin.on('volume-change', (volume) => {
+      $('#envelopeVolume').textContent = volume.toFixed(2)
+    })
+
+    // Main controls
+    $('#playBtn').addEventListener('click', () => wavesurfer.playPause())
+    $('#stopBtn').addEventListener('click', () => wavesurfer.stop())
+    $('#backBtn').addEventListener('click', () => wavesurfer.skip(-5))
+    $('#forwardBtn').addEventListener('click', () => wavesurfer.skip(5))
+    $('#muteBtn').addEventListener('click', () => {
+      const muted = !wavesurfer.getMuted()
+      wavesurfer.setMuted(muted)
+      $('#muteBtn').textContent = muted ? '🔇' : '🔊'
+      $('#muteBtn').classList.toggle('active', muted)
+    })
+    $('#loopAllBtn').addEventListener('click', () => {
+      state.loopAll = !state.loopAll
+      $('#loopAllBtn').classList.toggle('active', state.loopAll)
+      toast(`전체 반복 ${state.loopAll ? '활성화' : '해제'}`, '', 'ok')
+    })
+
+    $('#seekRange').addEventListener('input', (event) => {
+      state.suppressSeekInput = true
+      const ratio = Number(event.target.value) / 1000
+      wavesurfer.seekTo(ratio)
+      state.suppressSeekInput = false
+    })
+    $('#volumeRange').addEventListener('input', (event) => {
+      const volume = Number(event.target.value)
+      const points = envelopePlugin.getPoints()
+      const currentMax = Math.max(...points.map((point) => point.volume), 0)
+      if (points.length >= 2 && currentMax > 0) {
+        envelopePlugin.setPoints(points.map((point) => ({
+          ...point,
+          volume: Math.min(1, Math.max(0, point.volume * (volume / currentMax))),
+        })))
+      } else {
+        setFlatEnvelope(volume)
+      }
+      envelopePlugin.setVolume(volume)
+      $('#volumeOutput').textContent = `${Math.round(volume * 100)}%`
+      updateEnvelopePreview()
+    })
+    $('#rateRange').addEventListener('input', (event) => setPlaybackRate(Number(event.target.value)))
+    $('#zoomRange').addEventListener('input', (event) => {
+      const value = Number(event.target.value)
+      wavesurfer.zoom(value)
+      $('#zoomOutput').textContent = `${value} px/s`
+    })
+    $('#heightRange').addEventListener('input', (event) => {
+      const value = Number(event.target.value)
+      wavesurfer.setOptions({ height: value })
+      $('#heightOutput').textContent = `${value}px`
+    })
+
+    function setPlaybackRate(rate) {
+      wavesurfer.setPlaybackRate(rate, true)
+      $('#rateRange').value = String(rate)
+      $('#rateOutput').textContent = `${rate.toFixed(2)}×`
+      $$('.rate-preset').forEach((button) => button.classList.toggle('active', Number(button.dataset.rate) === rate))
+    }
+    $$('.rate-preset').forEach((button) => button.addEventListener('click', () => setPlaybackRate(Number(button.dataset.rate))))
+
+    const waveformModes = {
+      line: { barWidth: undefined, barGap: undefined, barRadius: undefined },
+      bar: { barWidth: 4, barGap: 2, barRadius: 4 },
+      dense: { barWidth: 2, barGap: 1, barRadius: 2 },
+    }
+    $$('.waveform-mode').forEach((button) => button.addEventListener('click', () => {
+      wavesurfer.setOptions(waveformModes[button.dataset.mode])
+      $$('.waveform-mode').forEach((b) => b.classList.toggle('active', b === button))
+    }))
+
+    const themes = {
+      ocean: { waveColor: '#2a7790', progressColor: '#2dd4bf', cursorColor: '#f8fafc' },
+      violet: { waveColor: '#6d5fa8', progressColor: '#a78bfa', cursorColor: '#f5f3ff' },
+      sunset: { waveColor: '#b45363', progressColor: '#fb923c', cursorColor: '#fff7ed' },
+      mono: { waveColor: '#64748b', progressColor: '#e2e8f0', cursorColor: '#fff' },
+    }
+    $$('.theme-preset').forEach((button) => button.addEventListener('click', () => {
+      wavesurfer.setOptions(themes[button.dataset.theme])
+      toast('파형 테마 적용', button.textContent, 'ok')
+    }))
+
+    $('#normalizeToggle').addEventListener('change', (event) => wavesurfer.setOptions({ normalize: event.target.checked }))
+    $('#autoScrollToggle').addEventListener('change', (event) => wavesurfer.setOptions({ autoScroll: event.target.checked }))
+    $('#autoCenterToggle').addEventListener('change', (event) => wavesurfer.setOptions({ autoCenter: event.target.checked }))
+    $('#dragSeekToggle').addEventListener('change', (event) => wavesurfer.setOptions({ dragToSeek: event.target.checked ? { debounceTime: 60 } : false }))
+    $('#interactToggle').addEventListener('change', (event) => wavesurfer.toggleInteraction(event.target.checked))
+    $('#spectrogramToggle').addEventListener('change', (event) => $('#spectrogram-wrap').classList.toggle('hidden-visual', !event.target.checked))
+    $('#minimapToggle').addEventListener('change', (event) => $('#minimap').classList.toggle('hidden-visual', !event.target.checked))
+
+    $('#audioFile').addEventListener('change', async (event) => {
+      const file = event.target.files?.[0]
+      if (file) {
+        await loadAudioSource({ blob: file, name: file.name, badge: '로컬 파일' })
+        await loadChannelSource(state.currentSourceUrl)
+      }
+      event.target.value = ''
+    })
+    $('#loadUrlBtn').addEventListener('click', async () => {
+      const url = $('#audioUrl').value.trim()
+      if (!url) return toast('URL 확인 필요', '오디오 URL을 입력한다.', 'error')
+      await loadAudioSource({ url, name: url.split('/').pop()?.split('?')[0] || '원격 오디오', badge: 'URL 음원' })
+      await loadChannelSource(url)
+    })
+    $('#demoBtn').addEventListener('click', () => loadDefaultDemo(false))
+    $('#shortDemoBtn').addEventListener('click', () => loadDefaultDemo(true))
+    $('#reloadBtn').addEventListener('click', () => {
+      if (!state.currentSourceUrl) return
+      loadAudioSource({ url: state.currentSourceUrl, name: state.currentName, badge: $('#sourceBadge').textContent, preserveObject: true })
+    })
+
+    const dropZone = $('#dropZone')
+    ;['dragenter', 'dragover'].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault()
+      dropZone.classList.add('dragover')
+    }))
+    ;['dragleave', 'drop'].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault()
+      dropZone.classList.remove('dragover')
+    }))
+    dropZone.addEventListener('drop', async (event) => {
+      const file = [...event.dataTransfer.files].find((item) => item.type.startsWith('audio/') || item.type.startsWith('video/'))
+      if (!file) return toast('지원 파일 없음', '오디오 또는 비디오 파일을 선택한다.', 'error')
+      await loadAudioSource({ blob: file, name: file.name, badge: '드롭 파일' })
+      await loadChannelSource(state.currentSourceUrl)
+    })
+
+    // Region controls
+    $('#dragSelectionBtn').addEventListener('click', () => enableDragSelection(!state.dragSelectionEnabled))
+    $('#addRegionBtn').addEventListener('click', () => {
+      const duration = wavesurfer.getDuration()
+      if (!duration) return
+      const start = Math.min(wavesurfer.getCurrentTime(), Math.max(0, duration - .25))
+      const end = Math.min(duration, start + 3)
+      const region = regionsPlugin.addRegion({ start, end, content: '새 구간', color: regionPalette[regionsPlugin.getRegions().length % regionPalette.length], contentEditable: true, minLength: .15 })
+      selectRegion(region)
+    })
+    $('#addMarkerBtn').addEventListener('click', () => {
+      const region = regionsPlugin.addRegion({ start: wavesurfer.getCurrentTime(), content: '마커', color: 'rgba(251,191,36,.9)', resize: false })
+      selectRegion(region)
+    })
+    $('#addPresetRegionsBtn').addEventListener('click', setupDefaultRegions)
+    $('#clearRegionsBtn').addEventListener('click', () => {
+      regionsPlugin.clearRegions()
+      state.selectedRegion = null
+      state.loopRegion = null
+      renderRegionList()
+      refreshRegionJson()
+    })
+    $('#applyRegionBtn').addEventListener('click', () => {
+      const region = state.selectedRegion
+      if (!region) return toast('선택 구간 없음', '목록에서 편집할 구간을 선택한다.', 'error')
+      const start = Number($('#regionStart').value)
+      const end = Number($('#regionEnd').value)
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return toast('시간 값 오류', '종료 시간은 시작 시간 이상이어야 한다.', 'error')
+      region.setOptions({
+        start,
+        end,
+        color: rgbaFromHex($('#regionColor').value, Number($('#regionAlpha').value)),
+        content: $('#regionName').value || '구간',
+      })
+      renderRegionList()
+      refreshRegionJson()
+    })
+    $('#playRegionBtn').addEventListener('click', () => state.selectedRegion?.play(true))
+    $('#loopRegionBtn').addEventListener('click', () => {
+      if (!state.selectedRegion) return toast('선택 구간 없음', '반복할 구간을 선택한다.', 'error')
+      state.loopRegion = state.loopRegion === state.selectedRegion ? null : state.selectedRegion
+      $('#loopRegionBtn').classList.toggle('active', Boolean(state.loopRegion))
+      if (state.loopRegion) state.loopRegion.play(true)
+      toast(`구간 반복 ${state.loopRegion ? '활성화' : '해제'}`, '', 'ok')
+    })
+    $('#deleteRegionBtn').addEventListener('click', () => state.selectedRegion?.remove())
+    $('#refreshRegionJsonBtn').addEventListener('click', refreshRegionJson)
+    $('#importRegionJsonBtn').addEventListener('click', () => {
+      try {
+        const rows = JSON.parse($('#regionsJson').value)
+        if (!Array.isArray(rows)) throw new Error('배열 형식이 아니다.')
+        regionsPlugin.clearRegions()
+        rows.forEach((row, index) => regionsPlugin.addRegion({
+          id: row.id || `region-${Date.now()}-${index}`,
+          start: Number(row.start),
+          end: Number(row.end ?? row.start),
+          color: row.color || regionPalette[index % regionPalette.length],
+          content: row.content || `구간 ${index + 1}`,
+          drag: row.drag !== false,
+          resize: row.resize !== false,
+          contentEditable: true,
+        }))
+        renderRegionList()
+        toast('구간 가져오기 완료', `${rows.length}개 적용`, 'ok')
+      } catch (error) {
+        toast('JSON 형식 오류', error.message, 'error')
+      }
+    })
+    $('#downloadRegionJsonBtn').addEventListener('click', () => {
+      refreshRegionJson()
+      downloadBlob(new Blob([$('#regionsJson').value], { type: 'application/json' }), 'wavesurfer-regions.json')
+    })
+
+    $('#fadePresetBtn').addEventListener('click', () => setEnvelopePreset('fade'))
+    $('#duckPresetBtn').addEventListener('click', () => setEnvelopePreset('duck'))
+    $('#pulsePresetBtn').addEventListener('click', () => setEnvelopePreset('pulse'))
+    $('#clearEnvelopeBtn').addEventListener('click', () => { setFlatEnvelope(Number($('#volumeRange').value)); updateEnvelopePreview() })
+    $('#addEnvelopePointBtn').addEventListener('click', () => {
+      envelopePlugin.addPoint({ time: wavesurfer.getCurrentTime(), volume: wavesurfer.getVolume() })
+      updateEnvelopePreview()
+    })
+    $('#envelopeJsonBtn').addEventListener('click', () => copyText(JSON.stringify(envelopePlugin.getPoints(), null, 2)))
+
+    // Recorder
+    let recordWaveSurfer = null
+    let recordPlugin = null
+
+    function buildRecorder() {
+      if (recordPlugin?.isActive()) {
+        toast('녹음 진행 중', '녹음을 중지한 뒤 모드를 변경한다.', 'error')
+        return
+      }
+      recordWaveSurfer?.destroy()
+      const mode = $('#recordMode').value
+      recordWaveSurfer = WaveSurfer.create({
+        container: '#record-waveform',
+        height: 130,
+        waveColor: '#375d76',
+        progressColor: '#fb7185',
+        cursorColor: '#fff',
+        normalize: true,
+        barWidth: 3,
+        barGap: 2,
+        barRadius: 3,
+      })
+      recordPlugin = recordWaveSurfer.registerPlugin(RecordPlugin.create({
+        renderRecordedAudio: true,
+        scrollingWaveform: mode === 'scrolling',
+        scrollingWaveformWindow: 6,
+        continuousWaveform: mode === 'continuous',
+        continuousWaveformDuration: mode === 'continuous' ? 60 : undefined,
+        audioBitsPerSecond: Number($('#recordBitrate').value),
+        mediaRecorderTimeslice: 500,
+      }))
+      bindRecorderEvents()
+    }
+
+    function bindRecorderEvents() {
+      recordPlugin.on('record-start', () => {
+        state.recordChunks = 0
+        state.recordStartedAt = performance.now()
+        $('#recordChunks').textContent = '0'
+        $('#recordHeader').classList.add('recording')
+        $('#recordStatusText').textContent = '녹음 중'
+        $('#recordStartBtn').disabled = true
+        $('#recordPauseBtn').disabled = false
+        $('#recordStopBtn').disabled = false
+        $('#recordPlayBtn').disabled = true
+        logEvent('record-start')
+      })
+      recordPlugin.on('record-progress', (durationMs) => {
+        state.lastRecordDuration = durationMs
+        $('#recordTimer').textContent = formatTime(durationMs / 1000)
+        $('#recordDuration').textContent = formatTime(durationMs / 1000, false)
+      })
+      recordPlugin.on('record-data-available', (blob) => {
+        state.recordChunks += 1
+        $('#recordChunks').textContent = String(state.recordChunks)
+        logEvent('record-data', formatBytes(blob.size))
+      })
+      recordPlugin.on('record-pause', () => {
+        $('#recordHeader').classList.remove('recording')
+        $('#recordStatusText').textContent = '일시정지'
+        $('#recordPauseBtn').textContent = '재개'
+        logEvent('record-pause')
+      })
+      recordPlugin.on('record-resume', () => {
+        $('#recordHeader').classList.add('recording')
+        $('#recordStatusText').textContent = '녹음 중'
+        $('#recordPauseBtn').textContent = '일시정지'
+        logEvent('record-resume')
+      })
+      recordPlugin.on('record-end', (blob) => {
+        state.recordedBlob = blob
+        if (state.recordedUrl) URL.revokeObjectURL(state.recordedUrl)
+        state.recordedUrl = URL.createObjectURL(blob)
+        recordPlugin.stopMic()
+        $('#recordHeader').classList.remove('recording')
+        $('#recordStatusText').textContent = '녹음 완료'
+        $('#recordStartBtn').disabled = false
+        $('#recordPauseBtn').disabled = true
+        $('#recordStopBtn').disabled = true
+        $('#recordPlayBtn').disabled = false
+        $('#downloadRecordBtn').disabled = false
+        $('#loadRecordMainBtn').disabled = false
+        $('#recordMime').textContent = blob.type || 'unknown'
+        $('#recordSize').textContent = formatBytes(blob.size)
+        logEvent('record-end', { type: blob.type, size: blob.size })
+        toast('녹음 완료', `${formatBytes(blob.size)} · ${blob.type || '형식 미확인'}`, 'ok')
+      })
+    }
+
+    async function refreshMicDevices(requestPermission = false) {
+      try {
+        if (requestPermission) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          stream.getTracks().forEach((track) => track.stop())
+        }
+        const devices = await RecordPlugin.getAvailableAudioDevices()
+        const select = $('#micSelect')
+        const previous = select.value
+        select.innerHTML = '<option value="">기본 마이크</option>'
+        devices.forEach((device, index) => {
+          const option = document.createElement('option')
+          option.value = device.deviceId
+          option.textContent = device.label || `마이크 ${index + 1}`
+          select.appendChild(option)
+        })
+        if ([...select.options].some((o) => o.value === previous)) select.value = previous
+        toast('마이크 목록 갱신', `${devices.length}개 입력 장치 확인`, 'ok')
+      } catch (error) {
+        toast('마이크 접근 실패', error.message, 'error')
+      }
+    }
+
+    $('#recordStartBtn').addEventListener('click', async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('이 브라우저 또는 실행 환경은 마이크 API를 지원하지 않는다.')
+        if (!recordPlugin) buildRecorder()
+        const deviceId = $('#micSelect').value
+        await recordPlugin.startRecording({
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          echoCancellation: $('#echoCancelToggle').checked,
+          noiseSuppression: $('#noiseSuppressToggle').checked,
+        })
+        refreshMicDevices(false)
+      } catch (error) {
+        toast('녹음 시작 실패', error.message, 'error')
+      }
+    })
+    $('#recordPauseBtn').addEventListener('click', () => {
+      if (recordPlugin.isPaused()) recordPlugin.resumeRecording()
+      else recordPlugin.pauseRecording()
+    })
+    $('#recordStopBtn').addEventListener('click', () => recordPlugin.stopRecording())
+    $('#recordPlayBtn').addEventListener('click', () => recordWaveSurfer.playPause())
+    $('#recordMode').addEventListener('change', buildRecorder)
+    $('#recordBitrate').addEventListener('change', buildRecorder)
+    $('#refreshMicBtn').addEventListener('click', () => refreshMicDevices(true))
+    $('#downloadRecordBtn').addEventListener('click', () => {
+      if (!state.recordedBlob) return
+      const subtype = (state.recordedBlob.type.split('/')[1] || 'webm').split(';')[0]
+      downloadBlob(state.recordedBlob, `wavesurfer-recording-${Date.now()}.${subtype}`)
+    })
+    $('#loadRecordMainBtn').addEventListener('click', async () => {
+      if (!state.recordedBlob) return
+      await loadAudioSource({ blob: state.recordedBlob, name: '마이크 녹음 결과', badge: '녹음 결과' })
+      await loadChannelSource(state.currentSourceUrl)
+      switchTab('studio')
+    })
+
+    // Split channels player
+    const channelWaveSurfer = WaveSurfer.create({
+      container: '#channel-waveform',
+      height: 78,
+      waveColor: '#60758c',
+      progressColor: '#dbeafe',
+      cursorColor: '#fff',
+      cursorWidth: 2,
+      normalize: true,
+      dragToSeek: true,
+      autoScroll: true,
+      splitChannels: [
+        { waveColor: '#38bdf8', progressColor: '#0e7490' },
+        { waveColor: '#f472b6', progressColor: '#be185d' },
+      ],
+    })
+
+    channelWaveSurfer.on('ready', () => {
+      $('#channelPlayBtn').disabled = false
+      updateChannelTime(channelWaveSurfer.getCurrentTime())
+      logEvent('channel:ready', channelWaveSurfer.getDuration())
+    })
+    channelWaveSurfer.on('timeupdate', updateChannelTime)
+    channelWaveSurfer.on('play', () => $('#channelPlayBtn').textContent = 'Ⅱ 채널 일시정지')
+    channelWaveSurfer.on('pause', () => $('#channelPlayBtn').textContent = '▶ 채널 재생')
+    channelWaveSurfer.on('error', (error) => toast('채널 분석 오류', error.message, 'error'))
+
+    function updateChannelTime(time) {
+      $('#channelTime').textContent = `${formatTime(time)} / ${formatTime(channelWaveSurfer.getDuration())}`
+    }
+    async function loadChannelSource(url = state.currentSourceUrl) {
+      if (!url) return
+      state.channelLoadedUrl = url
+      try { await channelWaveSurfer.load(url) } catch (error) { console.error(error) }
+    }
+
+    $('#channelPlayBtn').addEventListener('click', () => channelWaveSurfer.playPause())
+    $('#channelStopBtn').addEventListener('click', () => channelWaveSurfer.stop())
+    $('#channelSyncBtn').addEventListener('click', () => {
+      channelWaveSurfer.setTime(wavesurfer.getCurrentTime())
+      toast('재생 위치 동기화', formatTime(wavesurfer.getCurrentTime()), 'ok')
+    })
+    $('#channelLoadCurrentBtn').addEventListener('click', () => loadChannelSource())
+    $('#channelZoomRange').addEventListener('input', (event) => {
+      const value = Number(event.target.value)
+      channelWaveSurfer.zoom(value)
+      $('#channelZoomValue').textContent = `${value} px/s`
+    })
+    $('#channelHeightRange').addEventListener('input', (event) => $('#channelHeightOutput').textContent = `${event.target.value}px`)
+    $('#applyChannelOptionsBtn').addEventListener('click', () => {
+      const height = Number($('#channelHeightRange').value)
+      channelWaveSurfer.setOptions({
+        height,
+        normalize: $('#channelNormalizeToggle').checked,
+        splitChannels: [
+          { waveColor: $('#leftWaveColor').value, progressColor: $('#leftProgressColor').value },
+          { waveColor: $('#rightWaveColor').value, progressColor: $('#rightProgressColor').value },
+        ],
+      })
+      toast('채널 설정 적용', `채널당 ${height}px`, 'ok')
+    })
+
+    // Export and state
+    $('#clearLogBtn').addEventListener('click', () => $('#eventLog').innerHTML = '')
+    $('#exportPngBtn').addEventListener('click', async () => {
+      try {
+        const blobs = await wavesurfer.exportImage('image/png', Number($('#imageQuality').value), 'blob')
+        blobs.forEach((blob, index) => downloadBlob(blob, `wavesurfer-waveform-${index + 1}.png`))
+        toast('파형 이미지 생성', `${blobs.length}개 PNG 저장`, 'ok')
+      } catch (error) {
+        toast('이미지 내보내기 실패', error.message, 'error')
+      }
+    })
+    function getPeaksData() {
+      return {
+        version: '7.12.8',
+        duration: wavesurfer.getDuration(),
+        channels: wavesurfer.exportPeaks({ channels: 8, maxLength: Number($('#peaksLength').value), precision: 10000 }),
+      }
+    }
+    $('#exportPeaksBtn').addEventListener('click', () => {
+      try {
+        downloadBlob(new Blob([JSON.stringify(getPeaksData())], { type: 'application/json' }), 'wavesurfer-peaks.json')
+      } catch (error) { toast('Peaks 내보내기 실패', error.message, 'error') }
+    })
+    $('#copyPeaksBtn').addEventListener('click', () => {
+      try { copyText(JSON.stringify(getPeaksData())) } catch (error) { toast('Peaks 복사 실패', error.message, 'error') }
+    })
+
+    function getCurrentState() {
+      const data = wavesurfer.getDecodedData()
+      return {
+        source: state.currentName,
+        currentTime: +wavesurfer.getCurrentTime().toFixed(3),
+        duration: +wavesurfer.getDuration().toFixed(3),
+        isPlaying: wavesurfer.isPlaying(),
+        muted: wavesurfer.getMuted(),
+        volume: +wavesurfer.getVolume().toFixed(3),
+        playbackRate: wavesurfer.getPlaybackRate(),
+        channels: data?.numberOfChannels ?? null,
+        sampleRate: data?.sampleRate ?? null,
+        regionCount: regionsPlugin.getRegions().length,
+        envelopePoints: envelopePlugin.getPoints().length,
+        activePlugins: wavesurfer.getActivePlugins().map((plugin) => plugin.constructor?.name || 'Plugin'),
+      }
+    }
+    let statePreviewTimer
+    function updateStatePreview(force = true) {
+      clearTimeout(statePreviewTimer)
+      const render = () => $('#statePreview').textContent = JSON.stringify(getCurrentState(), null, 2)
+      if (force) render()
+      else statePreviewTimer = setTimeout(render, 180)
+    }
+    $('#copyCurrentStateBtn').addEventListener('click', () => copyText(JSON.stringify(getCurrentState(), null, 2)))
+
+    // Tabs
+    function switchTab(name) {
+      $$('.tab-btn').forEach((button) => button.classList.toggle('active', button.dataset.tab === name))
+      $$('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.id === `tab-${name}`))
+      if (name === 'regions') {
+        renderRegionList()
+        refreshRegionJson()
+        updateEnvelopePreview()
+      }
+      if (name === 'events') updateStatePreview()
+      if (name === 'channels' && state.channelLoadedUrl !== state.currentSourceUrl) loadChannelSource()
+    }
+    $$('.tab-btn').forEach((button) => button.addEventListener('click', () => switchTab(button.dataset.tab)))
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return
+      if (event.code === 'Space') { event.preventDefault(); wavesurfer.playPause() }
+      if (event.code === 'ArrowLeft') wavesurfer.skip(event.shiftKey ? -10 : -2)
+      if (event.code === 'ArrowRight') wavesurfer.skip(event.shiftKey ? 10 : 2)
+      if (event.key.toLowerCase() === 'm') $('#muteBtn').click()
+    })
+
+    window.addEventListener('beforeunload', () => {
+      wavesurfer.destroy()
+      channelWaveSurfer.destroy()
+      recordWaveSurfer?.destroy()
+      if (state.currentObjectUrl) URL.revokeObjectURL(state.currentObjectUrl)
+      if (state.recordedUrl) URL.revokeObjectURL(state.recordedUrl)
+    })
+
+    buildRecorder()
+    await loadDefaultDemo(false)
+    logEvent('app-ready', 'WaveSurfer.js 7.12.8 종합 샘플 초기화 완료')
+  </script>
+</body>
+</html>
