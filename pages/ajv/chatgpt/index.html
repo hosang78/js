@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ajv 8 기반 JSON Schema·JTD 종합 기능 실습 페이지" />
+  <title>Ajv 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #eef3f9;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #dce4ee;
+      --primary: #3157d5;
+      --primary-2: #213f9c;
+      --primary-soft: #e9eeff;
+      --success: #16835d;
+      --success-soft: #e4f7ef;
+      --danger: #c63d4d;
+      --danger-soft: #fff0f2;
+      --warning: #a56309;
+      --warning-soft: #fff6df;
+      --code: #111827;
+      --code-2: #1f2937;
+      --shadow: 0 18px 50px rgba(36, 54, 85, .10);
+      --radius: 18px;
+      --radius-sm: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0 0, rgba(49,87,213,.10), transparent 28rem),
+        linear-gradient(180deg, #f8faff 0, var(--bg) 420px);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, -apple-system, sans-serif;
+      line-height: 1.55;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button, select, input[type="checkbox"] { cursor: pointer; }
+    a { color: inherit; }
+
+    .app-shell { max-width: 1680px; margin: 0 auto; padding: 0 24px 60px; }
+
+    .topbar {
+      position: sticky;
+      z-index: 50;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 68px;
+      padding: 10px 24px;
+      margin: 0 -24px;
+      border-bottom: 1px solid rgba(220,228,238,.92);
+      background: rgba(248,250,255,.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: -.02em; }
+    .brand-mark {
+      display: grid; place-items: center;
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      color: white;
+      background: linear-gradient(145deg, #4b6dea, #203d9a);
+      box-shadow: 0 9px 24px rgba(49,87,213,.28);
+      font-size: 14px;
+    }
+    .brand small { display: block; margin-top: -2px; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+
+    .status-pill, .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; box-shadow: 0 0 0 4px rgba(148,163,184,.14); }
+    .status-dot.ok { background: var(--success); box-shadow: 0 0 0 4px rgba(22,131,93,.14); }
+    .status-dot.fail { background: var(--danger); box-shadow: 0 0 0 4px rgba(198,61,77,.14); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 38px;
+      padding: 8px 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: var(--surface);
+      font-weight: 750;
+      font-size: 13px;
+      transition: .16s ease;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #b8c5d6; box-shadow: 0 7px 18px rgba(32,56,98,.08); }
+    .btn.primary { border-color: var(--primary); color: white; background: var(--primary); }
+    .btn.primary:hover { background: var(--primary-2); }
+    .btn.danger { color: var(--danger); }
+    .btn.small { min-height: 32px; padding: 6px 10px; font-size: 12px; }
+    .btn.icon { width: 36px; padding: 0; }
+    .btn:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(310px, .6fr);
+      gap: 26px;
+      align-items: stretch;
+      padding: 44px 0 26px;
+    }
+    .hero-main {
+      position: relative;
+      overflow: hidden;
+      padding: 38px;
+      border: 1px solid rgba(49,87,213,.18);
+      border-radius: 28px;
+      color: white;
+      background:
+        linear-gradient(135deg, rgba(18,31,74,.98), rgba(39,69,169,.97)),
+        #18265a;
+      box-shadow: var(--shadow);
+    }
+    .hero-main::after {
+      content: "{}";
+      position: absolute;
+      right: 26px;
+      bottom: -46px;
+      color: rgba(255,255,255,.07);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 210px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .eyebrow { color: #b9c7ff; font-size: 12px; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+    .hero h1 { position: relative; z-index: 1; margin: 10px 0 12px; font-size: clamp(31px, 4vw, 52px); line-height: 1.12; letter-spacing: -.045em; }
+    .hero p { position: relative; z-index: 1; max-width: 800px; margin: 0; color: #d8e0ff; font-size: 16px; }
+    .hero-tags { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 25px; }
+    .hero-tags span { padding: 7px 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700; }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(255,255,255,.78);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .stat-card { padding: 18px; border-radius: 17px; background: var(--surface); border: 1px solid var(--line); }
+    .stat-card strong { display: block; margin-bottom: 4px; font-size: 23px; letter-spacing: -.04em; }
+    .stat-card span { color: var(--muted); font-size: 12px; font-weight: 700; }
+
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 22px; align-items: start; }
+    .side-nav {
+      position: sticky;
+      top: 86px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.88);
+      box-shadow: 0 12px 32px rgba(36,54,85,.07);
+      backdrop-filter: blur(12px);
+    }
+    .side-nav h3 { margin: 4px 8px 10px; color: var(--muted); font-size: 11px; letter-spacing: .12em; }
+    .side-nav a { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px; color: #475569; text-decoration: none; font-size: 13px; font-weight: 700; }
+    .side-nav a:hover, .side-nav a.active { color: var(--primary); background: var(--primary-soft); }
+    .nav-num { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--surface-3); font-size: 10px; }
+
+    main { min-width: 0; }
+    .section { scroll-margin-top: 86px; margin-bottom: 22px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 0 2px 12px; }
+    .section-head h2 { margin: 0; font-size: 21px; letter-spacing: -.025em; }
+    .section-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+    .card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 10px 30px rgba(36,54,85,.06); }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 58px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .card-head h3 { margin: 0; font-size: 15px; letter-spacing: -.015em; }
+    .card-head small { color: var(--muted); }
+    .card-body { padding: 16px; }
+
+    .lab-toolbar {
+      display: grid;
+      grid-template-columns: minmax(145px,.7fr) minmax(220px,1.4fr) auto auto;
+      gap: 10px;
+      align-items: end;
+      padding: 15px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .field label { display: block; margin: 0 0 5px; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .select, .input {
+      width: 100%; min-height: 39px; padding: 8px 10px;
+      border: 1px solid #cfd9e6; border-radius: 10px;
+      outline: none; color: var(--text); background: var(--surface);
+    }
+    .select:focus, .input:focus, .editor:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(49,87,213,.12); }
+
+    .toggle-wrap { display: flex; align-items: center; gap: 9px; min-height: 39px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 12px; font-weight: 750; white-space: nowrap; }
+    .switch { position: relative; width: 36px; height: 20px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; border-radius: 999px; background: #cbd5e1; transition: .2s; }
+    .slider::before { content: ""; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; border-radius: 50%; background: white; box-shadow: 0 2px 6px rgba(0,0,0,.18); transition: .2s; }
+    .switch input:checked + .slider { background: var(--primary); }
+    .switch input:checked + .slider::before { transform: translateX(16px); }
+
+    .editor-grid { display: grid; grid-template-columns: 1fr 1fr; min-height: 430px; }
+    .editor-pane { min-width: 0; }
+    .editor-pane + .editor-pane { border-left: 1px solid var(--line); }
+    .editor-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: #f8fafc; }
+    .editor-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 850; }
+    .file-dot { width: 9px; height: 9px; border-radius: 50%; background: #f1b943; }
+    .editor-actions { display: flex; gap: 6px; }
+    .editor {
+      display: block;
+      width: 100%; min-height: 390px;
+      resize: vertical;
+      padding: 16px;
+      border: 0;
+      outline: 0;
+      color: #d6deeb;
+      background: var(--code);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      tab-size: 2;
+    }
+    .editor.error { box-shadow: inset 0 0 0 2px var(--danger); }
+
+    .result-area { display: grid; grid-template-columns: minmax(250px,.32fr) minmax(0,.68fr); border-top: 1px solid var(--line); }
+    .result-summary { padding: 18px; border-right: 1px solid var(--line); background: var(--surface-2); }
+    .result-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 12px; border-radius: 15px; color: var(--muted); background: var(--surface-3); font-weight: 900; }
+    .result-icon.pass { color: var(--success); background: var(--success-soft); }
+    .result-icon.fail { color: var(--danger); background: var(--danger-soft); }
+    .result-summary h3 { margin: 0 0 4px; font-size: 18px; }
+    .result-summary p { margin: 0; color: var(--muted); font-size: 12px; }
+    .result-metrics { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 16px; }
+    .mini-metric { padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: white; }
+    .mini-metric strong { display: block; font-size: 15px; }
+    .mini-metric span { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .result-errors { min-width: 0; padding: 14px; }
+    .result-tools { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .error-list { display: grid; gap: 8px; max-height: 335px; overflow: auto; }
+    .error-item { padding: 11px 12px; border: 1px solid #f1ccd2; border-radius: 11px; background: #fff8f9; }
+    .error-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .error-keyword { color: var(--danger); font-family: ui-monospace, monospace; font-size: 11px; font-weight: 900; }
+    .error-path { overflow: hidden; color: #7f1d2d; font-family: ui-monospace, monospace; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .error-message { margin-top: 5px; font-size: 12px; font-weight: 700; }
+    .error-raw { margin-top: 4px; color: var(--muted); font-family: ui-monospace, monospace; font-size: 10px; }
+    .empty-state { display: grid; place-items: center; min-height: 180px; padding: 20px; color: var(--muted); text-align: center; font-size: 13px; }
+
+    .option-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+    .option-card { padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-2); }
+    .option-card label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 850; }
+    .option-card p { min-height: 34px; margin: 7px 0 0; color: var(--muted); font-size: 10px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .three-col { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .feature-card { position: relative; overflow: hidden; padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); transition: .17s ease; }
+    .feature-card:hover { transform: translateY(-2px); border-color: #b8c7df; box-shadow: 0 10px 25px rgba(36,54,85,.09); }
+    .feature-card h4 { margin: 0 0 6px; font-size: 14px; }
+    .feature-card p { min-height: 40px; margin: 0 0 12px; color: var(--muted); font-size: 11px; }
+    .feature-meta { display: flex; flex-wrap: wrap; gap: 5px; }
+    .feature-meta code { padding: 3px 6px; border-radius: 6px; color: #40518d; background: #edf1ff; font-family: ui-monospace, monospace; font-size: 9px; }
+    .feature-card .btn { margin-top: 13px; }
+
+    .code-box { position: relative; overflow: auto; max-height: 360px; margin: 0; padding: 16px; border-radius: 13px; color: #d6deeb; background: var(--code); font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; white-space: pre; }
+    .data-preview { min-height: 230px; }
+    .diff-list { display: grid; gap: 7px; margin-top: 10px; }
+    .diff-row { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 8px; padding: 8px; border-radius: 9px; background: var(--surface-2); font-family: ui-monospace, monospace; font-size: 10px; }
+    .diff-type { font-weight: 900; }
+    .diff-type.added { color: var(--success); }
+    .diff-type.removed { color: var(--danger); }
+    .diff-type.changed { color: var(--warning); }
+
+    .demo-panel { padding: 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface-2); }
+    .demo-panel h4 { margin: 0 0 6px; font-size: 14px; }
+    .demo-panel > p { margin: 0 0 13px; color: var(--muted); font-size: 11px; }
+    .inline-form { display: flex; gap: 8px; }
+    .inline-form .input { flex: 1; }
+    .demo-result { min-height: 44px; margin-top: 10px; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 10px; color: var(--muted); background: white; font-size: 12px; }
+    .demo-result.success { border-color: #93d6bd; color: var(--success); background: var(--success-soft); }
+    .demo-result.failure { border-color: #f0aab5; color: var(--danger); background: var(--danger-soft); }
+
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { position: sticky; top: 0; color: #475569; background: #f8fafc; font-size: 10px; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    td code { font-family: ui-monospace, monospace; font-size: 10px; }
+
+    .history-list { display: grid; gap: 8px; }
+    .history-item { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+    .history-status { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); }
+    .history-status.pass { background: var(--success); }
+    .history-main strong { display: block; font-size: 12px; }
+    .history-main span { color: var(--muted); font-size: 10px; }
+
+    .toast-wrap { position: fixed; z-index: 100; right: 22px; bottom: 22px; display: grid; gap: 8px; pointer-events: none; }
+    .toast { min-width: 250px; max-width: 390px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px; background: rgba(17,24,39,.94); color: white; box-shadow: var(--shadow); font-size: 12px; animation: toastIn .2s ease; }
+    @keyframes toastIn { from { transform: translateY(8px); opacity: 0; } }
+
+    .load-error {
+      display: none;
+      margin: 14px 0 0;
+      padding: 12px 14px;
+      border: 1px solid #efb2bb;
+      border-radius: 12px;
+      color: #8e2434;
+      background: #fff2f4;
+      font-size: 12px;
+    }
+    .load-error.show { display: block; }
+
+    .footer-note { margin-top: 28px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; color: var(--muted); background: rgba(255,255,255,.75); font-size: 11px; text-align: center; }
+
+    @media (max-width: 1200px) {
+      .option-grid { grid-template-columns: repeat(2,1fr); }
+      .feature-grid { grid-template-columns: repeat(2,1fr); }
+      .hero { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .app-shell { padding-inline: 14px; }
+      .topbar { margin-inline: -14px; padding-inline: 14px; }
+      .layout { grid-template-columns: 1fr; }
+      .side-nav { position: static; display: flex; overflow: auto; gap: 4px; white-space: nowrap; }
+      .side-nav h3 { display: none; }
+      .side-nav a { flex: 0 0 auto; }
+      .editor-grid, .result-area, .two-col, .three-col { grid-template-columns: 1fr; }
+      .editor-pane + .editor-pane { border-left: 0; border-top: 1px solid var(--line); }
+      .result-summary { border-right: 0; border-bottom: 1px solid var(--line); }
+      .lab-toolbar { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px) {
+      .top-actions .btn { display: none; }
+      .hero-main { padding: 28px 22px; }
+      .hero-stats { grid-template-columns: 1fr 1fr; }
+      .lab-toolbar, .option-grid, .feature-grid { grid-template-columns: 1fr; }
+      .section-head { align-items: start; flex-direction: column; }
+      .inline-form { flex-direction: column; }
+      .editor { min-height: 340px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">Ajv</div>
+        <div>Schema Lab <small>JSON 검증 종합 실습실</small></div>
+      </div>
+      <div class="top-actions">
+        <span class="status-pill"><span id="libStatusDot" class="status-dot"></span><span id="libStatusText">라이브러리 로딩</span></span>
+        <a class="btn" href="https://ajv.js.org/" target="_blank" rel="noopener">공식 문서</a>
+        <button class="btn primary" id="topValidateBtn" type="button">검증 실행</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-main">
+        <div class="eyebrow">AJV 8 · JSON SCHEMA VALIDATOR</div>
+        <h1>스키마 검증을<br />직접 조작하며 이해하는 페이지</h1>
+        <p>JSON Schema Draft-07·2019-09·2020-12와 JTD를 전환하고, 데이터 보정 옵션부터 커스텀 키워드·비동기 검증·컴파일 성능까지 한 화면에서 확인합니다.</p>
+        <div class="hero-tags">
+          <span>실시간 검증</span><span>오류 경로 분석</span><span>데이터 변환 비교</span><span>스키마 프리셋</span><span>JTD Parser/Serializer</span><span>보고서 저장</span>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-card"><strong>8.20.0</strong><span>Ajv 연결 버전</span></div>
+        <div class="stat-card"><strong>4종</strong><span>스키마 언어·초안</span></div>
+        <div class="stat-card"><strong id="presetCount">0</strong><span>내장 예제</span></div>
+        <div class="stat-card"><strong>10+</strong><span>런타임 옵션</span></div>
+      </div>
+    </section>
+
+    <div id="loadError" class="load-error">
+      Ajv 모듈을 불러오지 못했습니다. 인터넷 연결 또는 사내망의 CDN 차단 여부를 확인하세요. 페이지 UI와 예제 내용은 볼 수 있지만 실제 검증은 모듈 연결 후 동작합니다.
+    </div>
+
+    <div class="layout">
+      <nav class="side-nav" aria-label="페이지 섹션">
+        <h3>AJV PLAYGROUND</h3>
+        <a href="#lab" class="active"><span class="nav-num">01</span>통합 실험실</a>
+        <a href="#options"><span class="nav-num">02</span>옵션 제어</a>
+        <a href="#features"><span class="nav-num">03</span>키워드 예제</a>
+        <a href="#mutation"><span class="nav-num">04</span>데이터 변환</a>
+        <a href="#advanced"><span class="nav-num">05</span>고급 검증</a>
+        <a href="#jtd"><span class="nav-num">06</span>JTD 도구</a>
+        <a href="#performance"><span class="nav-num">07</span>성능·코드</a>
+        <a href="#management"><span class="nav-num">08</span>관리·내보내기</a>
+      </nav>
+
+      <main>
+        <section id="lab" class="section">
+          <div class="section-head">
+            <div><h2>통합 검증 실험실</h2><p>스키마와 데이터를 수정한 뒤 결과·오류·변환 내역을 즉시 확인</p></div>
+            <div class="badge">Ctrl / Cmd + Enter 실행</div>
+          </div>
+          <div class="card">
+            <div class="lab-toolbar">
+              <div class="field">
+                <label for="draftSelect">스키마 모드</label>
+                <select id="draftSelect" class="select">
+                  <option value="draft7">JSON Schema Draft-07</option>
+                  <option value="2019">JSON Schema 2019-09</option>
+                  <option value="2020">JSON Schema 2020-12</option>
+                  <option value="jtd">JSON Type Definition</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="presetSelect">기능 예제</label>
+                <select id="presetSelect" class="select"></select>
+              </div>
+              <div class="toggle-wrap">
+                <label class="switch"><input id="liveToggle" type="checkbox" checked /><span class="slider"></span></label>
+                실시간 검증
+              </div>
+              <button id="validateBtn" class="btn primary" type="button">검증 실행</button>
+            </div>
+
+            <div class="editor-grid">
+              <div class="editor-pane">
+                <div class="editor-bar">
+                  <div class="editor-title"><span class="file-dot"></span>schema.json</div>
+                  <div class="editor-actions">
+                    <button class="btn small" data-format="schema" type="button">정렬</button>
+                    <button class="btn small" data-copy="schema" type="button">복사</button>
+                    <button class="btn small" data-file="schema" type="button">불러오기</button>
+                  </div>
+                </div>
+                <textarea id="schemaEditor" class="editor" spellcheck="false" aria-label="JSON Schema 편집기"></textarea>
+              </div>
+              <div class="editor-pane">
+                <div class="editor-bar">
+                  <div class="editor-title"><span class="file-dot" style="background:#45c28a"></span>data.json</div>
+                  <div class="editor-actions">
+                    <button class="btn small" data-format="data" type="button">정렬</button>
+                    <button class="btn small" data-copy="data" type="button">복사</button>
+                    <button class="btn small" data-file="data" type="button">불러오기</button>
+                  </div>
+                </div>
+                <textarea id="dataEditor" class="editor" spellcheck="false" aria-label="검증 데이터 편집기"></textarea>
+              </div>
+            </div>
+
+            <div class="result-area">
+              <div class="result-summary">
+                <div id="resultIcon" class="result-icon">?</div>
+                <h3 id="resultTitle">검증 대기</h3>
+                <p id="resultText">예제를 선택하거나 JSON을 편집해 보세요.</p>
+                <div class="result-metrics">
+                  <div class="mini-metric"><strong id="errorCount">-</strong><span>오류 수</span></div>
+                  <div class="mini-metric"><strong id="compileTime">-</strong><span>컴파일 시간</span></div>
+                  <div class="mini-metric"><strong id="validateTime">-</strong><span>검증 시간</span></div>
+                  <div class="mini-metric"><strong id="schemaStatus">-</strong><span>스키마 문법</span></div>
+                </div>
+              </div>
+              <div class="result-errors">
+                <div class="result-tools">
+                  <strong style="font-size:13px">검증 오류 상세</strong>
+                  <div>
+                    <button id="copyErrorsBtn" class="btn small" type="button">오류 복사</button>
+                    <button id="downloadReportBtn" class="btn small" type="button">보고서 JSON</button>
+                  </div>
+                </div>
+                <div id="errorList" class="error-list"><div class="empty-state">검증 결과가 여기에 표시됩니다.</div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="options" class="section">
+          <div class="section-head">
+            <div><h2>Ajv 런타임 옵션</h2><p>같은 스키마라도 오류 수집·엄격성·데이터 변경 방식이 달라짐</p></div>
+            <button id="resetOptionsBtn" class="btn small" type="button">기본값 복원</button>
+          </div>
+          <div class="card"><div id="optionGrid" class="card-body option-grid"></div></div>
+        </section>
+
+        <section id="features" class="section">
+          <div class="section-head">
+            <div><h2>JSON Schema 기능 예제</h2><p>카드를 누르면 해당 예제가 통합 실험실에 즉시 적용</p></div>
+          </div>
+          <div id="featureGrid" class="feature-grid"></div>
+        </section>
+
+        <section id="mutation" class="section">
+          <div class="section-head">
+            <div><h2>검증 전·후 데이터 비교</h2><p><code>useDefaults</code>, <code>coerceTypes</code>, <code>removeAdditional</code>, <code>transform</code>에 따른 변경 추적</p></div>
+            <button id="loadMutationBtn" class="btn small" type="button">변환 예제 적용</button>
+          </div>
+          <div class="card"><div class="card-body two-col">
+            <div>
+              <div class="card-head" style="padding:0 0 10px; border:0; min-height:auto"><h3>검증 전</h3><button class="btn small" data-copy-preview="before" type="button">복사</button></div>
+              <pre id="beforePreview" class="code-box data-preview">아직 검증하지 않았습니다.</pre>
+            </div>
+            <div>
+              <div class="card-head" style="padding:0 0 10px; border:0; min-height:auto"><h3>검증 후</h3><button class="btn small" data-copy-preview="after" type="button">복사</button></div>
+              <pre id="afterPreview" class="code-box data-preview">아직 검증하지 않았습니다.</pre>
+            </div>
+            <div style="grid-column:1/-1">
+              <strong style="font-size:13px">변경 경로</strong>
+              <div id="diffList" class="diff-list"><div class="empty-state" style="min-height:80px">데이터 변경 옵션을 켜고 검증하면 차이가 표시됩니다.</div></div>
+            </div>
+          </div></div>
+        </section>
+
+        <section id="advanced" class="section">
+          <div class="section-head">
+            <div><h2>커스텀·비동기 검증</h2><p>표준 키워드로 부족한 업무 규칙을 형식·키워드·Promise 기반으로 확장</p></div>
+          </div>
+          <div class="three-col">
+            <div class="demo-panel">
+              <h4>커스텀 format</h4>
+              <p><code>SH-0000-0000</code> 형식의 조합원 코드를 검사</p>
+              <div class="inline-form"><input id="formatDemoInput" class="input" value="SH-2026-0712" /><button id="formatDemoBtn" class="btn primary" type="button">검사</button></div>
+              <div id="formatDemoResult" class="demo-result">검사 결과 대기</div>
+            </div>
+            <div class="demo-panel">
+              <h4>커스텀 keyword</h4>
+              <p><code>isEven: true</code>로 짝수 여부를 검증</p>
+              <div class="inline-form"><input id="keywordDemoInput" class="input" type="number" value="42" /><button id="keywordDemoBtn" class="btn primary" type="button">검사</button></div>
+              <div id="keywordDemoResult" class="demo-result">검사 결과 대기</div>
+            </div>
+            <div class="demo-panel">
+              <h4>비동기 keyword</h4>
+              <p>서버·DB 조회를 가정한 조합 코드 존재 여부 검사</p>
+              <div class="inline-form"><input id="asyncDemoInput" class="input" value="COOP-001" /><button id="asyncDemoBtn" class="btn primary" type="button">비동기 검사</button></div>
+              <div id="asyncDemoResult" class="demo-result">허용 예: COOP-001, COOP-007, COOP-101</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="jtd" class="section">
+          <div class="section-head">
+            <div><h2>JSON Type Definition 도구</h2><p>간결한 JTD 스키마의 검증·전용 Parser·Serializer 확인</p></div>
+            <button id="loadJtdBtn" class="btn small" type="button">JTD 예제 적용</button>
+          </div>
+          <div class="card"><div class="card-body two-col">
+            <div>
+              <div class="field"><label for="jtdSchemaEditor">JTD 스키마</label><textarea id="jtdSchemaEditor" class="editor" style="min-height:300px"></textarea></div>
+            </div>
+            <div>
+              <div class="field"><label for="jtdDataEditor">객체 또는 JSON 문자열</label><textarea id="jtdDataEditor" class="editor" style="min-height:300px"></textarea></div>
+            </div>
+            <div style="grid-column:1/-1; display:flex; flex-wrap:wrap; gap:8px">
+              <button id="jtdValidateBtn" class="btn primary" type="button">JTD 검증</button>
+              <button id="jtdSerializeBtn" class="btn" type="button">Serializer 실행</button>
+              <button id="jtdParseBtn" class="btn" type="button">Parser 실행</button>
+            </div>
+            <div style="grid-column:1/-1"><pre id="jtdOutput" class="code-box">실행 결과가 표시됩니다.</pre></div>
+          </div></div>
+        </section>
+
+        <section id="performance" class="section">
+          <div class="section-head">
+            <div><h2>컴파일 성능·생성 코드</h2><p>스키마 1회 컴파일 후 검증 함수를 반복 재사용하는 Ajv 실행 모델 확인</p></div>
+          </div>
+          <div class="card"><div class="card-body two-col">
+            <div class="demo-panel">
+              <h4>벤치마크</h4>
+              <p>현재 스키마·데이터로 동기 검증을 반복 실행</p>
+              <div class="inline-form"><select id="benchmarkCount" class="select"><option value="1000">1,000회</option><option value="10000" selected>10,000회</option><option value="50000">50,000회</option></select><button id="benchmarkBtn" class="btn primary" type="button">측정</button></div>
+              <div id="benchmarkResult" class="demo-result">측정 결과 대기</div>
+            </div>
+            <div class="demo-panel">
+              <h4>재사용 코드 생성</h4>
+              <p>현재 설정을 반영한 Node.js ESM 예제 생성</p>
+              <div class="inline-form"><button id="generateSnippetBtn" class="btn primary" type="button">코드 생성</button><button id="copySnippetBtn" class="btn" type="button">복사</button></div>
+              <div class="demo-result">아래 코드 창에 생성됩니다.</div>
+            </div>
+            <div style="grid-column:1/-1">
+              <div class="card-head" style="padding:0 0 10px; border:0; min-height:auto"><h3>검증 함수 또는 사용 코드</h3><select id="codeViewSelect" class="select" style="width:auto; min-width:180px"><option value="snippet">사용 예제</option><option value="compiled">컴파일된 함수</option></select></div>
+              <pre id="generatedCode" class="code-box">검증 후 컴파일된 함수 또는 사용 예제를 확인할 수 있습니다.</pre>
+            </div>
+          </div></div>
+        </section>
+
+        <section id="management" class="section">
+          <div class="section-head">
+            <div><h2>스키마 관리·기록·내보내기</h2><p>브라우저 저장소 기반 스키마 보관, 검증 이력, JSON·CSV 파일 생성</p></div>
+          </div>
+          <div class="two-col">
+            <div class="card">
+              <div class="card-head"><h3>내 스키마 저장소</h3><button id="saveSchemaBtn" class="btn small primary" type="button">현재 스키마 저장</button></div>
+              <div class="card-body"><div id="schemaRegistry" class="history-list"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>최근 검증 이력</h3><button id="clearHistoryBtn" class="btn small danger" type="button">기록 삭제</button></div>
+              <div class="card-body"><div id="historyList" class="history-list"></div></div>
+            </div>
+            <div class="card" style="grid-column:1/-1">
+              <div class="card-head"><h3>파일 내보내기</h3><small>현재 편집 내용과 최근 결과 기준</small></div>
+              <div class="card-body" style="display:flex; flex-wrap:wrap; gap:8px">
+                <button id="exportSchemaBtn" class="btn" type="button">스키마 JSON</button>
+                <button id="exportDataBtn" class="btn" type="button">데이터 JSON</button>
+                <button id="exportErrorsCsvBtn" class="btn" type="button">오류 CSV</button>
+                <button id="exportBundleBtn" class="btn primary" type="button">실험 전체 JSON</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="footer-note">
+          본 페이지는 브라우저에서 Ajv 기능을 학습하기 위한 샘플입니다. 실제 서비스에서는 신뢰할 수 없는 스키마의 무제한 컴파일, ReDoS 가능성이 있는 정규식·format, 과도하게 깊은 데이터 구조를 별도로 통제해야 합니다.
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <input id="schemaFileInput" type="file" accept=".json,application/json" hidden />
+  <input id="dataFileInput" type="file" accept=".json,application/json" hidden />
+  <div id="toastWrap" class="toast-wrap"></div>
+
+  <script>
+    window.__ajvModuleReady = false;
+    setTimeout(function () {
+      if (!window.__ajvModuleReady) {
+        document.getElementById('loadError')?.classList.add('show');
+        const dot = document.getElementById('libStatusDot');
+        const text = document.getElementById('libStatusText');
+        dot?.classList.add('fail');
+        if (text) text.textContent = '모듈 연결 실패';
+      }
+    }, 9000);
+  </script>
+
+  <script type="module">
+    import Ajv from "https://esm.sh/ajv@8.20.0";
+    import Ajv2019 from "https://esm.sh/ajv@8.20.0/dist/2019";
+    import Ajv2020 from "https://esm.sh/ajv@8.20.0/dist/2020";
+    import AjvJTD from "https://esm.sh/ajv@8.20.0/dist/jtd";
+    import addFormats from "https://esm.sh/ajv-formats@3.0.1?deps=ajv@8.20.0";
+    import addKeywords from "https://esm.sh/ajv-keywords@5.1.0?deps=ajv@8.20.0";
+    import addErrors from "https://esm.sh/ajv-errors@3.0.0?deps=ajv@8.20.0";
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const clone = (value) => JSON.parse(JSON.stringify(value));
+    const pretty = (value) => JSON.stringify(value, null, 2);
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const state = {
+      lastErrors: [],
+      lastReport: null,
+      lastBefore: null,
+      lastAfter: null,
+      lastCompiledSource: '',
+      lastSnippet: '',
+      liveTimer: null,
+      registry: JSON.parse(localStorage.getItem('ajv-schema-registry') || '[]'),
+      history: JSON.parse(localStorage.getItem('ajv-validation-history') || '[]')
+    };
+
+    const defaultOptions = {
+      allErrors: true,
+      strict: 'log',
+      coerceTypes: false,
+      useDefaults: false,
+      removeAdditional: false,
+      verbose: true,
+      messages: true,
+      validateFormats: true,
+      discriminator: true,
+      $data: true,
+      unicodeRegExp: true,
+      ownProperties: false,
+      allowUnionTypes: true
+    };
+
+    const optionDefinitions = [
+      { key:'allErrors', label:'allErrors', desc:'첫 오류에서 멈추지 않고 가능한 오류를 모두 수집', values:[['true','true'],['false','false']] },
+      { key:'strict', label:'strict', desc:'모호하거나 무시될 수 있는 스키마를 오류 또는 경고로 처리', values:[['log','경고(log)'],['true','오류'],['false','해제']] },
+      { key:'coerceTypes', label:'coerceTypes', desc:'문자열 숫자·불리언 등을 스키마 타입으로 변환', values:[['false','사용 안 함'],['true','사용'],['array','배열 포함']] },
+      { key:'useDefaults', label:'useDefaults', desc:'누락된 속성에 스키마 default 값을 삽입', values:[['false','사용 안 함'],['true','사용'],['empty','빈 값도 대체']] },
+      { key:'removeAdditional', label:'removeAdditional', desc:'additionalProperties 규칙에 맞지 않는 속성을 제거', values:[['false','사용 안 함'],['true','추가 속성'],['all','모두 제거'],['failing','실패 속성']] },
+      { key:'verbose', label:'verbose', desc:'오류 객체에 schema·parentSchema·data 정보 추가', values:[['true','true'],['false','false']] },
+      { key:'validateFormats', label:'validateFormats', desc:'email·date·uuid 등 format 실제 검증 여부', values:[['true','검증'],['false','무시']] },
+      { key:'messages', label:'messages', desc:'Ajv 기본 오류 메시지 생성 여부', values:[['true','생성'],['false','생성 안 함']] },
+      { key:'discriminator', label:'discriminator', desc:'OpenAPI 방식 discriminator 키워드 사용', values:[['true','사용'],['false','사용 안 함']] },
+      { key:'$data', label:'$data', desc:'다른 데이터 값을 스키마 제한값으로 참조', values:[['true','사용'],['false','사용 안 함']] },
+      { key:'unicodeRegExp', label:'unicodeRegExp', desc:'pattern과 patternProperties에 유니코드 정규식 플래그 사용', values:[['true','사용'],['false','사용 안 함']] },
+      { key:'ownProperties', label:'ownProperties', desc:'상속 속성을 제외하고 객체 자체 속성만 순회', values:[['false','전체'],['true','자체 속성만']] }
+    ];
+
+    const presets = {
+      basic: {
+        title: '기본 객체·문자열·숫자·배열', mode: 'draft7', category:'기초',
+        description: 'required, enum, format, 범위, 배열 고유값, 추가 속성 차단',
+        tags:['type','required','enum','format','uniqueItems'],
+        schema: {
+          $id: 'https://example.local/member.schema.json',
+          type: 'object',
+          additionalProperties: false,
+          required: ['memberId','name','email','age','status'],
+          properties: {
+            memberId: { type:'string', format:'sh-member-code' },
+            name: { type:'string', minLength:2, maxLength:30 },
+            email: { type:'string', format:'email' },
+            age: { type:'integer', minimum:18, maximum:100 },
+            status: { enum:['active','inactive','pending'] },
+            joinDate: { type:'string', format:'date' },
+            interests: { type:'array', minItems:1, uniqueItems:true, items:{type:'string', minLength:2} }
+          }
+        },
+        data: { memberId:'SH-26-12', name:'김', email:'wrong@', age:17.5, status:'waiting', joinDate:'2026-02-30', interests:['양식','양식'], memo:'허용되지 않은 속성' }
+      },
+      formats: {
+        title: '표준·커스텀 format', mode: 'draft7', category:'문자열',
+        description: 'ajv-formats의 날짜·URI·IP·UUID와 직접 등록한 형식',
+        tags:['email','date-time','uri','ipv4','uuid'],
+        schema: {
+          type:'object', additionalProperties:false,
+          required:['email','createdAt','homepage','serverIp','requestId','duration','phone','memberCode'],
+          properties:{
+            email:{type:'string',format:'email'}, createdAt:{type:'string',format:'date-time'},
+            homepage:{type:'string',format:'uri'}, serverIp:{type:'string',format:'ipv4'},
+            requestId:{type:'string',format:'uuid'}, duration:{type:'string',format:'duration'},
+            phone:{type:'string',format:'kr-phone'}, memberCode:{type:'string',format:'sh-member-code'}
+          }
+        },
+        data:{ email:'user@sh.co.kr', createdAt:'2026-07-12T11:30:00Z', homepage:'https://www.suhyup.co.kr', serverIp:'300.1.1.1', requestId:'not-a-uuid', duration:'P3D', phone:'02-2240-2114', memberCode:'SH-2026-0712' }
+      },
+      condition: {
+        title: '조건부 if / then / else', mode:'draft7', category:'논리',
+        description: '사고 유형에 따라 필수 필드와 패턴을 동적으로 변경',
+        tags:['if','then','else','required'],
+        schema:{
+          type:'object', required:['claimType','amount'], additionalProperties:false,
+          properties:{ claimType:{enum:['vessel','personal']}, amount:{type:'number',exclusiveMinimum:0}, vesselId:{type:'string'}, residentNoMasked:{type:'string'} },
+          if:{ properties:{claimType:{const:'vessel'}}, required:['claimType'] },
+          then:{ required:['vesselId'], properties:{vesselId:{pattern:'^VES-[0-9]{6}$'}} },
+          else:{ required:['residentNoMasked'], properties:{residentNoMasked:{pattern:'^[0-9]{6}-\\*{7}$'}} }
+        },
+        data:{claimType:'vessel',amount:0,vesselId:'SHIP-12'}
+      },
+      composition: {
+        title:'allOf·anyOf·oneOf·not', mode:'draft7', category:'논리',
+        description:'여러 스키마 결합과 배타적 선택, 금지 조건을 한 번에 확인',
+        tags:['allOf','anyOf','oneOf','not'],
+        schema:{
+          allOf:[
+            {type:'object',required:['name','contact'],properties:{name:{type:'string',minLength:2},contact:{type:'object'}}},
+            {properties:{contact:{anyOf:[{required:['email'],properties:{email:{type:'string',format:'email'}}},{required:['phone'],properties:{phone:{type:'string',format:'kr-phone'}}}]}}},
+            {not:{required:['blocked'],properties:{blocked:{const:true}}}}
+          ]
+        },
+        data:{name:'수',contact:{email:'invalid'},blocked:true}
+      },
+      refs: {
+        title:'$defs와 $ref 재사용', mode:'draft7', category:'구조화',
+        description:'주소·담당자 하위 스키마를 정의하고 여러 위치에서 재사용',
+        tags:['$id','$defs','$ref'],
+        schema:{
+          $id:'https://example.local/coop.json', type:'object', required:['headOffice','branches'],
+          $defs:{
+            address:{type:'object',required:['city','detail'],additionalProperties:false,properties:{city:{type:'string'},detail:{type:'string'},zip:{type:'string',pattern:'^[0-9]{5}$'}}},
+            manager:{type:'object',required:['name','email'],properties:{name:{type:'string'},email:{type:'string',format:'email'}}}
+          },
+          properties:{ headOffice:{$ref:'#/$defs/address'}, branches:{type:'array',items:{allOf:[{$ref:'#/$defs/address'},{type:'object',properties:{manager:{$ref:'#/$defs/manager'}}}]}} }
+        },
+        data:{headOffice:{city:'서울',detail:'송파구',zip:'123'},branches:[{city:'부산',detail:'중구',zip:'48900',manager:{name:'박담당',email:'manager@example.com'}}]}
+      },
+      pattern: {
+        title:'patternProperties·propertyNames', mode:'draft7', category:'객체',
+        description:'동적 키 이름과 키별 값 타입을 정규식으로 통제',
+        tags:['patternProperties','propertyNames','minProperties'],
+        schema:{
+          type:'object', minProperties:2,
+          propertyNames:{pattern:'^[A-Z][A-Z0-9_]{2,15}$'},
+          patternProperties:{'^NUM_':{type:'number'},'^TXT_':{type:'string'}},
+          additionalProperties:false
+        },
+        data:{NUM_SALES:1200,TXT_REGION:'동해안',bad_key:true,NUM_COUNT:'10'}
+      },
+      array2020: {
+        title:'2020-12 배열 tuple·contains', mode:'2020', category:'2020-12',
+        description:'prefixItems로 위치별 타입을 지정하고 contains 개수를 제한',
+        tags:['prefixItems','contains','minContains','maxContains'],
+        schema:{
+          $schema:'https://json-schema.org/draft/2020-12/schema', type:'array',
+          prefixItems:[{const:'FISH'},{type:'string',minLength:2},{type:'integer',minimum:1}],
+          items:{type:'number'},
+          contains:{type:'number',minimum:100}, minContains:1, maxContains:2
+        },
+        data:['FISH','고등어',3,90,110,150,170]
+      },
+      unevaluated: {
+        title:'unevaluatedProperties', mode:'2020', category:'2020-12',
+        description:'조합 스키마 전체에서 평가되지 않은 속성을 최종 차단',
+        tags:['oneOf','unevaluatedProperties'],
+        schema:{
+          $schema:'https://json-schema.org/draft/2020-12/schema', type:'object', required:['kind'],
+          properties:{kind:{enum:['capture','aquaculture']}},
+          oneOf:[
+            {properties:{kind:{const:'capture'},vessel:{type:'string'}},required:['vessel']},
+            {properties:{kind:{const:'aquaculture'},farmArea:{type:'number',minimum:0}},required:['farmArea']}
+          ],
+          unevaluatedProperties:false
+        },
+        data:{kind:'capture',vessel:'SEA-01',farmArea:200,unknown:true}
+      },
+      dependent: {
+        title:'dependentRequired·dependentSchemas', mode:'2020', category:'2020-12',
+        description:'특정 속성이 존재할 때 함께 필요한 속성과 추가 스키마 적용',
+        tags:['dependentRequired','dependentSchemas'],
+        schema:{
+          $schema:'https://json-schema.org/draft/2020-12/schema', type:'object',
+          properties:{cardNo:{type:'string'},billingAddress:{type:'string'},corporate:{type:'boolean'},businessNo:{type:'string',pattern:'^[0-9]{10}$'}},
+          dependentRequired:{cardNo:['billingAddress']},
+          dependentSchemas:{corporate:{if:{properties:{corporate:{const:true}}},then:{required:['businessNo']}}}
+        },
+        data:{cardNo:'1111-2222',corporate:true,businessNo:'123'}
+      },
+      discriminator: {
+        title:'OpenAPI discriminator', mode:'draft7', category:'API',
+        description:'kind 값으로 oneOf 분기를 빠르고 명확하게 선택',
+        tags:['discriminator','oneOf','const'],
+        schema:{
+          type:'object', discriminator:{propertyName:'kind'}, required:['kind'],
+          oneOf:[
+            {properties:{kind:{const:'capture'},vesselId:{type:'string'},catchKg:{type:'number',minimum:0}},required:['vesselId','catchKg']},
+            {properties:{kind:{const:'aquaculture'},farmId:{type:'string'},stockCount:{type:'integer',minimum:0}},required:['farmId','stockCount']}
+          ]
+        },
+        data:{kind:'aquaculture',vesselId:'VES-1',stockCount:-1}
+      },
+      mutation: {
+        title:'데이터 보정 옵션', mode:'draft7', category:'데이터 변경',
+        description:'기본값 삽입·타입 변환·추가 속성 제거·문자열 정제',
+        tags:['default','coerceTypes','removeAdditional','transform'],
+        recommendedOptions:{useDefaults:true,coerceTypes:true,removeAdditional:true},
+        schema:{
+          type:'object', additionalProperties:false, required:['quantity','active','name'],
+          properties:{
+            quantity:{type:'integer',minimum:1}, active:{type:'boolean',default:true},
+            status:{type:'string',default:'draft'}, name:{type:'string',transform:['trim']},
+            tags:{type:'array',items:{type:'string'},default:[]}
+          }
+        },
+        data:{quantity:'12',active:'false',name:'  고등어 출하  ',temporary:'삭제 대상'}
+      },
+      customKeywords: {
+        title:'ajv-keywords 확장', mode:'draft7', category:'확장',
+        description:'range·regexp·transform·uniqueItemProperties 등 플러그인 키워드',
+        tags:['range','regexp','transform','uniqueItemProperties'],
+        schema:{
+          type:'object', required:['score','code','items'],
+          properties:{
+            score:{type:'number',range:[0,100]},
+            code:{type:'string',transform:['trim','toUpperCase'],regexp:'/^SH-[0-9]{3}$/'},
+            items:{type:'array',uniqueItemProperties:['id'],items:{type:'object',required:['id'],properties:{id:{type:'integer'},name:{type:'string'}}}}
+          }
+        },
+        data:{score:120,code:' sh-001 ',items:[{id:1,name:'A'},{id:1,name:'B'}]}
+      },
+      dataReference: {
+        title:'$data 상대 참조', mode:'draft7', category:'확장',
+        description:'confirmPassword가 같은 객체의 password와 일치하는지 참조',
+        tags:['$data','const','minLength'],
+        schema:{
+          type:'object',required:['password','confirmPassword'],
+          properties:{password:{type:'string',minLength:8},confirmPassword:{type:'string',const:{$data:'1/password'}}}
+        },
+        data:{password:'secure123',confirmPassword:'secure124'}
+      },
+      customError: {
+        title:'ajv-errors 사용자 메시지', mode:'draft7', category:'오류',
+        description:'errorMessage 키워드로 업무 친화적인 오류 문구 지정',
+        tags:['errorMessage','required','minimum'],
+        schema:{
+          type:'object',required:['product','price'],
+          properties:{product:{type:'string',minLength:2},price:{type:'number',minimum:1000}},
+          errorMessage:{required:{product:'상품명을 입력해야 합니다.',price:'가격을 입력해야 합니다.'},properties:{product:'상품명은 두 글자 이상이어야 합니다.',price:'가격은 1,000원 이상이어야 합니다.'}}
+        },
+        data:{product:'굴',price:500}
+      },
+      recursive: {
+        title:'재귀 트리 스키마', mode:'2020', category:'구조화',
+        description:'조직·메뉴처럼 반복되는 계층 구조를 $ref로 재귀 검증',
+        tags:['$defs','$ref','recursive'],
+        schema:{
+          $schema:'https://json-schema.org/draft/2020-12/schema',
+          $ref:'#/$defs/node',
+          $defs:{node:{type:'object',required:['name'],additionalProperties:false,properties:{name:{type:'string',minLength:1},children:{type:'array',items:{$ref:'#/$defs/node'}}}}}
+        },
+        data:{name:'본부',children:[{name:'부서',children:[{name:''}]},{title:'잘못된 노드'}]}
+      },
+      jtdBasic: {
+        title:'JTD 기본 모델', mode:'jtd', category:'JTD',
+        description:'properties·optionalProperties·enum·elements 중심의 간결한 타입 정의',
+        tags:['properties','optionalProperties','enum','elements'],
+        schema:{
+          properties:{id:{type:'uint32'},name:{type:'string'},role:{enum:['admin','manager','viewer']},active:{type:'boolean'},teams:{elements:{type:'string'}}},
+          optionalProperties:{joinedAt:{type:'timestamp'},note:{type:'string'}},
+          additionalProperties:false
+        },
+        data:{id:-1,name:'사용자',role:'owner',active:true,teams:['기획',10],extra:'불가'}
+      }
+    };
+
+    function parseOptionValue(value) {
+      if (value === 'true') return true;
+      if (value === 'false') return false;
+      return value;
+    }
+
+    function getOptions() {
+      const result = {};
+      optionDefinitions.forEach(def => {
+        const select = document.getElementById(`opt-${def.key}`);
+        result[def.key] = select ? parseOptionValue(select.value) : defaultOptions[def.key];
+      });
+      result.code = {source:true, lines:true, optimize:true};
+      return result;
+    }
+
+    function renderOptions() {
+      const grid = $('#optionGrid');
+      grid.innerHTML = optionDefinitions.map(def => `
+        <div class="option-card">
+          <label for="opt-${def.key}">${def.label}</label>
+          <select class="select" id="opt-${def.key}">
+            ${def.values.map(([value,label]) => `<option value="${value}">${label}</option>`).join('')}
+          </select>
+          <p>${def.desc}</p>
+        </div>`).join('');
+      resetOptions(false);
+      $$('[id^="opt-"]').forEach(el => el.addEventListener('change', scheduleValidation));
+    }
+
+    function resetOptions(run = true) {
+      optionDefinitions.forEach(def => {
+        const el = document.getElementById(`opt-${def.key}`);
+        if (el) el.value = String(defaultOptions[def.key]);
+      });
+      if (run) validateCurrent();
+    }
+
+    function registerExtensions(ajv, mode, options) {
+      if (mode === 'jtd') return ajv;
+      addFormats(ajv, {keywords:true});
+      try { addKeywords(ajv); } catch (error) { console.warn('ajv-keywords 일부 등록 실패:', error); }
+      try { addErrors(ajv, {singleError:false}); } catch (error) { console.warn('ajv-errors 등록 실패:', error); }
+
+      ajv.addFormat('sh-member-code', /^SH-[0-9]{4}-[0-9]{4}$/);
+      ajv.addFormat('kr-phone', /^(0[2-6][0-5]?)-([0-9]{3,4})-([0-9]{4})$/);
+      ajv.addKeyword({
+        keyword:'isEven', type:'number', schemaType:'boolean',
+        validate:(schema, data) => !schema || (Number.isInteger(data) && data % 2 === 0),
+        errors:false
+      });
+      return ajv;
+    }
+
+    function createAjv(mode, overrides = {}) {
+      const options = {...getOptions(), ...overrides};
+      let instance;
+      if (mode === '2019') instance = new Ajv2019(options);
+      else if (mode === '2020') instance = new Ajv2020(options);
+      else if (mode === 'jtd') instance = new AjvJTD(options);
+      else instance = new Ajv(options);
+      return registerExtensions(instance, mode, options);
+    }
+
+    function stringifyEditorValue(editor) {
+      const parsed = JSON.parse(editor.value);
+      editor.value = pretty(parsed);
+      editor.classList.remove('error');
+      return parsed;
+    }
+
+    function applyPreset(key, run = true) {
+      const preset = presets[key];
+      if (!preset) return;
+      $('#draftSelect').value = preset.mode;
+      $('#presetSelect').value = key;
+      $('#schemaEditor').value = pretty(preset.schema);
+      $('#dataEditor').value = pretty(preset.data);
+      $('#schemaEditor').classList.remove('error');
+      $('#dataEditor').classList.remove('error');
+      if (preset.recommendedOptions) {
+        Object.entries(preset.recommendedOptions).forEach(([key,value]) => {
+          const el = document.getElementById(`opt-${key}`);
+          if (el) el.value = String(value);
+        });
+      }
+      toast(`${preset.title} 예제를 적용했습니다.`);
+      if (run) validateCurrent();
+      location.hash = '#lab';
+    }
+
+    function renderPresets() {
+      const select = $('#presetSelect');
+      select.innerHTML = Object.entries(presets).map(([key,p]) => `<option value="${key}">[${p.category}] ${p.title}</option>`).join('');
+      $('#presetCount').textContent = `${Object.keys(presets).length}개`;
+
+      $('#featureGrid').innerHTML = Object.entries(presets).map(([key,p]) => `
+        <article class="feature-card">
+          <span class="badge" style="margin-bottom:10px">${p.category} · ${modeLabel(p.mode)}</span>
+          <h4>${p.title}</h4>
+          <p>${p.description}</p>
+          <div class="feature-meta">${p.tags.map(tag => `<code>${escapeHtml(tag)}</code>`).join('')}</div>
+          <button class="btn small" type="button" data-preset="${key}">실험실에서 열기</button>
+        </article>`).join('');
+      $$('[data-preset]').forEach(btn => btn.addEventListener('click', () => applyPreset(btn.dataset.preset)));
+    }
+
+    function modeLabel(mode) {
+      return ({draft7:'Draft-07',2019:'2019-09',2020:'2020-12',jtd:'JTD'})[mode] || mode;
+    }
+
+    function scheduleValidation() {
+      if (!$('#liveToggle').checked) return;
+      clearTimeout(state.liveTimer);
+      state.liveTimer = setTimeout(validateCurrent, 420);
+    }
+
+    async function validateCurrent() {
+      const btn = $('#validateBtn');
+      btn.disabled = true;
+      btn.textContent = '검증 중…';
+      let schema, data;
+      try {
+        schema = stringifyEditorValue($('#schemaEditor'));
+      } catch (error) {
+        $('#schemaEditor').classList.add('error');
+        renderFatal('스키마 JSON 문법 오류', error.message);
+        btn.disabled = false; btn.textContent = '검증 실행';
+        return;
+      }
+      try {
+        data = stringifyEditorValue($('#dataEditor'));
+      } catch (error) {
+        $('#dataEditor').classList.add('error');
+        renderFatal('데이터 JSON 문법 오류', error.message);
+        btn.disabled = false; btn.textContent = '검증 실행';
+        return;
+      }
+
+      const mode = $('#draftSelect').value;
+      const before = clone(data);
+      let ajv, validate, valid = false, errors = [], schemaOk = true;
+      const compileStart = performance.now();
+      let compileMs = 0, validateMs = 0;
+
+      try {
+        ajv = createAjv(mode);
+        try { schemaOk = ajv.validateSchema(schema); } catch { schemaOk = false; }
+        validate = ajv.compile(schema);
+        compileMs = performance.now() - compileStart;
+        const validationStart = performance.now();
+        if (schema.$async === true) {
+          try { await validate(data); valid = true; errors = []; }
+          catch (error) { valid = false; errors = error.errors || [{keyword:'async',instancePath:'',message:error.message,params:{}}]; }
+        } else {
+          valid = Boolean(validate(data));
+          errors = validate.errors ? clone(validate.errors) : [];
+        }
+        validateMs = performance.now() - validationStart;
+        state.lastCompiledSource = validate.toString();
+      } catch (error) {
+        compileMs = performance.now() - compileStart;
+        errors = [{keyword:'compile', instancePath:'', schemaPath:'', params:{}, message:error.message || String(error)}];
+        schemaOk = false;
+        renderValidation(false, errors, before, data, compileMs, 0, schemaOk, mode, true);
+        btn.disabled = false; btn.textContent = '검증 실행';
+        return;
+      }
+
+      renderValidation(valid, errors, before, data, compileMs, validateMs, schemaOk, mode, false);
+      btn.disabled = false; btn.textContent = '검증 실행';
+    }
+
+    function renderFatal(title, message) {
+      $('#resultIcon').className = 'result-icon fail';
+      $('#resultIcon').textContent = '!';
+      $('#resultTitle').textContent = title;
+      $('#resultText').textContent = message;
+      $('#errorCount').textContent = '1';
+      $('#compileTime').textContent = '-';
+      $('#validateTime').textContent = '-';
+      $('#schemaStatus').textContent = '오류';
+      $('#errorList').innerHTML = `<div class="error-item"><div class="error-message">${escapeHtml(message)}</div></div>`;
+    }
+
+    function renderValidation(valid, errors, before, after, compileMs, validateMs, schemaOk, mode, compileError) {
+      state.lastErrors = errors || [];
+      state.lastBefore = clone(before);
+      state.lastAfter = clone(after);
+      state.lastReport = {
+        generatedAt: new Date().toISOString(),
+        mode, valid, schemaValid: schemaOk,
+        compileMilliseconds: Number(compileMs.toFixed(3)),
+        validationMilliseconds: Number(validateMs.toFixed(3)),
+        errors: state.lastErrors,
+        before: state.lastBefore,
+        after: state.lastAfter,
+        options: getOptions()
+      };
+
+      $('#resultIcon').className = `result-icon ${valid ? 'pass' : 'fail'}`;
+      $('#resultIcon').textContent = valid ? '✓' : '!';
+      $('#resultTitle').textContent = valid ? '검증 통과' : (compileError ? '스키마 컴파일 실패' : '검증 실패');
+      $('#resultText').textContent = valid ? `${modeLabel(mode)} 기준으로 데이터가 유효합니다.` : `${errors.length}개의 오류 또는 제한 위반이 발견되었습니다.`;
+      $('#errorCount').textContent = String(errors.length);
+      $('#compileTime').textContent = `${compileMs.toFixed(2)} ms`;
+      $('#validateTime').textContent = `${validateMs.toFixed(3)} ms`;
+      $('#schemaStatus').textContent = schemaOk ? '정상' : '확인 필요';
+
+      if (!errors.length) {
+        $('#errorList').innerHTML = '<div class="empty-state">모든 검증 규칙을 통과했습니다.</div>';
+      } else {
+        $('#errorList').innerHTML = errors.map(error => {
+          const path = error.instancePath || error.dataPath || '/';
+          return `<div class="error-item">
+            <div class="error-top"><span class="error-keyword">${escapeHtml(error.keyword || 'error')}</span><span class="error-path" title="${escapeHtml(path)}">${escapeHtml(path)}</span></div>
+            <div class="error-message">${escapeHtml(koreanError(error))}</div>
+            <div class="error-raw">${escapeHtml(error.message || '')} · ${escapeHtml(error.schemaPath || '')}</div>
+          </div>`;
+        }).join('');
+      }
+
+      $('#beforePreview').textContent = pretty(before);
+      $('#afterPreview').textContent = pretty(after);
+      renderDiff(before, after);
+      updateGeneratedCodeView();
+      addHistory(valid, errors.length, mode);
+    }
+
+    function koreanError(error) {
+      const p = error.params || {};
+      const raw = error.message || '검증 규칙을 통과하지 못했습니다.';
+      const map = {
+        required: `필수 속성 “${p.missingProperty || ''}”이(가) 없습니다.`,
+        type: `값의 타입은 ${p.type || '지정 타입'}이어야 합니다.`,
+        format: `“${p.format || '지정'}” 형식에 맞지 않습니다.`,
+        minLength: `문자열 길이는 최소 ${p.limit}자여야 합니다.`,
+        maxLength: `문자열 길이는 최대 ${p.limit}자여야 합니다.`,
+        minimum: `값은 ${p.limit} 이상이어야 합니다.`,
+        maximum: `값은 ${p.limit} 이하여야 합니다.`,
+        exclusiveMinimum: `값은 ${p.limit}보다 커야 합니다.`,
+        exclusiveMaximum: `값은 ${p.limit}보다 작아야 합니다.`,
+        enum: '허용된 값 목록 중 하나여야 합니다.',
+        const: '지정된 고정값 또는 참조값과 일치해야 합니다.',
+        pattern: `정규식 ${p.pattern || ''} 패턴과 일치해야 합니다.`,
+        additionalProperties: `허용되지 않은 속성 “${p.additionalProperty || ''}”이(가) 있습니다.`,
+        unevaluatedProperties: `평가되지 않은 속성 “${p.unevaluatedProperty || ''}”은 허용되지 않습니다.`,
+        uniqueItems: `배열의 ${p.j}번째와 ${p.i}번째 항목이 중복됩니다.`,
+        minItems: `배열 항목은 최소 ${p.limit}개여야 합니다.`,
+        maxItems: `배열 항목은 최대 ${p.limit}개여야 합니다.`,
+        contains: '배열에 contains 조건을 만족하는 항목 수가 부족하거나 많습니다.',
+        oneOf: 'oneOf 하위 스키마 중 정확히 하나만 통과해야 합니다.',
+        anyOf: 'anyOf 하위 스키마 중 하나 이상을 통과해야 합니다.',
+        allOf: 'allOf의 모든 하위 스키마를 통과해야 합니다.',
+        not: 'not에 정의된 금지 조건과 일치합니다.',
+        if: '조건부 스키마 분기 결과를 확인하세요.',
+        propertyNames: '객체 속성 이름 규칙을 통과하지 못했습니다.',
+        dependentRequired: `“${p.property || ''}” 사용 시 ${Array.isArray(p.deps) ? p.deps.join(', ') : p.deps || ''} 속성이 함께 필요합니다.`,
+        discriminator: 'discriminator 값과 oneOf 분기 구성이 일치하지 않습니다.',
+        errorMessage: raw,
+        transform: '문자열 변환 규칙을 적용할 수 없습니다.',
+        uniqueItemProperties: '지정한 속성 값이 배열 안에서 고유하지 않습니다.',
+        range: '지정된 숫자 범위를 벗어났습니다.',
+        regexp: '지정된 정규식 조건과 일치하지 않습니다.',
+        isEven: '정수형 짝수여야 합니다.',
+        compile: `스키마를 컴파일할 수 없습니다: ${raw}`
+      };
+      return map[error.keyword] || raw;
+    }
+
+    function renderDiff(before, after) {
+      const changes = diffValues(before, after);
+      if (!changes.length) {
+        $('#diffList').innerHTML = '<div class="empty-state" style="min-height:80px">검증 과정에서 데이터가 변경되지 않았습니다.</div>';
+        return;
+      }
+      $('#diffList').innerHTML = changes.map(change => `<div class="diff-row"><span class="diff-type ${change.type}">${change.type.toUpperCase()}</span><span>${escapeHtml(change.path)} · ${escapeHtml(change.detail)}</span></div>`).join('');
+    }
+
+    function diffValues(before, after, path = '$') {
+      const changes = [];
+      if (Object.is(before, after)) return changes;
+      const beforeObj = before && typeof before === 'object';
+      const afterObj = after && typeof after === 'object';
+      if (!beforeObj || !afterObj || Array.isArray(before) !== Array.isArray(after)) {
+        changes.push({type:'changed',path,detail:`${shortValue(before)} → ${shortValue(after)}`});
+        return changes;
+      }
+      const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+      for (const key of keys) {
+        const childPath = Array.isArray(after) || Array.isArray(before) ? `${path}[${key}]` : `${path}.${key}`;
+        if (!(key in before)) changes.push({type:'added',path:childPath,detail:shortValue(after[key])});
+        else if (!(key in after)) changes.push({type:'removed',path:childPath,detail:shortValue(before[key])});
+        else changes.push(...diffValues(before[key], after[key], childPath));
+      }
+      return changes;
+    }
+
+    function shortValue(value) {
+      const text = JSON.stringify(value);
+      return text && text.length > 90 ? `${text.slice(0,87)}…` : String(text);
+    }
+
+    async function runFormatDemo() {
+      const value = $('#formatDemoInput').value;
+      try {
+        const ajv = createAjv('draft7');
+        const valid = ajv.validate({type:'string',format:'sh-member-code'}, value);
+        setDemoResult('#formatDemoResult', valid, valid ? '유효한 조합원 코드입니다.' : 'SH-0000-0000 형식으로 입력해야 합니다.');
+      } catch (error) { setDemoResult('#formatDemoResult', false, error.message); }
+    }
+
+    async function runKeywordDemo() {
+      const value = Number($('#keywordDemoInput').value);
+      try {
+        const ajv = createAjv('draft7');
+        const valid = ajv.validate({type:'number',isEven:true}, value);
+        setDemoResult('#keywordDemoResult', valid, valid ? `${value}은(는) 짝수입니다.` : `${value}은(는) 정수형 짝수가 아닙니다.`);
+      } catch (error) { setDemoResult('#keywordDemoResult', false, error.message); }
+    }
+
+    async function runAsyncDemo() {
+      const btn = $('#asyncDemoBtn');
+      const result = $('#asyncDemoResult');
+      btn.disabled = true; btn.textContent = '조회 중…';
+      result.className = 'demo-result'; result.textContent = '가상 DB에서 코드를 조회하고 있습니다.';
+      try {
+        const ajv = new Ajv({allErrors:true});
+        ajv.addKeyword({
+          keyword:'codeExists', async:true, type:'string', schemaType:'boolean',
+          validate: async (schema, data) => {
+            await delay(650);
+            return !schema || ['COOP-001','COOP-007','COOP-101'].includes(data);
+          }
+        });
+        const validate = ajv.compile({$async:true,type:'string',codeExists:true});
+        await validate($('#asyncDemoInput').value);
+        setDemoResult('#asyncDemoResult', true, '가상 DB에 등록된 코드입니다.');
+      } catch (error) {
+        setDemoResult('#asyncDemoResult', false, '등록되지 않은 코드입니다. Promise 검증이 실패했습니다.');
+      } finally { btn.disabled = false; btn.textContent = '비동기 검사'; }
+    }
+
+    function setDemoResult(selector, success, text) {
+      const el = $(selector); el.className = `demo-result ${success ? 'success' : 'failure'}`; el.textContent = text;
+    }
+
+    function syncJtdPreset() {
+      $('#jtdSchemaEditor').value = pretty(presets.jtdBasic.schema);
+      $('#jtdDataEditor').value = pretty({id:7,name:'분석 담당자',role:'manager',active:true,teams:['기획','자동화'],joinedAt:'2026-07-12T09:00:00Z'});
+    }
+
+    function runJtdValidate() {
+      try {
+        const schema = JSON.parse($('#jtdSchemaEditor').value);
+        const data = JSON.parse($('#jtdDataEditor').value);
+        const ajv = new AjvJTD({allErrors:true});
+        const validate = ajv.compile(schema);
+        const valid = validate(data);
+        $('#jtdOutput').textContent = pretty({valid, errors:validate.errors || [], data});
+      } catch (error) { $('#jtdOutput').textContent = `오류: ${error.message}`; }
+    }
+
+    function runJtdSerialize() {
+      try {
+        const schema = JSON.parse($('#jtdSchemaEditor').value);
+        const data = JSON.parse($('#jtdDataEditor').value);
+        const ajv = new AjvJTD();
+        const serialize = ajv.compileSerializer(schema);
+        const text = serialize(data);
+        $('#jtdOutput').textContent = `직렬화 결과 (${new Blob([text]).size} bytes)\n\n${text}`;
+      } catch (error) { $('#jtdOutput').textContent = `Serializer 오류: ${error.message}`; }
+    }
+
+    function runJtdParse() {
+      try {
+        const schema = JSON.parse($('#jtdSchemaEditor').value);
+        const raw = $('#jtdDataEditor').value.trim();
+        const text = raw.startsWith('{') ? raw : JSON.stringify(raw);
+        const ajv = new AjvJTD();
+        const parse = ajv.compileParser(schema);
+        const value = parse(text);
+        if (value === undefined) {
+          $('#jtdOutput').textContent = `Parser 실패\n위치: ${parse.position}\n메시지: ${parse.message}`;
+        } else {
+          $('#jtdOutput').textContent = `Parser 성공\n\n${pretty(value)}`;
+        }
+      } catch (error) { $('#jtdOutput').textContent = `Parser 오류: ${error.message}`; }
+    }
+
+    async function runBenchmark() {
+      const btn = $('#benchmarkBtn');
+      btn.disabled = true; btn.textContent = '측정 중…';
+      await new Promise(requestAnimationFrame);
+      try {
+        const mode = $('#draftSelect').value;
+        const schema = JSON.parse($('#schemaEditor').value);
+        const sourceData = JSON.parse($('#dataEditor').value);
+        if (schema.$async) throw new Error('비동기 스키마는 이 동기 벤치마크에서 제외됩니다.');
+        const ajv = createAjv(mode, {allErrors:false, verbose:false, code:{source:false,optimize:true}});
+        const c0 = performance.now();
+        const validate = ajv.compile(schema);
+        const compile = performance.now() - c0;
+        const count = Number($('#benchmarkCount').value);
+        let pass = 0;
+        const v0 = performance.now();
+        for (let i=0; i<count; i++) {
+          const data = (getOptions().useDefaults || getOptions().coerceTypes || getOptions().removeAdditional) ? clone(sourceData) : sourceData;
+          if (validate(data)) pass++;
+        }
+        const elapsed = performance.now() - v0;
+        const ops = Math.round(count / (elapsed / 1000));
+        setDemoResult('#benchmarkResult', true, `컴파일 ${compile.toFixed(2)}ms · ${count.toLocaleString()}회 ${elapsed.toFixed(2)}ms · 초당 약 ${ops.toLocaleString()}회 · 통과 ${pass.toLocaleString()}회`);
+      } catch (error) { setDemoResult('#benchmarkResult', false, error.message); }
+      finally { btn.disabled = false; btn.textContent = '측정'; }
+    }
+
+    function generateSnippet() {
+      try {
+        const mode = $('#draftSelect').value;
+        const schema = JSON.parse($('#schemaEditor').value);
+        const data = JSON.parse($('#dataEditor').value);
+        const options = getOptions();
+        const importLine = mode === '2020' ? 'import Ajv from "ajv/dist/2020.js"' : mode === '2019' ? 'import Ajv from "ajv/dist/2019.js"' : mode === 'jtd' ? 'import Ajv from "ajv/dist/jtd.js"' : 'import Ajv from "ajv"';
+        const pluginLines = mode === 'jtd' ? '' : '\nimport addFormats from "ajv-formats"\nimport addKeywords from "ajv-keywords"\nimport addErrors from "ajv-errors"';
+        const setupLines = mode === 'jtd' ? '' : '\naddFormats(ajv, {keywords: true})\naddKeywords(ajv)\naddErrors(ajv)';
+        state.lastSnippet = `${importLine}${pluginLines}\n\nconst ajv = new Ajv(${pretty({...options, code:undefined}).replace(/\n/g,'\n')})${setupLines}\n\nconst schema = ${pretty(schema)}\nconst data = ${pretty(data)}\n\nconst validate = ajv.compile(schema)\nconst valid = validate(data)\n\nconsole.log({ valid, errors: validate.errors, data })`;
+        $('#codeViewSelect').value = 'snippet';
+        updateGeneratedCodeView();
+        toast('Node.js ESM 예제 코드를 생성했습니다.');
+      } catch (error) { toast(`코드 생성 실패: ${error.message}`); }
+    }
+
+    function updateGeneratedCodeView() {
+      const mode = $('#codeViewSelect').value;
+      $('#generatedCode').textContent = mode === 'compiled' ? (state.lastCompiledSource || '먼저 검증을 실행하세요.') : (state.lastSnippet || '“코드 생성” 버튼을 누르세요.');
+    }
+
+    function addHistory(valid, errorCount, mode) {
+      const preset = presets[$('#presetSelect').value];
+      state.history.unshift({id:crypto.randomUUID(),at:new Date().toISOString(),valid,errorCount,mode,title:preset?.title || '직접 편집'});
+      state.history = state.history.slice(0,20);
+      localStorage.setItem('ajv-validation-history', JSON.stringify(state.history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const root = $('#historyList');
+      if (!state.history.length) { root.innerHTML = '<div class="empty-state" style="min-height:120px">검증 이력이 없습니다.</div>'; return; }
+      root.innerHTML = state.history.slice(0,10).map(item => `<div class="history-item"><span class="history-status ${item.valid?'pass':''}"></span><div class="history-main"><strong>${escapeHtml(item.title)}</strong><span>${modeLabel(item.mode)} · 오류 ${item.errorCount}개 · ${formatDate(item.at)}</span></div><span class="badge">${item.valid?'PASS':'FAIL'}</span></div>`).join('');
+    }
+
+    function saveCurrentSchema() {
+      try {
+        const schema = JSON.parse($('#schemaEditor').value);
+        const suggested = presets[$('#presetSelect').value]?.title || '사용자 스키마';
+        const name = prompt('저장할 스키마 이름', suggested);
+        if (!name) return;
+        state.registry.unshift({id:crypto.randomUUID(),name,mode:$('#draftSelect').value,schema,createdAt:new Date().toISOString()});
+        state.registry = state.registry.slice(0,30);
+        localStorage.setItem('ajv-schema-registry', JSON.stringify(state.registry));
+        renderRegistry(); toast('현재 스키마를 브라우저에 저장했습니다.');
+      } catch (error) { toast(`저장 실패: ${error.message}`); }
+    }
+
+    function renderRegistry() {
+      const root = $('#schemaRegistry');
+      if (!state.registry.length) { root.innerHTML = '<div class="empty-state" style="min-height:120px">저장된 스키마가 없습니다.</div>'; return; }
+      root.innerHTML = state.registry.map(item => `<div class="history-item"><span class="history-status pass"></span><div class="history-main"><strong>${escapeHtml(item.name)}</strong><span>${modeLabel(item.mode)} · ${formatDate(item.createdAt)}</span></div><div style="display:flex;gap:5px"><button class="btn small" data-load-schema="${item.id}" type="button">열기</button><button class="btn small danger" data-delete-schema="${item.id}" type="button">삭제</button></div></div>`).join('');
+      $$('[data-load-schema]').forEach(btn => btn.addEventListener('click', () => {
+        const item = state.registry.find(x => x.id === btn.dataset.loadSchema); if (!item) return;
+        $('#draftSelect').value = item.mode; $('#schemaEditor').value = pretty(item.schema); validateCurrent(); location.hash='#lab';
+      }));
+      $$('[data-delete-schema]').forEach(btn => btn.addEventListener('click', () => {
+        state.registry = state.registry.filter(x => x.id !== btn.dataset.deleteSchema);
+        localStorage.setItem('ajv-schema-registry', JSON.stringify(state.registry)); renderRegistry();
+      }));
+    }
+
+    function formatDate(iso) {
+      try { return new Intl.DateTimeFormat('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(iso)); }
+      catch { return iso; }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+
+    function toast(message) {
+      const el = document.createElement('div'); el.className='toast'; el.textContent=message; $('#toastWrap').appendChild(el);
+      setTimeout(() => el.remove(), 2600);
+    }
+
+    async function copyText(text) {
+      try { await navigator.clipboard.writeText(text); toast('클립보드에 복사했습니다.'); }
+      catch { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('클립보드에 복사했습니다.'); }
+    }
+
+    function downloadText(filename, text, mime='application/json;charset=utf-8') {
+      const blob = new Blob([text], {type:mime}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+
+    function errorsToCsv(errors) {
+      const rows = [['keyword','instancePath','schemaPath','message','params']];
+      errors.forEach(e => rows.push([e.keyword||'',e.instancePath||'',e.schemaPath||'',e.message||'',JSON.stringify(e.params||{})]));
+      return '\uFEFF' + rows.map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+    }
+
+    function openFile(kind) { document.getElementById(`${kind}FileInput`).click(); }
+    function readJsonFile(input, editor) {
+      const file = input.files?.[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { editor.value = pretty(JSON.parse(reader.result)); editor.classList.remove('error'); validateCurrent(); }
+        catch (error) { toast(`JSON 파일 오류: ${error.message}`); }
+      };
+      reader.readAsText(file,'utf-8'); input.value='';
+    }
+
+    function bindEvents() {
+      $('#validateBtn').addEventListener('click', validateCurrent);
+      $('#topValidateBtn').addEventListener('click', () => { location.hash='#lab'; validateCurrent(); });
+      $('#presetSelect').addEventListener('change', e => applyPreset(e.target.value));
+      $('#draftSelect').addEventListener('change', scheduleValidation);
+      $('#schemaEditor').addEventListener('input', scheduleValidation);
+      $('#dataEditor').addEventListener('input', scheduleValidation);
+      $('#resetOptionsBtn').addEventListener('click', () => resetOptions(true));
+      $('#loadMutationBtn').addEventListener('click', () => applyPreset('mutation'));
+      $('#loadJtdBtn').addEventListener('click', () => applyPreset('jtdBasic'));
+      $('#copyErrorsBtn').addEventListener('click', () => copyText(pretty(state.lastErrors)));
+      $('#downloadReportBtn').addEventListener('click', () => downloadText('ajv-validation-report.json', pretty(state.lastReport || {})));
+      $('#formatDemoBtn').addEventListener('click', runFormatDemo);
+      $('#keywordDemoBtn').addEventListener('click', runKeywordDemo);
+      $('#asyncDemoBtn').addEventListener('click', runAsyncDemo);
+      $('#jtdValidateBtn').addEventListener('click', runJtdValidate);
+      $('#jtdSerializeBtn').addEventListener('click', runJtdSerialize);
+      $('#jtdParseBtn').addEventListener('click', runJtdParse);
+      $('#benchmarkBtn').addEventListener('click', runBenchmark);
+      $('#generateSnippetBtn').addEventListener('click', generateSnippet);
+      $('#copySnippetBtn').addEventListener('click', () => copyText($('#generatedCode').textContent));
+      $('#codeViewSelect').addEventListener('change', updateGeneratedCodeView);
+      $('#saveSchemaBtn').addEventListener('click', saveCurrentSchema);
+      $('#clearHistoryBtn').addEventListener('click', () => { state.history=[]; localStorage.removeItem('ajv-validation-history'); renderHistory(); });
+      $('#exportSchemaBtn').addEventListener('click', () => downloadText('schema.json', $('#schemaEditor').value));
+      $('#exportDataBtn').addEventListener('click', () => downloadText('data.json', $('#dataEditor').value));
+      $('#exportErrorsCsvBtn').addEventListener('click', () => downloadText('ajv-errors.csv', errorsToCsv(state.lastErrors), 'text/csv;charset=utf-8'));
+      $('#exportBundleBtn').addEventListener('click', () => downloadText('ajv-lab-bundle.json', pretty({mode:$('#draftSelect').value,options:getOptions(),schema:JSON.parse($('#schemaEditor').value),data:JSON.parse($('#dataEditor').value),report:state.lastReport})));
+
+      $$('[data-format]').forEach(btn => btn.addEventListener('click', () => {
+        try { stringifyEditorValue(btn.dataset.format === 'schema' ? $('#schemaEditor') : $('#dataEditor')); scheduleValidation(); }
+        catch (error) { toast(`JSON 문법 오류: ${error.message}`); }
+      }));
+      $$('[data-copy]').forEach(btn => btn.addEventListener('click', () => copyText(btn.dataset.copy === 'schema' ? $('#schemaEditor').value : $('#dataEditor').value)));
+      $$('[data-file]').forEach(btn => btn.addEventListener('click', () => openFile(btn.dataset.file)));
+      $$('[data-copy-preview]').forEach(btn => btn.addEventListener('click', () => copyText(btn.dataset.copyPreview === 'before' ? $('#beforePreview').textContent : $('#afterPreview').textContent)));
+      $('#schemaFileInput').addEventListener('change', e => readJsonFile(e.target,$('#schemaEditor')));
+      $('#dataFileInput').addEventListener('change', e => readJsonFile(e.target,$('#dataEditor')));
+      document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); validateCurrent(); } });
+
+      const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          $$('.side-nav a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === `#${entry.target.id}`));
+        }
+      }), {rootMargin:'-20% 0px -70% 0px'});
+      $$('.section').forEach(section => observer.observe(section));
+    }
+
+    function initialize() {
+      renderOptions(); renderPresets(); renderHistory(); renderRegistry(); syncJtdPreset(); bindEvents();
+      window.__ajvModuleReady = true;
+      $('#loadError').classList.remove('show');
+      $('#libStatusDot').className = 'status-dot ok';
+      $('#libStatusText').textContent = 'Ajv 8.20.0 연결됨';
+      applyPreset('basic', false);
+      validateCurrent();
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
