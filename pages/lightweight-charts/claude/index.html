@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Lightweight Charts</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap { position: relative; width: 100%; max-width: 760px; }
+  .legend-box {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #dde1e8;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    pointer-events: none;
+    min-width: 200px;
+  }
+  .legend-box .row { display: flex; justify-content: space-between; gap: 10px; }
+  .legend-box .up { color: #1baf7a; font-weight: 600; }
+  .legend-box .down { color: #e34948; font-weight: 600; }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Lightweight Charts 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Lightweight Charts</strong>는 TradingView가 만든 초경량(약 45KB) 금융 차트
+    라이브러리입니다. Canvas에 직접 그려서 캔들스틱 같은 OHLC 차트를 빠르게 렌더링하고, 마커·가격
+    라인·크로스헤어 이벤트 같은 트레이딩 차트 특유의 기능을 기본 API로 제공합니다.
+    <ul>
+      <li><code class="inline">candlestickSeries</code> + <code class="inline">histogramSeries</code>로 만드는 캔들스틱 · 거래량 차트</li>
+      <li><code class="inline">subscribeCrosshairMove()</code>로 만드는 커스텀 호버 범례</li>
+      <li><code class="inline">createSeriesMarkers()</code> · <code class="inline">createPriceLine()</code>로 표시하는 이벤트 마커와 기준선</li>
+      <li><code class="inline">series.update()</code>로 마지막 캔들을 갱신하는 실시간 스트리밍</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 "고등어 일별 시세"는 실제 위판 데이터에는 없는 시가·고가·저가·종가(OHLC) 개념을 이
+      라이브러리 데모를 위해 임의로 구성한 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      통계와 무관합니다. Lightweight Charts(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 캔들스틱 + 거래량 차트</h2>
+    <div class="desc">
+      고등어의 가상 일별 시세를 캔들스틱으로, 그날 위판량을 하단의 막대(히스토그램)로 함께
+      표시했습니다. 거래량은 별도 가격축 없이 캔들 차트 아래 20% 영역에 겹쳐 그려집니다.
+    </div>
+    <div class="chart-wrap" id="chart1-wrap"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const chart = createChart(container, { autoSize: true });
+
+const candleSeries = chart.addSeries(CandlestickSeries, {
+  upColor: '#1baf7a', downColor: '#e34948',
+  borderVisible: false, wickUpColor: '#1baf7a', wickDownColor: '#e34948',
+});
+candleSeries.setData(ohlcData);   // [{ time, open, high, low, close }, ...]
+
+const volumeSeries = chart.addSeries(HistogramSeries, {
+  priceFormat: { type: 'volume' },
+  priceScaleId: '',                                  // 별도 가격축을 만들지 않고 겹쳐 그림
+});
+volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+volumeSeries.setData(volumeData);  // [{ time, value, color }, ...]
+
+chart.timeScale().fitContent();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 크로스헤어 이벤트로 만드는 커스텀 범례</h2>
+    <div class="desc">
+      차트 위에서 마우스를 움직이면 <code class="inline">subscribeCrosshairMove</code> 이벤트로 그
+      날짜의 OHLC 값과 거래량을 읽어와 좌측 상단 범례에 표시합니다.
+    </div>
+    <div class="chart-wrap" id="chart2-wrap">
+      <div class="legend-box" id="legend2">차트 위에 마우스를 올려보세요</div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>chart.subscribeCrosshairMove((param) => {
+  if (!param.time) { legendEl.textContent = '차트 위에 마우스를 올려보세요'; return; }
+  const bar = param.seriesData.get(candleSeries);   // { open, high, low, close }
+  const vol = param.seriesData.get(volumeSeries);   // { value }
+  legendEl.innerHTML = `${param.time} · 종가 ${bar.close}원 · 거래량 ${vol.value}건`;
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 시리즈 마커 + 가격 라인</h2>
+    <div class="desc">
+      성수기가 시작된 날짜에 화살표 마커를, 최근 30일 평균 시세 위치에 수평 기준선(가격 라인)을
+      그렸습니다.
+    </div>
+    <div class="chart-wrap" id="chart3-wrap"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>createSeriesMarkers(candleSeries, [
+  { time: peakSeasonStart, position: 'aboveBar', color: '#eda100', shape: 'arrowDown', text: '성수기 시작' },
+]);
+
+candleSeries.createPriceLine({
+  price: averagePrice,
+  color: '#4a3aa7',
+  lineWidth: 1,
+  lineStyle: LineStyle.Dashed,
+  title: '30일 평균',
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 실시간 스트리밍 갱신</h2>
+    <div class="desc">
+      1초마다 진행 중인 오늘 캔들의 값을 바꾸다가, 일정 확률로 다음날 캔들을 새로 추가합니다.
+      <code class="inline">series.update()</code>는 마지막 항목과 시간이 같으면 값만 바꾸고, 시간이
+      더 미래면 새 항목을 이어붙입니다.
+    </div>
+    <div class="controls">
+      <button id="s4-toggle">일시정지</button>
+    </div>
+    <div class="chart-wrap" id="chart4-wrap"></div>
+    <div class="stat-box" id="s4-stat">스트리밍 대기 중...</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let last = ohlcData[ohlcData.length - 1];
+setInterval(() => {
+  const move = (Math.random() - 0.5) * 60;
+  last = { ...last, close: last.close + move, high: Math.max(last.high, last.close + move), low: Math.min(last.low, last.close + move) };
+  candleSeries.update(last);       // 시간이 같으므로 마지막 캔들 값만 갱신
+}, 1000);</pre>
+    </details>
+  </section>
+
+<script type="module">
+import {
+  createChart, CandlestickSeries, HistogramSeries, LineStyle,
+  createSeriesMarkers, ColorType,
+} from 'https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.mjs';
+
+const UP = '#1baf7a';
+const DOWN = '#e34948';
+
+function genOhlcData(dayCount, seed) {
+  let s = seed;
+  function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+  const out = [];
+  const start = new Date();
+  start.setDate(start.getDate() - dayCount);
+  let price = 6000;
+  for (let i = 0; i < dayCount; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const open = price;
+    const move = (rand() - 0.5) * 300;
+    const close = Math.max(2000, open + move);
+    const high = Math.max(open, close) + rand() * 100;
+    const low = Math.min(open, close) - rand() * 100;
+    const volume = Math.round(200 + rand() * 800);
+    price = close;
+    out.push({
+      time: d.toISOString().slice(0, 10),
+      open: Math.round(open), high: Math.round(high), low: Math.round(low), close: Math.round(close),
+      volume,
+    });
+  }
+  return out;
+}
+
+const ohlcData = genOhlcData(120, 77);
+
+function buildChart(container) {
+  return createChart(container, {
+    autoSize: true,
+    layout: { background: { type: ColorType.Solid, color: '#ffffff' }, textColor: '#333' },
+    grid: { vertLines: { color: '#eef0f3' }, horzLines: { color: '#eef0f3' } },
+    timeScale: { borderColor: '#ddd' },
+    rightPriceScale: { borderColor: '#ddd' },
+    height: 300,
+  });
+}
+
+// ---- 섹션 1: 캔들스틱 + 거래량 ----
+(function section1() {
+  const container = document.getElementById('chart1-wrap');
+  const chart = buildChart(container);
+
+  const candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: UP, downColor: DOWN, borderVisible: false, wickUpColor: UP, wickDownColor: DOWN,
+  });
+  candleSeries.setData(ohlcData.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
+
+  const volumeSeries = chart.addSeries(HistogramSeries, {
+    priceFormat: { type: 'volume' },
+    priceScaleId: '',
+  });
+  volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+  volumeSeries.setData(ohlcData.map(({ time, close, open, volume }) => ({
+    time, value: volume, color: close >= open ? 'rgba(27,175,122,0.5)' : 'rgba(227,73,72,0.5)',
+  })));
+
+  chart.timeScale().fitContent();
+})();
+
+// ---- 섹션 2: 크로스헤어 커스텀 범례 ----
+(function section2() {
+  const container = document.getElementById('chart2-wrap');
+  const chart = buildChart(container);
+  const legendEl = document.getElementById('legend2');
+
+  const candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: UP, downColor: DOWN, borderVisible: false, wickUpColor: UP, wickDownColor: DOWN,
+  });
+  candleSeries.setData(ohlcData.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
+
+  const volumeSeries = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: '' });
+  volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+  volumeSeries.setData(ohlcData.map(({ time, close, open, volume }) => ({
+    time, value: volume, color: close >= open ? 'rgba(27,175,122,0.5)' : 'rgba(227,73,72,0.5)',
+  })));
+  chart.timeScale().fitContent();
+
+  chart.subscribeCrosshairMove((param) => {
+    if (!param.time || !param.seriesData.has(candleSeries)) {
+      legendEl.textContent = '차트 위에 마우스를 올려보세요';
+      return;
+    }
+    const bar = param.seriesData.get(candleSeries);
+    const vol = param.seriesData.get(volumeSeries);
+    const up = bar.close >= bar.open;
+    legendEl.innerHTML = `
+      <div class="row"><span>${param.time}</span><span class="${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${bar.close.toLocaleString()}원</span></div>
+      <div class="row"><span>시가</span><span>${bar.open.toLocaleString()}</span></div>
+      <div class="row"><span>고가</span><span>${bar.high.toLocaleString()}</span></div>
+      <div class="row"><span>저가</span><span>${bar.low.toLocaleString()}</span></div>
+      <div class="row"><span>거래량</span><span>${vol ? vol.value.toLocaleString() : '-'}건</span></div>
+    `;
+  });
+})();
+
+// ---- 섹션 3: 마커 + 가격 라인 ----
+(function section3() {
+  const container = document.getElementById('chart3-wrap');
+  const chart = buildChart(container);
+
+  const candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: UP, downColor: DOWN, borderVisible: false, wickUpColor: UP, wickDownColor: DOWN,
+  });
+  candleSeries.setData(ohlcData.map(({ time, open, high, low, close }) => ({ time, open, high, low, close })));
+  chart.timeScale().fitContent();
+
+  const peakSeasonStart = ohlcData[Math.round(ohlcData.length * 0.65)].time;
+  createSeriesMarkers(candleSeries, [
+    { time: peakSeasonStart, position: 'aboveBar', color: '#eda100', shape: 'arrowDown', text: '성수기 시작' },
+  ]);
+
+  const recent30 = ohlcData.slice(-30);
+  const avgPrice = Math.round(recent30.reduce((sum, d) => sum + d.close, 0) / recent30.length);
+  candleSeries.createPriceLine({
+    price: avgPrice,
+    color: '#4a3aa7',
+    lineWidth: 1,
+    lineStyle: LineStyle.Dashed,
+    axisLabelVisible: true,
+    title: '30일 평균',
+  });
+})();
+
+// ---- 섹션 4: 실시간 스트리밍 갱신 ----
+(function section4() {
+  const container = document.getElementById('chart4-wrap');
+  const chart = buildChart(container);
+
+  const candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: UP, downColor: DOWN, borderVisible: false, wickUpColor: UP, wickDownColor: DOWN,
+  });
+  const seedData = ohlcData.map(({ time, open, high, low, close }) => ({ time, open, high, low, close }));
+  candleSeries.setData(seedData);
+  chart.timeScale().fitContent();
+
+  // update()에 넘긴 객체는 라이브러리가 내부적으로 time 필드를 변형해버리므로,
+  // 되읽지 않고 curDate/curOpen 등 별도 변수로 상태를 직접 관리한다
+  const lastSeed = ohlcData[ohlcData.length - 1];
+  let curDate = new Date(lastSeed.time);
+  let curOpen = lastSeed.open;
+  let curHigh = lastSeed.high;
+  let curLow = lastSeed.low;
+  let curClose = lastSeed.close;
+  let paused = false;
+  let tickCount = 0;
+  const statEl = document.getElementById('s4-stat');
+
+  let s = 999;
+  function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+
+  const timer = setInterval(() => {
+    if (paused) return;
+    const move = (rand() - 0.5) * 60;
+    curClose = Math.max(500, Math.round(curClose + move));
+    curHigh = Math.max(curHigh, curClose);
+    curLow = Math.min(curLow, curClose);
+    const timeStr = curDate.toISOString().slice(0, 10);
+    candleSeries.update({ time: timeStr, open: curOpen, high: curHigh, low: curLow, close: curClose });
+    tickCount++;
+    statEl.innerHTML = `<strong>${tickCount}</strong>번째 갱신 · ${timeStr} 캔들 종가 <strong>${curClose.toLocaleString()}원</strong>`;
+
+    if (tickCount % 8 === 0) {
+      curDate = new Date(curDate);
+      curDate.setDate(curDate.getDate() + 1);
+      curOpen = curClose; curHigh = curClose; curLow = curClose;
+      const newTimeStr = curDate.toISOString().slice(0, 10);
+      candleSeries.update({ time: newTimeStr, open: curOpen, high: curHigh, low: curLow, close: curClose });
+      chart.timeScale().scrollToRealTime();
+    }
+  }, 1000);
+
+  document.getElementById('s4-toggle').addEventListener('click', (e) => {
+    paused = !paused;
+    e.target.textContent = paused ? '재개' : '일시정지';
+  });
+
+  window.addEventListener('beforeunload', () => clearInterval(timer));
+})();
+</script>
+</body>
+</html>
