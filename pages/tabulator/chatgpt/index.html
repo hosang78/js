@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Tabulator Feature Lab | 인터랙티브 데이터 그리드</title>
+  <!--
+    오프라인 운용 시 아래 vendor 경로에 동일 파일을 배치하면 자동으로 먼저 사용합니다.
+    vendor/tabulator.min.css
+    vendor/tabulator.min.js
+    vendor/xlsx.full.min.js
+    vendor/jspdf.umd.min.js
+    vendor/jspdf.plugin.autotable.min.js
+  -->
+  <link id="tabulator-css" rel="stylesheet" href="vendor/tabulator.min.css" />
+  <style>
+    :root{
+      --ink:#102338; --muted:#61758a; --line:#d9e3ec; --paper:#f5f8fb; --card:#ffffff;
+      --brand:#1264d6; --brand-2:#0d9f86; --warn:#dd7a00; --danger:#d14242; --shadow:0 14px 38px rgba(26,58,86,.10);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif}
+    button,input,select{font:inherit}
+    button{border:1px solid #ccd8e4;background:#fff;color:#20354a;cursor:pointer;border-radius:9px;padding:9px 11px;transition:.18s ease}
+    button:hover{border-color:#8fb5e9;box-shadow:0 3px 10px rgba(18,100,214,.10);transform:translateY(-1px)}
+    button:active{transform:translateY(0)}
+    button.primary{background:var(--brand);border-color:var(--brand);color:white}
+    button.success{background:var(--brand-2);border-color:var(--brand-2);color:white}
+    button.danger{color:#b83636;border-color:#ebbbbb;background:#fffafa}
+    button.mini{padding:5px 8px;border-radius:7px;font-size:12px}
+    .app{max-width:1600px;margin:0 auto;padding:24px}
+    .hero{display:flex;gap:22px;justify-content:space-between;align-items:flex-end;padding:8px 0 22px}
+    .eyebrow{font-size:12px;font-weight:800;color:var(--brand);letter-spacing:.08em;text-transform:uppercase}
+    h1{font-size:30px;letter-spacing:-.04em;line-height:1.16;margin:6px 0 7px}
+    .hero p{margin:0;color:var(--muted);max-width:800px}
+    .mode-badge{white-space:nowrap;background:#eaf3ff;color:#0756ba;border:1px solid #cde0fb;font-weight:800;padding:8px 11px;border-radius:999px}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;margin-bottom:14px}
+    .stat{background:var(--card);border:1px solid var(--line);box-shadow:0 5px 14px rgba(42,69,96,.05);border-radius:14px;padding:14px 16px}
+    .stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:22px;margin-top:3px;letter-spacing:-.03em}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .toolbar{padding:16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .search{position:relative;flex:1 1 250px;min-width:190px}.search input{width:100%;padding:10px 12px 10px 34px;border-radius:9px;border:1px solid #cbd8e4;background:#fff;outline:none}.search input:focus{border-color:#6fa3eb;box-shadow:0 0 0 3px rgba(18,100,214,.11)}
+    .search:before{content:"⌕";position:absolute;left:12px;top:8px;font-size:20px;line-height:1;color:#71859b}
+    .toolbar-group{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.separator{width:1px;height:30px;background:var(--line);margin:0 2px}
+    .select{border:1px solid #cbd8e4;border-radius:9px;padding:9px;background:#fff;color:#20354a}
+    #table-shell{padding:14px}.tabulator{border:1px solid #cfdbe6;border-radius:10px;overflow:hidden;font-size:13px}.tabulator .tabulator-header{border-bottom:1px solid #cfdbe6;background:#edf4fb;color:#18344f;font-weight:800}.tabulator .tabulator-header .tabulator-col{background:transparent;border-right:1px solid #d6e2ed}.tabulator .tabulator-header .tabulator-col.tabulator-sortable[aria-sort="none"] .tabulator-col-content:hover{background:rgba(18,100,214,.04)}.tabulator .tabulator-row{border-bottom:1px solid #e5edf4}.tabulator .tabulator-row.tabulator-row-even{background:#fbfdff}.tabulator .tabulator-row.tabulator-selectable:hover{background:#f0f7ff}.tabulator .tabulator-row.tabulator-selected{background:#dcecff!important}.tabulator .tabulator-cell{border-right:1px solid #e8eef4}.tabulator .tabulator-footer{border-top:1px solid #cfdbe6;background:#f4f8fc}.tabulator .tabulator-calcs-holder{font-weight:800}.tabulator .tabulator-group{background:#f2f7fc;border-top:1px solid #dbe6ef;border-bottom:1px solid #dbe6ef;color:#2c4965;font-weight:800}.tabulator .tabulator-data-tree-control{border:1px solid #a6bdd3;border-radius:4px}.tabulator input,.tabulator select{font:inherit}.tabulator .tabulator-header-filter input,.tabulator .tabulator-header-filter select{border:1px solid #bcd0e2;border-radius:6px;padding:5px;background:#fff}.tabulator .tabulator-page{border-radius:6px}.tabulator .tabulator-page.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+    .status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:850}.status-pill:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}.status-active{background:#e7f8f3;color:#087b67}.status-hold{background:#fff3df;color:#a56300}.status-pending{background:#eaf2ff;color:#2e70c9}.status-risk{background:#ffeaea;color:#c34141}
+    .tag{display:inline-block;background:#eef3f8;border:1px solid #dce6ee;color:#496177;padding:3px 6px;margin:2px;border-radius:5px;font-size:11px}.cell-actions{display:flex;gap:4px}.progress-text{font-weight:750}.row-risk{box-shadow:inset 3px 0 0 #dc4747}.row-hold{box-shadow:inset 3px 0 0 #df8b1d}
+    .lower{display:grid;grid-template-columns:1.45fr .9fr;gap:14px;margin-top:14px}.guide,.log{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:0 5px 14px rgba(42,69,96,.05)}
+    .guide h2,.log h2{margin:0 0 10px;font-size:15px}.feature-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}.feature-list li{background:#f7fafc;border:1px solid #e3ebf2;border-radius:9px;padding:8px 9px;color:#405870}.feature-list b{color:#173854}.log-list{height:160px;overflow:auto;background:#102337;color:#c9ddf1;border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}.log-item{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.08)}.log-item:last-child{border-bottom:0}.hint{font-size:12px;color:var(--muted);margin-top:10px}.toast{position:fixed;right:22px;bottom:22px;z-index:1000;max-width:360px;background:#102337;color:#fff;padding:12px 15px;border-radius:10px;box-shadow:0 14px 36px rgba(16,35,55,.30);opacity:0;transform:translateY(12px);pointer-events:none;transition:.24s ease}.toast.show{opacity:1;transform:translateY(0)}
+    body.dark{--ink:#e8f0f8;--muted:#a6b6c7;--line:#284058;--paper:#0d1b29;--card:#102337;--shadow:0 14px 38px rgba(0,0,0,.22)} body.dark button,body.dark .select,body.dark .search input{background:#142b40;color:#e8f0f8;border-color:#36526e}body.dark .tabulator{border-color:#31506d}body.dark .tabulator .tabulator-header{background:#17334d;color:#eaf2f8;border-color:#31506d}body.dark .tabulator .tabulator-header .tabulator-col,body.dark .tabulator .tabulator-cell{border-color:#28455f}body.dark .tabulator .tabulator-row,body.dark .tabulator .tabulator-footer{background:#102337;color:#e8f0f8;border-color:#28455f}body.dark .tabulator .tabulator-row.tabulator-row-even{background:#11263a}body.dark .tabulator .tabulator-row.tabulator-selectable:hover{background:#183a57}body.dark .tabulator .tabulator-group{background:#173047;color:#d9eaf8;border-color:#31506d}body.dark .tabulator .tabulator-header-filter input,body.dark .tabulator .tabulator-header-filter select{background:#0d1b29;color:#e8f0f8;border-color:#3a5974}body.dark .feature-list li{background:#13293e;border-color:#28455f;color:#bdd0e1}body.dark .tag{background:#1c3650;border-color:#35516b;color:#c8d8e7}body.dark .mode-badge{background:#193655;border-color:#31567e;color:#bcdcff}
+    @media(max-width:1040px){.lower{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(120px,1fr))}.hero{align-items:flex-start;flex-direction:column}}@media(max-width:620px){.app{padding:14px}h1{font-size:25px}.stats{gap:8px}.toolbar{padding:11px}.toolbar-group{width:100%}.separator{display:none}.feature-list{grid-template-columns:1fr}.stat{padding:11px}.stat strong{font-size:19px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Tabulator 6.5.2 · Feature Playground</div>
+        <h1>인터랙티브 데이터 그리드 실습 페이지</h1>
+        <p>행을 직접 편집하고, 헤더 필터·그룹·트리·선택·계산행·가져오기·내보내기·열 배치 저장까지 한 화면에서 확인한다. 열 제목을 드래그하거나 우클릭해도 기능을 탐색할 수 있다.</p>
+      </div>
+      <div id="mode-badge" class="mode-badge">그룹 보기</div>
+    </section>
+
+    <section class="stats" aria-label="현재 데이터 상태">
+      <div class="stat"><span>활성 행</span><strong id="stat-rows">0</strong></div>
+      <div class="stat"><span>선택 행</span><strong id="stat-selected">0</strong></div>
+      <div class="stat"><span>적용 필터</span><strong id="stat-filters">0</strong></div>
+      <div class="stat"><span>평균 진행률</span><strong id="stat-progress">0%</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="search"><input id="global-search" type="search" autocomplete="off" placeholder="전체 검색: 이름, 부서, 직무, 태그, 메모" /></div>
+        <div class="toolbar-group">
+          <button id="clear-filter">필터 초기화</button>
+          <button id="group-toggle" class="primary">부서 그룹</button>
+          <button id="tree-toggle">데이터 트리</button>
+          <button id="expand-groups">그룹 펼침</button>
+          <button id="collapse-groups">그룹 접기</button>
+        </div>
+        <span class="separator"></span>
+        <div class="toolbar-group">
+          <button id="add-row" class="success">+ 행 추가</button>
+          <button id="delete-selected" class="danger">선택 삭제</button>
+          <button id="undo">↶ 실행 취소</button>
+          <button id="redo">↷ 다시 실행</button>
+        </div>
+        <span class="separator"></span>
+        <div class="toolbar-group">
+          <select id="page-size" class="select" aria-label="페이지당 행 수"><option value="10">10행</option><option value="25" selected>25행</option><option value="50">50행</option></select>
+          <button id="toggle-notes">메모 열</button>
+          <button id="copy-selected">선택 복사</button>
+          <button id="print">인쇄</button>
+          <button id="dark-mode">다크</button>
+        </div>
+      </div>
+      <div class="toolbar" style="border-bottom:0; padding-top:11px; padding-bottom:11px; background:#fbfdff">
+        <div class="toolbar-group"><strong style="font-size:12px;color:#536b83">내보내기</strong><button class="mini" data-download="csv">CSV</button><button class="mini" data-download="json">JSON</button><button class="mini" data-download="xlsx">XLSX</button><button class="mini" data-download="pdf">PDF</button><button class="mini" data-download="html">HTML</button></div>
+        <span class="separator"></span>
+        <div class="toolbar-group"><strong style="font-size:12px;color:#536b83">가져오기</strong><button class="mini" id="import-json">JSON 파일</button><button class="mini" id="import-csv">CSV 파일</button><input id="file-input" type="file" accept=".json,.csv,.xlsx" hidden /></div>
+        <span class="separator"></span>
+        <div class="toolbar-group"><button class="mini" id="reset-data">샘플 데이터 복원</button><button class="mini" id="reset-layout">열 배치 초기화</button></div>
+      </div>
+      <div id="table-shell"><div id="demo-table"></div></div>
+    </section>
+
+    <section class="lower">
+      <aside class="guide">
+        <h2>이 페이지에서 확인할 기능</h2>
+        <ul class="feature-list">
+          <li><b>데이터 편집</b><br>텍스트·숫자·날짜·목록·체크박스·텍스트영역</li>
+          <li><b>조회/탐색</b><br>다중 정렬, 헤더 필터, 전체 검색, 로컬 페이지</li>
+          <li><b>표 구조</b><br>열 이동·너비 조절·고정 열·반응형 접기·열 메뉴</li>
+          <li><b>행 제어</b><br>체크 선택, 컨텍스트 메뉴, 행 추가/삭제, 클릭 이벤트</li>
+          <li><b>분석 표현</b><br>상태 배지·진행바·별점·태그·하단 합계/평균/건수</li>
+          <li><b>데이터 형태</b><br>부서 그룹, 계층형 데이터 트리, 접기/펼치기</li>
+          <li><b>작업 이력</b><br>편집·삭제 후 실행 취소/다시 실행, 열 배치 LocalStorage 저장</li>
+          <li><b>입출력</b><br>CSV·JSON·XLSX·PDF·HTML 내보내기 및 JSON/CSV/XLSX 파일 읽기</li>
+        </ul>
+        <div class="hint">팁: <b>헤더 우클릭</b>으로 열 숨김/고정/정렬 해제, <b>행 우클릭</b>으로 행 단위 동작을 확인할 수 있다. 모바일에서는 일부 열이 반응형 상세 영역으로 이동한다.</div>
+      </aside>
+      <aside class="log">
+        <h2>이벤트 로그</h2>
+        <div id="event-log" class="log-list" aria-live="polite"></div>
+        <div class="hint">최근 80건만 유지 · 셀 편집, 선택, 필터, 행 추가/삭제 상태를 표시</div>
+      </aside>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // 로컬 vendor 파일을 우선 시도하고, 없을 때 CDN을 동적으로 불러온다.
+    function injectFallback(tag, url, onload){
+      var el = document.createElement(tag);
+      if(tag === 'link'){ el.rel = 'stylesheet'; el.href = url; }
+      else { el.src = url; el.defer = true; }
+      if(onload) el.onload = onload;
+      document.head.appendChild(el);
+      return el;
+    }
+    document.getElementById('tabulator-css').addEventListener('error', function(){ injectFallback('link','https://unpkg.com/tabulator-tables@6.5.2/dist/css/tabulator.min.css'); });
+  </script>
+  <script id="tabulator-js" src="vendor/tabulator.min.js"></script>
+  <script>
+    (function loadTabulator(){
+      var script = document.getElementById('tabulator-js');
+      script.onerror = function(){
+        var s = injectFallback('script','https://unpkg.com/tabulator-tables@6.5.2/dist/js/tabulator.min.js', boot);
+        s.onerror = function(){ showBootError(); };
+      };
+      script.onload = boot;
+      if(window.Tabulator){ boot(); }
+    })();
+
+    function showBootError(){
+      document.getElementById('demo-table').innerHTML = '<div style="padding:34px;text-align:center;color:#a43c3c">Tabulator 라이브러리를 불러오지 못했습니다.<br><small>인터넷 연결을 확인하거나 <code>vendor/tabulator.min.js</code> 및 <code>vendor/tabulator.min.css</code>를 이 HTML 파일과 같은 폴더의 vendor 폴더에 넣으세요.</small></div>';
+    }
+
+    function boot(){
+      if(window.__tabulatorLabBooted || !window.Tabulator) return;
+      window.__tabulatorLabBooted = true;
+
+      // SheetJS / jsPDF는 내보내기를 누를 때만 로드한다. vendor 파일을 우선하고 없으면 CDN을 사용한다.
+      function loadScriptOnce(key, sources){
+        return new Promise(function(resolve,reject){
+          if(window[key]) return resolve();
+          var existing = document.querySelector('script[data-lib="'+key+'"]');
+          if(existing){ existing.addEventListener('load',resolve,{once:true}); existing.addEventListener('error',reject,{once:true}); return; }
+          var urls=Array.isArray(sources)?sources:[sources];
+          function tryNext(index){
+            if(index>=urls.length){ reject(new Error(key+' 로딩 실패')); return; }
+            var s=document.createElement('script'); s.dataset.lib=key; s.src=urls[index];
+            s.onload=resolve;
+            s.onerror=function(){ s.remove(); tryNext(index+1); };
+            document.head.appendChild(s);
+          }
+          tryNext(0);
+        });
+      }
+      function loadExportDeps(type){
+        if(type==='xlsx') return loadScriptOnce('XLSX',['vendor/xlsx.full.min.js','https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js']);
+        if(type==='pdf') return loadScriptOnce('jspdf',['vendor/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js']).then(function(){
+          window.jsPDF=window.jspdf.jsPDF;
+          return loadScriptOnce('autoTable',['vendor/jspdf.plugin.autotable.min.js','https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js']);
+        });
+        return Promise.resolve();
+      }
+
+      var departments=['상호금융','공제보험','유통','어업지원','ICT전략','경영지원'];
+      var roles=['기획','운영','분석','영업','지원','개발'];
+      var names=['김민서','이도윤','박서준','최하린','정우진','윤서연','한지훈','오지안','서현우','강다은','조민재','문채원','임건우','신유진','권태윤','배수아','홍도현','남지우','백승민','장예은'];
+      var statuses=['정상','진행중','보류','주의'];
+      var tags=['정산','리스크','고객','데이터','현장','자동화','보고','보안','교육','계약'];
+      var numberFmt = new Intl.NumberFormat('ko-KR');
+      var table, isGrouped=true, isTree=false, toastTimer, pendingImportType='';
+      var baseData = makeData(156);
+
+      function makeData(count){
+        var rows=[];
+        for(var i=1;i<=count;i++){
+          var department=departments[(i*7)%departments.length];
+          var status=statuses[(i*5)%statuses.length];
+          rows.push({
+            id:i,
+            name:names[i%names.length]+' '+String(Math.ceil(i/20)).padStart(2,'0'),
+            department:department,
+            role:roles[(i*3)%roles.length],
+            hire_date:'20'+String(17+(i%9)).padStart(2,'0')+'-'+String((i%12)+1).padStart(2,'0')+'-'+String((i%27)+1).padStart(2,'0'),
+            status:status,
+            progress:(i*13)%101,
+            rating:(i%5)+1,
+            budget:Math.round((2100000+(i*87351))/-1000)*1000,
+            active:i%7!==0,
+            tags:[tags[i%tags.length],tags[(i+3)%tags.length]],
+            note:i%9===0?'협업 부서 확인 필요':(i%7===0?'검토 대기':'정기 점검 대상')
+          });
+        }
+        return rows;
+      }
+      function makeTreeData(){
+        return departments.map(function(department, idx){
+          var children=baseData.filter(function(row){return row.department===department;}).slice(0,7).map(function(row){return Object.assign({},row);});
+          return {id:'G-'+(idx+1),name:department+' 업무 묶음',department:'조직',role:'상위 노드',hire_date:'',status:'정상',progress:Math.round(children.reduce(function(sum,row){return sum+row.progress;},0)/children.length),rating:5,budget:children.reduce(function(sum,row){return sum+row.budget;},0),active:true,tags:['그룹','트리'],note:'하위 구성원 '+children.length+'명',_children:children};
+        });
+      }
+      function escapeHtml(value){return String(value==null?'':value).replace(/[&<>'"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[ch];});}
+      function moneyFormatter(cell){ return numberFmt.format(Number(cell.getValue()||0))+'원'; }
+      function statusFormatter(cell){ var value=cell.getValue()||'진행중'; var map={정상:'status-active',진행중:'status-pending',보류:'status-hold',주의:'status-risk'};return '<span class="status-pill '+map[value]+'">'+escapeHtml(value)+'</span>'; }
+      function tagsFormatter(cell){return (cell.getValue()||[]).map(function(tag){return '<span class="tag">'+escapeHtml(tag)+'</span>';}).join('');}
+      function progressFormatter(cell){var value=Number(cell.getValue()||0);return '<div class="progress-text">'+value+'%</div>';}
+      function actionFormatter(){return '<div class="cell-actions"><button class="mini js-view">보기</button><button class="mini js-duplicate">복제</button></div>';}
+      function headerMenu(){return [
+        {label:'열 숨기기', action:function(e,column){column.hide(); log('열 숨김: '+column.getDefinition().title);}},
+        {label:'열 고정/해제', action:function(e,column){column.updateDefinition({frozen:!column.getDefinition().frozen}); log('열 고정 상태 변경: '+column.getDefinition().title);}},
+        {separator:true},
+        {label:'정렬 해제', action:function(e,column){column.getTable().clearSort(); log('정렬 해제');}},
+        {label:'필터 해제', action:function(e,column){column.getTable().clearFilter(true); log('필터 해제');}}
+      ];}
+      function rowContextMenu(){return [
+        {label:'선택 전환', action:function(e,row){row.toggleSelect();}},
+        {label:'행 복제', action:function(e,row){var clone=Object.assign({},row.getData(),{id:nextId(),name:row.getData().name+' (복제)'}); table.addRow(clone,true); log('행 복제: '+clone.name);}},
+        {separator:true},
+        {label:'행 삭제', action:function(e,row){if(confirm('이 행을 삭제할까요?')){row.delete(); log('행 삭제');}}}
+      ];}
+      function nextId(){return Math.max.apply(null,table.getData().map(function(row){return typeof row.id==='number'?row.id:0;}))+1;}
+      function currentColumns(){
+        return [
+          {title:'ID',field:'id',width:74,hozAlign:'right',headerSort:true,frozen:true,headerFilter:'number',bottomCalc:'count',bottomCalcFormatter:function(){return '건수';},headerMenu:headerMenu()},
+          {title:'이름',field:'name',minWidth:140,editor:'input',validator:'required',headerFilter:'input',headerFilterPlaceholder:'이름',frozen:true,headerMenu:headerMenu()},
+          {title:'부서',field:'department',minWidth:120,editor:'list',editorParams:{values:departments,clearable:true},headerFilter:'list',headerFilterParams:{values:['상호금융','공제보험','유통','어업지원','ICT전략','경영지원'],clearable:true},headerMenu:headerMenu()},
+          {title:'직무',field:'role',minWidth:105,editor:'list',editorParams:{values:roles,clearable:true},headerFilter:'list',headerFilterParams:{values:roles,clearable:true},headerMenu:headerMenu()},
+          {title:'입사일',field:'hire_date',width:120,editor:'date',headerFilter:'input',headerFilterPlaceholder:'YYYY-MM-DD',headerMenu:headerMenu()},
+          {title:'상태',field:'status',width:108,formatter:statusFormatter,editor:'list',editorParams:{values:statuses},headerFilter:'list',headerFilterParams:{values:statuses,clearable:true},headerMenu:headerMenu()},
+          {title:'진행률',field:'progress',width:120,formatter:'progress',formatterParams:{min:0,max:100,legend:progressFormatter},editor:'number',editorParams:{min:0,max:100,step:1},hozAlign:'center',bottomCalc:'avg',bottomCalcFormatter:function(cell){return '평균 '+Math.round(cell.getValue())+'%';},headerMenu:headerMenu()},
+          {title:'평점',field:'rating',width:100,formatter:'star',formatterParams:{stars:5},editor:'star',editorParams:{stars:5},hozAlign:'center',bottomCalc:'avg',bottomCalcFormatter:function(cell){return '평균 '+Number(cell.getValue()).toFixed(1);},headerMenu:headerMenu()},
+          {title:'예산',field:'budget',minWidth:145,hozAlign:'right',formatter:moneyFormatter,editor:'number',editorParams:{min:0,step:1000},bottomCalc:'sum',bottomCalcFormatter:moneyFormatter,headerMenu:headerMenu()},
+          {title:'활성',field:'active',width:84,formatter:'tickCross',editor:true,hozAlign:'center',headerFilter:'tickCross',headerMenu:headerMenu()},
+          {title:'태그',field:'tags',minWidth:165,formatter:tagsFormatter,headerSort:false,headerMenu:headerMenu()},
+          {title:'메모',field:'note',minWidth:210,editor:'textarea',headerFilter:'input',headerFilterPlaceholder:'메모',headerMenu:headerMenu()},
+          {title:'작업',formatter:actionFormatter,width:130,hozAlign:'center',headerSort:false,download:false,headerMenu:headerMenu(),cellClick:function(e,cell){var target=e.target;if(target.classList.contains('js-view')){var row=cell.getRow().getData();showToast(row.name+' · '+row.department+' · '+row.role+' · '+row.status);log('상세 보기: '+row.name);}if(target.classList.contains('js-duplicate')){var d=cell.getRow().getData();table.addRow(Object.assign({},d,{id:nextId(),name:d.name+' (복제)'}),true);log('행 복제: '+d.name);}}}
+        ];
+      }
+      function buildTable(){
+        if(table){ table.destroy(); document.getElementById('demo-table').innerHTML=''; }
+        var config={
+          data:isTree?makeTreeData():baseData,
+          layout:'fitDataStretch', height:'620px', index:'id', responsiveLayout:'collapse', responsiveLayoutCollapseStartOpen:false,
+          pagination:true,paginationMode:'local',paginationSize:25,paginationSizeSelector:[10,25,50,100],
+          movableColumns:true,resizableColumns:true,resizableRows:true,tooltips:true,selectableRows:true,history:true,clipboard:true,
+          persistence:{columns:true,sort:true,filter:true,page:true},persistenceMode:'local',persistenceID:'tabulator-feature-lab-v1',
+          dataTree:isTree,dataTreeStartExpanded:false,dataTreeElementColumn:'name',dataTreeChildIndent:18,
+          groupBy:(!isTree && isGrouped)?'department':false,groupStartOpen:false,
+          groupHeader:function(value,count,data){var avg=Math.round(data.reduce(function(sum,row){return sum+Number(row.progress||0);},0)/count);return '<span>'+escapeHtml(value)+'</span><span style="color:#6b8299;font-weight:600"> · '+count+'건 · 평균 진행률 '+avg+'%</span>';},
+          rowHeader:{formatter:'rowSelection',titleFormatter:'rowSelection',hozAlign:'center',headerSort:false,width:50,resizable:false,frozen:true},
+          rowContextMenu:rowContextMenu(),
+          columns:currentColumns(),
+          rowFormatter:function(row){var status=row.getData().status;var el=row.getElement();el.classList.toggle('row-risk',status==='주의');el.classList.toggle('row-hold',status==='보류');},
+          cellEdited:function(cell){log('편집: '+cell.getColumn().getDefinition().title+' → '+String(cell.getValue())); updateStats();},
+          rowAdded:function(){updateStats();},rowDeleted:function(){updateStats();},
+          rowSelectionChanged:function(){updateStats();},dataFiltered:function(){setTimeout(updateStats,0);},dataSorted:function(){setTimeout(updateStats,0);}
+        };
+        table=new Tabulator('#demo-table',config);
+        table.on('tableBuilt',function(){ setTimeout(function(){updateStats();log('테이블 생성 완료 · '+(isTree?'트리 모드':'표 모드')+' · '+(isGrouped&&!isTree?'부서 그룹 사용':'그룹 미사용'));},0);});
+        table.on('cellClick',function(e,cell){if(!e.target.closest('button')) log('셀 클릭: '+cell.getColumn().getDefinition().title);});
+        updateModeBadge();
+      }
+      function updateModeBadge(){document.getElementById('mode-badge').textContent=isTree?'데이터 트리 보기':(isGrouped?'부서 그룹 보기':'일반 표 보기');document.getElementById('group-toggle').textContent=isGrouped?'그룹 해제':'부서 그룹';document.getElementById('tree-toggle').textContent=isTree?'일반 표':'데이터 트리';}
+      function updateStats(){ if(!table) return; var active=table.getRows('active'); var data=active.map(function(row){return row.getData();}); var avg=data.length?Math.round(data.reduce(function(sum,row){return sum+Number(row.progress||0);},0)/data.length):0; document.getElementById('stat-rows').textContent=active.length;document.getElementById('stat-selected').textContent=table.getSelectedData().length;document.getElementById('stat-filters').textContent=table.getFilters(true).length;document.getElementById('stat-progress').textContent=avg+'%'; }
+      function log(message){var logEl=document.getElementById('event-log');var time=new Date().toLocaleTimeString('ko-KR',{hour12:false});var item=document.createElement('div');item.className='log-item';item.textContent='['+time+'] '+message;logEl.prepend(item);while(logEl.children.length>80)logEl.removeChild(logEl.lastChild);}
+      function showToast(message){var toast=document.getElementById('toast');toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){toast.classList.remove('show');},2700);}
+      function fullSearchFilter(data, filterParams){var term=String(filterParams||'').toLowerCase().trim();if(!term)return true;return ['name','department','role','status','note','hire_date'].some(function(key){return String(data[key]||'').toLowerCase().indexOf(term)>-1;}) || (data.tags||[]).join(' ').toLowerCase().indexOf(term)>-1;}
+      function parseCsv(text){
+        var lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);if(lines.length<2)throw new Error('헤더와 데이터 행이 필요합니다.');
+        function split(line){var out=[],cur='',quote=false;for(var i=0;i<line.length;i++){var c=line[i];if(c==='"'){if(quote&&line[i+1]==='"'){cur+='"';i++;}else quote=!quote;}else if(c===','&&!quote){out.push(cur.trim());cur='';}else cur+=c;}out.push(cur.trim());return out;}
+        var headers=split(lines[0]).map(function(h){return h.replace(/^"|"$/g,'');});return lines.slice(1).filter(Boolean).map(function(line,idx){var values=split(line);var row={id:nextId()+idx};headers.forEach(function(h,i){row[h]=values[i]==null?'':values[i].replace(/^"|"$/g,'');});row.progress=Number(row.progress||0);row.rating=Number(row.rating||0);row.budget=Number(row.budget||0);row.active=String(row.active).toLowerCase()!=='false';row.tags=Array.isArray(row.tags)?row.tags:String(row.tags||'').split(/[|,]/).filter(Boolean);return row;});
+      }
+      function normalizeImported(rows){return rows.map(function(row,idx){return Object.assign({id:nextId()+idx,name:'이름 미정',department:'경영지원',role:'지원',hire_date:'2026-01-01',status:'진행중',progress:0,rating:3,budget:0,active:true,tags:[],note:''},row,{id:typeof row.id==='number'?row.id:nextId()+idx,tags:Array.isArray(row.tags)?row.tags:String(row.tags||'').split(/[|,]/).filter(Boolean),progress:Number(row.progress||0),rating:Number(row.rating||0),budget:Number(row.budget||0)});});}
+      function importFile(file){var ext=file.name.split('.').pop().toLowerCase();var reader=new FileReader();reader.onerror=function(){showToast('파일을 읽지 못했습니다.');};
+        if(ext==='xlsx'){
+          loadExportDeps('xlsx').then(function(){reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array'});var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});baseData=normalizeImported(rows);isTree=false;buildTable();showToast('XLSX '+baseData.length+'건을 가져왔습니다.');log('XLSX 가져오기 완료');}catch(err){showToast('XLSX 형식을 확인하세요.');log('XLSX 오류: '+err.message);}};reader.readAsArrayBuffer(file);}).catch(function(){showToast('XLSX 읽기 라이브러리를 불러오지 못했습니다.');});return;
+        }
+        reader.onload=function(e){try{var rows=ext==='json'?JSON.parse(e.target.result):parseCsv(e.target.result);if(!Array.isArray(rows))throw new Error('배열 형식이 아닙니다.');baseData=normalizeImported(rows);isTree=false;buildTable();showToast(ext.toUpperCase()+' '+baseData.length+'건을 가져왔습니다.');log(ext.toUpperCase()+' 가져오기 완료');}catch(err){showToast('파일 형식을 확인하세요: '+err.message);log('가져오기 오류: '+err.message);}};reader.readAsText(file,'utf-8');
+      }
+
+      document.getElementById('global-search').addEventListener('input',function(e){var value=e.target.value;if(value)table.setFilter(fullSearchFilter,value);else table.clearFilter(true);log(value?'전체 검색 적용: '+value:'전체 검색 해제');});
+      document.getElementById('clear-filter').addEventListener('click',function(){table.clearFilter(true);table.clearHeaderFilter();document.getElementById('global-search').value='';showToast('전체·헤더 필터를 초기화했습니다.');log('필터 초기화');});
+      document.getElementById('group-toggle').addEventListener('click',function(){if(isTree){showToast('트리 모드에서는 그룹을 사용할 수 없습니다. 일반 표로 전환합니다.');isTree=false;}isGrouped=!isGrouped;buildTable();});
+      document.getElementById('tree-toggle').addEventListener('click',function(){isTree=!isTree;if(isTree)isGrouped=false;buildTable();});
+      document.getElementById('expand-groups').addEventListener('click',function(){if(isTree){table.getRows().forEach(function(row){row.treeExpand&&row.treeExpand();});}else{table.getGroups().forEach(function(group){group.show();});}log('모두 펼침');});
+      document.getElementById('collapse-groups').addEventListener('click',function(){if(isTree){table.getRows().forEach(function(row){row.treeCollapse&&row.treeCollapse();});}else{table.getGroups().forEach(function(group){group.hide();});}log('모두 접기');});
+      document.getElementById('page-size').addEventListener('change',function(e){table.setPageSize(Number(e.target.value));log('페이지 크기: '+e.target.value);});
+      document.getElementById('add-row').addEventListener('click',function(){var id=nextId();table.addRow({id:id,name:'새 담당자 '+id,department:'경영지원',role:'지원',hire_date:'2026-07-01',status:'진행중',progress:0,rating:3,budget:0,active:true,tags:['신규'],note:'새로 추가된 행'},true);showToast('새 행을 맨 위에 추가했습니다.');log('행 추가: '+id);});
+      document.getElementById('delete-selected').addEventListener('click',function(){var rows=table.getSelectedRows();if(!rows.length){showToast('삭제할 행을 먼저 선택하세요.');return;}if(confirm(rows.length+'개 행을 삭제할까요?')){rows.forEach(function(row){row.delete();});showToast(rows.length+'개 행을 삭제했습니다.');log('선택 행 삭제: '+rows.length);}});
+      document.getElementById('undo').addEventListener('click',function(){table.undo();log('실행 취소');});document.getElementById('redo').addEventListener('click',function(){table.redo();log('다시 실행');});
+      document.getElementById('toggle-notes').addEventListener('click',function(){var col=table.getColumn('note');if(col.isVisible())col.hide();else col.show();log('메모 열 표시 전환');});
+      document.getElementById('copy-selected').addEventListener('click',function(){if(!table.getSelectedRows().length){showToast('복사할 행을 먼저 선택하세요.');return;}table.copyToClipboard('selected');showToast('선택 행을 클립보드에 복사했습니다.');log('선택 행 복사');});
+      document.getElementById('print').addEventListener('click',function(){table.print(false,true);log('테이블 인쇄 호출');});
+      document.getElementById('dark-mode').addEventListener('click',function(){document.body.classList.toggle('dark');this.textContent=document.body.classList.contains('dark')?'라이트':'다크';});
+      document.querySelectorAll('[data-download]').forEach(function(button){button.addEventListener('click',function(){var type=this.dataset.download;var filename='tabulator_feature_lab_'+new Date().toISOString().slice(0,10);var go=function(){try{if(type==='xlsx')table.download('xlsx',filename+'.xlsx',{sheetName:'Tabulator'});else if(type==='pdf')table.download('pdf',filename+'.pdf',{orientation:'landscape',title:'Tabulator Feature Lab'});else table.download(type,filename+'.'+type,{bom:true});showToast(type.toUpperCase()+' 파일을 생성했습니다.');log(type.toUpperCase()+' 내보내기');}catch(err){showToast('내보내기 오류: '+err.message);log('내보내기 오류: '+err.message);}};if(type==='xlsx'||type==='pdf'){showToast(type.toUpperCase()+' 라이브러리를 준비 중입니다.');loadExportDeps(type).then(go).catch(function(){showToast(type.toUpperCase()+' 라이브러리를 불러오지 못했습니다. 인터넷 또는 vendor 폴더를 확인하세요.');});}else go();});});
+      document.getElementById('import-json').addEventListener('click',function(){pendingImportType='json';var input=document.getElementById('file-input');input.accept='.json';input.click();});
+      document.getElementById('import-csv').addEventListener('click',function(){pendingImportType='csv';var input=document.getElementById('file-input');input.accept='.csv,.xlsx';input.click();});
+      document.getElementById('file-input').addEventListener('change',function(e){if(e.target.files[0])importFile(e.target.files[0]);e.target.value='';});
+      document.getElementById('reset-data').addEventListener('click',function(){baseData=makeData(156);isTree=false;buildTable();showToast('샘플 데이터 156건을 복원했습니다.');log('샘플 데이터 복원');});
+      document.getElementById('reset-layout').addEventListener('click',function(){try{table.clearPersistence();}catch(e){localStorage.removeItem('tabulator-feature-lab-v1');}buildTable();showToast('저장된 열 배치와 정렬/필터를 초기화했습니다.');log('레이아웃 초기화');});
+
+      buildTable();
+    }
+  </script>
+</body>
+</html>
