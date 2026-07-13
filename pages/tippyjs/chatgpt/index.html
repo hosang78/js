@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Tippy.js v6 주요 기능을 실습하는 단일 HTML 샘플 페이지" />
+  <title>Tippy.js Feature Lab</title>
+
+  <!-- Tippy 기본 번들: Popper + 기본 CSS + 공식 플러그인 포함 -->
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/light.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/light-border.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/material.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/translucent.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/animations/shift-away.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/animations/shift-toward.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/animations/scale.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/animations/perspective.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/dist/backdrop.css" />
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/dist/svg-arrow.css" />
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --paper: #ffffff;
+      --ink: #1d2738;
+      --muted: #657187;
+      --line: #dce2ec;
+      --accent: #4d46e5;
+      --accent-2: #0ea5a0;
+      --soft: #edf0ff;
+      --shadow: 0 12px 28px rgba(33, 47, 77, .08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
+      line-height: 1.55;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .app { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 24px 16px;
+      color: #edf2ff;
+      background: linear-gradient(160deg, #171b3c 0%, #252075 56%, #153653 100%);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; margin: 2px 8px 26px; }
+    .brand-mark {
+      width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px;
+      background: linear-gradient(135deg, #7c72ff, #2dd4bf); color: #151833; font-weight: 900;
+      box-shadow: 0 8px 18px rgba(0,0,0,.2);
+    }
+    .brand strong { display: block; font-size: 15px; letter-spacing: .2px; }
+    .brand small { display: block; margin-top: 1px; color: #b7c1e6; font-size: 11px; }
+    .nav-label { margin: 22px 10px 7px; color: #9eaad2; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+    .nav a { display: flex; align-items: center; gap: 9px; margin: 2px 0; padding: 9px 10px; border-radius: 10px; text-decoration: none; font-size: 13px; color: #dce3ff; }
+    .nav a:hover, .nav a:focus-visible { outline: none; background: rgba(255,255,255,.12); color: #fff; }
+    .nav b { width: 21px; color: #99f6e4; font-size: 10px; }
+    .sidebar-note { margin: 26px 8px 0; padding: 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; color: #cbd5fd; background: rgba(255,255,255,.07); font-size: 11px; }
+    main { padding: 34px clamp(20px, 4vw, 58px) 58px; overflow: hidden; }
+    .hero { max-width: 1160px; margin: 0 auto 26px; padding: 30px clamp(22px, 4vw, 44px); border-radius: 26px; color: #fff; background: radial-gradient(circle at 90% 20%, rgba(45, 212, 191, .42), transparent 24%), linear-gradient(135deg, #2d257f, #4740d8 56%, #245d82); box-shadow: 0 18px 44px rgba(47, 47, 141, .22); }
+    .eyebrow { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; color: #dbeafe; background: rgba(255,255,255,.10); font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #86efac; box-shadow: 0 0 0 4px rgba(134,239,172,.15); }
+    h1 { margin: 15px 0 6px; font-size: clamp(28px, 4vw, 47px); line-height: 1.1; letter-spacing: -.05em; }
+    .hero p { max-width: 760px; margin: 0; color: #e7eaff; font-size: 15px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(14, 18, 57, .18); color: #eff6ff; font-size: 11px; }
+    .toolbar { max-width: 1160px; margin: 0 auto 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+    .toolbar p { margin: 0; color: var(--muted); font-size: 13px; }
+    .toolbar-actions, .button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn, .demo-btn {
+      appearance: none; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
+      background: var(--paper); color: #273248; font-size: 13px; font-weight: 700; box-shadow: 0 2px 0 rgba(34,45,68,.02);
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .btn:hover, .demo-btn:hover, .btn:focus-visible, .demo-btn:focus-visible { outline: none; transform: translateY(-1px); border-color: #9aa5ff; box-shadow: 0 7px 18px rgba(77,70,229,.12); }
+    .btn.primary, .demo-btn.primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .btn.teal, .demo-btn.teal { border-color: #0f968f; background: #0ea5a0; color: #fff; }
+    .lab { max-width: 1160px; margin: 0 auto; display: grid; gap: 18px; }
+    .section { scroll-margin-top: 20px; padding: clamp(18px, 2.4vw, 28px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow); }
+    .section-head { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 16px; }
+    .section h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
+    .section h2 .num { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 7px; border-radius: 8px; color: var(--accent); background: var(--soft); font-size: 11px; vertical-align: 2px; }
+    .section-head p { max-width: 650px; margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .tag { white-space: nowrap; padding: 4px 8px; border: 1px solid #d8dcff; border-radius: 999px; color: #5149d9; background: #f4f4ff; font-size: 10px; font-weight: 800; }
+    .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .demo-card { min-height: 124px; padding: 15px; border: 1px solid #e5e9f1; border-radius: 14px; background: linear-gradient(180deg, #fff, #fafbfe); }
+    .demo-card h3 { margin: 0 0 5px; font-size: 14px; }
+    .demo-card p { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+    .demo-card .demo-btn { width: 100%; }
+    .section-note { margin: 14px 0 0; padding: 10px 12px; border-left: 3px solid #746df0; border-radius: 0 9px 9px 0; color: #55627b; background: #f7f7ff; font-size: 12px; }
+    .placement-wrap { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.2fr); gap: 18px; align-items: stretch; }
+    .placement-stage { display: grid; place-items: center; min-height: 280px; border: 1px dashed #c6cce0; border-radius: 15px; background: repeating-linear-gradient(45deg, #fafbff 0 10px, #f6f7fb 10px 20px); }
+    .placement-target { position: relative; display: grid; place-items: center; width: 130px; height: 130px; border-radius: 50%; border: 8px solid #d9ddff; background: #fff; color: #3830bd; font-size: 12px; font-weight: 900; box-shadow: inset 0 0 0 1px #c3c7f8; }
+    .placement-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-content: center; }
+    .placement-list .demo-btn { padding: 8px 6px; font-size: 11px; }
+    .theme-card .demo-btn { white-space: nowrap; }
+    .animation-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 9px; }
+    .animation-buttons .demo-btn { padding: 12px 9px; }
+    .split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 18px; }
+    .control-panel { padding: 15px; border: 1px solid #e5e9f1; border-radius: 14px; background: #fcfdff; }
+    .control-panel h3 { margin: 0 0 12px; font-size: 14px; }
+    .control-panel label { display: block; margin: 10px 0 5px; color: #516078; font-size: 11px; font-weight: 800; }
+    select, input[type="range"] { width: 100%; }
+    select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fff; }
+    .log { min-height: 180px; max-height: 265px; overflow: auto; padding: 11px; border-radius: 12px; color: #b9c5dc; background: #161d2e; font: 11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .log .entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .log .entry b { color: #90f7dd; }
+    .menu-content { width: 240px; padding: 4px; }
+    .menu-content h4 { margin: 6px 8px 7px; font-size: 13px; }
+    .menu-content p { margin: 0 8px 9px; color: #cad3e4; font-size: 11px; }
+    .menu-link { display: flex; justify-content: space-between; width: 100%; margin: 2px 0; padding: 9px 9px; border: 0; border-radius: 7px; color: #f8fafc; background: transparent; text-align: left; font-size: 12px; }
+    .menu-link:hover, .menu-link:focus-visible { outline: none; background: rgba(255,255,255,.13); }
+    .menu-link small { color: #9caae0; }
+    .inline-copy { max-width: 600px; padding: 20px; border: 1px solid #e4e9f2; border-radius: 13px; color: #465269; background: #fafcff; font-size: 15px; line-height: 2; }
+    .inline-hot { color: #4338ca; font-weight: 900; text-decoration: underline wavy #b9b4ff 1.5px; text-underline-offset: 4px; }
+    .cursor-zone { min-height: 96px; padding: 16px; border: 1px solid #dbe2ec; border-radius: 13px; background: radial-gradient(circle at 25% 30%, #e4fff8, transparent 32%), #f8fbfd; color: #0e766e; font-size: 12px; font-weight: 800; }
+    .sticky-stage { position: relative; min-height: 190px; overflow: hidden; padding: 34px; border: 1px dashed #b9c3d9; border-radius: 14px; background: #f9fbff; }
+    #moving-target { position: absolute; left: 35px; top: 70px; transition: transform 1.25s cubic-bezier(.22,.88,.32,1); }
+    #moving-target.move { transform: translateX(min(560px, 62vw)); }
+    .context-pad { position: relative; min-height: 190px; overflow: hidden; padding: 18px; border-radius: 14px; color: #edf5ff; background: radial-gradient(circle at 88% 25%, rgba(44, 212, 191, .33), transparent 24%), linear-gradient(135deg, #202454, #1e4a72); }
+    .context-pad::after { content: "right-click"; position: absolute; right: 15px; bottom: 11px; color: rgba(255,255,255,.25); font-weight: 900; font-size: 28px; letter-spacing: -.05em; }
+    .context-pad p { position: relative; z-index: 1; max-width: 420px; margin: 0; font-size: 13px; }
+    .delegated-wrap { display: grid; gap: 12px; }
+    #delegated-root { display: flex; flex-wrap: wrap; gap: 8px; min-height: 48px; }
+    .delegated-item, .singleton-item { padding: 8px 10px; border: 1px solid #dbe1ec; border-radius: 9px; color: #3e4d66; background: #fff; font-size: 12px; font-weight: 800; }
+    .delegated-item:hover, .singleton-item:hover { border-color: #aaa6f8; }
+    .singleton-strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .virtual-menu { width: 220px; padding: 8px; }
+    .virtual-menu h4 { margin: 5px 5px 8px; font-size: 13px; }
+    .virtual-menu button { width: 100%; padding: 9px; border: 0; border-radius: 7px; color: #eef3ff; background: transparent; text-align: left; }
+    .virtual-menu button:hover { background: rgba(255,255,255,.12); }
+    details { margin-top: 14px; border: 1px solid #e3e8f2; border-radius: 10px; background: #fbfcff; }
+    summary { padding: 10px 12px; color: #56627a; cursor: pointer; font-size: 12px; font-weight: 800; }
+    pre { overflow: auto; margin: 0; padding: 0 13px 13px; color: #37425a; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+    .footer { max-width: 1160px; margin: 24px auto 0; padding: 16px; border-radius: 14px; color: #536179; background: #e9edf6; font-size: 12px; }
+    .footer code { padding: 2px 5px; border-radius: 5px; color: #322cac; background: #dcdcff; }
+    .tippy-box[data-theme~='ocean'] { color: #eaffff; background-color: #0e6680; }
+    .tippy-box[data-theme~='ocean'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #0e6680; }
+    .tippy-box[data-theme~='ocean'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #0e6680; }
+    .tippy-box[data-theme~='ocean'][data-placement^='left'] > .tippy-arrow::before { border-left-color: #0e6680; }
+    .tippy-box[data-theme~='ocean'][data-placement^='right'] > .tippy-arrow::before { border-right-color: #0e6680; }
+    .tippy-box[data-theme~='lab-card'] { color: #283448; border: 1px solid #ccd5e3; background: #fff; box-shadow: 0 14px 30px rgba(22, 32, 55, .18); }
+    .tippy-box[data-theme~='lab-card'] .tippy-content { padding: 0; }
+    .tippy-box[data-theme~='lab-card'][data-placement^='top'] > .tippy-arrow::before { border-top-color: #fff; }
+    .tippy-box[data-theme~='lab-card'][data-placement^='bottom'] > .tippy-arrow::before { border-bottom-color: #fff; }
+    .tippy-box[data-theme~='lab-card'][data-placement^='left'] > .tippy-arrow::before { border-left-color: #fff; }
+    .tippy-box[data-theme~='lab-card'][data-placement^='right'] > .tippy-arrow::before { border-right-color: #fff; }
+    body.compact .section { padding: 16px; }
+    body.compact .demo-card { min-height: 106px; padding: 12px; }
+    @media (max-width: 900px) { .app { grid-template-columns: 1fr; } aside { position: relative; height: auto; padding: 14px 16px; } .brand { margin-bottom: 12px; } .nav { display: flex; flex-wrap: wrap; gap: 3px; } .nav-label, .sidebar-note { display: none; } .nav a { margin: 0; padding: 7px 8px; font-size: 11px; } .nav b { width: auto; } main { padding: 18px 14px 40px; } .split, .placement-wrap { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { h1 { font-size: 31px; } .hero { padding: 23px; border-radius: 19px; } .section { padding: 16px; border-radius: 14px; } .section-head { display: block; } .tag { display: inline-block; margin-top: 9px; } .placement-list { grid-template-columns: repeat(2, 1fr); } .demo-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside aria-label="샘플 페이지 탐색">
+      <div class="brand">
+        <div class="brand-mark">T</div>
+        <div><strong>Tippy.js Feature Lab</strong><small>Tooltip · Popover · Menu</small></div>
+      </div>
+      <nav class="nav">
+        <div class="nav-label">BASICS</div>
+        <a href="#basic"><b>01</b> 기본·데이터 속성</a>
+        <a href="#placement"><b>02</b> 배치·화살표·테마</a>
+        <a href="#animation"><b>03</b> 애니메이션</a>
+        <div class="nav-label">INTERACTION</div>
+        <a href="#interactive"><b>04</b> 클릭·인터랙티브</a>
+        <a href="#manual"><b>05</b> 수동 제어·라이프사이클</a>
+        <a href="#cursor"><b>06</b> 커서 추적·인라인·Sticky</a>
+        <div class="nav-label">ADVANCED</div>
+        <a href="#virtual"><b>07</b> 가상 기준점·컨텍스트 메뉴</a>
+        <a href="#addons"><b>08</b> Delegate·Singleton</a>
+      </nav>
+      <div class="sidebar-note">키보드로도 실습할 수 있다. 버튼에 탭으로 이동한 뒤 Enter/Space 또는 포커스를 사용해 보자.</div>
+    </aside>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <span class="eyebrow"><span class="dot"></span> Tippy.js v6.3.7 · Single-file lab</span>
+        <h1 id="page-title">툴팁을 넘어<br>팝오버·메뉴까지</h1>
+        <p>배치, 테마, 애니메이션, 플러그인, 동적 콘텐츠, 접근성, 가상 기준점, 이벤트 위임을 한 페이지에서 직접 비교하는 실습형 샘플이다.</p>
+        <div class="hero-meta">
+          <span class="chip">Popper 기반 위치 계산</span>
+          <span class="chip">마우스 · 키보드 · 터치</span>
+          <span class="chip">CDN UMD 번들</span>
+          <span class="chip">외부 의존성: Tippy.js만</span>
+        </div>
+      </section>
+
+      <div class="toolbar">
+        <p><strong id="feature-count">0</strong>개 데모 초기화 완료 · 각 버튼에 마우스를 올리거나 클릭해 보자.</p>
+        <div class="toolbar-actions">
+          <button class="btn" id="hide-all" type="button">모든 Tippy 닫기</button>
+          <button class="btn" id="compact-toggle" type="button">밀도 전환</button>
+          <button class="btn primary" id="show-tour" type="button">핵심 기능 순회</button>
+        </div>
+      </div>
+
+      <div class="lab">
+        <section class="section" id="basic">
+          <div class="section-head">
+            <div>
+              <h2><span class="num">01</span>기본 툴팁과 데이터 속성</h2>
+              <p><code>data-tippy-content</code>, <code>data-tippy-placement</code>, <code>data-tippy-theme</code>로 마크업에서도 빠르게 설정할 수 있다.</p>
+            </div><span class="tag">Basic props</span>
+          </div>
+          <div class="demo-grid">
+            <article class="demo-card"><h3>기본 Hover + Focus</h3><p>기본 trigger는 mouseenter와 focus다.</p><button class="demo-btn basic-tip" data-tippy-content="기본 툴팁입니다. Tab 포커스로도 열립니다." type="button">기본 툴팁</button></article>
+            <article class="demo-card"><h3>지연 시간</h3><p>show 700ms · hide 150ms</p><button class="demo-btn delay-tip" type="button">0.7초 뒤 표시</button></article>
+            <article class="demo-card"><h3>HTML 비활성</h3><p>문자열을 안전한 텍스트로 출력한다.</p><button class="demo-btn safe-text-tip" type="button">&lt;strong&gt; 그대로</button></article>
+            <article class="demo-card"><h3>데이터 속성</h3><p>옵션을 HTML에 선언한다.</p><button class="demo-btn data-attr" data-tippy-content="<b>data-* 설정</b><br>아래에 배치됩니다." data-tippy-placement="bottom" data-tippy-theme="light-border" data-tippy-allowHTML="true" type="button">HTML 속성 설정</button></article>
+          </div>
+          <p class="section-note">보안: 사용자 입력값을 <code>allowHTML: true</code>와 함께 직접 출력하면 XSS 위험이 있다. 이 페이지의 HTML 콘텐츠는 고정된 내부 템플릿만 사용한다.</p>
+          <details><summary>초기화 코드 보기</summary><pre>tippy('.basic-tip', { content: '기본 툴팁입니다.' });
+tippy('.data-attr'); // data-tippy-* 속성 자동 해석</pre></details>
+        </section>
+
+        <section class="section" id="placement">
+          <div class="section-head">
+            <div><h2><span class="num">02</span>배치·화살표·테마</h2><p>12개 placement 조합, 기본 화살표/roundArrow, 내장 테마와 사용자 정의 테마를 비교한다.</p></div><span class="tag">placement · theme · arrow</span>
+          </div>
+          <div class="placement-wrap">
+            <div class="placement-stage"><button class="placement-target" id="placement-center" type="button">중앙 기준점</button></div>
+            <div class="placement-list" aria-label="툴팁 배치 선택">
+              <button class="demo-btn place-btn" data-placement="top-start" type="button">top-start</button><button class="demo-btn place-btn" data-placement="top" type="button">top</button><button class="demo-btn place-btn" data-placement="top-end" type="button">top-end</button>
+              <button class="demo-btn place-btn" data-placement="left-start" type="button">left-start</button><button class="demo-btn place-btn" data-placement="left" type="button">left</button><button class="demo-btn place-btn" data-placement="left-end" type="button">left-end</button>
+              <button class="demo-btn place-btn" data-placement="right-start" type="button">right-start</button><button class="demo-btn place-btn" data-placement="right" type="button">right</button><button class="demo-btn place-btn" data-placement="right-end" type="button">right-end</button>
+              <button class="demo-btn place-btn" data-placement="bottom-start" type="button">bottom-start</button><button class="demo-btn place-btn" data-placement="bottom" type="button">bottom</button><button class="demo-btn place-btn" data-placement="bottom-end" type="button">bottom-end</button>
+            </div>
+          </div>
+          <div class="demo-grid" style="margin-top:16px">
+            <article class="demo-card theme-card"><h3>기본</h3><p>core default</p><button class="demo-btn theme-default" type="button">Default</button></article>
+            <article class="demo-card theme-card"><h3>Light</h3><p>밝은 테마</p><button class="demo-btn theme-light" type="button">Light</button></article>
+            <article class="demo-card theme-card"><h3>Light Border</h3><p>경계선 강조</p><button class="demo-btn theme-border" type="button">Light border</button></article>
+            <article class="demo-card theme-card"><h3>Material</h3><p>Material 스타일</p><button class="demo-btn theme-material" type="button">Material</button></article>
+            <article class="demo-card theme-card"><h3>Translucent</h3><p>반투명 테마</p><button class="demo-btn theme-translucent" type="button">Translucent</button></article>
+            <article class="demo-card theme-card"><h3>Custom Ocean</h3><p>CSS 사용자 정의</p><button class="demo-btn theme-ocean" type="button">Ocean theme</button></article>
+            <article class="demo-card theme-card"><h3>Round Arrow</h3><p>SVG 둥근 화살표</p><button class="demo-btn round-arrow" type="button">Round Arrow</button></article>
+            <article class="demo-card theme-card"><h3>Arrow 없음</h3><p>arrow: false</p><button class="demo-btn no-arrow" type="button">No arrow</button></article>
+          </div>
+        </section>
+
+        <section class="section" id="animation">
+          <div class="section-head">
+            <div><h2><span class="num">03</span>애니메이션·관성·배치 이동</h2><p>추가 animation CSS를 로드한 상태다. 버튼마다 animation, inertia, duration, offset 조합이 다르다.</p></div><span class="tag">animation · inertia</span>
+          </div>
+          <div class="animation-buttons">
+            <button class="demo-btn anim-fade" type="button">fade (기본)</button>
+            <button class="demo-btn anim-away" type="button">shift-away</button>
+            <button class="demo-btn anim-toward" type="button">shift-toward</button>
+            <button class="demo-btn anim-scale" type="button">scale + inertia</button>
+            <button class="demo-btn anim-perspective" type="button">perspective</button>
+            <button class="demo-btn anim-offset" type="button">offset + moveTransition</button>
+          </div>
+          <details><summary>구현 포인트</summary><pre>tippy('.anim-scale', {
+  content: '탄성 효과', animation: 'scale', inertia: true,
+  duration: [480, 260]
+});</pre></details>
+        </section>
+
+        <section class="section" id="interactive">
+          <div class="section-head">
+            <div><h2><span class="num">04</span>클릭·인터랙티브 팝오버·터치</h2><p>단순 설명 툴팁 외에도 메뉴, 폼, 상태 패널 같은 클릭 가능한 팝오버로 사용할 수 있다.</p></div><span class="tag">trigger · interactive</span>
+          </div>
+          <div class="demo-grid">
+            <article class="demo-card"><h3>클릭 토글</h3><p><code>trigger: 'click'</code></p><button class="demo-btn click-tip" type="button">클릭으로 열기</button></article>
+            <article class="demo-card"><h3>hideOnClick: toggle</h3><p>참조 버튼으로만 닫기</p><button class="demo-btn toggle-tip" type="button">toggle 모드</button></article>
+            <article class="demo-card"><h3>인터랙티브 메뉴</h3><p>팝오버 내부 클릭 유지</p><button class="demo-btn primary" id="interactive-menu" type="button">작업 메뉴 열기</button></article>
+            <article class="demo-card"><h3>Long press</h3><p>터치 환경에서 500ms 길게 누르기</p><button class="demo-btn touch-tip" type="button">길게 누르기</button></article>
+          </div>
+          <template id="menu-template">
+            <div class="menu-content">
+              <h4>빠른 작업</h4><p>팝오버 내부의 버튼도 클릭할 수 있다.</p>
+              <button class="menu-link" data-menu-action="새 문서">새 문서 <small>⌘ N</small></button>
+              <button class="menu-link" data-menu-action="공유 링크">공유 링크 <small>⌘ S</small></button>
+              <button class="menu-link" data-close-menu="true">메뉴 닫기 <small>Esc</small></button>
+            </div>
+          </template>
+        </section>
+
+        <section class="section" id="manual">
+          <div class="section-head">
+            <div><h2><span class="num">05</span>수동 제어·동적 콘텐츠·라이프사이클</h2><p><code>show()</code>, <code>hide()</code>, <code>setContent()</code>, <code>setProps()</code>와 lifecycle callback을 한 인스턴스에서 확인한다.</p></div><span class="tag">methods · hooks</span>
+          </div>
+          <div class="split">
+            <div class="control-panel">
+              <h3>Manual instance control</h3>
+              <button id="manual-target" class="demo-btn primary" type="button">수동 제어 대상</button>
+              <label for="content-select">동적 콘텐츠</label>
+              <select id="content-select"><option value="현재 콘텐츠: 기본 상태">기본 상태</option><option value="동적으로 바뀐 콘텐츠입니다.">동적 콘텐츠</option><option value="<b>고정 템플릿 HTML</b><br>allowHTML이 활성화된 예시">HTML 템플릿</option></select>
+              <label for="placement-select">배치 변경</label>
+              <select id="placement-select"><option value="top">top</option><option value="right">right</option><option value="bottom">bottom</option><option value="left">left</option></select>
+              <div class="button-row" style="margin-top:13px"><button class="btn teal" id="manual-show" type="button">show()</button><button class="btn" id="manual-hide" type="button">hide()</button><button class="btn" id="manual-update" type="button">setProps()</button></div>
+              <div class="button-row" style="margin-top:8px"><button class="btn" id="manual-enable" type="button">enable()</button><button class="btn" id="manual-disable" type="button">disable()</button><button class="btn" id="manual-destroy" type="button">destroy 후 재생성</button></div>
+            </div>
+            <div>
+              <h3 style="margin:0 0 9px;font-size:14px">라이프사이클 로그</h3>
+              <div class="log" id="lifecycle-log" aria-live="polite"><div class="entry"><b>ready</b> · 인스턴스 생성 대기</div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="cursor">
+          <div class="section-head">
+            <div><h2><span class="num">06</span>커서 추적·인라인 포지셔닝·Sticky</h2><p>공식 플러그인인 <code>followCursor</code>, <code>inlinePositioning</code>, <code>sticky</code>의 대표 사용 장면이다.</p></div><span class="tag">plugins</span>
+          </div>
+          <div class="demo-grid">
+            <article class="cursor-zone cursor-both">이 영역 안에서 마우스를 움직여 보자<br><small>followCursor: true</small></article>
+            <article class="cursor-zone cursor-horizontal">가로 방향만 추적<br><small>followCursor: 'horizontal'</small></article>
+            <article class="cursor-zone cursor-vertical">세로 방향만 추적<br><small>followCursor: 'vertical'</small></article>
+            <article class="cursor-zone cursor-initial">처음 포인터 위치에 고정<br><small>followCursor: 'initial'</small></article>
+          </div>
+          <div class="split" style="margin-top:18px">
+            <div>
+              <h3 style="margin:0 0 9px;font-size:14px">인라인 텍스트의 정확한 기준점</h3>
+              <div class="inline-copy">문장 중간의 <span class="inline-hot" id="inline-word" tabindex="0">여러 줄로 감싸질 수 있는 인라인 대상</span>은 일반 요소와 다른 사각형 계산이 필요할 수 있다. narrow viewport에서 줄바꿈이 일어나면 특히 차이를 보기 쉽다.</div>
+            </div>
+            <div>
+              <h3 style="margin:0 0 9px;font-size:14px">움직이는 기준점에 고정</h3>
+              <div class="sticky-stage"><button id="moving-target" class="demo-btn teal" type="button">움직이는 대상</button><button class="btn" id="move-target" type="button" style="position:absolute;right:14px;bottom:14px">대상 이동</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="virtual">
+          <div class="section-head">
+            <div><h2><span class="num">07</span>가상 기준점과 컨텍스트 메뉴</h2><p>DOM 요소가 아닌 포인터 좌표를 기준점으로 사용한다. <code>getReferenceClientRect</code>가 필요한 대표 사례다.</p></div><span class="tag">virtual positioning</span>
+          </div>
+          <div class="context-pad" id="context-pad" tabindex="0" role="application" aria-label="오른쪽 클릭 데모 영역"><p><strong>오른쪽 클릭</strong> 또는 모바일 환경에서는 길게 눌러 보자.<br>클릭한 위치 옆에 Tippy 기반 컨텍스트 메뉴가 열린다.</p></div>
+        </section>
+
+        <section class="section" id="addons">
+          <div class="section-head">
+            <div><h2><span class="num">08</span>Delegate·Singleton·사용자 플러그인</h2><p>많은 동적 항목은 이벤트 위임으로 지연 생성하고, 가까운 툴팁 그룹은 singleton으로 부드럽게 이동시킬 수 있다.</p></div><span class="tag">addons · custom plugin</span>
+          </div>
+          <div class="split">
+            <div class="control-panel">
+              <h3>Event delegation</h3>
+              <p style="margin:0 0 10px;color:var(--muted);font-size:12px">추가된 버튼도 별도 초기화 없이 처음 트리거될 때 Tippy가 만들어진다.</p>
+              <div id="delegated-root"><button class="delegated-item" data-tip="초기 항목 A" type="button">초기 항목 A</button><button class="delegated-item" data-tip="초기 항목 B" type="button">초기 항목 B</button></div>
+              <div class="button-row" style="margin-top:10px"><button class="btn" id="add-delegated" type="button">동적 항목 추가</button><button class="btn" id="clear-delegated" type="button">동적 항목 정리</button></div>
+            </div>
+            <div class="control-panel">
+              <h3>Singleton + custom plugin</h3>
+              <p style="margin:0 0 10px;color:var(--muted);font-size:12px">각 대상은 하나의 팝오버를 공유한다. 하단 버튼으로 순서를 제어한다.</p>
+              <div class="singleton-strip"><button class="singleton-item" data-tippy-content="<b>알림</b><br>최근 3건" data-tippy-placement="top" type="button">알림</button><button class="singleton-item" data-tippy-content="<b>검색</b><br>Ctrl + K" data-tippy-placement="right" type="button">검색</button><button class="singleton-item" data-tippy-content="<b>도움말</b><br>가이드 열기" data-tippy-placement="bottom" type="button">도움말</button></div>
+              <div class="button-row" style="margin-top:10px"><button class="btn" id="singleton-prev" type="button">showPrevious()</button><button class="btn" id="singleton-next" type="button">showNext()</button></div>
+            </div>
+          </div>
+          <p class="section-note">custom plugin은 생성·표시 시점 같은 라이프사이클 훅을 공통화할 때 유용하다. 이 페이지에서는 singleton 항목이 열릴 때 상단 상태 문구를 갱신하는 간단한 플러그인을 사용한다.</p>
+        </section>
+      </div>
+      <footer class="footer">실행 방법: 인터넷 연결 상태에서 HTML 파일을 브라우저로 열면 된다. 내부망에서 활용하려면 CDN 주소의 JS/CSS 파일을 내려받아 로컬 <code>assets/tippy/</code> 경로로 교체하면 된다.</footer>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/tippy.js@6.3.7/dist/tippy-bundle.umd.min.js"></script>
+  <script>
+    (() => {
+      'use strict';
+      const $ = (selector, scope = document) => scope.querySelector(selector);
+      const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+      const logBox = $('#lifecycle-log');
+      let featureCount = 0;
+      const register = (result) => {
+        if (Array.isArray(result)) featureCount += result.length;
+        else if (result) featureCount += 1;
+        $('#feature-count').textContent = featureCount;
+        return result;
+      };
+      const log = (name, detail = '') => {
+        const now = new Date().toLocaleTimeString('ko-KR', {hour12:false});
+        const line = document.createElement('div');
+        line.className = 'entry';
+        line.innerHTML = `<b>${now}</b> · ${name}${detail ? ` · ${detail}` : ''}`;
+        logBox.prepend(line);
+        while (logBox.children.length > 10) logBox.lastElementChild.remove();
+      };
+
+      // 01 Basic / attributes
+      register(tippy('.basic-tip', { content: '기본 툴팁입니다. Tab 포커스로도 열립니다.' }));
+      register(tippy('.delay-tip', { content: '700ms 후 표시되었습니다.', delay: [700, 150], animation: 'shift-away' }));
+      register(tippy('.safe-text-tip', { content: '<strong>태그도 문자 그대로</strong>', allowHTML: false, theme: 'light-border' }));
+      register(tippy('.data-attr'));
+
+      // 02 Placement controller: one manual tippy that receives placement changes.
+      const placementTip = register(tippy('#placement-center', {
+        content: 'placement: top', trigger: 'manual', placement: 'top', theme: 'ocean', duration: [220, 130]
+      }));
+      $$('.place-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+          const placement = button.dataset.placement;
+          placementTip.setProps({ placement });
+          placementTip.setContent(`placement: <b>${placement}</b>`);
+          placementTip.show();
+        });
+      });
+      register(tippy('.theme-default', { content: '기본 dark theme' }));
+      register(tippy('.theme-light', { content: 'theme: light', theme: 'light' }));
+      register(tippy('.theme-border', { content: 'theme: light-border', theme: 'light-border' }));
+      register(tippy('.theme-material', { content: 'theme: material', theme: 'material' }));
+      register(tippy('.theme-translucent', { content: 'theme: translucent', theme: 'translucent' }));
+      register(tippy('.theme-ocean', { content: '사용자 CSS theme: ocean', theme: 'ocean' }));
+      register(tippy('.round-arrow', { content: 'tippy.roundArrow SVG', arrow: tippy.roundArrow, theme: 'light-border' }));
+      register(tippy('.no-arrow', { content: 'arrow: false', arrow: false, theme: 'material' }));
+
+      // 03 Animations
+      register(tippy('.anim-fade', { content: 'animation: fade' }));
+      register(tippy('.anim-away', { content: 'animation: shift-away', animation: 'shift-away' }));
+      register(tippy('.anim-toward', { content: 'animation: shift-toward', animation: 'shift-toward' }));
+      register(tippy('.anim-scale', { content: 'scale + inertia', animation: 'scale', inertia: true, duration: [480, 250] }));
+      register(tippy('.anim-perspective', { content: 'animation: perspective', animation: 'perspective' }));
+      register(tippy('.anim-offset', { content: 'offset: [18, 20]', animation: 'shift-away', offset: [18, 20], moveTransition: 'transform .2s ease-out' }));
+
+      // 04 triggers / interactive content
+      register(tippy('.click-tip', { content: '클릭하면 열리고, 다시 클릭하면 닫힙니다.', trigger: 'click', theme: 'light-border' }));
+      register(tippy('.toggle-tip', { content: '바깥 클릭으로는 닫히지 않고, 버튼을 다시 클릭해야 닫힙니다.', trigger: 'click', hideOnClick: 'toggle', theme: 'light' }));
+      const interactiveMenu = register(tippy('#interactive-menu', {
+        content: $('#menu-template').innerHTML,
+        allowHTML: true,
+        trigger: 'click',
+        interactive: true,
+        appendTo: () => document.body,
+        placement: 'bottom-start',
+        theme: 'lab-card',
+        onMount(instance) {
+          instance.popper.querySelectorAll('[data-menu-action]').forEach((item) => {
+            item.addEventListener('click', () => {
+              log('interactive menu', item.dataset.menuAction);
+              instance.hide();
+            });
+          });
+          const close = instance.popper.querySelector('[data-close-menu]');
+          if (close) close.addEventListener('click', () => instance.hide());
+        }
+      }));
+      register(tippy('.touch-tip', { content: '길게 누르기 감지 완료', touch: ['hold', 500], trigger: 'mouseenter focus', theme: 'material' }));
+
+      // 05 manual instance/lifecycle
+      let manualInstance;
+      const createManualInstance = () => {
+        manualInstance = register(tippy('#manual-target', {
+          content: '현재 콘텐츠: 기본 상태', trigger: 'manual', allowHTML: true, theme: 'ocean', placement: 'top',
+          onCreate() { log('onCreate'); },
+          onShow() { log('onShow'); },
+          onMount() { log('onMount'); },
+          onShown() { log('onShown'); },
+          onHide() { log('onHide'); },
+          onHidden() { log('onHidden'); },
+          onBeforeUpdate(_instance, props) { log('onBeforeUpdate', Object.keys(props).join(', ')); },
+          onAfterUpdate(_instance, props) { log('onAfterUpdate', Object.keys(props).join(', ')); },
+          onDestroy() { log('onDestroy'); }
+        }));
+      };
+      createManualInstance();
+      $('#manual-show').addEventListener('click', () => manualInstance.show());
+      $('#manual-hide').addEventListener('click', () => manualInstance.hide());
+      $('#manual-update').addEventListener('click', () => {
+        const content = $('#content-select').value;
+        const placement = $('#placement-select').value;
+        manualInstance.setContent(content);
+        manualInstance.setProps({ placement });
+        manualInstance.show();
+      });
+      $('#manual-enable').addEventListener('click', () => { manualInstance.enable(); log('enable()'); });
+      $('#manual-disable').addEventListener('click', () => { manualInstance.disable(); log('disable()'); });
+      $('#manual-destroy').addEventListener('click', () => { manualInstance.destroy(); createManualInstance(); log('new instance ready'); });
+
+      // 06 plugins: followCursor / inlinePositioning / sticky.
+      register(tippy('.cursor-both', { content: 'followCursor: true', followCursor: true, theme: 'ocean' }));
+      register(tippy('.cursor-horizontal', { content: 'followCursor: horizontal', followCursor: 'horizontal', theme: 'light-border' }));
+      register(tippy('.cursor-vertical', { content: 'followCursor: vertical', followCursor: 'vertical', theme: 'material' }));
+      register(tippy('.cursor-initial', { content: 'followCursor: initial', followCursor: 'initial', theme: 'translucent', delay: [180, 0] }));
+      register(tippy('#inline-word', { content: 'inlinePositioning: true — 줄 바꿈이 있는 inline 요소의 알맞은 rect를 선택합니다.', inlinePositioning: true, placement: 'top', theme: 'light-border' }));
+      register(tippy('#moving-target', { content: 'sticky: reference — 대상이 이동해도 열린 팝오버 위치를 계속 갱신합니다.', sticky: 'reference', theme: 'ocean' }));
+      $('#move-target').addEventListener('click', () => $('#moving-target').classList.toggle('move'));
+
+      // 07 virtual reference / context menu.
+      let pointer = { x: 0, y: 0 };
+      const rectFromPointer = () => ({ width: 0, height: 0, top: pointer.y, bottom: pointer.y, left: pointer.x, right: pointer.x });
+      const virtualMenu = register(tippy(document.body, {
+        content: `<div class="virtual-menu"><h4>컨텍스트 메뉴</h4><button data-virtual-action="새 작업">새 작업</button><button data-virtual-action="복사">좌표 복사</button><button data-virtual-action="close">닫기</button></div>`,
+        allowHTML: true, trigger: 'manual', interactive: true, appendTo: () => document.body,
+        getReferenceClientRect: rectFromPointer, placement: 'right-start', theme: 'lab-card',
+        onMount(instance) {
+          instance.popper.querySelectorAll('[data-virtual-action]').forEach((button) => {
+            button.addEventListener('click', () => {
+              const action = button.dataset.virtualAction;
+              if (action === '복사') navigator.clipboard?.writeText(`${pointer.x}, ${pointer.y}`);
+              log('context action', action);
+              instance.hide();
+            });
+          });
+        }
+      }));
+      const openVirtualMenu = (event) => {
+        event.preventDefault();
+        pointer = { x: event.clientX, y: event.clientY };
+        virtualMenu.setProps({ getReferenceClientRect: rectFromPointer });
+        virtualMenu.show();
+      };
+      $('#context-pad').addEventListener('contextmenu', openVirtualMenu);
+      $('#context-pad').addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'touch') {
+          const startX = event.clientX, startY = event.clientY;
+          const timer = setTimeout(() => openVirtualMenu({ preventDefault(){}, clientX: startX, clientY: startY }), 650);
+          const cancel = () => { clearTimeout(timer); $('#context-pad').removeEventListener('pointerup', cancel); $('#context-pad').removeEventListener('pointercancel', cancel); };
+          $('#context-pad').addEventListener('pointerup', cancel, { once: true });
+          $('#context-pad').addEventListener('pointercancel', cancel, { once: true });
+        }
+      });
+
+      // 08 delegate
+      const delegated = register(tippy.delegate('#delegated-root', {
+        target: '.delegated-item',
+        content(reference) { return `delegate로 지연 생성된 툴팁: <b>${reference.dataset.tip}</b>`; },
+        allowHTML: true, theme: 'light-border', animation: 'shift-away'
+      }));
+      let delegateIndex = 2;
+      $('#add-delegated').addEventListener('click', () => {
+        delegateIndex += 1;
+        const item = document.createElement('button');
+        item.type = 'button'; item.className = 'delegated-item';
+        item.dataset.tip = `동적 항목 ${delegateIndex}`;
+        item.textContent = `동적 항목 ${delegateIndex}`;
+        $('#delegated-root').appendChild(item);
+        log('delegate item added', item.textContent);
+      });
+      $('#clear-delegated').addEventListener('click', () => {
+        $$('.delegated-item', $('#delegated-root')).slice(2).forEach((item) => item.remove());
+        log('delegate dynamic items cleared');
+      });
+
+      // 08 singleton + custom plugin
+      const statusPlugin = {
+        name: 'statusPlugin', defaultValue: true,
+        fn(instance) {
+          return {
+            onShow() {
+              if (instance.props.statusPlugin) log('custom plugin onShow', instance.reference.textContent.trim());
+            }
+          };
+        }
+      };
+      const singletonChildren = register(tippy('.singleton-item', { allowHTML: true, theme: 'ocean', plugins: [statusPlugin] }));
+      const singleton = tippy.createSingleton(singletonChildren, { delay: [400, 80], moveTransition: 'transform .22s cubic-bezier(.25,.8,.25,1)', overrides: ['placement', 'theme'] });
+      $('#singleton-prev').addEventListener('click', () => singleton.showPrevious());
+      $('#singleton-next').addEventListener('click', () => singleton.showNext());
+
+      // Page controls
+      $('#hide-all').addEventListener('click', () => { tippy.hideAll(); log('tippy.hideAll()'); });
+      $('#compact-toggle').addEventListener('click', () => document.body.classList.toggle('compact'));
+      const tourSteps = ['placement', 'interactive', 'manual', 'virtual'];
+      let tourIndex = 0;
+      $('#show-tour').addEventListener('click', () => {
+        tippy.hideAll();
+        const step = tourSteps[tourIndex % tourSteps.length];
+        if (step === 'placement') {
+          placementTip.setProps({ placement: 'top' });
+          placementTip.setContent('<b>01 · 배치</b><br>버튼으로 12가지 위치를 비교하세요.');
+          placementTip.show();
+        } else if (step === 'interactive') {
+          interactiveMenu.show();
+        } else if (step === 'manual') {
+          manualInstance.setContent('<b>03 · 수동 제어</b><br>오른쪽의 버튼으로 API 메서드를 호출해 보세요.');
+          manualInstance.show();
+        } else {
+          const target = $('#context-pad');
+          const r = target.getBoundingClientRect();
+          pointer = { x: r.left + r.width / 2, y: r.top + 25 };
+          virtualMenu.show();
+        }
+        tourIndex += 1;
+      });
+
+      log('ready', `${featureCount} demo instances`);
+    })();
+  </script>
+</body>
+</html>
