@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="bpmn-js의 모델링, XML 입출력, 검사, 검색, 오버레이, 시뮬레이션 기능을 한 화면에서 체험하는 종합 샘플" />
+  <title>bpmn-js 기능 체험 페이지</title>
+
+  <!-- bpmn-js 18.21.0. 내부망에서는 아래 3개 주소를 로컬 파일 경로로 교체하세요. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/assets/diagram-js.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/assets/bpmn-font/css/bpmn.css" />
+  <script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.21.0/dist/bpmn-modeler.production.min.js"></script>
+
+  <style>
+    :root {
+      --app-bg: #f3f5f8;
+      --surface: #ffffff;
+      --surface-soft: #f7f8fa;
+      --surface-hover: #f2f5f9;
+      --border: #d9dee7;
+      --border-strong: #c7cfdb;
+      --text: #182230;
+      --text-subtle: #667085;
+      --primary: #1769e0;
+      --primary-hover: #0f58c7;
+      --primary-soft: #eaf2ff;
+      --danger: #c4322b;
+      --warning: #b75c00;
+      --success: #168454;
+      --radius: 8px;
+      --shadow: 0 8px 30px rgba(22, 34, 51, .12);
+      --topbar-h: 52px;
+      --toolbar-h: 46px;
+      --nav-w: 300px;
+      --inspector-w: 340px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      color: var(--text);
+      background: var(--app-bg);
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", Arial, sans-serif;
+      font-size: 14px;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid rgba(23, 105, 224, .35);
+      outline-offset: 1px;
+    }
+
+    .app { height: 100vh; display: grid; grid-template-rows: var(--topbar-h) var(--toolbar-h) minmax(0, 1fr); }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      padding: 0 16px; color: #fff; background: #111827; border-bottom: 1px solid #243041;
+    }
+    .brand { display: flex; align-items: center; min-width: 0; gap: 11px; }
+    .brand-symbol {
+      width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 auto;
+      border-radius: 7px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 850; letter-spacing: -.3px;
+    }
+    .brand-copy { min-width: 0; }
+    .brand-title { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+    .brand-subtitle { margin-top: 2px; color: #aeb9ca; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+    .version { color: #b9c4d4; font-size: 11px; }
+
+    .toolbar {
+      display: flex; align-items: center; gap: 6px; min-width: 0; padding: 6px 10px;
+      background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap;
+    }
+    .toolbar::-webkit-scrollbar { height: 4px; }
+    .toolbar-group { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+    .toolbar-divider { width: 1px; height: 24px; margin: 0 3px; background: var(--border); flex: 0 0 auto; }
+
+    .btn, .icon-btn {
+      height: 34px; border: 1px solid var(--border); border-radius: 7px;
+      color: #344054; background: var(--surface); font-weight: 700; transition: background .12s, border-color .12s, color .12s;
+    }
+    .btn { padding: 0 10px; font-size: 12px; }
+    .icon-btn { width: 34px; padding: 0; display: inline-grid; place-items: center; font-size: 16px; }
+    .btn:hover, .icon-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); color: var(--text); }
+    .btn.primary { color: #fff; background: var(--primary); border-color: var(--primary); }
+    .btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn.danger { color: var(--danger); }
+    .btn.active, .icon-btn.active { color: var(--primary); background: var(--primary-soft); border-color: #a9c8f7; }
+    .btn:disabled, .icon-btn:disabled { opacity: .42; cursor: default; }
+    .topbar .btn { color: #e8edf5; background: #273449; border-color: #3a485e; }
+    .topbar .btn:hover { background: #34435a; }
+    .sample-select, .field, .search-input, textarea {
+      border: 1px solid var(--border); border-radius: 7px; color: var(--text); background: var(--surface); outline: none;
+    }
+    .sample-select { width: 190px; height: 34px; padding: 0 9px; font-size: 12px; }
+
+    .workspace {
+      position: relative; min-height: 0; display: grid;
+      grid-template-columns: var(--nav-w) minmax(420px, 1fr) var(--inspector-w);
+      background: var(--app-bg);
+    }
+    .workspace.left-hidden { grid-template-columns: minmax(420px, 1fr) var(--inspector-w); }
+    .workspace.right-hidden { grid-template-columns: var(--nav-w) minmax(420px, 1fr); }
+    .workspace.left-hidden.right-hidden { grid-template-columns: minmax(420px, 1fr); }
+
+    .sidebar { min-width: 0; min-height: 0; overflow: auto; background: var(--surface); z-index: 20; }
+    .sidebar.left { border-right: 1px solid var(--border); }
+    .sidebar.right { border-left: 1px solid var(--border); }
+    .sidebar.hidden { display: none; }
+    .panel-header {
+      position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between;
+      height: 44px; padding: 0 13px; background: rgba(255,255,255,.97); border-bottom: 1px solid var(--border);
+    }
+    .panel-header h2 { margin: 0; font-size: 13px; }
+    .panel-section { padding: 13px; border-bottom: 1px solid #edf0f4; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 9px; color: #344054; font-size: 12px; font-weight: 800; }
+    .count { color: var(--text-subtle); font-size: 10px; font-weight: 650; }
+    .hint { margin: 0; color: var(--text-subtle); font-size: 11px; line-height: 1.55; }
+    .empty { padding: 16px 8px; color: var(--text-subtle); text-align: center; font-size: 11px; line-height: 1.55; }
+
+    .search-row { display: flex; gap: 6px; }
+    .search-input, .field { width: 100%; height: 34px; padding: 0 9px; font-size: 12px; }
+    textarea { width: 100%; min-height: 74px; padding: 9px; resize: vertical; font-size: 12px; line-height: 1.5; }
+    .search-input:focus, .field:focus, textarea:focus { border-color: #7eb0f0; box-shadow: 0 0 0 3px rgba(23,105,224,.10); }
+    label { display: block; margin: 10px 0 5px; color: #475467; font-size: 11px; font-weight: 750; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+    .stat-card { min-width: 0; padding: 8px 5px; border: 1px solid #e6eaf0; border-radius: 7px; background: var(--surface-soft); text-align: center; }
+    .stat-card strong { display: block; font-size: 16px; line-height: 1.1; }
+    .stat-card span { display: block; margin-top: 3px; color: var(--text-subtle); font-size: 9px; }
+
+    .element-list, .issue-list, .log-list { display: grid; gap: 5px; }
+    .element-list { max-height: 340px; overflow: auto; }
+    .issue-list { max-height: 300px; overflow: auto; }
+    .log-list { max-height: calc(100vh - 205px); overflow: auto; }
+    .element-item, .issue-item, .log-item { padding: 8px 9px; border: 1px solid #e5e9ef; border-radius: 7px; background: #fff; font-size: 11px; line-height: 1.45; }
+    .element-item { cursor: pointer; }
+    .element-item:hover { background: #f7faff; border-color: #b7cef0; }
+    .element-item strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .element-item small, .log-item small { display: block; margin-top: 2px; color: var(--text-subtle); }
+    .mini-type { color: var(--primary); font-size: 10px; font-weight: 700; }
+    .issue-item.error { border-left: 3px solid var(--danger); }
+    .issue-item.warning { border-left: 3px solid var(--warning); }
+    .issue-item.success { border-left: 3px solid var(--success); }
+
+    .canvas-shell { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #f3f5f8; }
+    #canvas {
+      width: 100%; height: 100%; background-color: #fafbfc;
+      background-image: linear-gradient(rgba(93, 110, 133, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(93, 110, 133, .045) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    #canvas.grid-off { background-image: none; }
+    #canvas.locked .djs-palette, #canvas.locked .djs-context-pad { display: none !important; }
+    #canvas.locked .djs-element, #canvas.locked .djs-direct-editing-parent { pointer-events: none !important; }
+    #canvas.locked .djs-hit { pointer-events: none !important; }
+
+    .canvas-loading, .drop-overlay { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; padding: 28px; text-align: center; }
+    .canvas-loading { background: rgba(250,251,252,.97); }
+    .canvas-loading.hidden, .drop-overlay.hidden { display: none; }
+    .loading-card { width: min(470px, 92%); padding: 24px; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: var(--shadow); }
+    .loading-card h2 { margin: 0 0 8px; font-size: 17px; }
+    .spinner { width: 30px; height: 30px; margin: 0 auto 14px; border: 3px solid #dce9fa; border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .drop-overlay { z-index: 70; color: #0e4d9e; background: rgba(234,242,255,.92); border: 2px dashed var(--primary); font-size: 17px; font-weight: 800; }
+
+    .floating-tools { position: absolute; right: 12px; bottom: 13px; z-index: 15; display: flex; align-items: center; gap: 5px; padding: 4px; border: 1px solid var(--border); border-radius: 9px; background: rgba(255,255,255,.95); box-shadow: 0 4px 18px rgba(31,42,58,.10); }
+    .floating-tools .icon-btn { border-color: transparent; background: transparent; }
+    .zoom-label { min-width: 44px; color: var(--text-subtle); text-align: center; font-size: 10px; }
+    .statusbar { position: absolute; left: 12px; bottom: 13px; z-index: 14; display: flex; align-items: center; gap: 7px; max-width: calc(100% - 270px); padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-subtle); background: rgba(255,255,255,.94); box-shadow: 0 4px 18px rgba(31,42,58,.08); font-size: 10px; }
+    .statusbar span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--success); }
+    .dot.warn { background: var(--warning); }
+
+    .tabs { position: sticky; top: 44px; z-index: 2; display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 8px; background: #fff; border-bottom: 1px solid var(--border); }
+    .tab { height: 38px; padding: 0 3px; border: 0; border-bottom: 2px solid transparent; color: var(--text-subtle); background: transparent; font-size: 11px; font-weight: 750; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-panel { display: none; padding: 13px; }
+    .tab-panel.active { display: block; }
+    .color-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .color-field { width: 100%; height: 34px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 7px; background: #fff; }
+    .color-field:disabled { opacity: .45; }
+    .inline-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .inline-actions .btn { flex: 1 1 auto; }
+    .simulation-box { padding: 11px; border: 1px solid #cfe0f8; border-radius: 8px; background: #f5f9ff; }
+    .simulation-state { margin-bottom: 7px; color: #164b91; font-size: 11px; font-weight: 800; }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: none; place-items: center; padding: 22px; background: rgba(15,23,42,.48); }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(900px, 96vw); max-height: 88vh; overflow: auto; border-radius: 10px; background: #fff; box-shadow: 0 24px 80px rgba(15,23,42,.28); }
+    .modal.small { width: min(560px, 96vw); }
+    .modal-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 16px; border-bottom: 1px solid var(--border); background: #fff; }
+    .modal-head h2 { margin: 0; font-size: 15px; }
+    .modal-body { padding: 16px; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 7px; padding: 12px 16px; border-top: 1px solid var(--border); }
+    #xmlEditor { min-height: 56vh; font-family: Consolas, Monaco, monospace; font-size: 11px; white-space: pre; }
+    .shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+    .shortcut { display: flex; align-items: center; justify-content: space-between; padding: 9px; border: 1px solid #e5e9ef; border-radius: 7px; font-size: 11px; }
+    kbd { padding: 3px 6px; border: 1px solid #d7dce5; border-radius: 5px; background: #f0f2f5; box-shadow: 0 1px 0 #cbd1da; font-size: 10px; }
+
+    .toast-container { position: fixed; top: 66px; right: 14px; z-index: 2000; display: grid; gap: 7px; }
+    .toast { min-width: 240px; max-width: 400px; padding: 10px 12px; border-radius: 8px; color: #fff; background: #344054; box-shadow: var(--shadow); font-size: 12px; animation: toastIn .18s ease; }
+    .toast.success { background: #167a4b; } .toast.error { background: #b42318; } .toast.warning { background: #ad5700; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } }
+
+    .bpmn-overlay-badge { padding: 4px 7px; border-radius: 999px; color: #fff; font-size: 9px; font-weight: 850; white-space: nowrap; box-shadow: 0 2px 8px rgba(15,23,42,.18); }
+    .badge-risk { background: #c56b0b; } .badge-done { background: #168454; } .badge-info { background: #1769e0; }
+    .sim-token { width: 15px; height: 15px; border: 3px solid #fff; border-radius: 50%; background: #e11d48; box-shadow: 0 0 0 2px #e11d48, 0 3px 10px rgba(225,29,72,.42); animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { transform: scale(1.16); } }
+    .djs-element.sim-active .djs-visual > :first-child { stroke: #e11d48 !important; stroke-width: 4px !important; }
+    .djs-element.validation-error .djs-visual > :first-child { stroke: #d92d20 !important; stroke-width: 3px !important; }
+    .djs-element.search-hit .djs-visual > :first-child { stroke: #7a5af8 !important; stroke-width: 4px !important; }
+
+    .djs-palette { border: 1px solid #d7dce5 !important; border-radius: 8px !important; box-shadow: 0 5px 18px rgba(31,42,58,.10) !important; }
+    .djs-context-pad { filter: drop-shadow(0 3px 7px rgba(31,42,58,.13)); }
+
+    @media (max-width: 1180px) {
+      .workspace, .workspace.left-hidden, .workspace.right-hidden, .workspace.left-hidden.right-hidden { grid-template-columns: minmax(380px, 1fr); }
+      .sidebar { position: absolute; top: 0; bottom: 0; width: min(330px, 88vw); box-shadow: var(--shadow); }
+      .sidebar.left { left: 0; } .sidebar.right { right: 0; }
+      .workspace .sidebar.hidden { display: none; }
+    }
+    @media (max-width: 720px) {
+      :root { --topbar-h: 50px; --toolbar-h: 46px; }
+      .topbar { padding: 0 10px; }
+      .brand-subtitle, .version { display: none; }
+      .brand-title { font-size: 14px; }
+      .toolbar { padding-inline: 7px; }
+      .sample-select { width: 164px; }
+      .statusbar { max-width: calc(100% - 190px); }
+      .floating-tools { right: 8px; bottom: 9px; }
+      .statusbar { left: 8px; bottom: 9px; }
+      .shortcut-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-symbol">BPMN</div>
+        <div class="brand-copy">
+          <h1 class="brand-title">bpmn-js 기능 체험 페이지</h1>
+          <div class="brand-subtitle">그리기 · 속성 편집 · 검사 · XML/SVG/PNG 내보내기</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="version">bpmn-js 18.21.0</span>
+        <button class="btn" id="helpBtn">사용 안내</button>
+      </div>
+    </header>
+
+    <nav class="toolbar" aria-label="모델러 도구 모음">
+      <div class="toolbar-group">
+        <button class="btn primary" id="newBtn">새 문서</button>
+        <button class="btn" id="openBtn">BPMN/XML 열기</button>
+        <input type="file" id="fileInput" accept=".bpmn,.xml,text/xml,application/xml" hidden />
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <select class="sample-select" id="sampleSelect" aria-label="예제 프로세스 선택">
+          <option value="approval">일반 승인·보완 프로세스</option>
+          <option value="insurance">정책보험 사고 접수 흐름</option>
+          <option value="collaboration">회원조합–중앙회 협업 흐름</option>
+        </select>
+        <button class="btn" id="loadSampleBtn">예제 적용</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="icon-btn" id="undoBtn" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소">↶</button>
+        <button class="icon-btn" id="redoBtn" title="다시 실행 (Ctrl+Y)" aria-label="다시 실행">↷</button>
+        <button class="icon-btn" id="deleteBtn" title="선택 요소 삭제 (Delete)" aria-label="선택 요소 삭제">⌫</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="btn" id="saveXmlBtn">BPMN 저장</button>
+        <button class="btn" id="saveSvgBtn">SVG</button>
+        <button class="btn" id="savePngBtn">PNG</button>
+        <button class="btn" id="xmlBtn">XML 편집</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="btn" id="validateBtn">간단 검사</button>
+        <button class="btn" id="clearMarkersBtn">표시 지우기</button>
+        <button class="btn" id="gridBtn">격자 끄기</button>
+        <button class="btn" id="lockBtn">편집 잠금</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="btn active" id="leftToggleBtn" aria-pressed="true">탐색 패널</button>
+        <button class="btn active" id="rightToggleBtn" aria-pressed="true">속성 패널</button>
+      </div>
+    </nav>
+
+    <main class="workspace" id="workspace">
+      <aside class="sidebar left" id="leftSidebar" aria-label="다이어그램 탐색기">
+        <div class="panel-header"><h2>탐색 패널</h2><span class="count" id="elementTotal">0개</span></div>
+        <section class="panel-section">
+          <h3 class="section-title">빠른 사용 순서</h3>
+          <p class="hint">① 예제 적용 → ② 요소 선택 → ③ 우측 속성 수정 → ④ 검사 또는 저장 순서로 확인하면 자연스럽습니다.</p>
+        </section>
+        <section class="panel-section">
+          <div class="search-row">
+            <input class="search-input" id="elementSearch" placeholder="요소 이름, ID, 유형 검색" />
+            <button class="icon-btn" id="searchBtn" title="검색" aria-label="검색">⌕</button>
+          </div>
+          <p class="hint" style="margin-top:7px">목록에서 요소를 누르면 캔버스에서 바로 선택됩니다.</p>
+          <span id="searchCount" class="count" style="display:block;margin-top:5px">0건</span>
+        </section>
+        <section class="panel-section">
+          <h3 class="section-title">구성 현황</h3>
+          <div class="stat-grid">
+            <div class="stat-card"><strong id="statTasks">0</strong><span>작업</span></div>
+            <div class="stat-card"><strong id="statEvents">0</strong><span>이벤트</span></div>
+            <div class="stat-card"><strong id="statGateways">0</strong><span>게이트웨이</span></div>
+            <div class="stat-card"><strong id="statFlows">0</strong><span>흐름</span></div>
+          </div>
+        </section>
+        <section class="panel-section">
+          <h3 class="section-title">요소 목록 <span class="count">선택하여 이동</span></h3>
+          <div class="element-list" id="elementList"></div>
+        </section>
+      </aside>
+
+      <section class="canvas-shell" id="canvasShell" aria-label="BPMN 편집 캔버스">
+        <div id="canvas"></div>
+        <div class="canvas-loading" id="loadingLayer">
+          <div class="loading-card" id="loadingCard">
+            <div class="spinner"></div>
+            <h2>프로세스 편집기 준비 중</h2>
+            <p class="hint">bpmn-js 파일을 불러오고 예제 프로세스를 구성하고 있습니다.</p>
+          </div>
+        </div>
+        <div class="drop-overlay hidden" id="dropOverlay">BPMN 또는 XML 파일을 놓아 불러오기</div>
+
+        <div class="floating-tools" aria-label="화면 조절">
+          <button class="icon-btn" id="zoomOutBtn" title="축소" aria-label="축소">−</button>
+          <div class="zoom-label" id="zoomLabel">100%</div>
+          <button class="icon-btn" id="zoomInBtn" title="확대" aria-label="확대">＋</button>
+          <button class="icon-btn" id="fitBtn" title="전체 화면 맞춤" aria-label="전체 화면 맞춤">⛶</button>
+          <button class="icon-btn" id="centerBtn" title="선택 요소로 이동" aria-label="선택 요소로 이동">◎</button>
+        </div>
+        <div class="statusbar"><span class="dot" id="statusDot"></span><span id="statusText">초기화 중</span></div>
+      </section>
+
+      <aside class="sidebar right" id="rightSidebar" aria-label="선택 요소 속성 패널">
+        <div class="panel-header"><h2>속성 패널</h2><span class="count" id="selectedType">선택 없음</span></div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="properties">속성</button>
+          <button class="tab" data-tab="validation">검사</button>
+          <button class="tab" data-tab="simulation">실행</button>
+          <button class="tab" data-tab="events">기록</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-properties">
+          <div id="noSelection" class="empty">요소를 선택하면 이름, 설명, 색상, 조건식을 여기서 바로 수정할 수 있습니다.</div>
+          <div id="propertyForm" style="display:none">
+            <label for="propName">이름</label>
+            <input class="field" id="propName" />
+
+            <label for="propId">요소 ID</label>
+            <input class="field" id="propId" />
+
+            <label for="propDoc">설명</label>
+            <textarea id="propDoc" placeholder="담당 조직, 처리 기준, 예외 사항 등을 입력하세요."></textarea>
+
+            <label>표시 색상</label>
+            <div class="color-row">
+              <div><span class="hint">채우기</span><input class="color-field" type="color" id="fillColor" value="#ffffff" /></div>
+              <div><span class="hint">테두리</span><input class="color-field" type="color" id="strokeColor" value="#1e293b" /></div>
+            </div>
+
+            <div class="inline-actions">
+              <button class="btn primary" id="applyPropsBtn">속성 적용</button>
+            </div>
+
+            <label>검토 배지</label>
+            <div class="inline-actions" style="margin-top:0">
+              <button class="btn" id="riskBadgeBtn">검토 필요</button>
+              <button class="btn" id="doneBadgeBtn">완료</button>
+              <button class="btn" id="infoBadgeBtn">담당 표시</button>
+            </div>
+
+            <div id="conditionBox" style="display:none">
+              <label for="propCondition">순서 흐름 조건식</label>
+              <textarea id="propCondition" placeholder="예: ${approved == true}"></textarea>
+              <button class="btn" id="applyConditionBtn" style="margin-top:7px;width:100%">조건식 적용</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-validation">
+          <h3 class="section-title">간단 검사 <span class="count" id="issueCount">미실행</span></h3>
+          <p class="hint" style="margin-bottom:10px">시작·종료 이벤트, 이름 누락, 단절 요소, 게이트웨이 분기를 빠르게 확인합니다. 전문 린터 수준의 검사는 아닙니다.</p>
+          <button class="btn primary" id="validateBtnMirror" style="display:none">검사 실행</button>
+          <div class="issue-list" id="issueList"><div class="empty">상단의 ‘간단 검사’를 실행하세요.</div></div>
+        </div>
+
+        <div class="tab-panel" id="tab-simulation">
+          <h3 class="section-title">경로 따라가기 <span class="count">체험 기능</span></h3>
+          <div class="simulation-box">
+            <div class="simulation-state" id="simState">실행 대기</div>
+            <p class="hint">시작 이벤트에서 순서 흐름을 따라 한 단계씩 이동합니다. 게이트웨이에서는 아래 분기를 선택할 수 있습니다.</p>
+            <div class="inline-actions">
+              <button class="btn primary" id="simStartBtn">시작</button>
+              <button class="btn" id="simNextBtn">다음</button>
+              <button class="btn" id="simAutoBtn">자동 실행</button>
+              <button class="btn danger" id="simResetBtn">초기화</button>
+            </div>
+          </div>
+          <label for="simBranch">다음 분기</label>
+          <select class="field" id="simBranch" disabled><option value="0">실행을 시작하세요</option></select>
+          <p class="hint" style="margin-top:8px">토큰 경로 표시용 간이 기능이며 실제 BPMN 실행 엔진은 아닙니다.</p>
+        </div>
+
+        <div class="tab-panel" id="tab-events">
+          <h3 class="section-title">작업 기록 <button class="btn" id="clearLogBtn" style="height:28px;padding:0 7px">비우기</button></h3>
+          <div class="log-list" id="logList"><div class="empty">편집 이벤트가 여기에 기록됩니다.</div></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="xmlModal">
+    <div class="modal">
+      <div class="modal-head"><h2>BPMN XML 보기 / 수정</h2><button class="icon-btn modal-close" aria-label="닫기">×</button></div>
+      <div class="modal-body"><textarea id="xmlEditor" spellcheck="false"></textarea></div>
+      <div class="modal-foot"><button class="btn modal-close">취소</button><button class="btn" id="copyXmlBtn">복사</button><button class="btn primary" id="applyXmlBtn">XML 적용</button></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="helpModal">
+    <div class="modal small">
+      <div class="modal-head"><h2>사용 안내</h2><button class="icon-btn modal-close" aria-label="닫기">×</button></div>
+      <div class="modal-body">
+        <p class="hint" style="margin-bottom:12px"><b>요소 생성</b>: 캔버스 왼쪽 팔레트 사용<br><b>빠른 연결</b>: 요소 선택 후 컨텍스트 패드 사용<br><b>이름 편집</b>: 요소 또는 라벨 더블클릭<br><b>파일 불러오기</b>: 상단 ‘BPMN/XML 열기’ 또는 캔버스로 끌어놓기</p>
+        <div class="shortcut-grid">
+          <div class="shortcut"><span>실행 취소</span><kbd>Ctrl + Z</kbd></div>
+          <div class="shortcut"><span>다시 실행</span><kbd>Ctrl + Y</kbd></div>
+          <div class="shortcut"><span>복사</span><kbd>Ctrl + C</kbd></div>
+          <div class="shortcut"><span>붙여넣기</span><kbd>Ctrl + V</kbd></div>
+          <div class="shortcut"><span>모두 선택</span><kbd>Ctrl + A</kbd></div>
+          <div class="shortcut"><span>선택 요소 삭제</span><kbd>Delete</kbd></div>
+        </div>
+      </div>
+      <div class="modal-foot"><button class="btn primary modal-close">확인</button></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+
+    'use strict';
+
+    const SAMPLE_XML = {
+      approval: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Approval" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_Approval" name="일반 승인·보완 프로세스" isExecutable="false">
+    <bpmn:documentation>요청 접수 후 내용 확인, 승인 처리 또는 보완 요청으로 이어지는 기본 업무 흐름입니다.</bpmn:documentation>
+    <bpmn:startEvent id="Start_Request" name="요청 접수">
+      <bpmn:outgoing>Flow_Start_Check</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Check" name="내용 확인">
+      <bpmn:incoming>Flow_Start_Check</bpmn:incoming>
+      <bpmn:incoming>Flow_Return_Check</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="처리 방향">
+      <bpmn:incoming>Flow_Check_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approve</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Supplement</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Approve" name="승인 처리">
+      <bpmn:incoming>Flow_Approve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Complete</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Complete" name="처리 완료">
+      <bpmn:incoming>Flow_Complete</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="Task_Supplement" name="보완 요청">
+      <bpmn:incoming>Flow_Supplement</bpmn:incoming>
+      <bpmn:outgoing>Flow_Wait_Supplement</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Catch_Supplement" name="보완자료 수신">
+      <bpmn:incoming>Flow_Wait_Supplement</bpmn:incoming>
+      <bpmn:outgoing>Flow_Return_Check</bpmn:outgoing>
+      <bpmn:messageEventDefinition />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:dataObjectReference id="Data_Request" name="신청서" dataObjectRef="DataObject_Request" />
+    <bpmn:dataObject id="DataObject_Request" />
+    <bpmn:textAnnotation id="Annotation_Decision"><bpmn:text>승인 기준을 만족하지 않으면 보완 요청 후 재확인</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Association_Request" sourceRef="Data_Request" targetRef="Task_Check" />
+    <bpmn:association id="Association_Decision" sourceRef="Annotation_Decision" targetRef="Gateway_Decision" />
+    <bpmn:sequenceFlow id="Flow_Start_Check" sourceRef="Start_Request" targetRef="Task_Check" />
+    <bpmn:sequenceFlow id="Flow_Check_Decision" sourceRef="Task_Check" targetRef="Gateway_Decision" />
+    <bpmn:sequenceFlow id="Flow_Approve" name="승인" sourceRef="Gateway_Decision" targetRef="Task_Approve">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">\${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Complete" sourceRef="Task_Approve" targetRef="End_Complete" />
+    <bpmn:sequenceFlow id="Flow_Supplement" name="보완" sourceRef="Gateway_Decision" targetRef="Task_Supplement" />
+    <bpmn:sequenceFlow id="Flow_Wait_Supplement" sourceRef="Task_Supplement" targetRef="Catch_Supplement" />
+    <bpmn:sequenceFlow id="Flow_Return_Check" name="재확인" sourceRef="Catch_Supplement" targetRef="Task_Check" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Approval"><bpmndi:BPMNPlane id="BPMNPlane_Approval" bpmnElement="Process_Approval">
+    <bpmndi:BPMNShape id="Start_Request_di" bpmnElement="Start_Request"><dc:Bounds x="120" y="235" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="111" y="278" width="54" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Check_di" bpmnElement="Task_Check"><dc:Bounds x="230" y="213" width="120" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Gateway_Decision_di" bpmnElement="Gateway_Decision" isMarkerVisible="true"><dc:Bounds x="430" y="228" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="428" y="285" width="57" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Approve_di" bpmnElement="Task_Approve"><dc:Bounds x="585" y="135" width="120" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="End_Complete_di" bpmnElement="End_Complete"><dc:Bounds x="780" y="157" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="771" y="200" width="54" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Supplement_di" bpmnElement="Task_Supplement"><dc:Bounds x="585" y="340" width="120" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Catch_Supplement_di" bpmnElement="Catch_Supplement"><dc:Bounds x="430" y="362" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="411" y="405" width="74" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Data_Request_di" bpmnElement="Data_Request"><dc:Bounds x="244" y="120" width="36" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="244" y="96" width="36" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Annotation_Decision_di" bpmnElement="Annotation_Decision"><dc:Bounds x="520" y="238" width="150" height="56" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNEdge id="Flow_Start_Check_di" bpmnElement="Flow_Start_Check"><di:waypoint x="156" y="253" /><di:waypoint x="230" y="253" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Check_Decision_di" bpmnElement="Flow_Check_Decision"><di:waypoint x="350" y="253" /><di:waypoint x="430" y="253" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Approve_di" bpmnElement="Flow_Approve"><di:waypoint x="455" y="228" /><di:waypoint x="455" y="175" /><di:waypoint x="585" y="175" /><bpmndi:BPMNLabel><dc:Bounds x="503" y="157" width="28" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Complete_di" bpmnElement="Flow_Complete"><di:waypoint x="705" y="175" /><di:waypoint x="780" y="175" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Supplement_di" bpmnElement="Flow_Supplement"><di:waypoint x="455" y="278" /><di:waypoint x="455" y="380" /><di:waypoint x="585" y="380" /><bpmndi:BPMNLabel><dc:Bounds x="505" y="362" width="28" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Wait_Supplement_di" bpmnElement="Flow_Wait_Supplement"><di:waypoint x="585" y="380" /><di:waypoint x="466" y="380" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Return_Check_di" bpmnElement="Flow_Return_Check"><di:waypoint x="430" y="380" /><di:waypoint x="290" y="380" /><di:waypoint x="290" y="293" /><bpmndi:BPMNLabel><dc:Bounds x="341" y="362" width="42" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Association_Request_di" bpmnElement="Association_Request"><di:waypoint x="262" y="170" /><di:waypoint x="282" y="213" /></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Association_Decision_di" bpmnElement="Association_Decision"><di:waypoint x="520" y="263" /><di:waypoint x="480" y="253" /></bpmndi:BPMNEdge>
+  </bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`,
+
+      insurance: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Insurance" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_Insurance" name="정책보험 사고접수" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Customer" name="어업인"><bpmn:flowNodeRef>Start_Accident</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_Report</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Coop" name="회원조합"><bpmn:flowNodeRef>Task_Receive</bpmn:flowNodeRef><bpmn:flowNodeRef>Gateway_Doc</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_RequestDoc</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Center" name="중앙회"><bpmn:flowNodeRef>SubProcess_Assess</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_Pay</bpmn:flowNodeRef><bpmn:flowNodeRef>End_Paid</bpmn:flowNodeRef><bpmn:flowNodeRef>End_Timeout</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Accident" name="사고 발생"><bpmn:outgoing>F1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="Task_Report" name="사고 신고"><bpmn:incoming>F1</bpmn:incoming><bpmn:outgoing>F2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:userTask id="Task_Receive" name="청구 접수"><bpmn:incoming>F2</bpmn:incoming><bpmn:incoming>F5</bpmn:incoming><bpmn:outgoing>F3</bpmn:outgoing></bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_Timer" name="처리기한 경과" attachedToRef="Task_Receive" cancelActivity="true"><bpmn:outgoing>F_Timeout</bpmn:outgoing><bpmn:timerEventDefinition /></bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Gateway_Doc" name="서류 완비?"><bpmn:incoming>F3</bpmn:incoming><bpmn:outgoing>F4</bpmn:outgoing><bpmn:outgoing>F6</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_RequestDoc" name="보완 요청"><bpmn:incoming>F4</bpmn:incoming><bpmn:outgoing>F5</bpmn:outgoing></bpmn:sendTask>
+    <bpmn:subProcess id="SubProcess_Assess" name="보험금 심사"><bpmn:incoming>F6</bpmn:incoming><bpmn:outgoing>F7</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart"><bpmn:outgoing>SF1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:businessRuleTask id="Task_Rule" name="약관·면책 검토"><bpmn:incoming>SF1</bpmn:incoming><bpmn:outgoing>SF2</bpmn:outgoing></bpmn:businessRuleTask>
+      <bpmn:manualTask id="Task_Field" name="현장 사실 확인"><bpmn:incoming>SF2</bpmn:incoming><bpmn:outgoing>SF3</bpmn:outgoing></bpmn:manualTask>
+      <bpmn:endEvent id="SubEnd"><bpmn:incoming>SF3</bpmn:incoming></bpmn:endEvent>
+      <bpmn:sequenceFlow id="SF1" sourceRef="SubStart" targetRef="Task_Rule"/><bpmn:sequenceFlow id="SF2" sourceRef="Task_Rule" targetRef="Task_Field"/><bpmn:sequenceFlow id="SF3" sourceRef="Task_Field" targetRef="SubEnd"/>
+    </bpmn:subProcess>
+    <bpmn:serviceTask id="Task_Pay" name="보험금 지급 처리"><bpmn:incoming>F7</bpmn:incoming><bpmn:outgoing>F8</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="End_Paid" name="지급 완료"><bpmn:incoming>F8</bpmn:incoming><bpmn:terminateEventDefinition /></bpmn:endEvent>
+    <bpmn:endEvent id="End_Timeout" name="기한 경과 알림"><bpmn:incoming>F_Timeout</bpmn:incoming><bpmn:errorEventDefinition /></bpmn:endEvent>
+    <bpmn:dataObjectReference id="Data_Claim" name="보험금 청구서" dataObjectRef="DataObject_Claim" />
+    <bpmn:dataObject id="DataObject_Claim" />
+    <bpmn:textAnnotation id="Annotation_1"><bpmn:text>서류 보완 시 재접수 경로</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="Data_Claim" targetRef="Task_Receive" />
+    <bpmn:association id="Association_2" sourceRef="Annotation_1" targetRef="Task_RequestDoc" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Accident" targetRef="Task_Report"/><bpmn:sequenceFlow id="F2" sourceRef="Task_Report" targetRef="Task_Receive"/><bpmn:sequenceFlow id="F3" sourceRef="Task_Receive" targetRef="Gateway_Doc"/>
+    <bpmn:sequenceFlow id="F4" name="미비" sourceRef="Gateway_Doc" targetRef="Task_RequestDoc"/><bpmn:sequenceFlow id="F5" sourceRef="Task_RequestDoc" targetRef="Task_Receive"/>
+    <bpmn:sequenceFlow id="F6" name="완비" sourceRef="Gateway_Doc" targetRef="SubProcess_Assess"/><bpmn:sequenceFlow id="F7" sourceRef="SubProcess_Assess" targetRef="Task_Pay"/><bpmn:sequenceFlow id="F8" sourceRef="Task_Pay" targetRef="End_Paid"/><bpmn:sequenceFlow id="F_Timeout" sourceRef="Boundary_Timer" targetRef="End_Timeout"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_Insurance"><bpmndi:BPMNPlane id="Plane_Insurance" bpmnElement="Process_Insurance">
+    <bpmndi:BPMNShape id="Lane_Customer_di" bpmnElement="Lane_Customer" isHorizontal="true"><dc:Bounds x="80" y="80" width="1120" height="150" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Coop_di" bpmnElement="Lane_Coop" isHorizontal="true"><dc:Bounds x="80" y="230" width="1120" height="190" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Lane_Center_di" bpmnElement="Lane_Center" isHorizontal="true"><dc:Bounds x="80" y="420" width="1120" height="240" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Start_Accident_di" bpmnElement="Start_Accident"><dc:Bounds x="145" y="137" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="137" y="180" width="52" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Report_di" bpmnElement="Task_Report"><dc:Bounds x="230" y="115" width="100" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Receive_di" bpmnElement="Task_Receive"><dc:Bounds x="390" y="275" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Boundary_Timer_di" bpmnElement="Boundary_Timer"><dc:Bounds x="432" y="337" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="414" y="376" width="72" height="28" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Gateway_Doc_di" bpmnElement="Gateway_Doc" isMarkerVisible="true"><dc:Bounds x="560" y="290" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="555" y="347" width="60" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_RequestDoc_di" bpmnElement="Task_RequestDoc"><dc:Bounds x="650" y="275" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="SubProcess_Assess_di" bpmnElement="SubProcess_Assess" isExpanded="true"><dc:Bounds x="650" y="450" width="320" height="160" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="SubStart_di" bpmnElement="SubStart"><dc:Bounds x="680" y="512" width="30" height="30" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Rule_di" bpmnElement="Task_Rule"><dc:Bounds x="735" y="487" width="90" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Field_di" bpmnElement="Task_Field"><dc:Bounds x="850" y="487" width="90" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="SubEnd_di" bpmnElement="SubEnd"><dc:Bounds x="950" y="512" width="30" height="30" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Pay_di" bpmnElement="Task_Pay"><dc:Bounds x="1000" y="490" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="End_Paid_di" bpmnElement="End_Paid"><dc:Bounds x="1140" y="512" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1131" y="555" width="54" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="End_Timeout_di" bpmnElement="End_Timeout"><dc:Bounds x="550" y="515" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="530" y="558" width="76" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Data_Claim_di" bpmnElement="Data_Claim"><dc:Bounds x="350" y="235" width="36" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="326" y="210" width="84" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Annotation_1_di" bpmnElement="Annotation_1"><dc:Bounds x="800" y="255" width="130" height="50" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="181" y="155"/><di:waypoint x="230" y="155"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="330" y="155"/><di:waypoint x="360" y="155"/><di:waypoint x="360" y="315"/><di:waypoint x="390" y="315"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="500" y="315"/><di:waypoint x="560" y="315"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="610" y="315"/><di:waypoint x="650" y="315"/><bpmndi:BPMNLabel><dc:Bounds x="620" y="296" width="28" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="705" y="275"/><di:waypoint x="705" y="245"/><di:waypoint x="445" y="245"/><di:waypoint x="445" y="275"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="585" y="340"/><di:waypoint x="585" y="530"/><di:waypoint x="650" y="530"/><bpmndi:BPMNLabel><dc:Bounds x="592" y="430" width="28" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="970" y="530"/><di:waypoint x="1000" y="530"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8"><di:waypoint x="1110" y="530"/><di:waypoint x="1140" y="530"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="F_Timeout_di" bpmnElement="F_Timeout"><di:waypoint x="450" y="373"/><di:waypoint x="450" y="533"/><di:waypoint x="550" y="533"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SF1_di" bpmnElement="SF1"><di:waypoint x="710" y="527"/><di:waypoint x="735" y="527"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SF2_di" bpmnElement="SF2"><di:waypoint x="825" y="527"/><di:waypoint x="850" y="527"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="SF3_di" bpmnElement="SF3"><di:waypoint x="940" y="527"/><di:waypoint x="950" y="527"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1"><di:waypoint x="386" y="273"/><di:waypoint x="390" y="285"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Association_2_di" bpmnElement="Association_2"><di:waypoint x="800" y="280"/><di:waypoint x="760" y="300"/></bpmndi:BPMNEdge>
+  </bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`,
+
+      collaboration: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Collab" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Coop" name="회원조합" processRef="Process_Coop" />
+    <bpmn:participant id="Participant_Center" name="수협중앙회" processRef="Process_Center" />
+    <bpmn:messageFlow id="Message_Request" name="지원 요청" sourceRef="Task_Send" targetRef="Start_Message" />
+    <bpmn:messageFlow id="Message_Result" name="검토 결과" sourceRef="Task_Reply" targetRef="Catch_Result" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Coop" isExecutable="false">
+    <bpmn:startEvent id="Start_Coop" name="지원 필요"><bpmn:outgoing>C1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sendTask id="Task_Send" name="지원 요청 송부"><bpmn:incoming>C1</bpmn:incoming><bpmn:outgoing>C2</bpmn:outgoing></bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Catch_Result" name="검토 결과 수신"><bpmn:incoming>C2</bpmn:incoming><bpmn:outgoing>C3</bpmn:outgoing><bpmn:messageEventDefinition /></bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Action" name="후속 조치"><bpmn:incoming>C3</bpmn:incoming><bpmn:outgoing>C4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="End_Coop" name="처리 완료"><bpmn:incoming>C4</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="C1" sourceRef="Start_Coop" targetRef="Task_Send"/><bpmn:sequenceFlow id="C2" sourceRef="Task_Send" targetRef="Catch_Result"/><bpmn:sequenceFlow id="C3" sourceRef="Catch_Result" targetRef="Task_Action"/><bpmn:sequenceFlow id="C4" sourceRef="Task_Action" targetRef="End_Coop"/>
+  </bpmn:process>
+  <bpmn:process id="Process_Center" isExecutable="false">
+    <bpmn:startEvent id="Start_Message" name="요청 접수"><bpmn:outgoing>H1</bpmn:outgoing><bpmn:messageEventDefinition /></bpmn:startEvent>
+    <bpmn:receiveTask id="Task_Classify" name="요청 분류"><bpmn:incoming>H1</bpmn:incoming><bpmn:outgoing>H2</bpmn:outgoing></bpmn:receiveTask>
+    <bpmn:parallelGateway id="Gateway_Split"><bpmn:incoming>H2</bpmn:incoming><bpmn:outgoing>H3</bpmn:outgoing><bpmn:outgoing>H4</bpmn:outgoing></bpmn:parallelGateway>
+    <bpmn:userTask id="Task_Business" name="업무 검토"><bpmn:incoming>H3</bpmn:incoming><bpmn:outgoing>H5</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="Task_System" name="시스템 자료 조회"><bpmn:incoming>H4</bpmn:incoming><bpmn:outgoing>H6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gateway_Join"><bpmn:incoming>H5</bpmn:incoming><bpmn:incoming>H6</bpmn:incoming><bpmn:outgoing>H7</bpmn:outgoing></bpmn:parallelGateway>
+    <bpmn:sendTask id="Task_Reply" name="검토 결과 회신"><bpmn:incoming>H7</bpmn:incoming><bpmn:outgoing>H8</bpmn:outgoing></bpmn:sendTask>
+    <bpmn:endEvent id="End_Center" name="지원 완료"><bpmn:incoming>H8</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="H1" sourceRef="Start_Message" targetRef="Task_Classify"/><bpmn:sequenceFlow id="H2" sourceRef="Task_Classify" targetRef="Gateway_Split"/><bpmn:sequenceFlow id="H3" sourceRef="Gateway_Split" targetRef="Task_Business"/><bpmn:sequenceFlow id="H4" sourceRef="Gateway_Split" targetRef="Task_System"/><bpmn:sequenceFlow id="H5" sourceRef="Task_Business" targetRef="Gateway_Join"/><bpmn:sequenceFlow id="H6" sourceRef="Task_System" targetRef="Gateway_Join"/><bpmn:sequenceFlow id="H7" sourceRef="Gateway_Join" targetRef="Task_Reply"/><bpmn:sequenceFlow id="H8" sourceRef="Task_Reply" targetRef="End_Center"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_Collab"><bpmndi:BPMNPlane id="Plane_Collab" bpmnElement="Collaboration_1">
+    <bpmndi:BPMNShape id="Participant_Coop_di" bpmnElement="Participant_Coop" isHorizontal="true"><dc:Bounds x="80" y="80" width="1050" height="180" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Participant_Center_di" bpmnElement="Participant_Center" isHorizontal="true"><dc:Bounds x="80" y="330" width="1050" height="250" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Start_Coop_di" bpmnElement="Start_Coop"><dc:Bounds x="145" y="152" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Send_di" bpmnElement="Task_Send"><dc:Bounds x="225" y="130" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Catch_Result_di" bpmnElement="Catch_Result"><dc:Bounds x="500" y="152" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="475" y="195" width="86" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Action_di" bpmnElement="Task_Action"><dc:Bounds x="650" y="130" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="End_Coop_di" bpmnElement="End_Coop"><dc:Bounds x="825" y="152" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Start_Message_di" bpmnElement="Start_Message"><dc:Bounds x="145" y="437" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Classify_di" bpmnElement="Task_Classify"><dc:Bounds x="225" y="415" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Gateway_Split_di" bpmnElement="Gateway_Split"><dc:Bounds x="385" y="430" width="50" height="50" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Business_di" bpmnElement="Task_Business"><dc:Bounds x="485" y="365" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_System_di" bpmnElement="Task_System"><dc:Bounds x="485" y="485" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Gateway_Join_di" bpmnElement="Gateway_Join"><dc:Bounds x="650" y="430" width="50" height="50" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Task_Reply_di" bpmnElement="Task_Reply"><dc:Bounds x="760" y="415" width="110" height="80" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="End_Center_di" bpmnElement="End_Center"><dc:Bounds x="925" y="437" width="36" height="36" /></bpmndi:BPMNShape>
+    <bpmndi:BPMNEdge id="C1_di" bpmnElement="C1"><di:waypoint x="181" y="170"/><di:waypoint x="225" y="170"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="C2_di" bpmnElement="C2"><di:waypoint x="335" y="170"/><di:waypoint x="500" y="170"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="C3_di" bpmnElement="C3"><di:waypoint x="536" y="170"/><di:waypoint x="650" y="170"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="C4_di" bpmnElement="C4"><di:waypoint x="760" y="170"/><di:waypoint x="825" y="170"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H1_di" bpmnElement="H1"><di:waypoint x="181" y="455"/><di:waypoint x="225" y="455"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H2_di" bpmnElement="H2"><di:waypoint x="335" y="455"/><di:waypoint x="385" y="455"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H3_di" bpmnElement="H3"><di:waypoint x="410" y="430"/><di:waypoint x="410" y="405"/><di:waypoint x="485" y="405"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H4_di" bpmnElement="H4"><di:waypoint x="410" y="480"/><di:waypoint x="410" y="525"/><di:waypoint x="485" y="525"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H5_di" bpmnElement="H5"><di:waypoint x="595" y="405"/><di:waypoint x="675" y="405"/><di:waypoint x="675" y="430"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H6_di" bpmnElement="H6"><di:waypoint x="595" y="525"/><di:waypoint x="675" y="525"/><di:waypoint x="675" y="480"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H7_di" bpmnElement="H7"><di:waypoint x="700" y="455"/><di:waypoint x="760" y="455"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="H8_di" bpmnElement="H8"><di:waypoint x="870" y="455"/><di:waypoint x="925" y="455"/></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Message_Request_di" bpmnElement="Message_Request"><di:waypoint x="280" y="210"/><di:waypoint x="280" y="300"/><di:waypoint x="163" y="300"/><di:waypoint x="163" y="437"/><bpmndi:BPMNLabel><dc:Bounds x="207" y="282" width="54" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Message_Result_di" bpmnElement="Message_Result"><di:waypoint x="815" y="415"/><di:waypoint x="815" y="290"/><di:waypoint x="518" y="290"/><di:waypoint x="518" y="188"/><bpmndi:BPMNLabel><dc:Bounds x="650" y="272" width="54" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+  </bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`
+    };
+
+    const EMPTY_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_Empty" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1"><bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+
+    let modeler;
+    let selectedElement = null;
+    let overlayIds = [];
+    let searchHitIds = [];
+    let validationMarkerIds = [];
+    let simCurrent = null;
+    let simStep = 0;
+    let simHistory = [];
+    let simTimer = null;
+    let isLocked = false;
+    let logSequence = 0;
+
+    const $ = (id) => document.getElementById(id);
+    const typeName = (el) => el?.businessObject?.$type || el?.type || '알 수 없음';
+    const TYPE_LABELS = {
+      'bpmn:StartEvent': '시작 이벤트', 'bpmn:EndEvent': '종료 이벤트',
+      'bpmn:IntermediateCatchEvent': '중간 수신 이벤트', 'bpmn:IntermediateThrowEvent': '중간 발생 이벤트',
+      'bpmn:BoundaryEvent': '경계 이벤트', 'bpmn:Task': '작업', 'bpmn:UserTask': '사용자 작업',
+      'bpmn:ServiceTask': '서비스 작업', 'bpmn:SendTask': '전송 작업', 'bpmn:ReceiveTask': '수신 작업',
+      'bpmn:ManualTask': '수동 작업', 'bpmn:BusinessRuleTask': '비즈니스 규칙 작업',
+      'bpmn:ScriptTask': '스크립트 작업', 'bpmn:CallActivity': '호출 활동', 'bpmn:SubProcess': '하위 프로세스',
+      'bpmn:ExclusiveGateway': '배타 게이트웨이', 'bpmn:ParallelGateway': '병렬 게이트웨이',
+      'bpmn:InclusiveGateway': '포괄 게이트웨이', 'bpmn:EventBasedGateway': '이벤트 기반 게이트웨이',
+      'bpmn:SequenceFlow': '순서 흐름', 'bpmn:MessageFlow': '메시지 흐름', 'bpmn:Association': '연관 관계',
+      'bpmn:Participant': '풀', 'bpmn:Lane': '레인', 'bpmn:DataObjectReference': '데이터 객체',
+      'bpmn:DataStoreReference': '데이터 저장소', 'bpmn:TextAnnotation': '텍스트 주석', 'bpmn:Group': '그룹'
+    };
+    const humanType = (el) => TYPE_LABELS[typeName(el)] || typeName(el).replace('bpmn:', '');
+    const displayName = (el) => el?.businessObject?.name || el?.id || '(이름 없음)';
+    const isLabel = (el) => el?.type === 'label';
+    const isRoot = (el) => el?.type === 'bpmn:Process' || el?.type === 'bpmn:Collaboration';
+    const isConnection = (el) => !!el?.waypoints;
+
+    function escapeHtml(value = '') {
+      return String(value).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    }
+
+    function toast(message, type = '') {
+      const node = document.createElement('div');
+      node.className = `toast ${type}`;
+      node.textContent = message;
+      $('toastContainer').appendChild(node);
+      setTimeout(() => node.remove(), 3200);
+    }
+
+    function setStatus(text, warning = false) {
+      $('statusText').textContent = text;
+      $('statusDot').classList.toggle('warn', warning);
+    }
+
+    function addLog(event, detail = '') {
+      logSequence += 1;
+      const node = document.createElement('div');
+      node.className = 'log-item';
+      const now = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+      node.innerHTML = `<strong>${escapeHtml(event)}</strong><small>#${logSequence} · ${now}${detail ? ' · ' + escapeHtml(detail) : ''}</small>`;
+      $('logList').prepend(node);
+      while ($('logList').children.length > 100) $('logList').lastChild.remove();
+    }
+
+    async function waitForLibrary() {
+      const started = Date.now();
+      while (!window.BpmnJS && Date.now() - started < 12000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (!window.BpmnJS) throw new Error('bpmn-js 파일을 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근 권한을 확인하세요.');
+    }
+
+    async function initialize() {
+      try {
+        await waitForLibrary();
+        modeler = new BpmnJS({
+          container: '#canvas',
+          keyboard: { bindTo: document }
+        });
+        bindModelerEvents();
+        await importDiagram(SAMPLE_XML.approval, '일반 승인·보완 프로세스', { silent: true });
+        $('loadingLayer').classList.add('hidden');
+        setStatus('예제를 불러왔습니다. 요소를 선택하거나 예제를 바꿔보세요.');
+      } catch (error) {
+        $('loadingCard').innerHTML = `<h2 style="color:#b42318">라이브러리 로드 실패</h2><p>${escapeHtml(error.message)}</p><p class="hint">내부망에서는 상단의 bpmn-js CDN 주소를 허용된 로컬 파일 경로로 바꿔야 합니다.</p>`;
+        setStatus('로드 실패', true);
+      }
+    }
+
+    async function importDiagram(xml, label = '다이어그램', options = {}) {
+      if (!modeler) return;
+      try {
+        resetSimulation();
+        clearAllMarkers();
+        const result = await modeler.importXML(xml);
+        modeler.get('canvas').zoom('fit-viewport');
+        selectedElement = null;
+        updatePropertyPanel();
+        refreshAll();
+        addLog('import.done', `${label}${result.warnings?.length ? ` · 경고 ${result.warnings.length}건` : ''}`);
+        if (!options.silent) toast(`${label} 불러오기 완료`, 'success');
+        setStatus(`${label} · 요소 ${getDiagramElements().length}개`);
+      } catch (error) {
+        console.error(error);
+        toast(`가져오기 실패: ${error.message}`, 'error');
+        setStatus('XML 가져오기 실패', true);
+      }
+    }
+
+    function bindModelerEvents() {
+      const eventBus = modeler.get('eventBus');
+      eventBus.on('selection.changed', ({ newSelection }) => {
+        selectedElement = newSelection?.[0] || null;
+        updatePropertyPanel();
+        if (selectedElement) addLog('selection.changed', selectedElement.id);
+      });
+      eventBus.on('element.changed', ({ element }) => {
+        refreshAll();
+        if (selectedElement?.id === element.id) updatePropertyPanel();
+      });
+      eventBus.on('commandStack.changed', () => {
+        updateUndoRedo();
+        refreshAll();
+      });
+      eventBus.on('shape.added', ({ element }) => addLog('shape.added', element.id));
+      eventBus.on('shape.removed', ({ element }) => addLog('shape.removed', element.id));
+      eventBus.on('connection.added', ({ element }) => addLog('connection.added', element.id));
+      eventBus.on('directEditing.complete', ({ element }) => addLog('directEditing.complete', element?.id || ''));
+      eventBus.on('canvas.viewbox.changed', () => updateZoomLabel());
+      updateUndoRedo();
+    }
+
+    function getDiagramElements() {
+      if (!modeler) return [];
+      return modeler.get('elementRegistry').getAll().filter(el => !isLabel(el) && !isRoot(el));
+    }
+
+    function refreshAll() {
+      refreshStats();
+      refreshElementList();
+      updateUndoRedo();
+      updateZoomLabel();
+    }
+
+    function refreshStats() {
+      const elements = getDiagramElements();
+      const tasks = elements.filter(el => /Task$/.test(typeName(el)) || /Task:/.test(typeName(el)) || typeName(el).includes('Task')).length;
+      const events = elements.filter(el => typeName(el).includes('Event')).length;
+      const gateways = elements.filter(el => typeName(el).includes('Gateway')).length;
+      const flows = elements.filter(el => typeName(el).includes('Flow') || typeName(el).includes('Association')).length;
+      $('statTasks').textContent = tasks;
+      $('statEvents').textContent = events;
+      $('statGateways').textContent = gateways;
+      $('statFlows').textContent = flows;
+      $('elementTotal').textContent = `${elements.length}개`;
+    }
+
+    function refreshElementList(filter = '') {
+      const term = filter.trim().toLowerCase();
+      const elements = getDiagramElements()
+        .filter(el => !term || displayName(el).toLowerCase().includes(term) || el.id.toLowerCase().includes(term) || typeName(el).toLowerCase().includes(term))
+        .sort((a, b) => displayName(a).localeCompare(displayName(b), 'ko'));
+      $('searchCount').textContent = `${elements.length}건`;
+      $('elementList').innerHTML = elements.length ? elements.map(el => `
+        <div class="element-item" data-id="${escapeHtml(el.id)}">
+          <strong>${escapeHtml(displayName(el))}</strong>
+          <span class="mini-type">${escapeHtml(humanType(el))}</span><br><small>${escapeHtml(el.id)}</small>
+        </div>`).join('') : '<div class="empty">검색 결과가 없습니다.</div>';
+      $('elementList').querySelectorAll('.element-item').forEach(node => node.addEventListener('click', () => focusElement(node.dataset.id)));
+    }
+
+    function focusElement(id) {
+      const registry = modeler.get('elementRegistry');
+      const selection = modeler.get('selection');
+      const canvas = modeler.get('canvas');
+      const el = registry.get(id);
+      if (!el) return;
+      selection.select(el);
+      if (!isConnection(el)) {
+        canvas.viewbox({ x: el.x - 160, y: el.y - 120, width: Math.max(el.width + 320, 500), height: Math.max(el.height + 240, 350) });
+      }
+    }
+
+    function updatePropertyPanel() {
+      if (!selectedElement || isRoot(selectedElement)) {
+        $('noSelection').style.display = '';
+        $('propertyForm').style.display = 'none';
+        $('selectedType').textContent = '없음';
+        return;
+      }
+      const bo = selectedElement.businessObject;
+      $('noSelection').style.display = 'none';
+      $('propertyForm').style.display = '';
+      $('selectedType').textContent = humanType(selectedElement);
+      $('propId').value = selectedElement.id || '';
+      $('propName').value = bo?.name || '';
+      $('propDoc').value = bo?.documentation?.[0]?.text || '';
+      $('fillColor').value = normalizeColor(bo?.di?.fill || '#ffffff', '#ffffff');
+      $('fillColor').disabled = isConnection(selectedElement);
+      $('strokeColor').value = normalizeColor(bo?.di?.stroke || '#1e293b', '#1e293b');
+      const isSeq = typeName(selectedElement) === 'bpmn:SequenceFlow';
+      $('conditionBox').style.display = isSeq ? '' : 'none';
+      $('propCondition').value = isSeq ? (bo?.conditionExpression?.body || '') : '';
+    }
+
+    function normalizeColor(value, fallback) {
+      return /^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback;
+    }
+
+    async function applyProperties() {
+      if (!selectedElement) return;
+      try {
+        const modeling = modeler.get('modeling');
+        const moddle = modeler.get('moddle');
+        const newId = $('propId').value.trim();
+        const props = { name: $('propName').value };
+        if (newId && newId !== selectedElement.id) props.id = newId;
+        const docText = $('propDoc').value.trim();
+        props.documentation = docText ? [moddle.create('bpmn:Documentation', { text: docText })] : [];
+        modeling.updateProperties(selectedElement, props);
+        if (!isConnection(selectedElement)) {
+          modeling.setColor([selectedElement], { fill: $('fillColor').value, stroke: $('strokeColor').value });
+        } else {
+          modeling.setColor([selectedElement], { stroke: $('strokeColor').value });
+        }
+        toast('속성을 적용했습니다.', 'success');
+      } catch (error) {
+        toast(`속성 적용 실패: ${error.message}`, 'error');
+      }
+    }
+
+    function applyCondition() {
+      if (!selectedElement || typeName(selectedElement) !== 'bpmn:SequenceFlow') return;
+      try {
+        const moddle = modeler.get('moddle');
+        const modeling = modeler.get('modeling');
+        const body = $('propCondition').value.trim();
+        const conditionExpression = body ? moddle.create('bpmn:FormalExpression', { body }) : undefined;
+        modeling.updateProperties(selectedElement, { conditionExpression });
+        toast('조건식을 적용했습니다.', 'success');
+      } catch (error) {
+        toast(`조건식 적용 실패: ${error.message}`, 'error');
+      }
+    }
+
+    function addBadge(kind) {
+      if (!selectedElement || isConnection(selectedElement)) {
+        toast('도형 요소를 선택하세요.', 'warning');
+        return;
+      }
+      const config = {
+        risk: ['검토 필요', 'badge-risk'],
+        done: ['완료', 'badge-done'],
+        info: ['담당: 업무팀', 'badge-info']
+      }[kind];
+      const overlays = modeler.get('overlays');
+      const id = overlays.add(selectedElement, {
+        position: { top: -12, right: -12 },
+        html: `<div class="bpmn-overlay-badge ${config[1]}">${config[0]}</div>`
+      });
+      overlayIds.push(id);
+      addLog('overlay.added', `${selectedElement.id} · ${config[0]}`);
+    }
+
+    function clearAllMarkers() {
+      if (!modeler) return;
+      resetSimulation();
+      const overlays = modeler.get('overlays');
+      overlayIds.forEach(id => { try { overlays.remove(id); } catch (_) {} });
+      overlayIds = [];
+      const canvas = modeler.get('canvas');
+      [...searchHitIds, ...validationMarkerIds].forEach(({ id, marker }) => { try { canvas.removeMarker(id, marker); } catch (_) {} });
+      searchHitIds = [];
+      validationMarkerIds = [];
+    }
+
+    function performSearch() {
+      const term = $('elementSearch').value.trim().toLowerCase();
+      const canvas = modeler.get('canvas');
+      searchHitIds.forEach(({ id, marker }) => { try { canvas.removeMarker(id, marker); } catch (_) {} });
+      searchHitIds = [];
+      refreshElementList(term);
+      if (!term) return;
+      const hits = getDiagramElements().filter(el => displayName(el).toLowerCase().includes(term) || el.id.toLowerCase().includes(term) || typeName(el).toLowerCase().includes(term));
+      hits.forEach(el => {
+        try { canvas.addMarker(el.id, 'search-hit'); searchHitIds.push({ id: el.id, marker: 'search-hit' }); } catch (_) {}
+      });
+      if (hits[0]) focusElement(hits[0].id);
+      toast(`검색 결과 ${hits.length}건`, hits.length ? 'success' : 'warning');
+    }
+
+    function validateModel() {
+      const elements = getDiagramElements();
+      const issues = [];
+      const canvas = modeler.get('canvas');
+      validationMarkerIds.forEach(({ id, marker }) => { try { canvas.removeMarker(id, marker); } catch (_) {} });
+      validationMarkerIds = [];
+
+      const starts = elements.filter(el => typeName(el) === 'bpmn:StartEvent');
+      const ends = elements.filter(el => typeName(el) === 'bpmn:EndEvent');
+      if (!starts.length) issues.push({ level: 'error', text: '시작 이벤트가 없습니다.' });
+      if (!ends.length) issues.push({ level: 'error', text: '종료 이벤트가 없습니다.' });
+
+      elements.forEach(el => {
+        const type = typeName(el);
+        if ((type.includes('Task') || type.includes('Gateway')) && !el.businessObject?.name) {
+          issues.push({ level: 'warning', text: `이름 없는 요소: ${el.id}`, id: el.id });
+        }
+        if (!isConnection(el) && !type.includes('EndEvent') && !type.includes('BoundaryEvent') && !type.includes('Participant') && !type.includes('Lane') && !type.includes('DataObject') && !type.includes('TextAnnotation') && !(el.outgoing?.length)) {
+          issues.push({ level: 'error', text: `후속 연결이 없는 요소: ${displayName(el)}`, id: el.id });
+        }
+        if (type.includes('Gateway') && (el.outgoing?.length || 0) < 2 && (el.incoming?.length || 0) <= 1) {
+          issues.push({ level: 'warning', text: `분기가 2개 미만인 게이트웨이: ${displayName(el)}`, id: el.id });
+        }
+        if (type === 'bpmn:SequenceFlow' && !el.source) {
+          issues.push({ level: 'error', text: `시작점 없는 연결선: ${el.id}`, id: el.id });
+        }
+      });
+
+      issues.filter(i => i.id).forEach(issue => {
+        try { canvas.addMarker(issue.id, 'validation-error'); validationMarkerIds.push({ id: issue.id, marker: 'validation-error' }); } catch (_) {}
+      });
+
+      if (!issues.length) {
+        $('issueList').innerHTML = '<div class="issue-item success"><strong>기본 검사 통과</strong><br>현재 검사 규칙에서 문제가 발견되지 않았습니다.</div>';
+        $('issueCount').textContent = '0건';
+        toast('기본 검사를 통과했습니다.', 'success');
+      } else {
+        $('issueList').innerHTML = issues.map(issue => `<div class="issue-item ${issue.level}" ${issue.id ? `data-id="${escapeHtml(issue.id)}" style="cursor:pointer"` : ''}><strong>${issue.level === 'error' ? '오류' : '주의'}</strong><br>${escapeHtml(issue.text)}</div>`).join('');
+        $('issueCount').textContent = `${issues.length}건`;
+        $('issueList').querySelectorAll('[data-id]').forEach(node => node.addEventListener('click', () => focusElement(node.dataset.id)));
+        toast(`검사 항목 ${issues.length}건을 확인하세요.`, 'warning');
+      }
+      addLog('model.validated', `${issues.length}건`);
+    }
+
+    function updateUndoRedo() {
+      if (!modeler) return;
+      const stack = modeler.get('commandStack');
+      $('undoBtn').disabled = !stack.canUndo();
+      $('redoBtn').disabled = !stack.canRedo();
+    }
+
+    function updateZoomLabel() {
+      if (!modeler) return;
+      const zoom = modeler.get('canvas').zoom();
+      if (Number.isFinite(zoom)) $('zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+    }
+
+    function changeZoom(delta) {
+      const canvas = modeler.get('canvas');
+      const current = canvas.zoom();
+      canvas.zoom(Math.max(.2, Math.min(4, current + delta)));
+    }
+
+    async function getXml() {
+      const result = await modeler.saveXML({ format: true });
+      return result.xml;
+    }
+
+    async function downloadXml() {
+      try { downloadBlob('process.bpmn', await getXml(), 'application/xml'); toast('BPMN XML을 저장했습니다.', 'success'); }
+      catch (error) { toast(error.message, 'error'); }
+    }
+
+    async function downloadSvg() {
+      try {
+        const { svg } = await modeler.saveSVG();
+        downloadBlob('process.svg', svg, 'image/svg+xml');
+        toast('SVG를 저장했습니다.', 'success');
+      } catch (error) { toast(error.message, 'error'); }
+    }
+
+    async function downloadPng() {
+      try {
+        const { svg } = await modeler.saveSVG();
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const image = new Image();
+        image.onload = () => {
+          const scale = 2;
+          const canvas = document.createElement('canvas');
+          const width = image.naturalWidth || image.width || 1600;
+          const height = image.naturalHeight || image.height || 900;
+          canvas.width = Math.max(1, width * scale);
+          canvas.height = Math.max(1, height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.scale(scale, scale);
+          ctx.drawImage(image, 0, 0);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(png => {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(png);
+            a.download = 'process.png';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+          }, 'image/png');
+          toast('PNG를 저장했습니다.', 'success');
+        };
+        image.onerror = () => { URL.revokeObjectURL(url); toast('PNG 변환에 실패했습니다.', 'error'); };
+        image.src = url;
+      } catch (error) { toast(error.message, 'error'); }
+    }
+
+    function downloadBlob(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function openXmlModal() {
+      try {
+        $('xmlEditor').value = await getXml();
+        $('xmlModal').classList.add('open');
+      } catch (error) { toast(error.message, 'error'); }
+    }
+
+    function closeModals() { document.querySelectorAll('.modal-backdrop.open').forEach(el => el.classList.remove('open')); }
+
+    function readFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => importDiagram(String(reader.result), file.name);
+      reader.onerror = () => toast('파일을 읽지 못했습니다.', 'error');
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function getSimulationStart() {
+      const starts = getDiagramElements().filter(el => typeName(el) === 'bpmn:StartEvent' && !el.parent?.businessObject?.$type?.includes('SubProcess'));
+      return starts[0] || getDiagramElements().find(el => typeName(el) === 'bpmn:StartEvent');
+    }
+
+    function startSimulation() {
+      resetSimulation();
+      const start = getSimulationStart();
+      if (!start) { toast('시작 이벤트가 없습니다.', 'warning'); return; }
+      simCurrent = start;
+      simStep = 1;
+      simHistory = [start.id];
+      renderSimulationStep();
+      addLog('simulation.started', start.id);
+    }
+
+    function nextSimulation() {
+      if (!simCurrent) return startSimulation();
+
+      if (isConnection(simCurrent)) {
+        simCurrent = simCurrent.target || null;
+      } else {
+        const outgoing = simCurrent.outgoing || [];
+        if (!outgoing.length) {
+          stopAutoSimulation();
+          $('simState').textContent = `완료 · ${displayName(simCurrent)}`;
+          toast('경로 실행이 완료되었습니다.', 'success');
+          return;
+        }
+        const selected = Math.max(0, Math.min(Number($('simBranch').value) || 0, outgoing.length - 1));
+        simCurrent = outgoing[selected] || outgoing[0];
+      }
+
+      if (!simCurrent) {
+        stopAutoSimulation();
+        $('simState').textContent = '더 이상 이동할 요소가 없습니다.';
+        return;
+      }
+
+      simStep += 1;
+      simHistory.push(simCurrent.id);
+      renderSimulationStep();
+    }
+
+    function renderSimulationStep() {
+      const canvas = modeler.get('canvas');
+      const overlays = modeler.get('overlays');
+      getDiagramElements().forEach(el => { try { canvas.removeMarker(el.id, 'sim-active'); } catch (_) {} });
+
+      const keep = [];
+      overlayIds.forEach(id => {
+        if (String(id).startsWith('sim-')) {
+          try { overlays.remove(String(id).slice(4)); } catch (_) {}
+        } else keep.push(id);
+      });
+      overlayIds = keep;
+
+      if (!simCurrent) return;
+      try { canvas.addMarker(simCurrent.id, 'sim-active'); } catch (_) {}
+      if (!isConnection(simCurrent)) {
+        try {
+          const rawId = overlays.add(simCurrent, { position: { top: -7, left: -7 }, html: '<div class="sim-token"></div>' });
+          overlayIds.push('sim-' + rawId);
+        } catch (_) {}
+      }
+
+      $('simState').textContent = `${simStep}단계 · ${displayName(simCurrent)} · ${humanType(simCurrent)}`;
+      modeler.get('selection').select(simCurrent);
+      updateBranchOptions(simCurrent);
+    }
+
+    function updateBranchOptions(el) {
+      const outgoing = isConnection(el) ? [] : (el?.outgoing || []);
+      $('simBranch').disabled = outgoing.length < 2;
+      if (!outgoing.length) {
+        $('simBranch').innerHTML = '<option value="0">선택 가능한 분기 없음</option>';
+        return;
+      }
+      $('simBranch').innerHTML = outgoing.map((flow, i) => `<option value="${i}">${i + 1}. ${escapeHtml(flow.businessObject?.name || flow.target?.businessObject?.name || flow.id)}</option>`).join('');
+    }
+
+    function autoSimulation() {
+      if (simTimer) { stopAutoSimulation(); return; }
+      if (!simCurrent) startSimulation();
+      $('simAutoBtn').textContent = '자동 실행 중지';
+      simTimer = setInterval(nextSimulation, 900);
+    }
+
+    function stopAutoSimulation() {
+      clearInterval(simTimer);
+      simTimer = null;
+      if ($('simAutoBtn')) $('simAutoBtn').textContent = '자동 실행';
+    }
+
+    function resetSimulation() {
+      stopAutoSimulation();
+      if (modeler) {
+        const canvas = modeler.get('canvas');
+        getDiagramElements().forEach(el => { try { canvas.removeMarker(el.id, 'sim-active'); } catch (_) {} });
+        const overlays = modeler.get('overlays');
+        const keep = [];
+        overlayIds.forEach(id => {
+          if (String(id).startsWith('sim-')) { try { overlays.remove(String(id).slice(4)); } catch (_) {} }
+          else keep.push(id);
+        });
+        overlayIds = keep;
+      }
+      simCurrent = null;
+      simStep = 0;
+      simHistory = [];
+      if ($('simState')) $('simState').textContent = '실행 대기';
+      if ($('simBranch')) {
+        $('simBranch').disabled = true;
+        $('simBranch').innerHTML = '<option value="0">실행을 시작하세요</option>';
+      }
+    }
+
+    function bindUi() {
+      $('newBtn').addEventListener('click', () => importDiagram(EMPTY_XML, '새 다이어그램'));
+      $('loadSampleBtn').addEventListener('click', () => {
+        const key = $('sampleSelect').value;
+        importDiagram(SAMPLE_XML[key], $('sampleSelect').selectedOptions[0].text.replace('예제: ', ''));
+      });
+      $('openBtn').addEventListener('click', () => $('fileInput').click());
+      $('fileInput').addEventListener('change', e => { readFile(e.target.files[0]); e.target.value = ''; });
+      $('undoBtn').addEventListener('click', () => modeler?.get('commandStack').undo());
+      $('redoBtn').addEventListener('click', () => modeler?.get('commandStack').redo());
+      $('deleteBtn').addEventListener('click', () => {
+        const selected = modeler?.get('selection').get() || [];
+        if (selected.length) modeler.get('modeling').removeElements(selected);
+      });
+      $('saveXmlBtn').addEventListener('click', downloadXml);
+      $('saveSvgBtn').addEventListener('click', downloadSvg);
+      $('savePngBtn').addEventListener('click', downloadPng);
+      $('xmlBtn').addEventListener('click', openXmlModal);
+      $('validateBtn').addEventListener('click', validateModel);
+      $('clearMarkersBtn').addEventListener('click', () => { clearAllMarkers(); toast('검색 표시, 검사 표시, 배지를 지웠습니다.'); });
+      $('gridBtn').addEventListener('click', e => {
+        $('canvas').classList.toggle('grid-off');
+        e.target.textContent = $('canvas').classList.contains('grid-off') ? '격자 켜기' : '격자 끄기';
+      });
+      $('lockBtn').addEventListener('click', e => {
+        isLocked = !isLocked;
+        $('canvas').classList.toggle('locked', isLocked);
+        e.target.textContent = isLocked ? '편집 해제' : '편집 잠금';
+        e.target.classList.toggle('active', isLocked);
+        setStatus(isLocked ? '편집을 잠갔습니다.' : '편집 잠금을 해제했습니다.');
+      });
+      $('leftToggleBtn').addEventListener('click', () => toggleSidebar('left'));
+      $('rightToggleBtn').addEventListener('click', () => toggleSidebar('right'));
+      $('zoomInBtn').addEventListener('click', () => changeZoom(.1));
+      $('zoomOutBtn').addEventListener('click', () => changeZoom(-.1));
+      $('fitBtn').addEventListener('click', () => modeler?.get('canvas').zoom('fit-viewport'));
+      $('centerBtn').addEventListener('click', () => selectedElement ? focusElement(selectedElement.id) : modeler?.get('canvas').zoom('fit-viewport'));
+      $('searchBtn').addEventListener('click', performSearch);
+      $('elementSearch').addEventListener('input', e => refreshElementList(e.target.value));
+      $('elementSearch').addEventListener('keydown', e => { if (e.key === 'Enter') performSearch(); });
+      $('applyPropsBtn').addEventListener('click', applyProperties);
+      $('applyConditionBtn').addEventListener('click', applyCondition);
+      $('riskBadgeBtn').addEventListener('click', () => addBadge('risk'));
+      $('doneBadgeBtn').addEventListener('click', () => addBadge('done'));
+      $('infoBadgeBtn').addEventListener('click', () => addBadge('info'));
+      $('simStartBtn').addEventListener('click', startSimulation);
+      $('simNextBtn').addEventListener('click', nextSimulation);
+      $('simAutoBtn').addEventListener('click', autoSimulation);
+      $('simResetBtn').addEventListener('click', resetSimulation);
+      $('clearLogBtn').addEventListener('click', () => { $('logList').innerHTML = ''; logSequence = 0; });
+      $('helpBtn').addEventListener('click', () => $('helpModal').classList.add('open'));
+      document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', closeModals));
+      document.querySelectorAll('.modal-backdrop').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) closeModals(); }));
+      $('applyXmlBtn').addEventListener('click', async () => { await importDiagram($('xmlEditor').value, '편집 XML'); closeModals(); });
+      $('copyXmlBtn').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText($('xmlEditor').value); toast('XML을 클립보드에 복사했습니다.', 'success'); }
+        catch (_) { $('xmlEditor').select(); document.execCommand('copy'); toast('XML을 복사했습니다.', 'success'); }
+      });
+      document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.tab)));
+
+      const shell = $('canvasShell');
+      ['dragenter','dragover'].forEach(name => shell.addEventListener(name, e => { e.preventDefault(); $('dropOverlay').classList.remove('hidden'); }));
+      ['dragleave','drop'].forEach(name => shell.addEventListener(name, e => {
+        e.preventDefault();
+        if (name === 'drop') readFile(e.dataTransfer.files[0]);
+        $('dropOverlay').classList.add('hidden');
+      }));
+      window.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+    }
+
+    function toggleSidebar(side) {
+      const id = side === 'left' ? 'leftSidebar' : 'rightSidebar';
+      const cls = side === 'left' ? 'left-hidden' : 'right-hidden';
+      const button = side === 'left' ? $('leftToggleBtn') : $('rightToggleBtn');
+      $(id).classList.toggle('hidden');
+      $('workspace').classList.toggle(cls);
+      button.classList.toggle('active', !$(id).classList.contains('hidden'));
+      button.setAttribute('aria-pressed', String(!$(id).classList.contains('hidden')));
+      setTimeout(() => modeler?.get('canvas').resized(), 60);
+    }
+
+    function activateTab(name) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === name));
+      document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.toggle('active', panel.id === `tab-${name}`));
+    }
+
+    bindUi();
+    initialize();
+  
+  </script>
+</body>
+</html>
