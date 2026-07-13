@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Vega</title>
+<script src="https://cdn.jsdelivr.net/npm/vega@6.2.0/build/vega.min.js"></script>
+<style>
+  :root {
+    --series-1: #2a78d6;
+    --series-2: #1baf7a;
+    --series-3: #eda100;
+    --accent-red: #e34948;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap {
+    background: #fcfcfb;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+  }
+  .bind-row {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #333;
+  }
+  .bind-row form.vega-bindings {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .info-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 300px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  #vega-tooltip {
+    position: fixed;
+    background: #222;
+    color: #fff;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    pointer-events: none;
+    display: none;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Vega 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Vega</strong>는 시각화를 <strong>순수 JSON 명세</strong>로 기술하는 그래픽 문법입니다.
+    Observable Plot이 JS 함수 호출로 마크를 나열한다면, Vega는 스케일·축·마크·인터랙션까지 차트 전체를
+    하나의 JSON 객체로 표현합니다 — 그 JSON 자체가 저장·전송·비교 가능한 데이터입니다.
+    <ul>
+      <li>차트 전체가 JSON 명세 — <code class="inline">vega.parse(spec)</code>로 파싱해 실행 가능한
+        런타임(dataflow)을 만들고 <code class="inline">View</code>로 렌더링</li>
+      <li><strong>signal</strong> — 슬라이더 같은 HTML 위젯에 바로 연결되는 반응형 변수. 위젯을 조작하면
+        signal 값이 바뀌고, 그 값을 참조하는 모든 데이터·인코딩이 자동으로 다시 계산됨</li>
+      <li>JSON 안에서 선언하는 데이터 변환(aggregate/filter/bin) 파이프라인</li>
+      <li>이벤트 스트림 기반 인터랙션 — click/hover 이벤트로 signal을 갱신해 마크 스타일을 동적으로 제어</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      통계와 무관합니다. Vega(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 순수 JSON 명세로 차트 그리기</h2>
+    <div class="desc">
+      아래 막대 차트는 JS 코드가 그린 게 아니라, 스케일·축·마크가 담긴 JSON 객체 하나를
+      <code class="inline">vega.parse()</code>에 넘긴 것입니다. 이 JSON은 그대로 파일로 저장하거나
+      서버로 전송해도 똑같이 렌더링됩니다.
+    </div>
+    <div class="chart-wrap" id="chart1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const spec = {
+  "$schema": "https://vega.github.io/schema/vega/v6.json",
+  "width": 400, "height": 220, "padding": 5,
+  "data": [{ "name": "table", "values": [
+    { "market": "1위판장", "catch": 320 },
+    { "market": "2위판장", "catch": 210 },
+    { "market": "3위판장", "catch": 450 }
+  ]}],
+  "scales": [
+    { "name": "x", "type": "band", "domain": {"data": "table", "field": "market"}, "range": "width", "padding": 0.2 },
+    { "name": "y", "type": "linear", "domain": {"data": "table", "field": "catch"}, "range": "height", "nice": true }
+  ],
+  "axes": [{ "orient": "bottom", "scale": "x" }, { "orient": "left", "scale": "y" }],
+  "marks": [{
+    "type": "rect", "from": { "data": "table" },
+    "encode": { "enter": {
+      "x": {"scale": "x", "field": "market"}, "width": {"scale": "x", "band": 1},
+      "y": {"scale": "y", "field": "catch"}, "y2": {"scale": "y", "value": 0},
+      "fill": {"value": "#2a78d6"}
+    }}
+  }]
+};
+
+const view = new vega.View(vega.parse(spec), { renderer: 'svg' })
+  .initialize(container)
+  .run();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Signal + HTML 위젯 바인딩</h2>
+    <div class="desc">
+      슬라이더를 움직여보세요. <code class="inline">signal</code>이 슬라이더에 바로 바인딩되어 있어서,
+      값이 바뀌면 <code class="inline">filter</code> 변환식(<code class="inline">datum.price &gt;= threshold</code>)이
+      다시 평가되고 차트가 즉시 갱신됩니다 — 이 시각화에는 별도의 이벤트 리스너 코드가 없습니다.
+    </div>
+    <div class="chart-wrap" id="chart2"></div>
+    <div class="bind-row" id="chart2-bind"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>{
+  "signals": [
+    { "name": "threshold", "value": 0,
+      "bind": { "input": "range", "min": 0, "max": 20000, "step": 500 } }
+  ],
+  "data": [{
+    "name": "table", "values": rawPrices,
+    "transform": [{ "type": "filter", "expr": "datum.price >= threshold" }]
+  }],
+  "marks": [{ "type": "rect", "from": { "data": "table" }, "encode": { ... } }]
+}
+// 슬라이더는 view.initialize(chartEl, bindEl)의 두 번째 인자 위치에 자동 생성됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 데이터 변환 파이프라인 (aggregate)</h2>
+    <div class="desc">
+      개별 위판 거래 25건을 원자료 그대로 넣었습니다. 합계를 미리 계산하지 않고, JSON 안의
+      <code class="inline">aggregate</code> 변환이 위판장별로 묶어서 합산합니다.
+    </div>
+    <div class="chart-wrap" id="chart3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// rawRows: [{ market, catch }, ...] 개별 거래 25건 (합계 미계산)
+{
+  "data": [{
+    "name": "table", "values": rawRows,
+    "transform": [
+      { "type": "aggregate", "groupby": ["market"], "fields": ["catch"], "ops": ["sum"], "as": ["total"] }
+    ]
+  }],
+  "marks": [{ "type": "rect", "from": { "data": "table" },
+    "encode": { "enter": { "y": {"scale": "y", "field": "total"}, ... } } }]
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 이벤트 기반 인터랙션 (hover 툴팁 + click 하이라이트)</h2>
+    <div class="desc">
+      막대에 마우스를 올리면 값이 뜨고, 클릭하면 빨간색으로 강조됩니다. 강조 상태는
+      <code class="inline">signal</code>의 <code class="inline">on</code> 이벤트 스트림으로
+      정의했고, 막대 색상은 그 signal 값을 참조하는 표현식으로 결정됩니다.
+    </div>
+    <div class="chart-wrap" id="chart4"></div>
+    <div class="info-box" id="info4">막대를 클릭해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>{
+  "signals": [{
+    "name": "selected", "value": null,
+    "on": [{ "events": "@bars:click", "update": "datum.market === selected ? null : datum.market" }]
+  }],
+  "marks": [{
+    "name": "bars", "type": "rect", "from": { "data": "table" },
+    "encode": {
+      "update": {
+        "fill": { "signal": "datum.market === selected ? '#e34948' : '#2a78d6'" }
+      }
+    }
+  }]
+}
+
+// hover 툴팁은 Vega가 자동으로 만들어주지 않아서 이벤트로 직접 구현:
+view.addEventListener('mouseover', (event, item) => {
+  if (item?.datum) showTooltip(event, `${item.datum.market}: ${item.datum.catch}kg`);
+});
+view.addEventListener('mouseout', hideTooltip);</pre>
+    </details>
+  </section>
+
+<div id="vega-tooltip"></div>
+
+<script>
+window.__pageErrors = [];
+window.addEventListener('error', (e) => window.__pageErrors.push(e.message));
+
+function main() {
+  // ================= 섹션 1: 기본 JSON 스펙 =================
+  {
+    const spec = {
+      $schema: 'https://vega.github.io/schema/vega/v6.json',
+      width: 400, height: 220, padding: 5,
+      data: [{ name: 'table', values: [
+        { market: '1위판장', catch: 320 },
+        { market: '2위판장', catch: 210 },
+        { market: '3위판장', catch: 450 },
+        { market: '4위판장', catch: 180 },
+      ]}],
+      scales: [
+        { name: 'x', type: 'band', domain: { data: 'table', field: 'market' }, range: 'width', padding: 0.2 },
+        { name: 'y', type: 'linear', domain: { data: 'table', field: 'catch' }, range: 'height', nice: true },
+      ],
+      axes: [{ orient: 'bottom', scale: 'x' }, { orient: 'left', scale: 'y' }],
+      marks: [{
+        type: 'rect', from: { data: 'table' },
+        encode: { enter: {
+          x: { scale: 'x', field: 'market' }, width: { scale: 'x', band: 1 },
+          y: { scale: 'y', field: 'catch' }, y2: { scale: 'y', value: 0 },
+          fill: { value: '#2a78d6' },
+        }},
+      }],
+    };
+    const view = new vega.View(vega.parse(spec), { renderer: 'svg' })
+      .initialize(document.getElementById('chart1'))
+      .hover()
+      .run();
+    window.__chart1View = view;
+  }
+
+  // ================= 섹션 2: signal + 위젯 바인딩 =================
+  {
+    const rawPrices = [];
+    ['고등어', '갈치', '오징어', '전어', '삼치'].forEach((sp, i) => {
+      rawPrices.push({ species: sp, price: 3000 + i * 3500 + Math.random() * 2000 });
+    });
+    const spec = {
+      $schema: 'https://vega.github.io/schema/vega/v6.json',
+      width: 400, height: 220, padding: 5,
+      signals: [
+        { name: 'threshold', value: 0, bind: { input: 'range', min: 0, max: 20000, step: 500, name: '최저 단가(원/kg) ' } },
+      ],
+      data: [{
+        name: 'table', values: rawPrices,
+        transform: [{ type: 'filter', expr: 'datum.price >= threshold' }],
+      }],
+      scales: [
+        { name: 'x', type: 'band', domain: { data: 'table', field: 'species' }, range: 'width', padding: 0.2 },
+        { name: 'y', type: 'linear', domain: [0, 20000], range: 'height', nice: true },
+      ],
+      axes: [{ orient: 'bottom', scale: 'x' }, { orient: 'left', scale: 'y' }],
+      marks: [{
+        type: 'rect', from: { data: 'table' },
+        encode: { enter: {
+          x: { scale: 'x', field: 'species' }, width: { scale: 'x', band: 1 },
+          y: { scale: 'y', field: 'price' }, y2: { scale: 'y', value: 0 },
+          fill: { value: '#1baf7a' },
+        }},
+      }],
+    };
+    const view = new vega.View(vega.parse(spec), { renderer: 'svg' })
+      .initialize(document.getElementById('chart2'), document.getElementById('chart2-bind'))
+      .run();
+    window.__chart2View = view;
+  }
+
+  // ================= 섹션 3: aggregate 변환 =================
+  {
+    const rawRows = [];
+    ['1위판장', '2위판장', '3위판장'].forEach((m) => {
+      for (let i = 0; i < 8; i++) rawRows.push({ market: m, catch: 15 + Math.random() * 70 });
+    });
+    const spec = {
+      $schema: 'https://vega.github.io/schema/vega/v6.json',
+      width: 400, height: 220, padding: 5,
+      data: [{
+        name: 'table', values: rawRows,
+        transform: [{ type: 'aggregate', groupby: ['market'], fields: ['catch'], ops: ['sum'], as: ['total'] }],
+      }],
+      scales: [
+        { name: 'x', type: 'band', domain: { data: 'table', field: 'market' }, range: 'width', padding: 0.2 },
+        { name: 'y', type: 'linear', domain: { data: 'table', field: 'total' }, range: 'height', nice: true },
+      ],
+      axes: [{ orient: 'bottom', scale: 'x' }, { orient: 'left', scale: 'y' }],
+      marks: [{
+        type: 'rect', from: { data: 'table' },
+        encode: { enter: {
+          x: { scale: 'x', field: 'market' }, width: { scale: 'x', band: 1 },
+          y: { scale: 'y', field: 'total' }, y2: { scale: 'y', value: 0 },
+          fill: { value: '#eda100' },
+        }},
+      }],
+    };
+    const view = new vega.View(vega.parse(spec), { renderer: 'svg' })
+      .initialize(document.getElementById('chart3'))
+      .hover()
+      .run();
+    window.__chart3View = view;
+    window.__chart3Aggregated = view.data('table');
+  }
+
+  // ================= 섹션 4: hover 툴팁 + click 하이라이트 =================
+  {
+    const data = [
+      { market: '1위판장', catch: 320 },
+      { market: '2위판장', catch: 210 },
+      { market: '3위판장', catch: 450 },
+      { market: '4위판장', catch: 180 },
+    ];
+    const spec = {
+      $schema: 'https://vega.github.io/schema/vega/v6.json',
+      width: 400, height: 220, padding: 5,
+      signals: [
+        { name: 'selected', value: null, on: [{ events: '@bars:click', update: 'datum.market === selected ? null : datum.market' }] },
+      ],
+      data: [{ name: 'table', values: data }],
+      scales: [
+        { name: 'x', type: 'band', domain: { data: 'table', field: 'market' }, range: 'width', padding: 0.2 },
+        { name: 'y', type: 'linear', domain: { data: 'table', field: 'catch' }, range: 'height', nice: true },
+      ],
+      axes: [{ orient: 'bottom', scale: 'x' }, { orient: 'left', scale: 'y' }],
+      marks: [{
+        name: 'bars', type: 'rect', from: { data: 'table' },
+        encode: {
+          enter: {
+            x: { scale: 'x', field: 'market' }, width: { scale: 'x', band: 1 },
+            y: { scale: 'y', field: 'catch' }, y2: { scale: 'y', value: 0 },
+          },
+          update: { fill: { signal: "datum.market === selected ? '#e34948' : '#2a78d6'" } },
+        },
+      }],
+    };
+    const view = new vega.View(vega.parse(spec), { renderer: 'svg' })
+      .initialize(document.getElementById('chart4'))
+      .hover()
+      .run();
+
+    const tooltipEl = document.getElementById('vega-tooltip');
+    view.addEventListener('mouseover', (event, item) => {
+      if (item && item.datum && item.datum.market) {
+        tooltipEl.textContent = `${item.datum.market}: ${item.datum.catch}kg`;
+        tooltipEl.style.display = 'block';
+        tooltipEl.style.left = event.clientX + 12 + 'px';
+        tooltipEl.style.top = event.clientY + 12 + 'px';
+      }
+    });
+    view.addEventListener('mouseout', () => { tooltipEl.style.display = 'none'; });
+
+    const info4 = document.getElementById('info4');
+    view.addSignalListener('selected', (name, value) => {
+      info4.textContent = value ? `선택됨: ${value}` : '막대를 클릭해보세요.';
+    });
+
+    window.__chart4View = view;
+  }
+
+  window.__ready = true;
+}
+
+try {
+  main();
+} catch (e) {
+  window.__pageErrors.push('main() error: ' + e.message + '\n' + (e.stack || ''));
+  window.__ready = true;
+}
+</script>
+</body>
+</html>
