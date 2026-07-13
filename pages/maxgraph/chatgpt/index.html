@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>mxGraph + draw.io 기능 쇼케이스</title>
+<style>
+:root{
+  --ink:#16233b; --muted:#66758d; --line:#dfe7f1; --panel:#ffffff; --canvas:#f7faff;
+  --nav:#0d1b31; --nav2:#162947; --accent:#2563eb; --accent2:#16a0e6; --good:#16a34a;
+  --warn:#d97706; --danger:#dc2626; --shadow:0 14px 40px rgba(29,52,84,.12);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Pretendard,"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;color:var(--ink);background:#edf3f9;overflow:hidden}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{height:100%;display:grid;grid-template-rows:64px 52px 1fr}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:linear-gradient(100deg,var(--nav),var(--nav2));color:#fff;box-shadow:0 3px 16px rgba(10,27,49,.28);z-index:10}
+.brand{display:flex;align-items:center;gap:11px;min-width:335px}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#38bdf8,#4f46e5);position:relative;box-shadow:0 6px 14px rgba(56,189,248,.28)}
+.brand-mark:before,.brand-mark:after{content:"";position:absolute;border-radius:4px;border:2px solid rgba(255,255,255,.96)}
+.brand-mark:before{left:8px;top:8px;width:8px;height:8px}
+.brand-mark:after{right:7px;bottom:7px;width:9px;height:9px}
+.brand-title{font-size:15px;font-weight:800;letter-spacing:.1px}
+.brand-sub{font-size:11px;color:#b9c8dd;margin-top:3px}
+.top-actions{display:flex;gap:8px;align-items:center}
+.status{font-size:12px;color:#d7e4f7;margin-right:8px;display:flex;align-items:center;gap:7px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.12)}
+.status.ok .status-dot{background:#35c66d;box-shadow:0 0 0 4px rgba(53,198,109,.14)}
+.btn{border:1px solid transparent;border-radius:8px;padding:8px 11px;background:#fff;color:#1b2c47;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn:hover{transform:translateY(-1px)}
+.btn.dark{background:rgba(255,255,255,.11);color:#fff;border-color:rgba(255,255,255,.18)}
+.btn.primary{background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;box-shadow:0 6px 14px rgba(37,99,235,.22)}
+.btn.ghost{background:#fff;border-color:var(--line)}
+.btn.small{padding:6px 8px;border-radius:7px;font-size:11px}
+.toolbar{display:flex;align-items:center;gap:7px;padding:0 14px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;z-index:5}
+.tool-group{display:flex;align-items:center;gap:5px;padding-right:8px;margin-right:1px;border-right:1px solid var(--line)}
+.tool-group:last-child{border-right:0}
+.tool-label{font-size:10px;color:#8290a7;font-weight:800;letter-spacing:.05em;margin:0 3px 0 1px}
+.icon-btn{width:31px;height:31px;border:1px solid transparent;background:#fff;border-radius:7px;color:#40516a;font-size:16px;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.main{min-height:0;display:grid;grid-template-columns:244px minmax(480px,1fr) 288px}
+.sidebar{background:#fff;border-right:1px solid var(--line);overflow:auto;padding:14px 12px 20px}
+.panel-title{font-size:11px;font-weight:900;color:#41516a;letter-spacing:.07em;text-transform:uppercase;margin:3px 2px 10px}
+.template-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.template{min-height:72px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(135deg,#fff,#f6faff);padding:9px;display:flex;flex-direction:column;justify-content:space-between;transition:.15s}
+.template:hover{border-color:#93c5fd;box-shadow:0 5px 14px rgba(37,99,235,.11);transform:translateY(-1px)}
+.template-icon{height:25px;display:flex;align-items:center;gap:4px}
+.mini-box{height:13px;border:2px solid #60a5fa;border-radius:3px;background:#dbeafe}
+.mini-line{height:2px;flex:1;background:#94a3b8}
+.mini-diamond{height:16px;width:16px;border:2px solid #f59e0b;transform:rotate(45deg);margin-left:5px;background:#fef3c7}
+.mini-circle{height:16px;width:16px;border:2px solid #10b981;border-radius:50%;background:#d1fae5}
+.template span{font-size:11px;font-weight:800;color:#4b5d77}
+.palette-section{border-top:1px solid #edf1f7;padding-top:14px;margin-top:3px}
+.shape-list{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.shape{height:48px;border:1px solid var(--line);border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;gap:7px;color:#465871;font-size:11px;font-weight:700;user-select:none}
+.shape:hover{border-color:#60a5fa;background:#eff6ff;color:#1d4ed8}
+.shape-drawing{width:30px;height:20px;border:2px solid #4f8af0;border-radius:4px;background:#dbeafe}
+.shape-drawing.round{border-radius:10px}
+.shape-drawing.ellipse{border-radius:50%}
+.shape-drawing.diamond{width:17px;height:17px;transform:rotate(45deg);border-color:#f59e0b;background:#fef3c7;border-radius:2px}
+.shape-drawing.cylinder{border-radius:50% / 23%;position:relative;background:#e0f2fe;border-color:#0ea5e9}
+.shape-drawing.cylinder:after{content:"";position:absolute;left:-2px;right:-2px;bottom:-2px;height:6px;border:2px solid #0ea5e9;border-top:0;border-radius:0 0 50% 50%}
+.shape-drawing.cloud{border:0;background:#e0f2fe;border-radius:50%;width:27px;height:14px;position:relative}
+.shape-drawing.cloud:before,.shape-drawing.cloud:after{content:"";position:absolute;background:#e0f2fe;border:2px solid #38bdf8;border-radius:50%}
+.shape-drawing.cloud:before{width:14px;height:14px;left:2px;top:-7px}
+.shape-drawing.cloud:after{width:13px;height:13px;right:2px;top:-5px}
+.shape-drawing.actor{border:0;background:none;position:relative;width:26px;height:27px}
+.shape-drawing.actor:before{content:"";position:absolute;left:9px;top:0;width:8px;height:8px;border:2px solid #a855f7;border-radius:50%}
+.shape-drawing.actor:after{content:"";position:absolute;left:12px;top:11px;width:2px;height:13px;background:#a855f7;box-shadow:-7px 5px 0 #a855f7,7px 5px 0 #a855f7}
+.tip{font-size:11px;line-height:1.55;color:#72819a;border-radius:9px;background:#f8fbff;border:1px dashed #cad8eb;padding:10px;margin-top:16px}
+.workspace{min-width:0;min-height:0;display:grid;grid-template-rows:38px 1fr;background:#fff}
+.canvas-header{display:flex;align-items:center;justify-content:space-between;background:#f9fbfe;border-bottom:1px solid var(--line);padding:0 11px}
+.breadcrumb{font-size:12px;font-weight:700;color:#49617f}
+.canvas-actions{display:flex;gap:5px;align-items:center}
+.zoom-box{font-size:11px;color:#516078;font-weight:800;padding:5px 8px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;min-width:54px;text-align:center}
+.canvas-wrap{min-height:0;position:relative;overflow:hidden;background-color:#fbfdff;background-image:radial-gradient(#cbd5e1 1px,transparent 1px);background-size:18px 18px}
+#graph{position:absolute;inset:0;overflow:hidden;cursor:default}
+#outline{position:absolute;right:15px;bottom:15px;width:170px;height:115px;z-index:6;background:#fff;border:1px solid #c8d5e6;border-radius:9px;box-shadow:0 8px 25px rgba(51,68,95,.18);overflow:hidden}
+.outline-label{position:absolute;right:25px;bottom:119px;font-size:10px;font-weight:800;color:#6f8099;background:rgba(255,255,255,.9);border:1px solid #dfe7f1;border-radius:5px;padding:3px 6px;z-index:7}
+.editor{background:#fff;border-left:1px solid var(--line);overflow:auto;padding:14px}
+.section{border-bottom:1px solid #e7edf5;padding-bottom:14px;margin-bottom:15px}
+.section:last-child{border-bottom:0}
+.prop-empty{border-radius:10px;border:1px dashed #cbd5e1;background:#f8fbff;padding:18px 12px;color:#74829a;font-size:12px;line-height:1.6;text-align:center}
+.selection-title{font-weight:900;font-size:14px;margin-bottom:3px;color:#283956}
+.selection-meta{font-size:10px;color:#8190a7}
+.field-label{font-size:10px;font-weight:900;color:#71809a;margin:10px 0 5px;text-transform:uppercase;letter-spacing:.06em}
+.text-input,.select-input,.textarea{width:100%;border:1px solid #dce5f0;border-radius:7px;padding:8px;color:#32455f;background:#fff;font-size:12px;outline:none}
+.text-input:focus,.select-input:focus,.textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(96,165,250,.16)}
+.textarea{resize:vertical;min-height:111px;line-height:1.45;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.color-row{display:flex;gap:7px}
+.color-swatch{width:29px;height:29px;padding:2px;border:1px solid #dce5f0;border-radius:7px;background:#fff;cursor:pointer}
+.color-swatch input{width:100%;height:100%;padding:0;border:0;border-radius:5px;background:none;cursor:pointer}
+.switch{display:flex;align-items:center;justify-content:space-between;margin:9px 0;font-size:12px;color:#56677f}
+.switch input{appearance:none;width:34px;height:19px;border-radius:99px;background:#cbd5e1;position:relative;cursor:pointer;outline:none;transition:.2s}
+.switch input:after{content:"";position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:2px;left:2px;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:.2s}
+.switch input:checked{background:#2563eb}
+.switch input:checked:after{left:17px}
+.action-stack{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.help-list{margin:8px 0 0;padding:0;list-style:none;font-size:11px;color:#6b7c95;line-height:1.9}
+kbd{font-family:inherit;font-size:10px;padding:2px 5px;border:1px solid #d7e1ef;border-bottom-color:#b9c7db;border-radius:4px;background:#f8fafc;color:#5b6c85}
+.modal{position:fixed;inset:0;background:rgba(10,25,46,.56);z-index:50;display:none;align-items:center;justify-content:center;padding:22px}
+.modal.open{display:flex}
+.modal-card{width:min(1280px,96vw);height:min(820px,92vh);display:grid;grid-template-rows:52px 1fr;background:#fff;border-radius:13px;box-shadow:0 24px 80px rgba(4,18,39,.38);overflow:hidden}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid #e4ebf4;background:#f8fbff}
+.modal-title{font-size:14px;font-weight:900}
+.modal-caption{font-size:11px;color:#6d7d94;margin-top:3px}
+#drawioFrame{border:0;width:100%;height:100%;background:#fff}
+.toast{position:fixed;left:50%;bottom:25px;transform:translate(-50%,18px);background:#172a46;color:#fff;padding:10px 15px;border-radius:8px;font-size:12px;font-weight:700;box-shadow:0 9px 22px rgba(20,36,61,.22);opacity:0;pointer-events:none;transition:.2s;z-index:99}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.hidden{display:none!important}
+@media(max-width:1050px){.main{grid-template-columns:214px minmax(380px,1fr)}.editor{display:none}.brand{min-width:auto}.brand-sub{display:none}}
+@media(max-width:720px){.main{grid-template-columns:1fr}.sidebar{display:none}.topbar{padding:0 10px}.brand-title{font-size:13px}.top-actions .status,.top-actions .btn.dark{display:none}.toolbar{padding:0 7px}.tool-label{display:none}#outline,.outline-label{display:none}}
+</style>
+<script>
+  // mxGraph full client is delivered from CDN. For offline use, replace this URL with a local mxClient.min.js file.
+  window.mxBasePath = 'https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/src';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/mxClient.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-title">mxGraph + draw.io 기능 쇼케이스</div>
+        <div class="brand-sub">다이어그램 편집 · 레이아웃 · XML · SVG/PNG · draw.io 임베드</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div id="libStatus" class="status"><span class="status-dot"></span><span>mxGraph 불러오는 중</span></div>
+      <button class="btn dark" id="btnXmlTop">XML 보기</button>
+      <button class="btn primary" id="btnDrawio">draw.io 고급 편집기</button>
+    </div>
+  </header>
+
+  <nav class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">편집</span>
+      <button class="icon-btn" title="새 다이어그램" id="btnNew">✧</button>
+      <button class="icon-btn" title="실행 취소 (Ctrl+Z)" id="btnUndo">↶</button>
+      <button class="icon-btn" title="다시 실행 (Ctrl+Y)" id="btnRedo">↷</button>
+      <button class="icon-btn" title="복제 (Ctrl+D)" id="btnDuplicate">⧉</button>
+      <button class="icon-btn" title="삭제 (Delete)" id="btnDelete">⌫</button>
+    </div>
+    <div class="tool-group">
+      <span class="tool-label">정렬</span>
+      <button class="icon-btn" title="계층형 자동 배치" data-layout="hierarchical">≋</button>
+      <button class="icon-btn" title="원형 자동 배치" data-layout="circle">◌</button>
+      <button class="icon-btn" title="유기적 자동 배치" data-layout="organic">✺</button>
+      <button class="icon-btn" title="선택 항목 가로 정렬" data-align="left">⇤</button>
+      <button class="icon-btn" title="선택 항목 세로 정렬" data-align="top">⇧</button>
+    </div>
+    <div class="tool-group">
+      <span class="tool-label">구조</span>
+      <button class="icon-btn" title="그룹화 (Ctrl+G)" id="btnGroup">▣</button>
+      <button class="icon-btn" title="그룹 해제 (Ctrl+Shift+G)" id="btnUngroup">▤</button>
+      <button class="icon-btn" title="맨 앞으로" id="btnFront">⇡</button>
+      <button class="icon-btn" title="맨 뒤로" id="btnBack">⇣</button>
+    </div>
+    <div class="tool-group">
+      <span class="tool-label">보기</span>
+      <button class="icon-btn" title="확대" id="btnZoomIn">＋</button>
+      <button class="icon-btn" title="축소" id="btnZoomOut">−</button>
+      <button class="icon-btn" title="전체 맞춤" id="btnFit">⛶</button>
+      <button class="icon-btn" title="그리드 켜기/끄기" id="btnGrid">⌗</button>
+    </div>
+    <div class="tool-group">
+      <span class="tool-label">파일</span>
+      <button class="btn small ghost" id="btnLoad">XML 열기</button>
+      <button class="btn small ghost" id="btnSaveXml">.drawio 저장</button>
+      <button class="btn small ghost" id="btnSvg">SVG</button>
+      <button class="btn small ghost" id="btnPng">PNG</button>
+      <input type="file" id="fileInput" accept=".xml,.drawio,.txt" class="hidden">
+    </div>
+  </nav>
+
+  <main class="main">
+    <aside class="sidebar">
+      <div class="panel-title">예제 템플릿</div>
+      <div class="template-grid">
+        <button class="template" data-template="flow">
+          <div class="template-icon"><i class="mini-box"></i><i class="mini-line"></i><i class="mini-diamond"></i></div><span>업무 프로세스</span>
+        </button>
+        <button class="template" data-template="swimlane">
+          <div class="template-icon"><i class="mini-box" style="height:23px;width:35px"></i><i class="mini-box" style="height:23px;width:20px"></i></div><span>스윔레인</span>
+        </button>
+        <button class="template" data-template="org">
+          <div class="template-icon"><i class="mini-box"></i><i class="mini-line"></i><i class="mini-box"></i></div><span>조직도</span>
+        </button>
+        <button class="template" data-template="network">
+          <div class="template-icon"><i class="mini-circle"></i><i class="mini-line"></i><i class="mini-circle"></i></div><span>네트워크</span>
+        </button>
+        <button class="template" data-template="erd">
+          <div class="template-icon"><i class="mini-box" style="height:26px"></i><i class="mini-line"></i><i class="mini-box" style="height:26px"></i></div><span>ERD</span>
+        </button>
+        <button class="template" data-template="mind">
+          <div class="template-icon"><i class="mini-circle"></i><i class="mini-line"></i><i class="mini-box"></i></div><span>마인드맵</span>
+        </button>
+      </div>
+
+      <div class="palette-section">
+        <div class="panel-title">도형 팔레트 · 클릭 후 캔버스</div>
+        <div class="shape-list">
+          <button class="shape" data-shape="rect"><i class="shape-drawing"></i>프로세스</button>
+          <button class="shape" data-shape="rounded"><i class="shape-drawing round"></i>둥근 상자</button>
+          <button class="shape" data-shape="ellipse"><i class="shape-drawing ellipse"></i>시작/종료</button>
+          <button class="shape" data-shape="rhombus"><i class="shape-drawing diamond"></i>조건</button>
+          <button class="shape" data-shape="cylinder"><i class="shape-drawing cylinder"></i>데이터</button>
+          <button class="shape" data-shape="cloud"><i class="shape-drawing cloud"></i>클라우드</button>
+          <button class="shape" data-shape="actor"><i class="shape-drawing actor"></i>사용자</button>
+          <button class="shape" data-shape="document"><i class="shape-drawing"></i>문서</button>
+        </div>
+      </div>
+      <div class="tip">
+        <b>조작 팁</b><br>
+        도형 클릭 → 캔버스 클릭으로 추가<br>
+        도형 위로 마우스를 올려 연결 핸들을 드래그<br>
+        빈 공간 드래그로 다중 선택 · 더블클릭으로 텍스트 편집
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <div class="canvas-header">
+        <div class="breadcrumb">캔버스 <span style="color:#9aabc0">/</span> mxGraph 편집기</div>
+        <div class="canvas-actions">
+          <button class="btn small ghost" id="btnCenter">중앙 정렬</button>
+          <button class="btn small ghost" id="btnXml">XML 패널</button>
+          <div class="zoom-box" id="zoomLabel">100%</div>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <div id="graph"></div>
+        <div class="outline-label">미니맵</div>
+        <div id="outline"></div>
+      </div>
+    </section>
+
+    <aside class="editor">
+      <div class="section">
+        <div class="panel-title">선택 항목</div>
+        <div id="selectionInfo" class="prop-empty">도형 또는 연결선을 선택하면<br>스타일과 속성을 조정할 수 있다.</div>
+        <div id="properties" class="hidden">
+          <div class="selection-title" id="selectionTitle">선택한 도형</div>
+          <div class="selection-meta" id="selectionMeta">vertex · id: -</div>
+          <div class="field-label">텍스트</div>
+          <input id="labelInput" class="text-input" placeholder="라벨 입력">
+          <div class="field-row">
+            <div><div class="field-label">채우기</div><div class="color-row"><label class="color-swatch"><input id="fillColor" type="color" value="#dbeafe"></label><input id="fillHex" class="text-input" value="#dbeafe"></div></div>
+            <div><div class="field-label">테두리</div><div class="color-row"><label class="color-swatch"><input id="strokeColor" type="color" value="#2563eb"></label><input id="strokeHex" class="text-input" value="#2563eb"></div></div>
+          </div>
+          <div class="field-row">
+            <div><div class="field-label">글자 크기</div><select id="fontSize" class="select-input"><option>11</option><option>12</option><option selected>13</option><option>14</option><option>16</option><option>18</option><option>22</option></select></div>
+            <div><div class="field-label">선 유형</div><select id="edgeStyle" class="select-input"><option value="orthogonalEdgeStyle">직각 연결</option><option value="none">직선</option><option value="elbowEdgeStyle">팔꿈치</option><option value="entityRelationEdgeStyle">ERD</option></select></div>
+          </div>
+          <label class="switch"><span>둥근 모서리</span><input id="rounded" type="checkbox"></label>
+          <label class="switch"><span>그림자</span><input id="shadow" type="checkbox"></label>
+          <label class="switch"><span>점선</span><input id="dashed" type="checkbox"></label>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="panel-title">XML · 파일 교환</div>
+        <textarea id="xmlText" class="textarea" spellcheck="false"></textarea>
+        <div class="action-stack" style="margin-top:8px">
+          <button class="btn small ghost" id="btnRefreshXml">캔버스 → XML</button>
+          <button class="btn small primary" id="btnApplyXml">XML → 캔버스</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="panel-title">빠른 기능</div>
+        <div class="action-stack">
+          <button class="btn small ghost" id="btnAddNote">메모 추가</button>
+          <button class="btn small ghost" id="btnConnect">자동 연결</button>
+          <button class="btn small ghost" id="btnFold">접기/펼치기</button>
+          <button class="btn small ghost" id="btnToggleLabels">라벨 표시</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="panel-title">단축키</div>
+        <ul class="help-list">
+          <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> 실행 취소</li>
+          <li><kbd>Ctrl</kbd> + <kbd>D</kbd> 선택 복제</li>
+          <li><kbd>Ctrl</kbd> + <kbd>G</kbd> 그룹화</li>
+          <li><kbd>Delete</kbd> 선택 삭제</li>
+          <li><kbd>Ctrl</kbd> + 마우스휠 확대/축소</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="modal" id="drawioModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">draw.io 고급 편집기</div>
+        <div class="modal-caption">저장(Save) 시 현재 XML을 이 페이지의 mxGraph 캔버스에 반영</div>
+      </div>
+      <button class="btn ghost" id="btnCloseDrawio">닫기</button>
+    </div>
+    <iframe id="drawioFrame" title="draw.io embedded editor"></iframe>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const graphNode = $('graph');
+  const libStatus = $('libStatus');
+  const toast = (message) => {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  };
+  const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const download = (filename, content, type='text/plain;charset=utf-8') => {
+    const blob = content instanceof Blob ? content : new Blob([content], {type});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  if (!window.mxGraph) {
+    libStatus.classList.remove('ok');
+    libStatus.innerHTML = '<span class="status-dot"></span><span>mxGraph 로딩 실패 · 인터넷/CDN 확인</span>';
+    graphNode.innerHTML = '<div style="padding:34px;font-size:14px;color:#a33">mxGraph 라이브러리를 불러오지 못했다.<br><br><b>점검:</b> 인터넷 연결 또는 CDN 접근 허용 여부<br><br>오프라인 배포 시 <code>mxClient.min.js</code>를 이 HTML과 같은 폴더에 저장하고 script 주소를 로컬 파일명으로 바꿔야 한다.</div>';
+    return;
+  }
+
+  libStatus.classList.add('ok');
+  libStatus.innerHTML = '<span class="status-dot"></span><span>mxGraph 4.2.2 준비됨</span>';
+
+  mxEvent.disableContextMenu(graphNode);
+  const graph = new mxGraph(graphNode);
+  graph.setConnectable(true);
+  graph.setMultigraph(false);
+  graph.setAllowDanglingEdges(false);
+  graph.setCellsResizable(true);
+  graph.setCellsEditable(true);
+  graph.setCellsMovable(true);
+  graph.setCellsCloneable(true);
+  graph.setPanning(true);
+  graph.panningHandler.useLeftButtonForPanning = false;
+  graph.setTooltips(true);
+  graph.setHtmlLabels(true);
+  graph.setGridEnabled(true);
+  graph.gridSize = 10;
+  graph.setDropEnabled(true);
+  graph.setCellsDisconnectable(true);
+  graph.setPortsEnabled(true);
+  graph.setAllowLoops(true);
+  graph.alternateEdgeStyle = 'elbow=vertical';
+  new mxRubberband(graph);
+  const keyHandler = new mxKeyHandler(graph);
+  keyHandler.bindKey(46, () => graph.removeCells());
+  keyHandler.bindControlKey(68, () => duplicateCells());
+  keyHandler.bindControlKey(71, () => groupCells());
+  keyHandler.bindControlShiftKey(71, () => ungroupCells());
+
+  const undoManager = new mxUndoManager();
+  const listener = (sender, evt) => undoManager.undoableEditHappened(evt.getProperty('edit'));
+  graph.getModel().addListener(mxEvent.UNDO, listener);
+  graph.getView().addListener(mxEvent.UNDO, listener);
+
+  // Edge defaults: orthogonal routing, end arrow, selected text contrast
+  const style = graph.getStylesheet().getDefaultEdgeStyle();
+  style[mxConstants.STYLE_EDGE] = mxEdgeStyle.OrthConnector;
+  style[mxConstants.STYLE_ROUNDED] = true;
+  style[mxConstants.STYLE_ENDARROW] = mxConstants.ARROW_CLASSIC;
+  style[mxConstants.STYLE_STROKECOLOR] = '#5b728f';
+  style[mxConstants.STYLE_FONTCOLOR] = '#465a72';
+  style[mxConstants.STYLE_FONTSTYLE] = mxConstants.FONT_BOLD;
+  style[mxConstants.STYLE_LABEL_BACKGROUNDCOLOR] = '#ffffff';
+
+  const SHAPE_STYLES = {
+    rect: 'rounded=0;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#2563eb;fontColor=#16345b;fontSize=13;fontStyle=1;spacing=7;',
+    rounded: 'rounded=1;arcSize=16;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontColor=#164e63;fontSize=13;fontStyle=1;spacing=7;',
+    ellipse: 'shape=ellipse;whiteSpace=wrap;html=1;fillColor=#dcfce7;strokeColor=#16a34a;fontColor=#14532d;fontSize=13;fontStyle=1;spacing=7;',
+    rhombus: 'shape=rhombus;whiteSpace=wrap;html=1;fillColor=#fef3c7;strokeColor=#d97706;fontColor=#78350f;fontSize=13;fontStyle=1;spacing=7;',
+    cylinder: 'shape=cylinder;whiteSpace=wrap;html=1;fillColor=#ede9fe;strokeColor=#7c3aed;fontColor=#4c1d95;fontSize=13;fontStyle=1;spacing=7;',
+    cloud: 'shape=cloud;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0ea5e9;fontColor=#0c4a6e;fontSize=13;fontStyle=1;spacing=7;',
+    actor: 'shape=actor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fillColor=#fce7f3;strokeColor=#db2777;fontColor=#831843;fontSize=13;fontStyle=1;',
+    document: 'shape=document;whiteSpace=wrap;html=1;fillColor=#fef2f2;strokeColor=#ef4444;fontColor=#7f1d1d;fontSize=13;fontStyle=1;spacing=7;',
+    note: 'shape=note;whiteSpace=wrap;html=1;fillColor=#fef9c3;strokeColor=#ca8a04;fontColor=#713f12;fontSize=12;spacing=8;'
+  };
+
+  let outline;
+  try {
+    outline = new mxOutline(graph, $('outline'));
+    outline.border = 9;
+  } catch (err) {
+    $('outline').style.display='none';
+    document.querySelector('.outline-label').style.display='none';
+  }
+
+  let pendingShape = null;
+  let labelsVisible = true;
+
+  function beginUpdate(fn) {
+    const model = graph.getModel();
+    model.beginUpdate();
+    try { fn(); } finally { model.endUpdate(); }
+  }
+
+  function clearGraph() {
+    const parent = graph.getDefaultParent();
+    beginUpdate(() => graph.removeCells(graph.getChildCells(parent, true, true)));
+  }
+
+  function v(parent, label, x, y, w, h, styleKey='rect') {
+    return graph.insertVertex(parent, null, label, x, y, w, h, SHAPE_STYLES[styleKey] || SHAPE_STYLES.rect);
+  }
+  function e(parent, label, source, target, extra='') {
+    return graph.insertEdge(parent, null, label || '', source, target, 'edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#5b728f;fontColor=#475569;fontSize=11;labelBackgroundColor=#ffffff;' + extra);
+  }
+
+  function buildFlow() {
+    clearGraph();
+    const p = graph.getDefaultParent();
+    beginUpdate(() => {
+      const start=v(p,'<b>시작</b>',80,180,100,42,'ellipse');
+      const input=v(p,'요청 접수',240,180,130,52,'rounded');
+      const decision=v(p,'조건 확인?',440,165,110,82,'rhombus');
+      const yes=v(p,'승인 처리',620,110,130,52,'rect');
+      const no=v(p,'보완 요청',620,265,130,52,'document');
+      const end=v(p,'<b>종료</b>',820,180,100,42,'ellipse');
+      e(p,'',start,input);e(p,'',input,decision);e(p,'예',decision,yes);e(p,'아니오',decision,no);e(p,'',yes,end);e(p,'재검토',no,input,'dashed=1;');
+      const note=v(p,'<b>기능 예시</b><br>연결선 라벨 · 조건 분기 · 재연결',385,360,220,64,'note');
+      e(p,'',note,decision,'dashed=1;endArrow=open;');
+    });
+    fit();
+  }
+  function buildSwimlane() {
+    clearGraph(); const p=graph.getDefaultParent();
+    beginUpdate(() => {
+      const lane1=graph.insertVertex(p,null,'<b>고객</b>',55,65,930,150,'shape=swimlane;horizontal=0;startSize=92;fillColor=#eff6ff;swimlaneFillColor=#ffffff;strokeColor=#60a5fa;fontColor=#1d4ed8;fontStyle=1;html=1;');
+      const lane2=graph.insertVertex(p,null,'<b>담당자</b>',55,215,930,150,'shape=swimlane;horizontal=0;startSize=92;fillColor=#f0fdf4;swimlaneFillColor=#ffffff;strokeColor=#4ade80;fontColor=#15803d;fontStyle=1;html=1;');
+      const lane3=graph.insertVertex(p,null,'<b>시스템</b>',55,365,930,150,'shape=swimlane;horizontal=0;startSize=92;fillColor=#faf5ff;swimlaneFillColor=#ffffff;strokeColor=#c084fc;fontColor=#7e22ce;fontStyle=1;html=1;');
+      const a=v(lane1,'신청서 작성',45,45,125,45,'rounded');
+      const b=v(lane2,'내용 검토',250,45,125,45,'rect');
+      const c=v(lane2,'보완 필요?',460,28,100,78,'rhombus');
+      const d=v(lane3,'접수 등록',660,45,125,45,'cylinder');
+      const f=v(lane1,'보완 제출',450,45,125,45,'document');
+      e(p,'',a,b);e(p,'',b,c);e(p,'아니오',c,d);e(p,'예',c,f);e(p,'',f,b,'dashed=1;');
+    });
+    fit();
+  }
+  function buildOrg() {
+    clearGraph(); const p=graph.getDefaultParent();
+    beginUpdate(() => {
+      const ceo=v(p,'<b>대표</b><br><span style="font-size:10px">전략 총괄</span>',420,60,150,62,'rounded');
+      const a=v(p,'운영본부',140,200,145,55,'rect');
+      const b=v(p,'기획본부',425,200,145,55,'rect');
+      const c=v(p,'기술본부',710,200,145,55,'rect');
+      const a1=v(p,'고객지원팀',70,345,130,50,'rounded');
+      const a2=v(p,'품질관리팀',225,345,130,50,'rounded');
+      const b1=v(p,'사업기획팀',355,345,130,50,'rounded');
+      const b2=v(p,'재무관리팀',510,345,130,50,'rounded');
+      const c1=v(p,'플랫폼팀',640,345,130,50,'rounded');
+      const c2=v(p,'데이터팀',795,345,130,50,'rounded');
+      [[ceo,a],[ceo,b],[ceo,c],[a,a1],[a,a2],[b,b1],[b,b2],[c,c1],[c,c2]].forEach(x=>e(p,'',x[0],x[1],'endArrow=none;'));
+    }); fit();
+  }
+  function buildNetwork() {
+    clearGraph(); const p=graph.getDefaultParent();
+    beginUpdate(() => {
+      const cloud=v(p,'인터넷',420,45,150,72,'cloud');
+      const fw=v(p,'방화벽',440,180,110,52,'rhombus');
+      const core=v(p,'Core Switch',430,290,130,54,'rounded');
+      const s1=v(p,'업무 서버',130,430,130,58,'cylinder');
+      const s2=v(p,'DB 서버',405,430,130,58,'cylinder');
+      const s3=v(p,'파일 서버',680,430,130,58,'cylinder');
+      const user1=v(p,'사용자 A',70,225,80,85,'actor');
+      const user2=v(p,'사용자 B',810,225,80,85,'actor');
+      [[cloud,fw],[fw,core],[core,s1],[core,s2],[core,s3],[user1,fw],[user2,fw]].forEach(x=>e(p,'',x[0],x[1]));
+    }); fit();
+  }
+  function buildErd() {
+    clearGraph(); const p=graph.getDefaultParent();
+    beginUpdate(() => {
+      const customer=v(p,'<b>Customer</b><br>PK customer_id<br>name<br>email',100,150,180,120,'rect');
+      const order=v(p,'<b>Order</b><br>PK order_id<br>FK customer_id<br>ordered_at',420,140,180,130,'rect');
+      const item=v(p,'<b>OrderItem</b><br>PK item_id<br>FK order_id<br>product_id<br>qty',745,135,185,145,'rect');
+      e(p,'1',customer,order,'edgeStyle=entityRelationEdgeStyle;endArrow=ERone;startArrow=ERmandOne;');
+      e(p,'N',order,item,'edgeStyle=entityRelationEdgeStyle;endArrow=ERmany;startArrow=ERmandOne;');
+      const product=v(p,'<b>Product</b><br>PK product_id<br>name<br>price',745,365,185,110,'rect');
+      e(p,'N:1',item,product,'edgeStyle=entityRelationEdgeStyle;endArrow=ERone;startArrow=ERmany;');
+    }); fit();
+  }
+  function buildMind() {
+    clearGraph(); const p=graph.getDefaultParent();
+    beginUpdate(() => {
+      const root=v(p,'<b>프로젝트</b>',425,245,160,64,'ellipse');
+      const n1=v(p,'목표',130,95,130,52,'rounded');
+      const n2=v(p,'일정',720,95,130,52,'rounded');
+      const n3=v(p,'예산',130,400,130,52,'rounded');
+      const n4=v(p,'리스크',720,400,130,52,'rounded');
+      const n5=v(p,'성과',430,455,145,52,'rounded');
+      const d1=v(p,'핵심 지표',35,35,115,42,'rect');
+      const d2=v(p,'마일스톤',855,35,115,42,'rect');
+      const d3=v(p,'대응계획',855,470,115,42,'rect');
+      [[root,n1],[root,n2],[root,n3],[root,n4],[root,n5],[n1,d1],[n2,d2],[n4,d3]].forEach(x=>e(p,'',x[0],x[1],'edgeStyle=none;endArrow=none;strokeWidth=2;'));
+    }); fit();
+  }
+
+  function fit() { setTimeout(() => { graph.fit(24); updateZoom(); refreshXml(); }, 40); }
+  function centerGraph() {
+    const b=graph.getGraphBounds(), c=graph.container;
+    const dx=(c.clientWidth/graph.view.scale-b.width)/2-b.x;
+    const dy=(c.clientHeight/graph.view.scale-b.height)/2-b.y;
+    graph.view.setTranslate(Math.max(10,dx),Math.max(10,dy)); graph.refresh(); updateZoom();
+  }
+  function updateZoom(){ $('zoomLabel').textContent = Math.round(graph.getView().scale*100)+'%'; }
+  function refreshXml(){ try{$('xmlText').value=exportXml();}catch(e){} }
+  function exportXml(){
+    const enc=new mxCodec(); const node=enc.encode(graph.getModel()); return mxUtils.getXml(node);
+  }
+  function importXml(xml) {
+    try {
+      xml=String(xml).trim();
+      // draw.io sometimes supplies an mxfile wrapper. Read the first diagram payload if it exists.
+      if (xml.startsWith('<mxfile')) {
+        const doc=mxUtils.parseXml(xml);
+        const diag=doc.getElementsByTagName('diagram')[0];
+        if (diag && diag.textContent.trim().startsWith('<mxGraphModel')) xml=diag.textContent.trim();
+      }
+      const doc=mxUtils.parseXml(xml);
+      const codec=new mxCodec(doc);
+      const node=doc.documentElement;
+      if (node.nodeName !== 'mxGraphModel') throw new Error('mxGraphModel 형식이 아니다.');
+      codec.decode(node, graph.getModel());
+      graph.refresh(); fit(); toast('XML을 캔버스에 반영했다.');
+    } catch (err) { toast('XML 반영 실패: '+err.message); }
+  }
+
+  function currentCell(){ return graph.getSelectionCell(); }
+  function applyStyle(key, value, cell=currentCell()) {
+    if (!cell) return;
+    graph.setCellStyles(key, value, [cell]); graph.refresh(); refreshXml(); updateInspector();
+  }
+  function updateInspector() {
+    const cell=currentCell();
+    if (!cell) { $('selectionInfo').classList.remove('hidden'); $('properties').classList.add('hidden'); return; }
+    $('selectionInfo').classList.add('hidden'); $('properties').classList.remove('hidden');
+    const model=graph.getModel(), st=graph.getCellStyle(cell);
+    const isEdge=model.isEdge(cell);
+    $('selectionTitle').textContent=(isEdge?'연결선':'도형')+' · '+stripHtml(graph.convertValueToString(cell)||'무제');
+    $('selectionMeta').textContent=(isEdge?'edge':'vertex')+' · id: '+cell.id;
+    $('labelInput').value=stripHtml(graph.convertValueToString(cell)||'');
+    const fill=st.fillColor||'#ffffff', stroke=st.strokeColor||'#64748b';
+    $('fillColor').value=normalizeColor(fill,'#ffffff'); $('fillHex').value=normalizeColor(fill,'#ffffff');
+    $('strokeColor').value=normalizeColor(stroke,'#64748b'); $('strokeHex').value=normalizeColor(stroke,'#64748b');
+    $('fontSize').value=st.fontSize||13;
+    $('edgeStyle').value=st.edgeStyle||'orthogonalEdgeStyle';
+    $('rounded').checked=String(st.rounded)==='1';
+    $('shadow').checked=String(st.shadow)==='1';
+    $('dashed').checked=String(st.dashed)==='1';
+  }
+  function normalizeColor(c, fallback) { return /^#[0-9a-f]{6}$/i.test(c||'')?c:fallback; }
+  function stripHtml(s){ const d=document.createElement('div'); d.innerHTML=s; return d.textContent || d.innerText || ''; }
+
+  function duplicateCells(){
+    const cells=graph.getSelectionCells(); if(!cells.length) return;
+    const clones=graph.cloneCells(cells); graph.moveCells(clones,24,24,true); graph.setSelectionCells(clones); refreshXml(); toast('선택 항목을 복제했다.');
+  }
+  function groupCells(){
+    const cells=graph.getSelectionCells().filter(c=>graph.getModel().isVertex(c));
+    if(cells.length<2) return toast('그룹화할 도형을 2개 이상 선택해줘.');
+    const group=graph.groupCells(null,12,cells); graph.setSelectionCell(group); refreshXml(); toast('선택 항목을 그룹화했다.');
+  }
+  function ungroupCells(){
+    const cells=graph.getSelectionCells(); if(!cells.length) return;
+    graph.ungroupCells(cells); refreshXml(); toast('그룹을 해제했다.');
+  }
+  function applyLayout(type) {
+    const p=graph.getDefaultParent();
+    beginUpdate(() => {
+      let layout;
+      if(type==='hierarchical') layout=new mxHierarchicalLayout(graph,mxConstants.DIRECTION_WEST);
+      if(type==='circle') layout=new mxCircleLayout(graph);
+      if(type==='organic') { layout=new mxFastOrganicLayout(graph); layout.forceConstant=80; layout.minDistanceLimit=60; }
+      if(layout) layout.execute(p);
+    });
+    fit(); toast('자동 배치를 적용했다.');
+  }
+  function addShape(shape,x,y) {
+    const p=graph.getDefaultParent();
+    const labels={rect:'새 프로세스',rounded:'새 항목',ellipse:'시작 / 종료',rhombus:'조건?',cylinder:'데이터',cloud:'클라우드',actor:'사용자',document:'문서'};
+    const dims={rhombus:[110,82],actor:[80,88],cloud:[130,65],ellipse:[120,48],cylinder:[125,58],document:[130,58]};
+    const [w,h]=dims[shape]||[135,54];
+    const cell=v(p,labels[shape]||'새 도형',x-w/2,y-h/2,w,h,shape);
+    graph.setSelectionCell(cell); refreshXml(); return cell;
+  }
+
+  // Click on palette -> next click on canvas creates the selected shape.
+  document.querySelectorAll('[data-shape]').forEach(btn => btn.addEventListener('click', () => {
+    pendingShape=btn.dataset.shape;
+    graphNode.style.cursor='crosshair';
+    toast('캔버스의 위치를 클릭해 도형을 추가해줘.');
+  }));
+  graph.addListener(mxEvent.CLICK, (sender, evt) => {
+    const e=evt.getProperty('event');
+    const cell=evt.getProperty('cell');
+    if(pendingShape && !cell) {
+      const pt=graph.getPointForEvent(e);
+      addShape(pendingShape,pt.x,pt.y);
+      pendingShape=null;graphNode.style.cursor='default';
+      return;
+    }
+    setTimeout(updateInspector,0);
+  });
+  graph.getSelectionModel().addListener(mxEvent.CHANGE, () => setTimeout(updateInspector,0));
+  graph.getModel().addListener(mxEvent.CHANGE, () => setTimeout(refreshXml,60));
+
+  $('labelInput').addEventListener('change', e => {
+    const c=currentCell(); if(!c) return;
+    graph.getModel().setValue(c,escapeHtml(e.target.value)); graph.refresh(); refreshXml(); updateInspector();
+  });
+  [['fillColor','fillColor'],['strokeColor','strokeColor']].forEach(([id,key])=>$(id).addEventListener('input',e=>{applyStyle(key,e.target.value); const hexId=id==='fillColor'?'fillHex':'strokeHex'; $(hexId).value=e.target.value;}));
+  [['fillHex','fillColor'],['strokeHex','strokeColor']].forEach(([id,key])=>$(id).addEventListener('change',e=>applyStyle(key,e.target.value)));
+  $('fontSize').addEventListener('change',e=>applyStyle('fontSize',e.target.value));
+  $('edgeStyle').addEventListener('change',e=>applyStyle('edgeStyle',e.target.value));
+  $('rounded').addEventListener('change',e=>applyStyle('rounded',e.target.checked?'1':'0'));
+  $('shadow').addEventListener('change',e=>applyStyle('shadow',e.target.checked?'1':'0'));
+  $('dashed').addEventListener('change',e=>applyStyle('dashed',e.target.checked?'1':'0'));
+
+  document.querySelectorAll('[data-template]').forEach(btn=>btn.addEventListener('click',()=>{
+    ({flow:buildFlow,swimlane:buildSwimlane,org:buildOrg,network:buildNetwork,erd:buildErd,mind:buildMind}[btn.dataset.template])();
+    toast(btn.textContent.trim()+' 템플릿을 불러왔다.');
+  }));
+  document.querySelectorAll('[data-layout]').forEach(btn=>btn.addEventListener('click',()=>applyLayout(btn.dataset.layout)));
+  document.querySelectorAll('[data-align]').forEach(btn=>btn.addEventListener('click',()=>{
+    const cells=graph.getSelectionCells(); if(cells.length<2) return toast('정렬할 도형을 2개 이상 선택해줘.');
+    graph.alignCells(btn.dataset.align,cells); refreshXml();
+  }));
+
+  $('btnNew').onclick=()=>{clearGraph(); refreshXml(); toast('새 캔버스를 만들었다.');};
+  $('btnUndo').onclick=()=>{undoManager.undo();refreshXml();};
+  $('btnRedo').onclick=()=>{undoManager.redo();refreshXml();};
+  $('btnDuplicate').onclick=duplicateCells;
+  $('btnDelete').onclick=()=>{graph.removeCells();refreshXml();};
+  $('btnGroup').onclick=groupCells; $('btnUngroup').onclick=ungroupCells;
+  $('btnFront').onclick=()=>{graph.orderCells(false);refreshXml();};
+  $('btnBack').onclick=()=>{graph.orderCells(true);refreshXml();};
+  $('btnZoomIn').onclick=()=>{graph.zoomIn();updateZoom();};
+  $('btnZoomOut').onclick=()=>{graph.zoomOut();updateZoom();};
+  $('btnFit').onclick=fit;
+  $('btnCenter').onclick=centerGraph;
+  $('btnGrid').onclick=()=>{graph.setGridEnabled(!graph.isGridEnabled());toast(graph.isGridEnabled()?'그리드를 표시한다.':'그리드를 숨겼다.');};
+  $('btnXml').onclick=()=>{$('xmlText').focus();refreshXml();};
+  $('btnXmlTop').onclick=()=>{$('xmlText').focus();refreshXml();};
+  $('btnRefreshXml').onclick=refreshXml; $('btnApplyXml').onclick=()=>importXml($('xmlText').value);
+  $('btnAddNote').onclick=()=>{const c=addShape('note',260,480);graph.getModel().setValue(c,'<b>메모</b><br>설명 또는 주석');};
+  $('btnConnect').onclick=()=>{const cells=graph.getSelectionCells().filter(c=>graph.getModel().isVertex(c));if(cells.length!==2)return toast('연결할 도형 2개를 선택해줘.');e(graph.getDefaultParent(),'연결',cells[0],cells[1]);refreshXml();};
+  $('btnFold').onclick=()=>{const c=currentCell();if(!c)return;graph.foldCells(!graph.isCellCollapsed(c),false,[c]);};
+  $('btnToggleLabels').onclick=()=>{labelsVisible=!labelsVisible;graph.setLabelsVisible(labelsVisible);toast(labelsVisible?'라벨을 표시한다.':'라벨을 숨겼다.');};
+  $('btnSaveXml').onclick=()=>download('mxgraph-drawio-showcase.drawio',exportXml(),'application/xml;charset=utf-8');
+  $('btnSvg').onclick=()=>exportSvg();
+  $('btnPng').onclick=()=>exportPng();
+  $('btnLoad').onclick=()=>$('fileInput').click();
+  $('fileInput').onchange=(ev)=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importXml(r.result);r.readAsText(f);ev.target.value='';};
+
+  function exportSvg() {
+    const svg=graphNode.querySelector('svg');
+    if(!svg) return toast('SVG 캔버스를 찾지 못했다.');
+    const clone=svg.cloneNode(true);
+    const bounds=graph.getGraphBounds(), scale=graph.view.scale;
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    clone.setAttribute('width',Math.ceil(bounds.width/scale+36));
+    clone.setAttribute('height',Math.ceil(bounds.height/scale+36));
+    clone.setAttribute('viewBox',`${Math.floor(bounds.x/scale-18)} ${Math.floor(bounds.y/scale-18)} ${Math.ceil(bounds.width/scale+36)} ${Math.ceil(bounds.height/scale+36)}`);
+    const content='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(clone);
+    download('mxgraph-diagram.svg',content,'image/svg+xml;charset=utf-8'); toast('SVG 파일을 저장했다.');
+  }
+  function exportPng() {
+    const svg=graphNode.querySelector('svg');
+    if(!svg) return toast('PNG 변환용 SVG를 찾지 못했다.');
+    const clone=svg.cloneNode(true);
+    const bounds=graph.getGraphBounds(), scale=graph.view.scale;
+    const w=Math.ceil(bounds.width/scale+50), h=Math.ceil(bounds.height/scale+50);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg'); clone.setAttribute('width',w); clone.setAttribute('height',h);
+    clone.setAttribute('viewBox',`${Math.floor(bounds.x/scale-25)} ${Math.floor(bounds.y/scale-25)} ${w} ${h}`);
+    const data='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(clone));
+    const img=new Image(); img.onload=()=>{
+      const canvas=document.createElement('canvas'); canvas.width=w*2;canvas.height=h*2;
+      const ctx=canvas.getContext('2d');ctx.scale(2,2);ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      canvas.toBlob(b=>download('mxgraph-diagram.png',b,'image/png')); toast('PNG 파일을 저장했다.');
+    }; img.onerror=()=>toast('PNG 변환에 실패했다. SVG 내보내기를 사용해줘.'); img.src=data;
+  }
+
+  // draw.io embed mode: protocol is JSON postMessage, with init -> load, save -> XML receipt.
+  const drawioOrigin='https://embed.diagrams.net';
+  const modal=$('drawioModal'), frame=$('drawioFrame');
+  function openDrawio(){
+    modal.classList.add('open');
+    frame.src=drawioOrigin+'/?embed=1&proto=json&spin=1&libraries=1&saveAndExit=1&noExitBtn=0&ui=atlas';
+  }
+  function closeDrawio(){modal.classList.remove('open');frame.src='about:blank';}
+  $('btnDrawio').onclick=openDrawio;
+  $('btnCloseDrawio').onclick=closeDrawio;
+  modal.addEventListener('click',e=>{if(e.target===modal)closeDrawio();});
+  window.addEventListener('message',event=>{
+    if(event.origin!==drawioOrigin || event.source!==frame.contentWindow) return;
+    let msg;try{msg=typeof event.data==='string'?JSON.parse(event.data):event.data;}catch{return;}
+    if(msg.event==='init') {
+      frame.contentWindow.postMessage(JSON.stringify({action:'load',xml:exportXml(),title:'mxGraph 기능 쇼케이스',autosave:0,saveAndExit:1}),drawioOrigin);
+    } else if(msg.event==='save') {
+      if(msg.xml) { importXml(msg.xml); toast('draw.io 변경 내용을 반영했다.'); }
+      if(msg.exit) closeDrawio();
+    } else if(msg.event==='exit') {
+      closeDrawio();
+    }
+  });
+
+  graph.addListener(mxEvent.DOUBLE_CLICK,()=>setTimeout(updateInspector,0));
+  buildFlow();
+  window.addEventListener('resize',()=>{if(outline)outline.refresh();});
+})();
+</script>
+</body>
+</html>
