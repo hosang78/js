@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Cal-Heatmap</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .cal-wrap { overflow-x: auto; padding-bottom: 4px; }
+  #legend1 { margin-top: 6px; }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Cal-Heatmap 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Cal-Heatmap</strong>은 GitHub의 커밋 잔디밭처럼, 날짜별 값을 색 농도가 다른 사각형으로
+    캘린더 위에 표시하는 시계열 히트맵 라이브러리입니다. d3.js 위에서 동작하며 날짜 탐색과
+    툴팁·범례 같은 부가 기능을 플러그인으로 붙일 수 있습니다.
+    <ul>
+      <li>월/주/일 단위로 구성되는 <strong>캘린더형 히트맵</strong>, 색상은 값의 크기(단계)를 나타냄</li>
+      <li><code class="inline">previous()</code> / <code class="inline">next()</code> / <code class="inline">jumpTo()</code>로 표시 기간을 이동하는 탐색 기능</li>
+      <li><code class="inline">Tooltip</code> · <code class="inline">Legend</code> 같은 <strong>플러그인 시스템</strong>(필요한 것만 골라 추가)</li>
+      <li><code class="inline">on('click', ...)</code> 이벤트와 <code class="inline">date.highlight</code>로 만드는 <strong>날짜 클릭·강조 표시</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 실적 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. Cal-Heatmap은 내부적으로 d3.js를 필요로 하며, 툴팁
+      플러그인은 위치 계산에 Popper.js를 사용합니다(둘 다 CDN). 그 외 다른 외부 API는 사용하지
+      않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 연간 캘린더 히트맵 + 범례</h2>
+    <div class="desc">
+      최근 1년간 일별 위판 건수를 GitHub 잔디밭과 같은 형태(<code class="inline">subDomain: 'ghDay'</code>)로
+      표시했습니다. 색이 짙을수록 그날 위판 건수가 많았다는 뜻이며, 아래 범례가 색상 단계와 값의
+      대응 관계를 보여줍니다.
+    </div>
+    <div class="cal-wrap"><div id="cal1"></div></div>
+    <div id="legend1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const cal = new CalHeatmap();
+await cal.paint({
+  itemSelector: '#cal1',
+  domain: { type: 'month', label: { text: 'MMM' } },
+  subDomain: { type: 'ghDay', radius: 2, width: 11, height: 11 },
+  range: 12,                                     // 12개월치 표시
+  data: { source: dailyRecords, x: 'date', y: 'value' },
+  scale: {
+    color: {
+      type: 'threshold',
+      domain: [1, 5, 10, 15],                    // 값 구간 경계
+      range: ['#eaf2fc', '#b9d4f5', '#7aa9e8', '#3f7dd0', '#154a8f'],
+    },
+  },
+}, [
+  [Legend, { itemSelector: '#legend1', width: 300, label: '위판량(건)' }],
+]);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 기간 이동 탐색</h2>
+    <div class="desc">
+      기본으로 최근 3개월을 표시하며, 버튼으로 <code class="inline">previous()</code> /
+      <code class="inline">next()</code>를 호출해 한 달씩 이동하거나 <code class="inline">jumpTo()</code>로
+      오늘로 즉시 복귀할 수 있습니다.
+    </div>
+    <div class="controls">
+      <button id="s2-prev">◀ 이전 달</button>
+      <button id="s2-today">오늘로</button>
+      <button id="s2-next">다음 달 ▶</button>
+    </div>
+    <div class="cal-wrap"><div id="cal2"></div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>cal.paint({ itemSelector: '#cal2', domain: { type: 'month' }, range: 3, /* ... */ });
+
+prevBtn.addEventListener('click', () => cal.previous());
+nextBtn.addEventListener('click', () => cal.next());
+todayBtn.addEventListener('click', () => cal.jumpTo(new Date(), true));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Tooltip 플러그인</h2>
+    <div class="desc">
+      최근 4주를 일 단위로 표시했습니다. 각 칸에 마우스를 올리면 Tooltip 플러그인이 날짜와 값을
+      말풍선으로 보여줍니다. 텍스트 형식은 함수로 직접 지정할 수 있습니다.
+    </div>
+    <div class="cal-wrap"><div id="cal3"></div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>cal.paint({ itemSelector: '#cal3', domain: { type: 'week' }, range: 4, /* ... */ }, [
+  [Tooltip, {
+    text: (timestamp, value) =>
+      `${new Date(timestamp).toISOString().slice(0, 10)}: ${value == null ? '데이터 없음' : value + '건'}`,
+  }],
+]);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 클릭 이벤트 + 날짜 하이라이트</h2>
+    <div class="desc">
+      칸을 클릭하면 <code class="inline">on('click', ...)</code> 이벤트로 해당 날짜의 값을 읽어와
+      아래 정보 박스에 표시합니다. 성수기가 시작된 날짜는 <code class="inline">date.highlight</code>로
+      테두리를 둘러 강조했습니다(아래 캘린더에서 네모 테두리가 있는 칸을 찾아보세요).
+    </div>
+    <div class="cal-wrap"><div id="cal4"></div></div>
+    <div class="stat-box" id="s4-info">칸을 클릭해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>cal.paint({
+  itemSelector: '#cal4',
+  domain: { type: 'week' },
+  range: 4,
+  date: { highlight: [peakSeasonStartDate] },     // 강조할 날짜
+  /* ... */
+});
+
+cal.on('click', (event, timestamp, value) => {
+  const dateStr = new Date(timestamp).toISOString().slice(0, 10);
+  infoBox.textContent = `${dateStr} 위판 건수: ${value == null ? '데이터 없음' : value + '건'}`;
+});</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/cal-heatmap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/plugins/Tooltip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cal-heatmap@4.2.4/dist/plugins/Legend.min.js"></script>
+<script>
+const COLOR_SCALE = {
+  type: 'threshold',
+  domain: [1, 5, 10, 15],
+  range: ['#eaf2fc', '#b9d4f5', '#7aa9e8', '#3f7dd0', '#154a8f'],
+};
+
+function genDailyRecords(days, seed) {
+  const out = [];
+  const now = new Date();
+  let s = seed;
+  function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dow = d.getDay();
+    const weekend = dow === 0 || dow === 6;
+    const value = weekend ? 0 : Math.round(rand() * 20);
+    out.push({ date: d.toISOString().slice(0, 10), value });
+  }
+  return out;
+}
+
+const dailyRecords = genDailyRecords(370, 42);
+
+// ---- 섹션 1: 연간 히트맵 + 범례 ----
+(async function section1() {
+  const cal = new CalHeatmap();
+  await cal.paint({
+    itemSelector: '#cal1',
+    domain: { type: 'month', gutter: 4, label: { text: 'MMM', textAlign: 'start' } },
+    subDomain: { type: 'ghDay', radius: 2, width: 11, height: 11, gutter: 4 },
+    date: { start: new Date(new Date().setMonth(new Date().getMonth() - 11)) },
+    range: 12,
+    data: { source: dailyRecords, x: 'date', y: 'value' },
+    scale: { color: COLOR_SCALE },
+  }, [
+    [Legend, { itemSelector: '#legend1', width: 300, label: '위판량(건)' }],
+  ]);
+})();
+
+// ---- 섹션 2: 기간 이동 탐색 ----
+(async function section2() {
+  const cal = new CalHeatmap();
+  await cal.paint({
+    itemSelector: '#cal2',
+    domain: { type: 'month', label: { text: 'YYYY-MM' } },
+    subDomain: { type: 'day', radius: 2, width: 12, height: 12 },
+    date: { start: new Date(new Date().setMonth(new Date().getMonth() - 2)) },
+    range: 3,
+    data: { source: dailyRecords, x: 'date', y: 'value' },
+    scale: { color: COLOR_SCALE },
+  });
+
+  document.getElementById('s2-prev').addEventListener('click', () => cal.previous());
+  document.getElementById('s2-next').addEventListener('click', () => cal.next());
+  document.getElementById('s2-today').addEventListener('click', () => cal.jumpTo(new Date(), true));
+})();
+
+// ---- 섹션 3: Tooltip 플러그인 ----
+(async function section3() {
+  const cal = new CalHeatmap();
+  await cal.paint({
+    itemSelector: '#cal3',
+    domain: { type: 'week', label: { text: 'MMM D' } },
+    subDomain: { type: 'day', radius: 2, width: 14, height: 14 },
+    date: { start: new Date(new Date().setDate(new Date().getDate() - 27)) },
+    range: 4,
+    data: { source: dailyRecords, x: 'date', y: 'value' },
+    scale: { color: COLOR_SCALE },
+  }, [
+    [Tooltip, {
+      text: (timestamp, value) =>
+        `${new Date(timestamp).toISOString().slice(0, 10)}: ${value == null ? '데이터 없음' : value + '건'}`,
+    }],
+  ]);
+})();
+
+// ---- 섹션 4: 클릭 이벤트 + 날짜 하이라이트 ----
+(async function section4() {
+  const peakSeasonStart = new Date(new Date().setDate(new Date().getDate() - 10));
+  const cal = new CalHeatmap();
+  await cal.paint({
+    itemSelector: '#cal4',
+    domain: { type: 'week', label: { text: 'MMM D' } },
+    subDomain: { type: 'day', radius: 2, width: 14, height: 14 },
+    date: {
+      start: new Date(new Date().setDate(new Date().getDate() - 27)),
+      highlight: [peakSeasonStart],
+    },
+    range: 4,
+    data: { source: dailyRecords, x: 'date', y: 'value' },
+    scale: { color: COLOR_SCALE },
+  });
+
+  const infoBox = document.getElementById('s4-info');
+  cal.on('click', (event, timestamp, value) => {
+    const dateStr = new Date(timestamp).toISOString().slice(0, 10);
+    infoBox.innerHTML = `<strong>${dateStr}</strong> 위판 건수: <strong>${value == null ? '데이터 없음' : value + '건'}</strong>`;
+  });
+})();
+</script>
+</body>
+</html>
