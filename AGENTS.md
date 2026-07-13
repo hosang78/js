@@ -57,6 +57,7 @@ pages/<라이브러리-slug>/
 
 ## 브랜치/배포
 
-- Claude는 `claude/nodejs-password-protected-app-phjpp3` 브랜치에서 작업한다. ChatGPT/Codex는 별도 브랜치(예: `chatgpt/...`)를 만들어 작업하고, 서로 다른 파일만 건드리므로 병합 시 충돌이 거의 없다.
-- Render가 배포 대상 브랜치를 보고 자동 배포함 (push하면 몇 분 내 반영)
+- 작업 브랜치: `claude/nodejs-password-protected-app-phjpp3` — Claude와 같은 브랜치를 그대로 쓴다. `pages/<slug>/claude/`와 `pages/<slug>/chatgpt/`는 폴더 자체가 분리되어 있어 같은 브랜치에서 작업해도 파일이 겹치지 않는다.
+- 이 브랜치를 Render가 보고 자동 배포하므로, 같은 브랜치에 push해야 만든 데모가 실제 배포 사이트에 반영된다.
+- push 전에는 항상 최신 원격 내용을 먼저 받아온다(`git pull` 또는 `git fetch && git rebase`) — Claude가 그 사이에 다른 라이브러리 페이지를 커밋했을 수 있음.
 - `.env`는 절대 커밋하지 않음 (비밀번호 해시/세션 시크릿은 로컬 `.env` 또는 Render 환경변수로만 관리)
