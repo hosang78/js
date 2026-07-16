@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Billboard.js 종합 기능 샘플</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/billboard.js/dist/billboard.min.css" />
+  <style>
+    :root{
+      --bg:#f6f8fb; --panel:#ffffff; --ink:#152033; --muted:#6b7280; --line:#e5e7eb;
+      --primary:#2563eb; --primary2:#0f766e; --danger:#dc2626; --warn:#d97706;
+      --shadow: 0 16px 36px rgba(15,23,42,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+    header{padding:34px 22px 22px;background:linear-gradient(135deg,#0f172a,#1e40af 55%,#0f766e);color:white}
+    .wrap{max-width:1420px;margin:0 auto}
+    h1{margin:0;font-size:clamp(28px,4vw,48px);letter-spacing:-.04em}
+    .lead{margin:12px 0 0;max-width:980px;color:#dbeafe;line-height:1.65;font-size:16px}
+    .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+    .badge{border:1px solid rgba(255,255,255,.26);background:rgba(255,255,255,.12);padding:7px 10px;border-radius:999px;font-size:13px;color:#eff6ff}
+    main{padding:20px 18px 48px}
+    .toolbar{position:sticky;top:0;z-index:10;background:rgba(246,248,251,.88);backdrop-filter: blur(10px);border-bottom:1px solid var(--line);padding:12px 0;margin:0 -18px 18px}
+    .toolbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:0 18px}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button,select,input[type="range"]{font:inherit}
+    button{border:0;border-radius:12px;padding:10px 12px;background:#111827;color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(15,23,42,.12)}
+    button.secondary{background:#fff;color:#111827;border:1px solid var(--line)}
+    button.primary{background:var(--primary)}
+    button.teal{background:var(--primary2)}
+    button.warn{background:var(--warn)}
+    button.danger{background:var(--danger)}
+    button:active{transform:translateY(1px)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .card{grid-column:span 6;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;min-width:0}
+    .card.wide{grid-column:span 12}
+    .card.third{grid-column:span 4}
+    .card h2{margin:0 0 6px;font-size:20px;letter-spacing:-.02em}
+    .card p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.55}
+    .chart{min-height:310px}
+    .chart.short{min-height:240px}
+    .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 12px;padding:10px;border-radius:14px;background:#f9fafb;border:1px solid var(--line)}
+    .controls label{font-size:13px;color:#475569;display:flex;align-items:center;gap:6px}
+    .mini{font-size:12px;color:#64748b}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 14px}
+    .kpi{padding:12px;border:1px solid var(--line);border-radius:14px;background:#fbfdff}
+    .kpi b{display:block;font-size:22px;letter-spacing:-.03em}
+    .kpi span{font-size:12px;color:var(--muted)}
+    .code-note{background:#0b1220;color:#cbd5e1;border-radius:14px;padding:14px;overflow:auto;font-size:12px;line-height:1.5}
+    .status{font-size:13px;color:#475569}
+    .bb-tooltip-container{z-index:20}
+    .footer-note{margin-top:18px;color:#64748b;font-size:13px;line-height:1.6}
+    @media(max-width:1100px){.card,.card.third{grid-column:span 12}.kpis{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:620px){header{padding:28px 16px 20px}main{padding:16px 12px 34px}.toolbar{margin:0 -12px 16px}.toolbar .wrap{padding:0 12px}.kpis{grid-template-columns:1fr}.chart{min-height:280px}button{width:100%}.btns{width:100%}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Billboard.js 기능 종합 샘플</h1>
+      <p class="lead">한 파일에서 기본 차트, 혼합 차트, 이중축, 타임시리즈, 줌/서브차트, 리전, 그리드, 스택, 산점도, 파이/도넛, 게이지, 레이더, 데이터 로드/언로드, 차트 타입 전환, 실시간 갱신, 툴팁/범례/라벨 포맷을 확인할 수 있는 데모입니다.</p>
+      <div class="badges">
+        <span class="badge">Line · Bar · Area · Spline · Step</span>
+        <span class="badge">Pie · Donut · Gauge · Radar</span>
+        <span class="badge">Zoom · Subchart · Regions · Grid</span>
+        <span class="badge">load / unload / transform / hide / show</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <div class="wrap">
+        <div class="status" id="loadStatus">Billboard.js 로딩 확인 중...</div>
+        <div class="btns">
+          <button class="primary" onclick="randomizeAll()">전체 데이터 새로고침</button>
+          <button class="secondary" onclick="toggleTheme()">배경 톤 전환</button>
+          <button class="secondary" onclick="resizeAll()">차트 리사이즈</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <section class="card wide">
+        <h2>1. 혼합 차트 · 이중축 · 줌 · 서브차트 · 리전</h2>
+        <p>매출은 막대, 가입자는 라인, 전환율은 y2 축 영역 차트로 표시합니다. 드래그 줌, 하단 서브차트, 특정 구간 강조, x/y 그리드, 툴팁 포맷을 함께 적용했습니다.</p>
+        <div class="kpis">
+          <div class="kpi"><b id="kpiSales">-</b><span>월 매출 합계</span></div>
+          <div class="kpi"><b id="kpiUsers">-</b><span>가입자 합계</span></div>
+          <div class="kpi"><b id="kpiRate">-</b><span>평균 전환율</span></div>
+          <div class="kpi"><b id="kpiPeak">-</b><span>최고 매출 월</span></div>
+        </div>
+        <div class="controls">
+          <button onclick="mainChart.zoom([2, 6])">3~7월 줌</button>
+          <button onclick="mainChart.unzoom()">줌 해제</button>
+          <button onclick="mainChart.hide(['가입자'])">가입자 숨김</button>
+          <button onclick="mainChart.show(['가입자'])">가입자 표시</button>
+          <button onclick="mainChart.transform('line', '매출')">매출 라인 전환</button>
+          <button onclick="mainChart.transform('bar', '매출')">매출 막대 전환</button>
+          <button onclick="addCampaignData()">캠페인 데이터 추가</button>
+          <button class="danger" onclick="mainChart.unload({ids:['캠페인']})">캠페인 제거</button>
+        </div>
+        <div id="mainChart" class="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>2. 타임시리즈 · 커스텀 x축 포맷</h2>
+        <p>날짜 컬럼을 x축으로 사용하고, 라인/스플라인/영역을 섞어 추세를 표현합니다.</p>
+        <div class="controls">
+          <button onclick="timeseriesChart.transform('spline')">스플라인</button>
+          <button onclick="timeseriesChart.transform('area-spline')">영역 스플라인</button>
+          <button onclick="timeseriesChart.transform('line')">라인</button>
+        </div>
+        <div id="timeseriesChart" class="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>3. 스택 막대 · 그룹/누적 비교</h2>
+        <p>data.groups 옵션으로 부문별 값을 누적하고, 버튼으로 그룹을 해제해 비교할 수 있습니다.</p>
+        <div class="controls">
+          <button onclick="stackedChart.groups([['모바일','PC','방문']])">누적</button>
+          <button onclick="stackedChart.groups([])">그룹 해제</button>
+          <button onclick="stackedChart.transform('area')">영역 전환</button>
+          <button onclick="stackedChart.transform('bar')">막대 전환</button>
+        </div>
+        <div id="stackedChart" class="chart"></div>
+      </section>
+
+      <section class="card third">
+        <h2>4. 도넛 · 중앙 타이틀 · 라벨</h2>
+        <p>구성비, 범례, 선택 효과를 확인하는 도넛 차트입니다.</p>
+        <div class="controls">
+          <button onclick="donutChart.focus('공제')">공제 강조</button>
+          <button onclick="donutChart.revert()">강조 해제</button>
+          <button onclick="donutChart.load({columns: randomDonut()})">값 변경</button>
+        </div>
+        <div id="donutChart" class="chart short"></div>
+      </section>
+
+      <section class="card third">
+        <h2>5. 파이 · 클릭 이벤트</h2>
+        <p>클릭 시 하단 상태 문구가 바뀌도록 이벤트를 연결했습니다.</p>
+        <div id="pieChart" class="chart short"></div>
+        <p class="mini" id="pieStatus">파이 조각을 클릭해보세요.</p>
+      </section>
+
+      <section class="card third">
+        <h2>6. 게이지 · 임계값 색상</h2>
+        <p>운영률, 달성률, 위험도 같은 단일 지표에 적합합니다.</p>
+        <div class="controls">
+          <label>값 <input id="gaugeRange" type="range" min="0" max="100" value="62" oninput="updateGauge(this.value)"></label>
+          <span id="gaugeText" class="mini">62%</span>
+        </div>
+        <div id="gaugeChart" class="chart short"></div>
+      </section>
+
+      <section class="card">
+        <h2>7. 산점도 · 회귀선 유사 비교</h2>
+        <p>x축 데이터 컬럼을 별도로 지정해 두 지표의 분포를 비교합니다.</p>
+        <div id="scatterChart" class="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>8. 레이더 · 역량/품질 프로파일</h2>
+        <p>여러 항목의 상대적 강약을 비교하는 레이더 차트입니다.</p>
+        <div class="controls">
+          <button onclick="radarChart.load({columns: randomRadar()})">프로파일 변경</button>
+        </div>
+        <div id="radarChart" class="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>9. 스텝/영역 · 계단형 변화</h2>
+        <p>정책 단계, 요금 구간, 상태값처럼 값이 일정 구간 유지되는 데이터를 표현합니다.</p>
+        <div class="controls">
+          <button onclick="stepChart.transform('step')">Step</button>
+          <button onclick="stepChart.transform('area-step')">Area Step</button>
+          <button onclick="stepChart.transform('bar')">Bar</button>
+        </div>
+        <div id="stepChart" class="chart"></div>
+      </section>
+
+      <section class="card">
+        <h2>10. 실시간 갱신 · load API</h2>
+        <p>setInterval과 chart.load()로 값이 계속 바뀌는 운영 대시보드 느낌을 구현했습니다.</p>
+        <div class="controls">
+          <button class="teal" onclick="startRealtime()">실시간 시작</button>
+          <button class="warn" onclick="stopRealtime()">정지</button>
+          <button onclick="appendRealtimeOnce()">1회 갱신</button>
+        </div>
+        <div id="realtimeChart" class="chart"></div>
+      </section>
+
+      <section class="card wide">
+        <h2>11. 핵심 코드 패턴</h2>
+        <p>Billboard.js는 bb.generate()로 차트를 생성하고, 생성된 chart 객체의 API로 데이터를 로드·숨김·전환·줌 처리합니다.</p>
+        <pre class="code-note"><code>const chart = bb.generate({
+  bindto: '#chart',
+  data: {
+    columns: [['매출', 30, 120, 90], ['가입자', 50, 80, 140]],
+    types: { '매출': 'bar', '가입자': 'line' },
+    axes: { '가입자': 'y2' }
+  },
+  axis: { y2: { show: true } },
+  zoom: { enabled: true },
+  subchart: { show: true }
+});
+
+chart.load({ columns: [['신규', 20, 40, 70]] });
+chart.unload({ ids: ['신규'] });
+chart.transform('area-spline', '가입자');
+chart.hide(['매출']);
+chart.show(['매출']);</code></pre>
+        <p class="footer-note">참고: 이 샘플은 CDN을 사용하므로 인터넷이 연결된 환경에서 바로 실행됩니다. 내부망/폐쇄망에서는 billboard.js CSS/JS 파일을 내려받아 같은 폴더에 두고 링크 경로만 로컬 파일명으로 바꾸면 됩니다.</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/billboard.js/dist/billboard.pkgd.min.js"></script>
+  <script>
+    let mainChart, timeseriesChart, stackedChart, donutChart, pieChart, gaugeChart, scatterChart, radarChart, stepChart, realtimeChart;
+    let realtimeTimer = null;
+    let dark = false;
+
+    const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const money = v => Math.round(v).toLocaleString('ko-KR') + '백만';
+    const pct = v => Number(v).toFixed(1) + '%';
+    const rnd = (min, max) => Math.round(min + Math.random() * (max - min));
+
+    function ensureLoaded(){
+      if(!window.bb){
+        document.getElementById('loadStatus').textContent = 'Billboard.js 로딩 실패: 인터넷 연결 또는 CDN 접근을 확인하세요.';
+        return false;
+      }
+      document.getElementById('loadStatus').textContent = 'Billboard.js 로딩 완료 · 모든 차트 생성됨';
+      return true;
+    }
+
+    function createMain(){
+      const sales = ['매출', 120, 150, 180, 155, 210, 240, 260, 235, 280, 310, 330, 360];
+      const users = ['가입자', 80, 90, 110, 120, 150, 160, 190, 205, 220, 240, 265, 300];
+      const rate = ['전환율', 11, 13, 15, 12, 18, 17, 20, 21, 22, 23, 24, 26];
+      mainChart = bb.generate({
+        bindto: '#mainChart',
+        data: {
+          columns: [sales, users, rate],
+          types: {'매출':'bar', '가입자':'line', '전환율':'area-spline'},
+          axes: {'전환율':'y2'},
+          names: {'매출':'월 매출', '가입자':'신규 가입자', '전환율':'전환율'},
+          labels: {format: { '전환율': v => pct(v) }}
+        },
+        axis: {
+          x: {type:'category', categories: months, tick:{rotate:0, multiline:false}},
+          y: {label:{text:'매출/가입자', position:'outer-middle'}, tick:{format: money}},
+          y2: {show:true, label:{text:'전환율', position:'outer-middle'}, tick:{format: pct}, max: 40, min: 0}
+        },
+        bar: {width: {ratio: .55}},
+        point: {r:4, focus:{expand:{r:7}}},
+        grid: {x:{show:true}, y:{show:true, lines:[{value:250,text:'목표 250'}]}},
+        regions: [{axis:'x', start:4, end:6, class:'region-campaign'}, {axis:'x', start:9, end:11, class:'region-peak'}],
+        tooltip: {format:{title: x => months[x], value: (v, ratio, id) => id === '전환율' ? pct(v) : money(v)}},
+        legend: {position:'right'},
+        zoom: {enabled:true, type:'drag'},
+        subchart: {show:true},
+        transition: {duration:500}
+      });
+      updateKpi(sales, users, rate);
+    }
+
+    function updateKpi(sales, users, rate){
+      const s = sales.slice(1), u = users.slice(1), r = rate.slice(1);
+      const max = Math.max(...s), idx = s.indexOf(max);
+      document.getElementById('kpiSales').textContent = s.reduce((a,b)=>a+b,0).toLocaleString('ko-KR');
+      document.getElementById('kpiUsers').textContent = u.reduce((a,b)=>a+b,0).toLocaleString('ko-KR');
+      document.getElementById('kpiRate').textContent = pct(r.reduce((a,b)=>a+b,0)/r.length);
+      document.getElementById('kpiPeak').textContent = months[idx];
+    }
+
+    function addCampaignData(){
+      mainChart.load({
+        columns: [['캠페인', 0, 0, 30, 40, 55, 70, 62, 44, 30, 20, 10, 0]],
+        type: 'area-step'
+      });
+    }
+
+    function createTimeseries(){
+      timeseriesChart = bb.generate({
+        bindto: '#timeseriesChart',
+        data: {
+          x: 'x',
+          columns: [
+            ['x','2026-01-01','2026-02-01','2026-03-01','2026-04-01','2026-05-01','2026-06-01','2026-07-01','2026-08-01'],
+            ['처리량', 240, 260, 310, 290, 340, 390, 410, 460],
+            ['오류', 35, 20, 28, 18, 17, 12, 14, 9]
+          ],
+          types: {'처리량':'spline', '오류':'area-spline'},
+          axes: {'오류':'y2'}
+        },
+        axis: {
+          x: {type:'timeseries', tick:{format:'%Y-%m'}},
+          y: {label:'처리량'},
+          y2: {show:true, label:'오류 건수'}
+        },
+        grid: {x:{show:true}, y:{show:true}},
+        zoom: {enabled:true},
+        tooltip: {format:{title: x => new Date(x).toLocaleDateString('ko-KR')}}
+      });
+    }
+
+    function createStacked(){
+      stackedChart = bb.generate({
+        bindto: '#stackedChart',
+        data: {
+          columns: [
+            ['모바일', 130, 145, 160, 180, 210, 230],
+            ['PC', 90, 85, 100, 110, 115, 120],
+            ['방문', 45, 55, 60, 58, 62, 70]
+          ],
+          type: 'bar',
+          groups: [['모바일','PC','방문']],
+          labels: true
+        },
+        axis: {x:{type:'category', categories:['1분기','2분기','3분기','4분기','5분기','6분기']}},
+        grid: {y:{show:true}},
+        bar: {width:{ratio:.65}}
+      });
+    }
+
+    function createDonut(){
+      donutChart = bb.generate({
+        bindto: '#donutChart',
+        data: {columns: [['상호금융', 32], ['공제', 24], ['경제사업', 18], ['교육지원', 14], ['기타', 12]], type: 'donut'},
+        donut: {title: '사업 비중', label:{format: (v, ratio) => Math.round(ratio * 100) + '%'}},
+        legend: {position:'bottom'}
+      });
+    }
+
+    function createPie(){
+      pieChart = bb.generate({
+        bindto: '#pieChart',
+        data: {
+          columns: [['완료', 63], ['진행', 24], ['지연', 8], ['보류', 5]],
+          type: 'pie',
+          onclick: d => { document.getElementById('pieStatus').textContent = d.id + ' 항목 선택 · 값 ' + d.value; }
+        },
+        pie: {label:{format:(v, ratio) => Math.round(ratio*100)+'%'}},
+        legend: {position:'bottom'}
+      });
+    }
+
+    function createGauge(){
+      gaugeChart = bb.generate({
+        bindto: '#gaugeChart',
+        data: {columns: [['달성률', 62]], type: 'gauge'},
+        gauge: {label:{format: v => v + '%'}, min:0, max:100, units:'%'},
+        color: {pattern:['#ef4444','#f59e0b','#10b981','#2563eb'], threshold:{values:[30,60,85,100]}},
+        size: {height: 210}
+      });
+    }
+
+    function updateGauge(v){
+      document.getElementById('gaugeText').textContent = v + '%';
+      gaugeChart.load({columns: [['달성률', Number(v)]]});
+    }
+
+    function createScatter(){
+      scatterChart = bb.generate({
+        bindto: '#scatterChart',
+        data: {
+          xs: {'A그룹':'A_x', 'B그룹':'B_x'},
+          columns: [
+            ['A_x', 10, 20, 30, 40, 50, 60, 70, 80],
+            ['B_x', 12, 22, 35, 42, 48, 63, 74, 85],
+            ['A그룹', 15, 25, 34, 44, 55, 66, 73, 88],
+            ['B그룹', 18, 23, 38, 41, 53, 60, 79, 91]
+          ],
+          type: 'scatter'
+        },
+        axis: {x:{label:'투입 지수'}, y:{label:'성과 지수'}},
+        point: {r:6, focus:{expand:{r:9}}},
+        grid: {x:{show:true}, y:{show:true}},
+        tooltip: {format:{title: x => '투입 ' + x}}
+      });
+    }
+
+    function createRadar(){
+      radarChart = bb.generate({
+        bindto: '#radarChart',
+        data: {
+          columns: [
+            ['현재', 70, 55, 80, 62, 76, 68],
+            ['목표', 85, 80, 88, 78, 90, 82]
+          ],
+          type: 'radar'
+        },
+        radar: {axis: {max:100}, level: {depth:4}, direction: {clockwise:true}},
+        axis: {x: {type:'category', categories:['기획','개발','운영','보안','데이터','자동화']}},
+        legend: {position:'bottom'}
+      });
+    }
+
+    function createStep(){
+      stepChart = bb.generate({
+        bindto: '#stepChart',
+        data: {columns: [['요금구간', 20, 20, 35, 35, 50, 50, 80, 80], ['처리단계', 10, 18, 18, 34, 34, 52, 52, 70]], type: 'area-step'},
+        axis: {x:{type:'category', categories:['A','B','C','D','E','F','G','H']}},
+        grid: {y:{show:true}}
+      });
+    }
+
+    function createRealtime(){
+      realtimeChart = bb.generate({
+        bindto: '#realtimeChart',
+        data: {columns: [['CPU', 30, 40, 35, 55, 48, 60, 52, 66], ['메모리', 45, 42, 50, 58, 64, 62, 70, 74]], type: 'spline'},
+        axis: {x:{type:'category', categories:['T-7','T-6','T-5','T-4','T-3','T-2','T-1','Now']}, y:{max:100, min:0, padding:{top:0,bottom:0}, tick:{format:v=>v+'%'}}},
+        grid: {y:{show:true}},
+        point: {show:false}
+      });
+    }
+
+    function appendRealtimeOnce(){
+      const cpu = ['CPU'], mem = ['메모리'];
+      for(let i=0;i<8;i++){ cpu.push(rnd(25,85)); mem.push(rnd(35,92)); }
+      realtimeChart.load({columns:[cpu, mem]});
+    }
+    function startRealtime(){ if(!realtimeTimer){ appendRealtimeOnce(); realtimeTimer = setInterval(appendRealtimeOnce, 1500); } }
+    function stopRealtime(){ clearInterval(realtimeTimer); realtimeTimer = null; }
+
+    function randomDonut(){ return [['상호금융', rnd(20,45)], ['공제', rnd(15,35)], ['경제사업', rnd(10,30)], ['교육지원', rnd(8,25)], ['기타', rnd(5,20)]]; }
+    function randomRadar(){ return [['현재', rnd(45,90), rnd(45,90), rnd(45,90), rnd(45,90), rnd(45,90), rnd(45,90)], ['목표', rnd(75,100), rnd(75,100), rnd(75,100), rnd(75,100), rnd(75,100), rnd(75,100)]]; }
+
+    function randomizeAll(){
+      const sales = ['매출'], users = ['가입자'], rate = ['전환율'];
+      for(let i=0;i<12;i++){ sales.push(rnd(120,420)); users.push(rnd(70,330)); rate.push(rnd(8,29)); }
+      mainChart.load({columns:[sales, users, rate]});
+      updateKpi(sales, users, rate);
+      donutChart.load({columns: randomDonut()});
+      radarChart.load({columns: randomRadar()});
+      appendRealtimeOnce();
+    }
+
+    function toggleTheme(){
+      dark = !dark;
+      document.body.style.setProperty('--bg', dark ? '#0b1120' : '#f6f8fb');
+      document.body.style.setProperty('--panel', dark ? '#111827' : '#ffffff');
+      document.body.style.setProperty('--ink', dark ? '#e5e7eb' : '#152033');
+      document.body.style.setProperty('--muted', dark ? '#9ca3af' : '#6b7280');
+      document.body.style.setProperty('--line', dark ? '#263244' : '#e5e7eb');
+      resizeAll();
+    }
+
+    function resizeAll(){
+      [mainChart,timeseriesChart,stackedChart,donutChart,pieChart,gaugeChart,scatterChart,radarChart,stepChart,realtimeChart]
+        .filter(Boolean).forEach(c => c.flush && c.flush(true));
+    }
+
+    window.addEventListener('load', () => {
+      if(!ensureLoaded()) return;
+      createMain(); createTimeseries(); createStacked(); createDonut(); createPie(); createGauge(); createScatter(); createRadar(); createStep(); createRealtime();
+      window.addEventListener('resize', resizeAll);
+    });
+  </script>
+</body>
+</html>
