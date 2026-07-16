@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AlaSQL Feature Lab</title>
+<script src="https://cdn.jsdelivr.net/npm/alasql@4.17.3/dist/alasql.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--ink:#142033;--muted:#667085;--line:#dce3ec;--brand:#2f6fed;--brand2:#eaf1ff;--ok:#087443;--warn:#a15c00;--danger:#b42318;--code:#111827}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,"Noto Sans KR",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,#102a56,#2f6fed);color:#fff;padding:28px 22px} header h1{margin:0 0 8px;font-size:clamp(25px,4vw,40px)} header p{margin:0;max-width:980px;opacity:.9;line-height:1.65}
+.wrap{max-width:1450px;margin:auto;padding:18px}.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;position:sticky;top:0;z-index:5;background:rgba(244,247,251,.94);backdrop-filter:blur(8px);padding:10px 0}
+button,.btn,label.file{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}button:hover,.btn:hover,label.file:hover{border-color:var(--brand);color:var(--brand)}button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}button.danger{color:var(--danger)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{grid-column:span 4;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:0 7px 20px rgba(25,43,78,.05)}.wide{grid-column:span 8}.full{grid-column:1/-1}.card h2{font-size:18px;margin:0 0 5px}.desc{color:var(--muted);font-size:13px;line-height:1.55;margin-bottom:12px}.actions{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+textarea,input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;font:inherit}textarea{min-height:150px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.result{border:1px solid var(--line);border-radius:11px;min-height:80px;max-height:330px;overflow:auto;background:#fbfcfe}.status{font-size:12px;color:var(--muted);margin:5px 0 8px}.status.ok{color:var(--ok)}.status.err{color:var(--danger)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#edf3ff;color:#253858}pre{margin:0;background:var(--code);color:#d1e3ff;padding:12px;overflow:auto;min-height:80px;font-size:12px;line-height:1.55}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:var(--brand2);color:var(--brand);font-size:12px;font-weight:800;margin:2px}.metric{font-size:28px;font-weight:900;color:var(--brand)}.muted{color:var(--muted);font-size:12px}.drop{border:2px dashed #aebbd0;border-radius:12px;padding:16px;text-align:center;background:#fbfdff}.hidden{display:none}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.tabs button.active{background:#1d2939;color:#fff}.note{background:#fff8e7;border:1px solid #f4d38c;padding:10px;border-radius:10px;color:#7a4b00;font-size:12px;line-height:1.55}
+@media(max-width:1000px){.card,.wide{grid-column:span 6}}@media(max-width:680px){.card,.wide{grid-column:1/-1}.row{grid-template-columns:1fr}.wrap{padding:10px}.toolbar{position:static}}
+</style>
+</head>
+<body>
+<header><h1>AlaSQL Feature Lab</h1><p>브라우저에서 SQL로 JavaScript 배열·JSON·메모리 테이블을 조회하고, 조인·집계·서브쿼리·집합 연산·데이터 변경·CSV/JSON/XLSX 입출력·사용자 정의 함수·쿼리 성능을 직접 시험하는 단일 HTML 샘플.</p></header>
+<div class="wrap">
+ <div class="toolbar"><button class="primary" onclick="resetAll()">전체 데이터 초기화</button><button onclick="runAllSafe()">주요 예제 일괄 실행</button><button onclick="downloadHTML()">현재 HTML 저장</button><span id="libState" class="pill">라이브러리 확인 중</span></div>
+ <div class="grid">
+  <section class="card wide"><h2>1. 자유 SQL 콘솔</h2><div class="desc">현재 메모리 DB의 employees, departments, sales 테이블을 대상으로 직접 SQL 실행</div>
+   <textarea id="sqlEditor">SELECT d.name AS department, COUNT(*) AS headcount, ROUND(AVG(e.salary),0) AS avg_salary
+FROM employees e
+JOIN departments d ON e.dept_id = d.id
+GROUP BY d.name
+ORDER BY avg_salary DESC;</textarea>
+   <div class="actions"><button class="primary" onclick="runConsole()">실행</button><button onclick="setSQL('SELECT * FROM employees ORDER BY salary DESC;')">SELECT</button><button onclick="setSQL('SELECT name, salary, RANK() OVER (ORDER BY salary DESC) AS salary_rank FROM employees;')">윈도 함수</button><button onclick="setSQL('SELECT * FROM employees WHERE salary > (SELECT AVG(salary) FROM employees);')">서브쿼리</button></div><div id="consoleStatus" class="status"></div><div id="consoleResult" class="result"></div>
+  </section>
+  <section class="card"><h2>2. 현재 DB 상태</h2><div class="desc">테이블 행 수와 라이브러리 버전</div><div id="dbMetrics"></div><div class="actions"><button onclick="showTables()">SHOW TABLES</button><button onclick="describeEmployees()">DESCRIBE</button></div><div id="metaResult" class="result"></div></section>
+
+  <section class="card"><h2>3. JavaScript 배열 직접 조회</h2><div class="desc">FROM ? 매개변수로 별도 테이블 생성 없이 객체 배열 질의</div><div class="actions"><button onclick="demoArrayQuery()">필터·정렬</button><button onclick="demoParams()">SQL 매개변수</button><button onclick="demoNested()">중첩 JSON</button></div><div id="arrayResult" class="result"></div></section>
+  <section class="card"><h2>4. JOIN</h2><div class="desc">INNER, LEFT, 다중 테이블 조인</div><div class="actions"><button onclick="demoJoin('inner')">INNER JOIN</button><button onclick="demoJoin('left')">LEFT JOIN</button><button onclick="demoMultiJoin()">3개 테이블</button></div><div id="joinResult" class="result"></div></section>
+  <section class="card"><h2>5. 집계·그룹</h2><div class="desc">COUNT, SUM, AVG, MIN, MAX, HAVING, CASE</div><div class="actions"><button onclick="demoAggregate()">집계</button><button onclick="demoHaving()">HAVING</button><button onclick="demoCase()">CASE</button></div><div id="aggResult" class="result"></div></section>
+  <section class="card"><h2>6. ROLLUP·CUBE</h2><div class="desc">다차원 소계 및 총계 생성</div><div class="actions"><button onclick="demoRollup()">ROLLUP</button><button onclick="demoCube()">CUBE</button></div><div id="cubeResult" class="result"></div></section>
+  <section class="card"><h2>7. 서브쿼리·CTE</h2><div class="desc">스칼라/IN 서브쿼리 및 WITH 공통 테이블 식</div><div class="actions"><button onclick="demoSubquery()">서브쿼리</button><button onclick="demoInSubquery()">IN</button><button onclick="demoCTE()">CTE</button></div><div id="subResult" class="result"></div></section>
+  <section class="card"><h2>8. 집합 연산</h2><div class="desc">UNION, UNION ALL, EXCEPT, INTERSECT 지원 확인</div><div class="actions"><button onclick="demoSet('UNION')">UNION</button><button onclick="demoSet('UNION ALL')">UNION ALL</button><button onclick="demoSet('EXCEPT')">EXCEPT</button><button onclick="demoSet('INTERSECT')">INTERSECT</button></div><div id="setResult" class="result"></div></section>
+  <section class="card"><h2>9. 윈도 함수</h2><div class="desc">ROW_NUMBER, RANK, DENSE_RANK 및 누적 합계</div><div class="actions"><button onclick="demoWindowRanks()">순위</button><button onclick="demoWindowRunning()">누적합</button></div><div id="windowResult" class="result"></div></section>
+
+  <section class="card wide"><h2>10. DDL·DML 데이터 편집</h2><div class="desc">CREATE TABLE, INSERT, UPDATE, DELETE, 트랜잭션 유사 흐름 테스트</div>
+   <div class="row"><input id="newName" value="신규직원" placeholder="이름"><input id="newSalary" type="number" value="4800" placeholder="급여"></div>
+   <div class="actions"><button onclick="insertEmployee()">INSERT</button><button onclick="raiseSalary()">UPDATE 급여 +5%</button><button class="danger" onclick="deleteLowest()">최저급여 DELETE</button><button onclick="demoTempTable()">임시 테이블 생성</button><button onclick="resetDB()">DB만 초기화</button></div><div id="dmlResult" class="result"></div>
+  </section>
+  <section class="card"><h2>11. 함수·문자열·날짜</h2><div class="desc">문자열, 숫자, 날짜 함수 및 사용자 정의 함수</div><div class="actions"><button onclick="demoFunctions()">내장 함수</button><button onclick="demoDate()">날짜</button><button onclick="demoUDF()">사용자 정의 함수</button></div><div id="fnResult" class="result"></div></section>
+
+  <section class="card"><h2>12. CSV 가져오기</h2><div class="desc">CSV 파일을 선택하거나 내장 샘플 CSV 파싱</div><label class="file">CSV 선택<input class="hidden" id="csvFile" type="file" accept=".csv,text/csv" onchange="importCSV(this.files[0])"></label><button onclick="sampleCSV()">샘플 CSV</button><div id="csvResult" class="result"></div></section>
+  <section class="card"><h2>13. JSON 가져오기</h2><div class="desc">JSON 배열 파일을 읽어 SQL로 분석</div><label class="file">JSON 선택<input class="hidden" id="jsonFile" type="file" accept=".json,application/json" onchange="importJSON(this.files[0])"></label><button onclick="sampleJSON()">샘플 JSON</button><div id="jsonResult" class="result"></div></section>
+  <section class="card"><h2>14. XLSX 가져오기</h2><div class="desc">SheetJS와 연계하여 첫 시트 데이터를 객체 배열로 변환 후 조회</div><label class="file">Excel 선택<input class="hidden" id="xlsxFile" type="file" accept=".xlsx,.xls" onchange="importXLSX(this.files[0])"></label><div id="xlsxResult" class="result"></div></section>
+  <section class="card"><h2>15. 파일 내보내기</h2><div class="desc">조회 결과를 CSV, JSON, XLSX로 다운로드</div><div class="actions"><button onclick="exportCSV()">CSV</button><button onclick="exportJSON()">JSON</button><button onclick="exportXLSX()">XLSX</button><button onclick="exportMultiSheet()">다중 시트 XLSX</button></div><div class="note">브라우저 보안 정책상 다운로드는 사용자 버튼 클릭으로 실행됨. XLSX는 SheetJS 로드 필요.</div></section>
+  <section class="card"><h2>16. 데이터 피벗</h2><div class="desc">조건부 집계로 부서·분기별 매출 피벗 테이블 구성</div><div class="actions"><button onclick="demoPivot()">피벗 실행</button></div><div id="pivotResult" class="result"></div></section>
+  <section class="card"><h2>17. 데이터 품질 점검</h2><div class="desc">NULL, 중복, 범위 이상치 탐지 SQL</div><div class="actions"><button onclick="demoNullCheck()">NULL</button><button onclick="demoDuplicate()">중복</button><button onclick="demoOutlier()">이상치</button></div><div id="qualityResult" class="result"></div></section>
+  <section class="card"><h2>18. 쿼리 컴파일·재사용</h2><div class="desc">alasql.compile()로 반복 실행 함수 생성</div><div class="actions"><button onclick="demoCompile()">10,000회 비교</button></div><div id="compileResult" class="result"></div></section>
+  <section class="card"><h2>19. 대용량 성능 테스트</h2><div class="desc">가상 데이터 생성 후 필터·그룹 집계 시간 측정</div><select id="perfSize"><option value="10000">10,000행</option><option value="50000">50,000행</option><option value="100000">100,000행</option></select><div class="actions"><button onclick="demoPerformance()">성능 측정</button></div><div id="perfResult" class="result"></div></section>
+  <section class="card"><h2>20. 오류 처리</h2><div class="desc">잘못된 SQL을 안전하게 포착하고 메시지 표시</div><div class="actions"><button onclick="demoError()">구문 오류 발생</button><button onclick="demoMissingTable()">없는 테이블</button></div><div id="errorResult" class="result"></div></section>
+
+  <section class="card full"><h2>포함 기능 요약</h2><div class="desc">이 페이지에서 즉시 시험 가능한 범위</div><div id="featureTags"></div></section>
+ </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const initial={
+ departments:[{id:1,name:'ICT전략실',region:'서울'},{id:2,name:'회원지원부',region:'서울'},{id:3,name:'어업양식지원부',region:'부산'},{id:4,name:'홍보부',region:'서울'},{id:5,name:'미배정부서',region:'제주'}],
+ employees:[
+ {id:1,name:'김하늘',dept_id:1,role:'개발',salary:6200,hire_date:'2021-03-15',skill:{sql:5,js:4}},
+ {id:2,name:'이바다',dept_id:1,role:'인프라',salary:5900,hire_date:'2020-07-01',skill:{sql:3,js:2}},
+ {id:3,name:'박물결',dept_id:2,role:'기획',salary:5100,hire_date:'2022-11-20',skill:{sql:3,js:1}},
+ {id:4,name:'최해양',dept_id:3,role:'현장지원',salary:4700,hire_date:'2023-02-10',skill:{sql:2,js:1}},
+ {id:5,name:'정푸름',dept_id:4,role:'홍보',salary:4500,hire_date:'2024-01-08',skill:{sql:2,js:2}},
+ {id:6,name:'한누리',dept_id:null,role:'계약',salary:3900,hire_date:'2025-04-21',skill:{sql:1,js:1}},
+ {id:7,name:'김하늘',dept_id:1,role:'분석',salary:6500,hire_date:'2019-09-09',skill:{sql:5,js:3}}
+ ],
+ sales:[
+ {id:1,dept_id:1,quarter:'Q1',category:'시스템',amount:120},{id:2,dept_id:1,quarter:'Q2',category:'시스템',amount:160},{id:3,dept_id:1,quarter:'Q3',category:'교육',amount:80},{id:4,dept_id:2,quarter:'Q1',category:'지원',amount:90},{id:5,dept_id:2,quarter:'Q2',category:'지원',amount:140},{id:6,dept_id:3,quarter:'Q1',category:'양식',amount:210},{id:7,dept_id:3,quarter:'Q2',category:'양식',amount:180},{id:8,dept_id:4,quarter:'Q3',category:'홍보',amount:110},{id:9,dept_id:4,quarter:'Q4',category:'홍보',amount:150}
+ ]
+};
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function render(id,data){const el=$(id);if(data==null){el.innerHTML='<div class="muted" style="padding:12px">결과 없음</div>';return} if(!Array.isArray(data)) data=[{result:data}]; if(data.length===0){el.innerHTML='<div class="muted" style="padding:12px">0행</div>';return} const cols=[...new Set(data.flatMap(o=>Object.keys(o||{})))];el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr></thead><tbody>'+data.map(r=>'<tr>'+cols.map(c=>`<td>${typeof r[c]==='object'?esc(JSON.stringify(r[c])):esc(r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>'}
+function renderPre(id,obj){$(id).innerHTML='<pre>'+esc(typeof obj==='string'?obj:JSON.stringify(obj,null,2))+'</pre>'}
+function safe(id,fn){try{const t=performance.now(),r=fn(),ms=(performance.now()-t).toFixed(2);render(id,r);return {ok:true,ms,r}}catch(e){renderPre(id,'오류: '+e.message);return {ok:false,error:e}}}
+function resetDB(){try{alasql('DROP DATABASE IF EXISTS lab');}catch(e){} alasql('CREATE DATABASE lab');alasql('USE lab');alasql('CREATE TABLE departments (id INT, name STRING, region STRING)');alasql('CREATE TABLE employees (id INT, name STRING, dept_id INT, role STRING, salary NUMBER, hire_date STRING, skill OBJECT)');alasql('CREATE TABLE sales (id INT, dept_id INT, quarter STRING, category STRING, amount NUMBER)');alasql.tables.departments.data=clone(initial.departments);alasql.tables.employees.data=clone(initial.employees);alasql.tables.sales.data=clone(initial.sales);updateMetrics();render('dmlResult',alasql('SELECT * FROM employees ORDER BY id'));}
+function resetAll(){resetDB();['consoleResult','metaResult','arrayResult','joinResult','aggResult','cubeResult','subResult','setResult','windowResult','fnResult','csvResult','jsonResult','xlsxResult','pivotResult','qualityResult','compileResult','perfResult','errorResult'].forEach(id=>$(id).innerHTML='');}
+function updateMetrics(){const e=alasql('SELECT COUNT(*) n FROM employees')[0].n,d=alasql('SELECT COUNT(*) n FROM departments')[0].n,s=alasql('SELECT COUNT(*) n FROM sales')[0].n;$('dbMetrics').innerHTML=`<div class="metric">${e+d+s}</div><div class="muted">전체 행 · 직원 ${e} / 부서 ${d} / 매출 ${s}<br>AlaSQL ${alasql.version||'버전 정보 없음'}</div>`}
+function setSQL(s){$('sqlEditor').value=s}
+function runConsole(){const st=$('consoleStatus');try{const t=performance.now();const r=alasql($('sqlEditor').value);const ms=(performance.now()-t).toFixed(2);render('consoleResult',r);st.className='status ok';st.textContent=`성공 · ${Array.isArray(r)?r.length:1}건 · ${ms} ms`;updateMetrics()}catch(e){st.className='status err';st.textContent='오류 · '+e.message;renderPre('consoleResult',e.stack||e.message)}}
+function showTables(){safe('metaResult',()=>alasql('SHOW TABLES'))}function describeEmployees(){safe('metaResult',()=>alasql('SHOW COLUMNS FROM employees'))}
+function demoArrayQuery(){safe('arrayResult',()=>alasql('SELECT name, salary FROM ? WHERE salary >= ? ORDER BY salary DESC',[clone(initial.employees),5000]))}
+function demoParams(){safe('arrayResult',()=>alasql('SELECT * FROM employees WHERE dept_id = ? AND salary >= ?',[1,5800]))}
+function demoNested(){safe('arrayResult',()=>alasql('SELECT name, skill->sql AS sql_level, skill->js AS js_level FROM ? WHERE skill->sql >= 3',[clone(initial.employees)]))}
+function demoJoin(type){const q=type==='left'?`SELECT d.name department,e.name employee,e.role FROM departments d LEFT JOIN employees e ON d.id=e.dept_id ORDER BY d.id,e.id`:`SELECT e.name employee,d.name department,d.region FROM employees e JOIN departments d ON e.dept_id=d.id ORDER BY e.id`;safe('joinResult',()=>alasql(q))}
+function demoMultiJoin(){safe('joinResult',()=>alasql(`SELECT d.name department,e.name employee,SUM(s.amount) department_sales FROM employees e JOIN departments d ON e.dept_id=d.id LEFT JOIN sales s ON d.id=s.dept_id GROUP BY d.name,e.name ORDER BY department_sales DESC`))}
+function demoAggregate(){safe('aggResult',()=>alasql(`SELECT dept_id,COUNT(*) cnt,MIN(salary) min_salary,MAX(salary) max_salary,ROUND(AVG(salary),0) avg_salary,SUM(salary) total FROM employees GROUP BY dept_id ORDER BY dept_id`))}
+function demoHaving(){safe('aggResult',()=>alasql(`SELECT dept_id,COUNT(*) cnt,AVG(salary) avg_salary FROM employees GROUP BY dept_id HAVING COUNT(*) >= 2`))}
+function demoCase(){safe('aggResult',()=>alasql(`SELECT name,salary,CASE WHEN salary>=6000 THEN '고' WHEN salary>=5000 THEN '중' ELSE '일반' END salary_band FROM employees ORDER BY salary DESC`))}
+function demoRollup(){safe('cubeResult',()=>alasql(`SELECT region,name,SUM(amount) total FROM departments d JOIN sales s ON d.id=s.dept_id GROUP BY ROLLUP(region,name) ORDER BY region,name`))}
+function demoCube(){safe('cubeResult',()=>alasql(`SELECT quarter,category,SUM(amount) total FROM sales GROUP BY CUBE(quarter,category) ORDER BY quarter,category`))}
+function demoSubquery(){safe('subResult',()=>alasql(`SELECT name,salary,(SELECT AVG(salary) FROM employees) company_avg FROM employees WHERE salary>(SELECT AVG(salary) FROM employees) ORDER BY salary DESC`))}
+function demoInSubquery(){safe('subResult',()=>alasql(`SELECT name,role FROM employees WHERE dept_id IN (SELECT id FROM departments WHERE region='서울')`))}
+function demoCTE(){safe('subResult',()=>alasql(`WITH deptpay AS (SELECT dept_id,AVG(salary) avgpay FROM employees GROUP BY dept_id) SELECT e.name,e.salary,d.avgpay FROM employees e JOIN deptpay d ON e.dept_id=d.dept_id WHERE e.salary>=d.avgpay`))}
+function demoSet(op){safe('setResult',()=>alasql(`SELECT name FROM employees WHERE salary>=5500 ${op} SELECT name FROM employees WHERE dept_id=1`))}
+function demoWindowRanks(){safe('windowResult',()=>alasql(`SELECT name,dept_id,salary,ROW_NUMBER() OVER (ORDER BY salary DESC) row_no,RANK() OVER (ORDER BY salary DESC) rank_no,DENSE_RANK() OVER (ORDER BY salary DESC) dense_rank FROM employees`))}
+function demoWindowRunning(){safe('windowResult',()=>alasql(`SELECT quarter,amount,SUM(amount) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) running_total FROM sales ORDER BY id`))}
+function insertEmployee(){const name=$('newName').value.trim()||'신규직원',salary=Number($('newSalary').value)||4000;const id=alasql('SELECT MAX(id)+1 id FROM employees')[0].id||1;alasql('INSERT INTO employees VALUES(?,?,?,?,?,?,?)',[id,name,1,'신규',salary,new Date().toISOString().slice(0,10),{sql:1,js:1}]);render('dmlResult',alasql('SELECT * FROM employees ORDER BY id DESC'));updateMetrics()}
+function raiseSalary(){alasql('UPDATE employees SET salary=ROUND(salary*1.05,0) WHERE dept_id=1');render('dmlResult',alasql('SELECT * FROM employees WHERE dept_id=1'));updateMetrics()}
+function deleteLowest(){alasql('DELETE FROM employees WHERE salary=(SELECT MIN(salary) FROM employees)');render('dmlResult',alasql('SELECT * FROM employees ORDER BY salary'));updateMetrics()}
+function demoTempTable(){try{alasql('DROP TABLE IF EXISTS high_earners');alasql('CREATE TABLE high_earners AS SELECT name,salary FROM employees WHERE salary>=5500');render('dmlResult',alasql('SELECT * FROM high_earners'))}catch(e){renderPre('dmlResult',e.message)}}
+function demoFunctions(){safe('fnResult',()=>alasql(`SELECT name,UPPER(role) role_upper,LEN(name) name_len,ROUND(salary/12,1) monthly,ABS(salary-5200) gap FROM employees`))}
+function demoDate(){safe('fnResult',()=>alasql(`SELECT name,hire_date,YEAR(DATE(hire_date)) hire_year,MONTH(DATE(hire_date)) hire_month FROM employees ORDER BY hire_date`))}
+function demoUDF(){alasql.fn.grade=s=>s>=6000?'A':s>=5000?'B':'C';safe('fnResult',()=>alasql(`SELECT name,salary,grade(salary) grade FROM employees ORDER BY salary DESC`))}
+function parseCSVText(text){const rows=text.trim().split(/\r?\n/).map(r=>r.split(','));const heads=rows.shift().map(x=>x.trim());return rows.map(r=>Object.fromEntries(heads.map((h,i)=>[h,(r[i]??'').trim()])))}
+async function importCSV(file){if(!file)return;try{const text=await file.text();const data=parseCSVText(text);render('csvResult',alasql('SELECT * FROM ?',[data]))}catch(e){renderPre('csvResult',e.message)}}
+function sampleCSV(){const data=parseCSVText('name,category,amount\n광어,수산물,120\n전복,수산물,180\n김,가공품,90');render('csvResult',alasql('SELECT category,SUM(CAST(amount AS NUMBER)) total FROM ? GROUP BY category',[data]))}
+async function importJSON(file){if(!file)return;try{const data=JSON.parse(await file.text());render('jsonResult',alasql('SELECT * FROM ?',[data]))}catch(e){renderPre('jsonResult',e.message)}}
+function sampleJSON(){const data=[{port:'부산',species:'고등어',qty:120},{port:'부산',species:'오징어',qty:80},{port:'제주',species:'갈치',qty:150}];render('jsonResult',alasql('SELECT port,SUM(qty) total_qty FROM ? GROUP BY port ORDER BY total_qty DESC',[data]))}
+async function importXLSX(file){if(!file)return;try{const buf=await file.arrayBuffer();const wb=XLSX.read(buf);const ws=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(ws,{defval:null});render('xlsxResult',data);window.lastExcelData=data}catch(e){renderPre('xlsxResult',e.message)}}
+function downloadBlob(name,type,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportCSV(){const data=alasql('SELECT e.name,d.name department,e.role,e.salary FROM employees e LEFT JOIN departments d ON e.dept_id=d.id');const heads=Object.keys(data[0]);const csv='\ufeff'+[heads.join(','),...data.map(r=>heads.map(h=>`"${String(r[h]??'').replaceAll('"','""')}"`).join(','))].join('\n');downloadBlob('alasql_employees.csv','text/csv;charset=utf-8',csv)}
+function exportJSON(){downloadBlob('alasql_employees.json','application/json',JSON.stringify(alasql('SELECT * FROM employees'),null,2))}
+function exportXLSX(){const data=alasql('SELECT e.name,d.name department,e.role,e.salary FROM employees e LEFT JOIN departments d ON e.dept_id=d.id');const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'직원');XLSX.writeFile(wb,'alasql_employees.xlsx')}
+function exportMultiSheet(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alasql('SELECT * FROM employees')),'직원');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alasql('SELECT * FROM departments')),'부서');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(alasql('SELECT * FROM sales')),'매출');XLSX.writeFile(wb,'alasql_multi_sheet.xlsx')}
+function demoPivot(){safe('pivotResult',()=>alasql(`SELECT d.name department,SUM(CASE WHEN quarter='Q1' THEN amount ELSE 0 END) Q1,SUM(CASE WHEN quarter='Q2' THEN amount ELSE 0 END) Q2,SUM(CASE WHEN quarter='Q3' THEN amount ELSE 0 END) Q3,SUM(CASE WHEN quarter='Q4' THEN amount ELSE 0 END) Q4,SUM(amount) total FROM sales s JOIN departments d ON s.dept_id=d.id GROUP BY d.name ORDER BY total DESC`))}
+function demoNullCheck(){safe('qualityResult',()=>alasql(`SELECT * FROM employees WHERE dept_id IS NULL OR name IS NULL OR salary IS NULL`))}
+function demoDuplicate(){safe('qualityResult',()=>alasql(`SELECT name,COUNT(*) duplicate_count FROM employees GROUP BY name HAVING COUNT(*)>1`))}
+function demoOutlier(){safe('qualityResult',()=>alasql(`SELECT name,salary FROM employees WHERE salary>(SELECT AVG(salary)+1.2*(MAX(salary)-MIN(salary))/2 FROM employees) OR salary<(SELECT AVG(salary)-1.2*(MAX(salary)-MIN(salary))/2 FROM employees)`))}
+function demoCompile(){const arr=clone(initial.employees),q='SELECT COUNT(*) n FROM ? WHERE salary>?';let t=performance.now();for(let i=0;i<10000;i++)alasql(q,[arr,5000]);const normal=performance.now()-t;const compiled=alasql.compile(q);t=performance.now();for(let i=0;i<10000;i++)compiled([arr,5000]);const comp=performance.now()-t;render('compileResult',[{method:'일반 실행',ms:normal.toFixed(1)},{method:'compile 재사용',ms:comp.toFixed(1)},{method:'개선 배수',ms:(normal/comp).toFixed(2)+'x'}])}
+function demoPerformance(){const n=Number($('perfSize').value),arr=Array.from({length:n},(_,i)=>({id:i,dept:i%20,amount:(i*17)%1000,status:i%3?'정상':'점검'}));const t=performance.now();const r=alasql('SELECT dept,COUNT(*) cnt,SUM(amount) total,AVG(amount) avg FROM ? WHERE status=? GROUP BY dept ORDER BY total DESC',[arr,'정상']);const ms=performance.now()-t;render('perfResult',[{rows:n,result_rows:r.length,elapsed_ms:ms.toFixed(2),rows_per_sec:Math.round(n/(ms/1000)).toLocaleString()},...r.slice(0,5)])}
+function demoError(){safe('errorResult',()=>alasql('SELEC name FORM employees'))}function demoMissingTable(){safe('errorResult',()=>alasql('SELECT * FROM no_such_table'))}
+function runAllSafe(){[demoArrayQuery,()=>demoJoin('inner'),demoAggregate,demoRollup,demoSubquery,()=>demoSet('UNION'),demoWindowRanks,demoFunctions,demoPivot,demoDuplicate].forEach((fn,i)=>setTimeout(fn,i*50))}
+function downloadHTML(){downloadBlob('alasql_feature_lab.html','text/html;charset=utf-8','<!doctype html>\n'+document.documentElement.outerHTML)}
+const features=['SELECT·WHERE·ORDER BY','매개변수','JavaScript 배열 조회','중첩 JSON','INNER·LEFT JOIN','다중 JOIN','COUNT·SUM·AVG·MIN·MAX','GROUP BY·HAVING','CASE','ROLLUP·CUBE','서브쿼리·IN','CTE','UNION·EXCEPT·INTERSECT','윈도 함수','CREATE·INSERT·UPDATE·DELETE','내장·사용자 정의 함수','CSV·JSON·XLSX 가져오기','CSV·JSON·XLSX 내보내기','다중 시트 Excel','피벗','데이터 품질','쿼리 컴파일','대용량 성능','오류 처리'];
+window.addEventListener('DOMContentLoaded',()=>{if(window.alasql){$('libState').textContent='AlaSQL '+(alasql.version||'로드 완료');$('libState').style.color='#087443';resetDB()}else{$('libState').textContent='AlaSQL 로드 실패';$('libState').style.color='#b42318'}$('featureTags').innerHTML=features.map(x=>`<span class="pill">${x}</span>`).join('')});
+</script>
+</body></html>
