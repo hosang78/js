@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>RevoGrid 종합 기능 샘플</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #eef3f8;
+      --text: #182230;
+      --muted: #667085;
+      --line: #dbe3ec;
+      --primary: #2563eb;
+      --primary-2: #1d4ed8;
+      --success: #0f9f6e;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; min-height: 100%; }
+
+    body {
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body.app-dark {
+      --bg: #0c111b;
+      --surface: #131b28;
+      --surface-2: #172131;
+      --surface-3: #202d3e;
+      --text: #e8edf4;
+      --muted: #9ba9bd;
+      --line: #2b394d;
+      --primary: #60a5fa;
+      --primary-2: #93c5fd;
+      --shadow: 0 14px 38px rgba(0, 0, 0, 0.25);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell { min-height: 100vh; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center;
+      color: #fff; font-weight: 900; letter-spacing: -1px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+    }
+    .brand h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+    .brand p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .main { width: min(1800px, 100%); margin: 0 auto; padding: 18px; }
+
+    .notice {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      padding: 12px 14px; margin-bottom: 14px;
+      background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
+      border-radius: 12px; color: var(--muted); font-size: 13px;
+    }
+    .notice strong { color: var(--text); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat-card {
+      min-height: 96px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .stat-value { margin-top: 9px; font-size: 24px; font-weight: 850; letter-spacing: -0.7px; }
+    .stat-sub { margin-top: 4px; color: var(--muted); font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+
+    .toolbar-section {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding-right: 8px; margin-right: 2px;
+      border-right: 1px solid var(--line);
+    }
+    .toolbar-section:last-child { border-right: 0; padding-right: 0; }
+
+    .btn, .select, .input {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+      transition: .16s ease;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 0 10px; font-size: 12px; font-weight: 750;
+    }
+    .btn:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); transform: translateY(-1px); }
+    .btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+    .btn.primary:hover { background: var(--primary-2); }
+    .btn.danger { color: var(--danger); }
+    .btn.active { color: var(--primary); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
+    .btn.icon { width: 36px; padding: 0; font-size: 16px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .select { padding: 0 28px 0 10px; font-size: 12px; }
+    .input { padding: 0 10px; min-width: 130px; font-size: 12px; }
+    .search-wrap { position: relative; }
+    .search-wrap .input { width: 220px; padding-left: 31px; }
+    .search-wrap::before { content: "⌕"; position: absolute; left: 10px; top: 6px; color: var(--muted); font-size: 17px; z-index: 1; }
+
+    .switch {
+      display: inline-flex; align-items: center; gap: 6px;
+      height: 34px; padding: 0 8px;
+      border: 1px solid var(--line); border-radius: 9px; background: var(--surface);
+      font-size: 12px; font-weight: 700; color: var(--muted); user-select: none;
+    }
+    .switch input { accent-color: var(--primary); }
+
+    .grid-wrap { position: relative; min-height: 680px; }
+    revo-grid { width: 100%; height: 680px; display: block; }
+
+    .loading-overlay {
+      position: absolute; inset: 0; z-index: 20;
+      display: grid; place-items: center;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(6px);
+    }
+    .loading-card { text-align: center; padding: 28px; }
+    .spinner {
+      width: 38px; height: 38px; margin: 0 auto 12px;
+      border: 4px solid var(--surface-3); border-top-color: var(--primary); border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .statusbar {
+      min-height: 38px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 12px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: 11px; background: var(--surface-2);
+    }
+    .statusbar .left, .statusbar .right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--success); }
+    .dot.live { animation: pulse 1.2s infinite; }
+    @keyframes pulse { 50% { opacity: .25; transform: scale(.7); } }
+
+    .side-panel { display: grid; gap: 14px; }
+    .side-section { padding: 14px; }
+    .side-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .side-title h2 { margin: 0; font-size: 14px; }
+    .side-title span { color: var(--muted); font-size: 10px; }
+
+    .detail-list { display: grid; gap: 7px; }
+    .detail-item {
+      display: grid; grid-template-columns: 80px 1fr; gap: 8px;
+      padding: 8px 9px; border-radius: 9px; background: var(--surface-2); font-size: 11px;
+    }
+    .detail-item b { color: var(--muted); font-weight: 700; }
+    .detail-item span { overflow-wrap: anywhere; }
+
+    .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .api-grid .btn { min-width: 0; padding: 0 7px; }
+
+    .event-log {
+      height: 228px; overflow: auto; padding: 8px;
+      background: #0d1522; color: #b9c8dc;
+      border-radius: 10px; font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .event-row { padding: 5px 4px; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .event-time { color: #60a5fa; }
+    .event-name { color: #fbbf24; }
+
+    .feature-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { padding: 5px 7px; border-radius: 999px; background: var(--surface-3); color: var(--muted); font-size: 10px; font-weight: 700; }
+
+    dialog {
+      width: min(560px, calc(100% - 24px));
+      border: 1px solid var(--line); border-radius: 16px;
+      background: var(--surface); color: var(--text); box-shadow: 0 24px 70px rgba(0,0,0,.3);
+      padding: 0;
+    }
+    dialog::backdrop { background: rgba(10, 17, 28, .58); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 16px; border-bottom: 1px solid var(--line); }
+    .dialog-head h3 { margin: 0; font-size: 16px; }
+    .dialog-body { padding: 16px; }
+    .dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--surface-2); }
+    .column-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: 380px; overflow: auto; }
+    .column-option { display: flex; gap: 8px; align-items: center; padding: 9px; background: var(--surface-2); border-radius: 9px; font-size: 12px; }
+    .column-option input { accent-color: var(--primary); }
+
+    .toast-stack { position: fixed; top: 74px; right: 18px; z-index: 100; display: grid; gap: 8px; pointer-events: none; }
+    .toast {
+      min-width: 260px; max-width: 380px; padding: 11px 13px;
+      border-radius: 11px; color: white; background: #253044;
+      box-shadow: 0 14px 30px rgba(0,0,0,.24); font-size: 12px; font-weight: 700;
+      animation: toast-in .2s ease-out;
+    }
+    .toast.success { background: #087f5b; }
+    .toast.warning { background: #b45309; }
+    .toast.error { background: #b91c1c; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
+
+    .kbd { display: inline-block; padding: 2px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface-2); font: 10px ui-monospace, monospace; }
+
+    @media (max-width: 1200px) {
+      .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .workspace { grid-template-columns: 1fr; }
+      .side-panel { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .event-log { height: 180px; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 10px 12px; align-items: flex-start; }
+      .brand p { display: none; }
+      .header-actions .btn:not(.icon) { display: none; }
+      .main { padding: 10px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat-card:last-child { grid-column: 1 / -1; }
+      .workspace { display: block; }
+      .side-panel { margin-top: 12px; display: grid; grid-template-columns: 1fr; }
+      .toolbar { align-items: stretch; }
+      .toolbar-section { border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 8px; margin: 0 0 2px; width: 100%; }
+      .toolbar-section:last-child { border-bottom: 0; padding-bottom: 0; }
+      .search-wrap, .search-wrap .input { width: 100%; }
+      .grid-wrap, revo-grid { min-height: 590px; height: 590px; }
+      .notice { display: block; }
+      .notice .btn { margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">RG</div>
+      <div>
+        <h1>RevoGrid 종합 기능 샘플</h1>
+        <p>Web Component · Virtual Grid · Community v4.23.21</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="btnHelp">⌨ 단축키</button>
+      <button class="btn" id="btnColumns">▦ 열 설정</button>
+      <button class="btn icon" id="btnAppTheme" title="페이지 다크 모드">◐</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="notice">
+      <div><strong>사용 방법:</strong> 헤더 클릭 정렬, 헤더 필터 아이콘 조건 필터, 셀 더블클릭 편집, 범위 드래그 후 <span class="kbd">Ctrl+C</span>/<span class="kbd">Ctrl+V</span>, 헤더·행 드래그 이동, 구분선 더블클릭 자동 너비.</div>
+      <button class="btn" id="btnResetAll">↺ 전체 초기화</button>
+    </div>
+
+    <section class="stats" aria-label="그리드 통계">
+      <article class="stat-card">
+        <div class="stat-label">전체 데이터</div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-sub">원본 데이터 행 수</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">현재 표시</div>
+        <div class="stat-value" id="statVisible">0</div>
+        <div class="stat-sub" id="statFilterInfo">검색·필터 반영</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">평균 달성률</div>
+        <div class="stat-value" id="statProgress">0%</div>
+        <div class="stat-sub">현재 표시 데이터 기준</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">평균 평가점수</div>
+        <div class="stat-value" id="statScore">0.0</div>
+        <div class="stat-sub">0~100점 범위</div>
+      </article>
+      <article class="stat-card">
+        <div class="stat-label">급여 합계</div>
+        <div class="stat-value" id="statSalary">₩0</div>
+        <div class="stat-sub">고정 하단 요약행 연동</div>
+      </article>
+    </section>
+
+    <section class="workspace">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="toolbar-section" aria-label="데이터 제어">
+            <select class="select" id="datasetSize" title="데이터 크기">
+              <option value="100">100행</option>
+              <option value="5000" selected>5,000행</option>
+              <option value="50000">50,000행</option>
+            </select>
+            <button class="btn primary" id="btnAdd">＋ 행 추가</button>
+            <button class="btn" id="btnDuplicate">⧉ 복제</button>
+            <button class="btn danger" id="btnDelete">− 삭제</button>
+          </div>
+
+          <div class="toolbar-section" aria-label="검색과 필터">
+            <div class="search-wrap"><input class="input" id="quickSearch" placeholder="전체 빠른 검색" /></div>
+            <button class="btn" id="btnClearFilter">필터 해제</button>
+            <button class="btn" id="btnClearSort">정렬 해제</button>
+          </div>
+
+          <div class="toolbar-section" aria-label="표시 설정">
+            <select class="select" id="groupSelect" title="행 그룹화">
+              <option value="">행 그룹 없음</option>
+              <option value="department">부서별 그룹</option>
+              <option value="status">상태별 그룹</option>
+              <option value="department,status">부서→상태 그룹</option>
+            </select>
+            <select class="select" id="gridTheme" title="RevoGrid 테마">
+              <option value="default">Excel 기본</option>
+              <option value="material" selected>Material</option>
+              <option value="compact">Compact</option>
+              <option value="darkMaterial">Dark Material</option>
+              <option value="darkCompact">Dark Compact</option>
+            </select>
+            <select class="select" id="rowDensity" title="행 높이">
+              <option value="30">조밀 30px</option>
+              <option value="38" selected>기본 38px</option>
+              <option value="48">넓게 48px</option>
+            </select>
+          </div>
+
+          <div class="toolbar-section" aria-label="기능 토글">
+            <label class="switch"><input type="checkbox" id="toggleColumnGroups" checked /> 그룹 헤더</label>
+            <label class="switch"><input type="checkbox" id="togglePinned" checked /> 고정 열</label>
+            <label class="switch"><input type="checkbox" id="toggleReadonly" /> 읽기 전용</label>
+            <label class="switch"><input type="checkbox" id="toggleRtl" /> RTL</label>
+            <label class="switch"><input type="checkbox" id="toggleLive" /> 실시간</label>
+          </div>
+
+          <div class="toolbar-section" aria-label="내보내기">
+            <button class="btn" id="btnCsv">⇩ CSV</button>
+            <button class="btn" id="btnJson">⇩ JSON</button>
+          </div>
+        </div>
+
+        <div class="grid-wrap">
+          <revo-grid id="grid" aria-label="RevoGrid 직원 프로젝트 데이터"></revo-grid>
+          <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-card">
+              <div class="spinner"></div>
+              <strong id="loadingTitle">RevoGrid 로딩 중</strong>
+              <div id="loadingDesc" style="margin-top:7px;color:var(--muted);font-size:12px">CDN 모듈과 샘플 데이터를 준비하고 있습니다.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="statusbar">
+          <div class="left">
+            <span><i class="dot" id="liveDot"></i> <span id="gridState">초기화 중</span></span>
+            <span id="selectedRange">선택 범위: 없음</span>
+            <span id="renderTime">렌더: -</span>
+          </div>
+          <div class="right">
+            <span>가상 스크롤 활성</span>
+            <span id="memoryHint">데이터 0행</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-panel">
+        <section class="panel side-section">
+          <div class="side-title"><h2>선택 셀 상세</h2><span>getFocused()</span></div>
+          <div class="detail-list" id="focusDetails">
+            <div class="detail-item"><b>상태</b><span>그리드 셀을 선택하세요.</span></div>
+          </div>
+        </section>
+
+        <section class="panel side-section">
+          <div class="side-title"><h2>API 플레이그라운드</h2><span>Public methods</span></div>
+          <div class="api-grid">
+            <button class="btn" data-api="first">첫 행 이동</button>
+            <button class="btn" data-api="middle">중간 이동</button>
+            <button class="btn" data-api="last">마지막 이동</button>
+            <button class="btn" data-api="salary">급여 열 이동</button>
+            <button class="btn" data-api="edit">이름 편집</button>
+            <button class="btn" data-api="range">범위 선택</button>
+            <button class="btn" data-api="trim">10행 간격 숨김</button>
+            <button class="btn" data-api="untrim">숨김 복원</button>
+            <button class="btn" data-api="size">콘텐츠 크기</button>
+            <button class="btn" data-api="plugins">플러그인 목록</button>
+            <button class="btn" data-api="refresh">전체 새로고침</button>
+            <button class="btn" data-api="visible">표시 데이터 수</button>
+          </div>
+        </section>
+
+        <section class="panel side-section">
+          <div class="side-title"><h2>이벤트 로그</h2><button class="btn" id="btnClearLog" style="height:27px">지우기</button></div>
+          <div class="event-log" id="eventLog" aria-live="polite"></div>
+        </section>
+
+        <section class="panel side-section">
+          <div class="side-title"><h2>포함 기능</h2><span>Community</span></div>
+          <div class="feature-chips">
+            <span class="chip">가상 스크롤</span><span class="chip">셀 편집</span><span class="chip">범위 선택</span>
+            <span class="chip">복사·붙여넣기</span><span class="chip">다중 정렬</span><span class="chip">조건 필터</span>
+            <span class="chip">열 크기 조절</span><span class="chip">자동 너비</span><span class="chip">열 이동</span>
+            <span class="chip">행 이동</span><span class="chip">행·열 고정</span><span class="chip">행 그룹</span>
+            <span class="chip">그룹 헤더</span><span class="chip">셀 템플릿</span><span class="chip">테마</span>
+            <span class="chip">RTL</span><span class="chip">API 제어</span><span class="chip">이벤트</span>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+</div>
+
+<dialog id="columnsDialog">
+  <div class="dialog-head"><h3>표시할 열 선택</h3><button class="btn icon" data-close-dialog>×</button></div>
+  <div class="dialog-body">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn" id="btnAllColumns">전체 선택</button>
+      <button class="btn" id="btnCoreColumns">핵심 열만</button>
+    </div>
+    <div class="column-list" id="columnList"></div>
+  </div>
+  <div class="dialog-foot"><button class="btn" data-close-dialog>취소</button><button class="btn primary" id="btnApplyColumns">적용</button></div>
+</dialog>
+
+<dialog id="helpDialog">
+  <div class="dialog-head"><h3>사용 팁 및 단축키</h3><button class="btn icon" data-close-dialog>×</button></div>
+  <div class="dialog-body" style="font-size:13px;line-height:1.8">
+    <p><span class="kbd">더블클릭</span> 또는 문자 입력: 셀 편집</p>
+    <p><span class="kbd">Enter</span>: 편집 확정 · <span class="kbd">Esc</span>: 취소</p>
+    <p><span class="kbd">Ctrl+C</span>/<span class="kbd">Ctrl+V</span>: 범위 복사·붙여넣기</p>
+    <p><span class="kbd">Shift</span> + 헤더 클릭: 다중 열 정렬</p>
+    <p>열 경계 드래그: 너비 변경 · 경계 더블클릭: 자동 너비</p>
+    <p>첫 번째 ⠿ 열 드래그: 행 순서 변경 · 일반 헤더 드래그: 열 순서 변경</p>
+    <p>헤더 필터 아이콘: 문자열·숫자 조건 필터</p>
+  </div>
+  <div class="dialog-foot"><button class="btn primary" data-close-dialog>확인</button></div>
+</dialog>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+  window.__revoLoadError = false;
+  window.__revoLoaderDetails = [];
+  function __loadRevoClassicScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = false;
+      script.onload = () => resolve(src);
+      script.onerror = () => reject(new Error('script load failed: ' + src));
+      document.head.appendChild(script);
+    });
+  }
+  function __waitRevoDefined(ms = 5000) {
+    return Promise.race([
+      customElements.whenDefined('revo-grid'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('custom element timeout')), ms))
+    ]);
+  }
+  function __installFallbackRevoGrid() {
+    if (customElements.get('revo-grid')) return;
+    class FallbackRevoGrid extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this._columns = [];
+        this._source = [];
+        this._pinnedTopSource = [];
+        this._pinnedBottomSource = [];
+        this._trimmed = {};
+        this._focused = null;
+        this._sort = null;
+        this._rowSize = 38;
+        this._readonly = false;
+      }
+      connectedCallback() {
+        this.render();
+        queueMicrotask(() => {
+          this.dispatchEvent(new CustomEvent('aftergridinit', { bubbles: true, detail: { fallback: true } }));
+        });
+      }
+      set columns(value) { this._columns = Array.isArray(value) ? value : []; this.render(); }
+      get columns() { return this._columns; }
+      set source(value) { this._source = Array.isArray(value) ? value : []; this.render(); }
+      get source() { return this._source; }
+      set pinnedTopSource(value) { this._pinnedTopSource = Array.isArray(value) ? value : []; this.render(); }
+      get pinnedTopSource() { return this._pinnedTopSource; }
+      set pinnedBottomSource(value) { this._pinnedBottomSource = Array.isArray(value) ? value : []; this.render(); }
+      get pinnedBottomSource() { return this._pinnedBottomSource; }
+      set rowSize(value) { this._rowSize = Number(value) || 38; this.render(); }
+      get rowSize() { return this._rowSize; }
+      set readonly(value) { this._readonly = !!value; this.render(); }
+      get readonly() { return this._readonly; }
+      set theme(value) { this.setAttribute('theme', value || 'material'); }
+      get theme() { return this.getAttribute('theme') || 'material'; }
+      getSource() { return Promise.resolve(this._source); }
+      getVisibleSource() { return Promise.resolve(this._getRows()); }
+      getFocused() { return Promise.resolve(this._focused); }
+      clearSorting() { this._sort = null; this.render(); return Promise.resolve(); }
+      scrollToRow(index) { this._scrollRow = Math.max(0, Number(index) || 0); this.render(); return Promise.resolve(); }
+      scrollToColumnProp(prop) { this._scrollProp = prop; this.render(); return Promise.resolve(); }
+      setCellEdit(rowIndex, prop) {
+        this._focused = { cell: { x: this._flatColumns().findIndex(c => c.prop === prop), y: rowIndex }, prop, column: this._flatColumns().find(c => c.prop === prop), model: this._source[rowIndex] };
+        this.dispatchEvent(new CustomEvent('afterfocus', { bubbles: true, detail: this._focused }));
+        return Promise.resolve();
+      }
+      setCellsFocus(start, end) { this._focused = { cell: start, range: { start, end } }; this.dispatchEvent(new CustomEvent('afterfocus', { bubbles: true, detail: this._focused })); return Promise.resolve(); }
+      addTrimmed(map) { this._trimmed = { ...this._trimmed, ...(map || {}) }; this.render(); return Promise.resolve(); }
+      getContentSize() { return Promise.resolve({ x: this.scrollWidth || 0, y: this.scrollHeight || 0 }); }
+      getPlugins() { return Promise.resolve([{ constructor: { name: 'FallbackRenderer' } }]); }
+      refresh() { this.render(); return Promise.resolve(); }
+      _flatColumns(cols = this._columns, out = []) {
+        for (const col of cols || []) {
+          if (Array.isArray(col.children)) this._flatColumns(col.children, out);
+          else out.push(col);
+        }
+        return out;
+      }
+      _getRows() {
+        let rows = this._source.filter((_, i) => !this._trimmed[i]);
+        if (this._sort?.prop) {
+          const { prop, dir } = this._sort;
+          rows = [...rows].sort((a, b) => {
+            const av = a?.[prop], bv = b?.[prop];
+            const an = Number(av), bn = Number(bv);
+            const cmp = Number.isFinite(an) && Number.isFinite(bn) ? an - bn : String(av ?? '').localeCompare(String(bv ?? ''), 'ko-KR');
+            return dir === 'desc' ? -cmp : cmp;
+          });
+        }
+        return rows;
+      }
+      _h(tag, props, children) {
+        const el = document.createElement(tag);
+        if (props) {
+          for (const [key, val] of Object.entries(props)) {
+            if (key === 'style' && val && typeof val === 'object') Object.assign(el.style, val);
+            else if (key.startsWith('on') && typeof val === 'function') el.addEventListener(key.slice(2).toLowerCase(), val);
+            else if (val != null) el.setAttribute(key, String(val));
+          }
+        }
+        const append = child => {
+          if (child == null) return;
+          if (Array.isArray(child)) child.forEach(append);
+          else if (child instanceof Node) el.appendChild(child);
+          else el.appendChild(document.createTextNode(String(child)));
+        };
+        append(children);
+        return el;
+      }
+      _renderCell(col, row, rowIndex, colIndex) {
+        const td = document.createElement('td');
+        td.style.height = this._rowSize + 'px';
+        td.style.minWidth = (col.size || 120) + 'px';
+        td.dataset.prop = col.prop || '';
+        td.tabIndex = 0;
+        const value = row?.[col.prop] ?? '';
+        try {
+          const content = typeof col.cellTemplate === 'function' ? col.cellTemplate(this._h.bind(this), { model: row, prop: col.prop, column: col, rowIndex, colIndex }) : String(value);
+          if (content instanceof Node) td.appendChild(content); else td.textContent = String(content ?? '');
+        } catch (_) { td.textContent = String(value ?? ''); }
+        td.addEventListener('click', () => {
+          this._focused = { cell: { x: colIndex, y: rowIndex }, prop: col.prop, column: col, model: row };
+          this.dispatchEvent(new CustomEvent('afterfocus', { bubbles: true, detail: this._focused }));
+        });
+        td.addEventListener('dblclick', () => {
+          if (this._readonly || col.readonly || row?._summary) return;
+          const next = prompt(`${col.name || col.prop} 값 수정`, String(value ?? ''));
+          if (next == null) return;
+          const before = new CustomEvent('beforeedit', { bubbles: true, cancelable: true, detail: { model: row, prop: col.prop, val: next, value: next, column: col } });
+          if (!this.dispatchEvent(before)) return;
+          row[col.prop] = next;
+          this.dispatchEvent(new CustomEvent('afteredit', { bubbles: true, detail: { model: row, prop: col.prop, val: next, value: next, column: col } }));
+          this.render();
+        });
+        return td;
+      }
+      render() {
+        if (!this.shadowRoot) return;
+        const cols = this._flatColumns();
+        const rows = this._getRows();
+        const start = Math.min(this._scrollRow || 0, Math.max(0, rows.length - 1));
+        const data = [...this._pinnedTopSource, ...rows.slice(start, start + 500), ...this._pinnedBottomSource];
+        const style = document.createElement('style');
+        style.textContent = `
+          :host{display:block;width:100%;height:100%;font-family:inherit;color:#182230;background:#fff}
+          .note{padding:8px 12px;border-bottom:1px solid #dbe3ec;background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800}
+          .wrap{height:calc(100% - 34px);overflow:auto}
+          table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:12px}
+          th,td{border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:0 10px;white-space:nowrap;background:#fff;vertical-align:middle}
+          th{position:sticky;top:0;z-index:1;height:40px;background:#f8fafc;text-align:left;font-weight:900;cursor:pointer;color:#334155}
+          tr:hover td{background:#f8fafc}
+          tr[data-summary="true"] td{position:sticky;background:#eef6ff;font-weight:800;z-index:1}
+          td:focus{outline:2px solid #2563eb;outline-offset:-2px}
+        `;
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.textContent = 'CDN 차단으로 내장 대체 그리드가 실행 중입니다. RevoGrid 실제 렌더링은 CDN 또는 로컬 배포 파일 연결 시 동작합니다.';
+        const wrap = document.createElement('div');
+        wrap.className = 'wrap';
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const hr = document.createElement('tr');
+        cols.forEach((col, colIndex) => {
+          const th = document.createElement('th');
+          th.style.minWidth = (col.size || 120) + 'px';
+          try {
+            const content = typeof col.columnTemplate === 'function' ? col.columnTemplate(this._h.bind(this), { column: col }) : (col.name || col.prop || '');
+            if (content instanceof Node) th.appendChild(content); else th.textContent = String(content ?? '');
+          } catch (_) { th.textContent = col.name || col.prop || ''; }
+          if (this._sort?.prop === col.prop) th.title = '정렬: ' + this._sort.dir;
+          th.addEventListener('click', () => {
+            if (!col.sortable) return;
+            const dir = this._sort?.prop === col.prop && this._sort.dir === 'asc' ? 'desc' : 'asc';
+            this._sort = { prop: col.prop, dir };
+            this.dispatchEvent(new CustomEvent('beforesortingapply', { bubbles: true, detail: this._sort }));
+            this.render();
+          });
+          hr.appendChild(th);
+        });
+        thead.appendChild(hr);
+        const tbody = document.createElement('tbody');
+        data.forEach((row, rowIndex) => {
+          const tr = document.createElement('tr');
+          if (row?._summary) tr.dataset.summary = 'true';
+          cols.forEach((col, colIndex) => tr.appendChild(this._renderCell(col, row, rowIndex, colIndex)));
+          tbody.appendChild(tr);
+        });
+        table.append(thead, tbody);
+        wrap.appendChild(table);
+        this.shadowRoot.replaceChildren(style, note, wrap);
+        queueMicrotask(() => this.dispatchEvent(new CustomEvent('aftergridrender', { bubbles: true, detail: { fallback: true } })));
+      }
+    }
+    customElements.define('revo-grid', FallbackRevoGrid);
+    window.__revoFallbackMode = true;
+  }
+  window.__revoReady = (async () => {
+    const classicUrls = [
+      'https://cdn.jsdelivr.net/npm/@revolist/revogrid@4.23.22/dist/revo-grid/revo-grid.js',
+      'https://unpkg.com/@revolist/revogrid@4.23.22/dist/revo-grid/revo-grid.js',
+      'https://cdn.jsdelivr.net/npm/@revolist/revogrid/dist/revo-grid/revo-grid.js',
+      'https://unpkg.com/@revolist/revogrid/dist/revo-grid/revo-grid.js',
+      'https://cdn.jsdelivr.net/npm/@revolist/revogrid@3.0.8/dist/revo-grid/revo-grid.js'
+    ];
+
+    for (const src of classicUrls) {
+      try {
+        await __loadRevoClassicScript(src);
+        await __waitRevoDefined(5000);
+        window.__revoLoadedFrom = src;
+        return src;
+      } catch (error) {
+        window.__revoLoaderDetails.push(error.message);
+      }
+    }
+
+    const moduleUrls = [
+      'https://esm.sh/@revolist/revogrid@4.23.22/loader',
+      'https://cdn.jsdelivr.net/npm/@revolist/revogrid@4.23.22/loader/index.js'
+    ];
+    for (const src of moduleUrls) {
+      try {
+        const mod = await import(src);
+        if (typeof mod.defineCustomElements === 'function') {
+          await mod.defineCustomElements();
+          await __waitRevoDefined(5000);
+          window.__revoLoadedFrom = src;
+          return src;
+        }
+        throw new Error('defineCustomElements export not found: ' + src);
+      } catch (error) {
+        window.__revoLoaderDetails.push(error.message);
+      }
+    }
+
+    __installFallbackRevoGrid();
+    window.__revoLoadedFrom = '내장 대체 그리드';
+    return '내장 대체 그리드';
+  })();
+</script>
+<script>
+(() => {
+  'use strict';
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const grid = $('#grid');
+
+  const state = {
+    baseData: [],
+    currentData: [],
+    datasetSize: 5000,
+    hiddenProps: new Set(),
+    groupedColumns: true,
+    pinnedColumns: true,
+    searchText: '',
+    focused: null,
+    logs: [],
+    liveTimer: null,
+    trimMap: {},
+    renderStarted: performance.now(),
+    theme: 'material',
+    rowSize: 38,
+  };
+
+  const names = ['김민준','이서연','박지후','최하윤','정도윤','강지민','조서준','윤서아','장예준','임수빈','한지우','오민서','신현우','권예린','황준서','안유진','송도현','전하린','홍시우','문채원'];
+  const departments = ['ICT전략실','기획조정실','회원지원부','어업양식지원부','홍보부','정보보호본부','자금운용본부','유통사업부'];
+  const roles = ['책임자','개발자','기획자','분석가','운영담당','보안담당','PM','디자이너'];
+  const statuses = ['진행','대기','완료','지연','검토'];
+  const priorities = ['긴급','높음','보통','낮음'];
+  const projects = ['디지털 업무혁신','통합 데이터 허브','회원조합 지원포털','양식장 AI 분석','정보보호 고도화','모바일 업무환경','자금운용 대시보드','수산물 유통혁신'];
+  const regions = ['서울','부산','인천','대전','광주','대구','제주','강릉'];
+  const coreProps = new Set(['_drag','id','name','department','status','progress','score','salary']);
+
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function pick(arr, r) { return arr[Math.floor(r() * arr.length)]; }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dateString(date) { return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`; }
+  function formatNumber(n) { return new Intl.NumberFormat('ko-KR').format(Number(n) || 0); }
+  function formatMoney(n) { return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW', maximumFractionDigits: 0 }).format(Number(n) || 0); }
+  function escapeCsv(value) { const s = value == null ? '' : String(value); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
+  function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  function calcRowClass(row) {
+    if (row.status === '지연') return 'row-overdue';
+    if (Number(row.score) >= 95) return 'row-excellent';
+    if (row.status === '완료') return 'row-complete';
+    return '';
+  }
+
+  function generateData(count) {
+    const r = mulberry32(20260717 + count);
+    const now = new Date(2026, 6, 17);
+    const result = new Array(count);
+    for (let i = 0; i < count; i++) {
+      const startOffset = Math.floor(r() * 260) - 180;
+      const duration = 20 + Math.floor(r() * 150);
+      const start = new Date(now); start.setDate(now.getDate() + startOffset);
+      const due = new Date(start); due.setDate(start.getDate() + duration);
+      const progress = Math.floor(r() * 101);
+      const score = Math.round((55 + r() * 45) * 10) / 10;
+      let status = progress === 100 ? '완료' : pick(statuses, r);
+      if (due < now && progress < 100 && r() > .45) status = '지연';
+      const salary = Math.round((32000000 + r() * 68000000) / 100000) * 100000;
+      const name = names[i % names.length];
+      const department = departments[Math.floor(r() * departments.length)];
+      const row = {
+        _drag: '',
+        id: i + 1,
+        name,
+        department,
+        role: pick(roles, r),
+        email: `user${i + 1}@example.com`,
+        phone: `010-${pad(10 + (i % 90))}${pad(i % 100)}-${pad((i * 17) % 100)}${pad((i * 31) % 100)}`,
+        region: pick(regions, r),
+        project: pick(projects, r),
+        status,
+        priority: pick(priorities, r),
+        progress,
+        score,
+        salary,
+        startDate: dateString(start),
+        dueDate: dateString(due),
+        active: r() > .14 ? 'Y' : 'N',
+        trend: Array.from({length: 8}, () => Math.floor(r() * 8) + 1).join(','),
+        memo: `${department} ${i + 1}번 업무 기록`,
+        updatedAt: `2026-07-${pad(1 + (i % 17))} ${pad(8 + (i % 10))}:${pad((i * 7) % 60)}`,
+      };
+      row._rowClass = calcRowClass(row);
+      result[i] = row;
+    }
+    return result;
+  }
+
+  function badgeTemplate(h, p) {
+    const value = String(p.model[p.prop] ?? '');
+    if (p.model._summary) return h('strong', { style: { color: '#2563eb' } }, value);
+    const styles = {
+      '진행': ['#dbeafe','#1d4ed8'], '대기': ['#f1f5f9','#475569'], '완료': ['#dcfce7','#047857'],
+      '지연': ['#fee2e2','#b91c1c'], '검토': ['#fef3c7','#b45309']
+    };
+    const [bg, color] = styles[value] || ['#eef2ff','#4338ca'];
+    return h('span', { style: { display:'inline-flex', alignItems:'center', padding:'3px 8px', borderRadius:'999px', background:bg, color, fontSize:'11px', fontWeight:'800' } }, value);
+  }
+
+  function nameTemplate(h, p) {
+    const value = String(p.model[p.prop] ?? '');
+    if (p.model._summary) return h('strong', null, value);
+    const initials = value.slice(-2);
+    return h('div', { style:{ display:'flex', alignItems:'center', gap:'8px', height:'100%' } }, [
+      h('span', { style:{ width:'26px', height:'26px', borderRadius:'8px', display:'inline-flex', alignItems:'center', justifyContent:'center', background:'#e0e7ff', color:'#4338ca', fontSize:'10px', fontWeight:'900' } }, initials),
+      h('span', { style:{ fontWeight:'750' } }, value)
+    ]);
+  }
+
+  function progressTemplate(h, p) {
+    if (p.model._summary) return h('strong', null, String(p.model[p.prop] ?? ''));
+    const value = Math.max(0, Math.min(100, Number(p.model[p.prop]) || 0));
+    const color = value >= 80 ? '#059669' : value >= 50 ? '#2563eb' : value >= 25 ? '#d97706' : '#dc2626';
+    return h('div', { style:{ display:'flex', alignItems:'center', gap:'7px', width:'100%' }, title:`${value}%` }, [
+      h('div', { style:{ flex:'1', height:'7px', borderRadius:'99px', background:'#e5e7eb', overflow:'hidden' } },
+        h('div', { style:{ width:`${value}%`, height:'100%', borderRadius:'99px', background:color } })
+      ),
+      h('span', { style:{ width:'34px', textAlign:'right', fontSize:'10px', fontWeight:'800', color } }, `${value}%`)
+    ]);
+  }
+
+  function priorityTemplate(h, p) {
+    const value = String(p.model[p.prop] ?? '');
+    if (p.model._summary) return h('strong', null, value);
+    const color = { '긴급':'#dc2626', '높음':'#ea580c', '보통':'#2563eb', '낮음':'#64748b' }[value] || '#64748b';
+    return h('span', { style:{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', fontWeight:'750' } }, [
+      h('i', { style:{ width:'7px', height:'7px', borderRadius:'50%', background:color } }), value
+    ]);
+  }
+
+  function scoreTemplate(h, p) {
+    if (p.model._summary) return h('strong', null, String(p.model[p.prop] ?? ''));
+    const value = Number(p.model[p.prop]) || 0;
+    const color = value >= 90 ? '#047857' : value >= 75 ? '#1d4ed8' : value >= 60 ? '#b45309' : '#b91c1c';
+    return h('strong', { style:{ color } }, value.toFixed(1));
+  }
+
+  function moneyTemplate(h, p) {
+    if (p.model._summary) return h('strong', { style:{ color:'#7c3aed' } }, String(p.model[p.prop] ?? ''));
+    return h('span', { style:{ fontVariantNumeric:'tabular-nums', fontWeight:'700' } }, formatMoney(p.model[p.prop]));
+  }
+
+  function trendTemplate(h, p) {
+    if (p.model._summary) return h('span', null, String(p.model[p.prop] ?? ''));
+    const blocks = '▁▂▃▄▅▆▇█';
+    const vals = String(p.model[p.prop] || '').split(',').map(Number);
+    const text = vals.map(v => blocks[Math.max(0, Math.min(7, v - 1))]).join('');
+    return h('span', { style:{ letterSpacing:'1px', color:'#7c3aed', fontSize:'14px' }, title:'최근 8개 시점 추이' }, text);
+  }
+
+  function yesNoTemplate(h, p) {
+    const value = String(p.model[p.prop] ?? '');
+    if (p.model._summary) return h('span', null, value);
+    const yes = value.toUpperCase() === 'Y';
+    return h('span', { style:{ color: yes ? '#047857' : '#94a3b8', fontWeight:'900' } }, yes ? '● 활성' : '○ 비활성');
+  }
+
+  function dragTemplate(h, p) {
+    if (p.model._summary) return h('span', null, '');
+    return h('span', { style:{ color:'#94a3b8', fontSize:'16px', cursor:'grab', letterSpacing:'-3px' }, title:'행을 드래그하여 이동' }, '⠿');
+  }
+
+  function emailTemplate(h, p) {
+    const value = String(p.model[p.prop] ?? '');
+    if (p.model._summary) return h('span', null, value);
+    return h('span', { style:{ color:'#2563eb', textDecoration:'underline', textUnderlineOffset:'2px' } }, value);
+  }
+
+  function headerTemplate(icon) {
+    return (h, props) => h('span', { style:{ display:'inline-flex', alignItems:'center', gap:'5px', fontWeight:'800' } }, [
+      h('span', { style:{ opacity:'.72' } }, icon),
+      h('span', null, props.column.name)
+    ]);
+  }
+
+  const leafColumns = [
+    { prop:'_drag', name:'', size:44, minSize:40, maxSize:48, readonly:true, rowDrag:true, cellTemplate:dragTemplate, pin:'colPinStart', core:true },
+    { prop:'id', name:'ID', size:72, minSize:58, sortable:true, filter:'number', readonly:true, pin:'colPinStart', core:true, columnTemplate:headerTemplate('#') },
+    { prop:'name', name:'성명', size:145, sortable:true, filter:'string', cellTemplate:nameTemplate, autoSize:true, core:true, columnTemplate:headerTemplate('●') },
+    { prop:'department', name:'부서', size:145, sortable:true, filter:'string', autoSize:true, core:true },
+    { prop:'role', name:'직무', size:110, sortable:true, filter:'string' },
+    { prop:'email', name:'이메일', size:210, sortable:true, filter:'string', cellTemplate:emailTemplate, autoSize:true },
+    { prop:'phone', name:'연락처', size:145, filter:'string' },
+    { prop:'region', name:'지역', size:90, sortable:true, filter:'string' },
+    { prop:'project', name:'프로젝트', size:190, sortable:true, filter:'string', autoSize:true },
+    { prop:'status', name:'상태', size:100, sortable:true, filter:'string', cellTemplate:badgeTemplate, core:true, columnTemplate:headerTemplate('◆') },
+    { prop:'priority', name:'우선순위', size:105, sortable:true, filter:'string', cellTemplate:priorityTemplate },
+    { prop:'progress', name:'달성률', size:145, sortable:true, filter:'number', cellTemplate:progressTemplate, cellParser:(m,c)=>Number(m[c.prop] ?? 0), core:true },
+    { prop:'score', name:'점수', size:92, sortable:true, filter:'number', cellTemplate:scoreTemplate, cellParser:(m,c)=>Number(m[c.prop] ?? 0), core:true },
+    { prop:'salary', name:'연봉', size:145, sortable:true, filter:'number', cellTemplate:moneyTemplate, cellParser:(m,c)=>Number(m[c.prop] ?? 0), core:true },
+    { prop:'startDate', name:'시작일', size:112, sortable:true, filter:'string' },
+    { prop:'dueDate', name:'마감일', size:112, sortable:true, filter:'string' },
+    { prop:'active', name:'재직', size:95, sortable:true, filter:'string', cellTemplate:yesNoTemplate },
+    { prop:'trend', name:'추이', size:125, readonly:true, cellTemplate:trendTemplate },
+    { prop:'memo', name:'메모', size:240, filter:'string', autoSize:true },
+    { prop:'updatedAt', name:'최종 수정', size:145, sortable:true, readonly:true, pin:'colPinEnd', columnTemplate:headerTemplate('↻') },
+  ];
+
+  const groupMap = [
+    { name:'기본 정보', props:['name','department','role','email','phone','region'] },
+    { name:'업무 현황', props:['project','status','priority','progress','score','salary'] },
+    { name:'일정·기타', props:['startDate','dueDate','active','trend','memo'] },
+  ];
+
+  function cloneColumn(column) {
+    const c = { ...column };
+    delete c.core;
+    if (!state.pinnedColumns) delete c.pin;
+    return c;
+  }
+
+  function buildColumns() {
+    const visible = leafColumns.filter(c => !state.hiddenProps.has(c.prop));
+    if (!state.groupedColumns) return visible.map(cloneColumn);
+
+    const result = [];
+    const fixedBefore = visible.filter(c => ['_drag','id'].includes(c.prop));
+    const fixedAfter = visible.filter(c => c.prop === 'updatedAt');
+    result.push(...fixedBefore.map(cloneColumn));
+    for (const group of groupMap) {
+      const children = group.props.map(prop => visible.find(c => c.prop === prop)).filter(Boolean).map(cloneColumn);
+      if (children.length) result.push({ name: group.name, children });
+    }
+    result.push(...fixedAfter.map(cloneColumn));
+    return result;
+  }
+
+  function flattenVisibleColumns() {
+    return leafColumns.filter(c => !state.hiddenProps.has(c.prop) && !['_drag','trend'].includes(c.prop));
+  }
+
+  function summaryRows(rows) {
+    const n = rows.length || 1;
+    const avgProgress = rows.reduce((s, r) => s + (Number(r.progress) || 0), 0) / n;
+    const avgScore = rows.reduce((s, r) => s + (Number(r.score) || 0), 0) / n;
+    const sumSalary = rows.reduce((s, r) => s + (Number(r.salary) || 0), 0);
+    return {
+      top: [{ _summary:true, id:'PIN', name:'상단 고정행', department:'현재 표시 기준', role:'', email:'', phone:'', region:'', project:'필터·정렬·편집 가능', status:'안내', priority:'', progress:'', score:'', salary:'', startDate:'', dueDate:'', active:'', trend:'', memo:'열/행 고정 샘플', updatedAt:'고정' }],
+      bottom: [{ _summary:true, id:'Σ', name:`요약 ${formatNumber(rows.length)}행`, department:'', role:'', email:'', phone:'', region:'', project:'평균/합계', status:'요약', priority:'', progress:`평균 ${avgProgress.toFixed(1)}%`, score:`평균 ${avgScore.toFixed(1)}`, salary:`합계 ${formatMoney(sumSalary)}`, startDate:'', dueDate:'', active:'', trend:'', memo:'고정 하단 요약행', updatedAt:'자동 계산' }]
+    };
+  }
+
+  async function applyData(reason = '데이터 적용') {
+    const q = state.searchText.trim().toLowerCase();
+    state.currentData = q ? state.baseData.filter(row => [row.id,row.name,row.department,row.role,row.email,row.region,row.project,row.status,row.priority,row.memo].some(v => String(v).toLowerCase().includes(q))) : state.baseData;
+    grid.source = state.currentData;
+    const sums = summaryRows(state.currentData);
+    grid.pinnedTopSource = sums.top;
+    grid.pinnedBottomSource = sums.bottom;
+    $('#memoryHint').textContent = `데이터 ${formatNumber(state.currentData.length)}행`;
+    $('#statFilterInfo').textContent = q ? `빠른 검색: “${state.searchText}”` : '검색·필터 반영';
+    logEvent('source', `${reason} · ${formatNumber(state.currentData.length)}행`);
+    await updateMetrics();
+  }
+
+  function applyColumns() {
+    grid.columns = buildColumns();
+    savePrefs();
+    logEvent('columns', `${flattenVisibleColumns().length}개 데이터 열 표시`);
+  }
+
+  async function loadDataset(count) {
+    setLoading(true, `${formatNumber(count)}행 생성 중`, '결정적 난수 기반 샘플 데이터를 준비하고 있습니다.');
+    const started = performance.now();
+    await sleep(30);
+    state.datasetSize = count;
+    state.baseData = generateData(count);
+    state.searchText = '';
+    $('#quickSearch').value = '';
+    await applyData('데이터셋 변경');
+    const elapsed = performance.now() - started;
+    $('#renderTime').textContent = `생성·적용: ${elapsed.toFixed(0)}ms`;
+    toast(`${formatNumber(count)}행 데이터셋을 불러왔습니다.`, 'success');
+    setLoading(false);
+  }
+
+  async function updateMetrics() {
+    let visible = state.currentData;
+    try {
+      const gridVisible = await grid.getVisibleSource();
+      if (Array.isArray(gridVisible)) visible = gridVisible.filter(r => !r?._summary);
+    } catch (_) {}
+    const n = visible.length || 1;
+    const avgProgress = visible.reduce((s, r) => s + (Number(r.progress) || 0), 0) / n;
+    const avgScore = visible.reduce((s, r) => s + (Number(r.score) || 0), 0) / n;
+    const salary = visible.reduce((s, r) => s + (Number(r.salary) || 0), 0);
+    $('#statTotal').textContent = formatNumber(state.baseData.length);
+    $('#statVisible').textContent = formatNumber(visible.length);
+    $('#statProgress').textContent = `${avgProgress.toFixed(1)}%`;
+    $('#statScore').textContent = avgScore.toFixed(1);
+    $('#statSalary').textContent = salary >= 100000000 ? `${(salary / 100000000).toFixed(1)}억원` : formatMoney(salary);
+    const sums = summaryRows(visible);
+    grid.pinnedBottomSource = sums.bottom;
+  }
+
+  function setLoading(show, title = '', desc = '') {
+    const overlay = $('#loadingOverlay');
+    overlay.style.display = show ? 'grid' : 'none';
+    if (title) $('#loadingTitle').textContent = title;
+    if (desc) $('#loadingDesc').textContent = desc;
+  }
+
+  function toast(message, type = '') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = message;
+    $('#toastStack').appendChild(el);
+    setTimeout(() => el.remove(), 2700);
+  }
+
+  function safeDetail(detail) {
+    try {
+      const seen = new WeakSet();
+      return JSON.stringify(detail, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) return '[Circular]';
+          seen.add(value);
+        }
+        if (key === 'model') return value?.id ? `{id:${value.id}}` : '[model]';
+        if (typeof value === 'function') return '[Function]';
+        return value;
+      }).slice(0, 240);
+    } catch (_) { return String(detail ?? ''); }
+  }
+
+  function logEvent(name, detail = '') {
+    const now = new Date();
+    const item = { time: now.toLocaleTimeString('ko-KR', { hour12:false }), name, detail: typeof detail === 'string' ? detail : safeDetail(detail) };
+    state.logs.unshift(item);
+    state.logs = state.logs.slice(0, 80);
+    $('#eventLog').innerHTML = state.logs.map(x => `<div class="event-row"><span class="event-time">${x.time}</span> <span class="event-name">${x.name}</span><br>${escapeHtml(x.detail)}</div>`).join('');
+  }
+
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  }
+
+  async function getFocusedContext() {
+    let focused = null;
+    try { focused = await grid.getFocused(); } catch (_) {}
+    const source = await grid.getSource().catch(() => state.currentData);
+    const rowIndex = focused?.cell?.y ?? focused?.rowIndex ?? focused?.y ?? focused?.row?.index;
+    const colIndex = focused?.cell?.x ?? focused?.colIndex ?? focused?.x ?? focused?.column?.index;
+    const model = focused?.model || focused?.row?.model || (Number.isInteger(rowIndex) ? source[rowIndex] : null);
+    const prop = focused?.column?.prop || focused?.prop || focused?.columnProp || (Number.isInteger(colIndex) ? flattenVisibleColumns()[colIndex]?.prop : null);
+    return { focused, source, rowIndex, colIndex, model, prop };
+  }
+
+  async function updateFocusDetails() {
+    const ctx = await getFocusedContext();
+    state.focused = ctx;
+    if (!ctx.focused) {
+      $('#focusDetails').innerHTML = '<div class="detail-item"><b>상태</b><span>선택 없음</span></div>';
+      return;
+    }
+    const model = ctx.model || {};
+    const value = ctx.prop ? model[ctx.prop] : '';
+    $('#focusDetails').innerHTML = [
+      ['행 인덱스', ctx.rowIndex ?? '-'], ['열 인덱스', ctx.colIndex ?? '-'], ['열 속성', ctx.prop ?? '-'],
+      ['직원 ID', model.id ?? '-'], ['성명', model.name ?? '-'], ['현재 값', value ?? '-']
+    ].map(([k,v]) => `<div class="detail-item"><b>${k}</b><span>${escapeHtml(v)}</span></div>`).join('');
+    $('#selectedRange').textContent = `선택 셀: ${ctx.prop || '?'} / 행 ${Number.isInteger(ctx.rowIndex) ? ctx.rowIndex + 1 : '?'}`;
+  }
+
+  function downloadFile(filename, content, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+  }
+
+  async function exportCsv() {
+    const rows = await grid.getVisibleSource().catch(() => state.currentData);
+    const columns = flattenVisibleColumns();
+    const csv = [columns.map(c => escapeCsv(c.name)).join(','), ...rows.filter(r => !r._summary).map(row => columns.map(c => escapeCsv(row[c.prop])).join(','))].join('\r\n');
+    downloadFile(`revogrid_${dateString(new Date())}.csv`, '\uFEFF' + csv, 'text/csv;charset=utf-8');
+    logEvent('export', `CSV ${formatNumber(rows.length)}행`);
+  }
+
+  async function exportJson() {
+    const rows = await grid.getVisibleSource().catch(() => state.currentData);
+    downloadFile(`revogrid_${dateString(new Date())}.json`, JSON.stringify(rows.filter(r => !r._summary), null, 2), 'application/json;charset=utf-8');
+    logEvent('export', `JSON ${formatNumber(rows.length)}행`);
+  }
+
+  function renderColumnDialog() {
+    $('#columnList').innerHTML = leafColumns.filter(c => c.prop !== '_drag').map(c => `
+      <label class="column-option"><input type="checkbox" value="${c.prop}" ${state.hiddenProps.has(c.prop) ? '' : 'checked'} /><span>${escapeHtml(c.name || c.prop)}</span></label>
+    `).join('');
+  }
+
+  function savePrefs() {
+    const prefs = {
+      hiddenProps:[...state.hiddenProps], groupedColumns:state.groupedColumns, pinnedColumns:state.pinnedColumns,
+      theme:state.theme, rowSize:state.rowSize, appDark:document.body.classList.contains('app-dark')
+    };
+    localStorage.setItem('revogrid-demo-prefs', JSON.stringify(prefs));
+  }
+
+  function loadPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem('revogrid-demo-prefs') || '{}');
+      state.hiddenProps = new Set(p.hiddenProps || []);
+      state.groupedColumns = p.groupedColumns ?? true;
+      state.pinnedColumns = p.pinnedColumns ?? true;
+      state.theme = p.theme || 'material';
+      state.rowSize = Number(p.rowSize) || 38;
+      if (p.appDark) document.body.classList.add('app-dark');
+    } catch (_) {}
+    $('#toggleColumnGroups').checked = state.groupedColumns;
+    $('#togglePinned').checked = state.pinnedColumns;
+    $('#gridTheme').value = state.theme;
+    $('#rowDensity').value = String(state.rowSize);
+  }
+
+  async function resetAll() {
+    localStorage.removeItem('revogrid-demo-prefs');
+    state.hiddenProps.clear();
+    state.groupedColumns = true;
+    state.pinnedColumns = true;
+    state.theme = 'material';
+    state.rowSize = 38;
+    $('#toggleColumnGroups').checked = true;
+    $('#togglePinned').checked = true;
+    $('#toggleReadonly').checked = false;
+    $('#toggleRtl').checked = false;
+    $('#toggleLive').checked = false;
+    $('#gridTheme').value = 'material';
+    $('#rowDensity').value = '38';
+    $('#groupSelect').value = '';
+    document.body.classList.remove('app-dark');
+    stopLive();
+    grid.readonly = false;
+    grid.rtl = false;
+    grid.grouping = undefined;
+    grid.theme = 'material';
+    grid.rowSize = 38;
+    grid.filter = false;
+    await sleep(10);
+    grid.filter = true;
+    await grid.clearSorting().catch(() => {});
+    applyColumns();
+    await loadDataset(Number($('#datasetSize').value));
+    toast('전체 설정을 초기화했습니다.', 'success');
+  }
+
+  function startLive() {
+    stopLive();
+    $('#liveDot').classList.add('live');
+    $('#gridState').textContent = '실시간 업데이트 실행 중';
+    state.liveTimer = setInterval(async () => {
+      if (!state.currentData.length) return;
+      const count = Math.min(8, Math.max(1, Math.floor(state.currentData.length / 1000)));
+      for (let i = 0; i < count; i++) {
+        const idx = Math.floor(Math.random() * state.currentData.length);
+        const row = state.currentData[idx];
+        if (!row || row._summary) continue;
+        row.progress = Math.max(0, Math.min(100, Number(row.progress) + (Math.random() > .3 ? 1 : -1)));
+        row.score = Math.max(0, Math.min(100, Math.round((Number(row.score) + (Math.random() - .45) * 1.5) * 10) / 10));
+        row.updatedAt = new Date().toLocaleString('sv-SE').slice(0,16);
+        row._rowClass = calcRowClass(row);
+      }
+      await grid.refresh('all').catch(() => {});
+      updateMetrics();
+    }, 850);
+    logEvent('realtime', '시작');
+  }
+
+  function stopLive() {
+    if (state.liveTimer) clearInterval(state.liveTimer);
+    state.liveTimer = null;
+    $('#liveDot').classList.remove('live');
+    $('#gridState').textContent = window.__revoFallbackMode ? '대체 모드' : '준비됨';
+  }
+
+  function installGridEvents() {
+    const eventNames = ['afteredit','aftersortingapply','aftercolumnresize','rowdragstart','rowdragend','afterthemechanged','aftertrimmed','beforepaste','afterpaste','headerclick'];
+    eventNames.forEach(name => grid.addEventListener(name, e => {
+      logEvent(name, e.detail || '');
+      if (['afteredit','aftersortingapply','aftertrimmed','afterpaste','rowdragend'].includes(name)) setTimeout(updateMetrics, 40);
+      if (name === 'afteredit') {
+        const model = e.detail?.model;
+        if (model) { model._rowClass = calcRowClass(model); model.updatedAt = new Date().toLocaleString('sv-SE').slice(0,16); }
+      }
+    }));
+
+    grid.addEventListener('beforeedit', e => {
+      const d = e.detail || {};
+      const model = d.model || d.row?.model;
+      if (model?._summary) { e.preventDefault(); toast('고정 요약행은 편집할 수 없습니다.', 'warning'); return; }
+      const prop = d.prop || d.column?.prop;
+      const val = d.val ?? d.value ?? d.newValue;
+      if (['progress','score'].includes(prop) && val !== undefined) {
+        const n = Number(val);
+        if (!Number.isFinite(n) || n < 0 || n > 100) { e.preventDefault(); toast(`${prop === 'score' ? '점수' : '달성률'}는 0~100 범위여야 합니다.`, 'error'); }
+      }
+      if (prop === 'salary' && val !== undefined && Number(val) < 0) { e.preventDefault(); toast('연봉은 0 이상이어야 합니다.', 'error'); }
+    });
+
+    grid.addEventListener('afterfocus', () => setTimeout(updateFocusDetails, 0));
+    grid.addEventListener('beforecellfocus', e => logEvent('beforecellfocus', e.detail || ''));
+    grid.addEventListener('aftergridrender', () => {
+      const elapsed = performance.now() - state.renderStarted;
+      $('#renderTime').textContent = `렌더: ${elapsed.toFixed(0)}ms`;
+    });
+    grid.addEventListener('filterconfigchanged', () => setTimeout(updateMetrics, 80));
+    grid.addEventListener('aftergridinit', () => logEvent('aftergridinit', '그리드 초기화 완료'));
+  }
+
+  async function runApi(action) {
+    const rows = await grid.getSource().catch(() => state.currentData);
+    try {
+      if (action === 'first') await grid.scrollToRow(0);
+      if (action === 'middle') await grid.scrollToRow(Math.floor(rows.length / 2));
+      if (action === 'last') await grid.scrollToRow(Math.max(0, rows.length - 1));
+      if (action === 'salary') await grid.scrollToColumnProp('salary');
+      if (action === 'edit') { await grid.scrollToRow(0); await grid.setCellEdit(0, 'name'); }
+      if (action === 'range') await grid.setCellsFocus({x:0,y:0}, {x:4,y:5}, 'rgCol', 'rgRow');
+      if (action === 'trim') {
+        state.trimMap = {};
+        for (let i = 9; i < rows.length; i += 10) state.trimMap[i] = true;
+        await grid.addTrimmed(state.trimMap, 'demo-trim', 'rgRow');
+        toast('매 10번째 행을 숨겼습니다.', 'warning');
+      }
+      if (action === 'untrim') {
+        const reset = Object.fromEntries(Object.keys(state.trimMap).map(k => [k, false]));
+        await grid.addTrimmed(reset, 'demo-trim', 'rgRow');
+        state.trimMap = {};
+        toast('숨긴 행을 복원했습니다.', 'success');
+      }
+      if (action === 'size') { const size = await grid.getContentSize(); toast(`콘텐츠 크기: x=${size.x}, y=${size.y}`); logEvent('getContentSize', size); }
+      if (action === 'plugins') { const plugins = await grid.getPlugins(); toast(`활성 플러그인 ${plugins.length}개`); logEvent('getPlugins', plugins.map(p => p.constructor?.name || 'Plugin').join(', ')); }
+      if (action === 'refresh') { await grid.refresh('all'); toast('전체 뷰포트를 새로고침했습니다.', 'success'); }
+      if (action === 'visible') { const visible = await grid.getVisibleSource(); toast(`현재 표시 데이터 ${formatNumber(visible.length)}행`); }
+      logEvent(`api:${action}`, '실행 완료');
+    } catch (error) {
+      toast(`API 실행 오류: ${error.message}`, 'error');
+      logEvent(`api:${action}:error`, error.message);
+    }
+  }
+
+  function wireUi() {
+    $('#datasetSize').addEventListener('change', e => loadDataset(Number(e.target.value)));
+    let searchTimer;
+    $('#quickSearch').addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => { state.searchText = e.target.value; applyData('빠른 검색'); }, 220);
+    });
+
+    $('#btnAdd').addEventListener('click', async () => {
+      const id = state.baseData.reduce((m,r) => Math.max(m, Number(r.id)||0), 0) + 1;
+      const row = generateData(1)[0];
+      Object.assign(row, { id, name:'신규 직원', email:`new${id}@example.com`, memo:'새로 추가된 행', updatedAt:new Date().toLocaleString('sv-SE').slice(0,16) });
+      state.baseData.unshift(row);
+      await applyData('행 추가');
+      await grid.scrollToRow(0);
+      await grid.setCellEdit(0, 'name').catch(() => {});
+    });
+
+    $('#btnDuplicate').addEventListener('click', async () => {
+      const { model } = await getFocusedContext();
+      if (!model || model._summary) return toast('복제할 일반 데이터 셀을 먼저 선택하세요.', 'warning');
+      const id = state.baseData.reduce((m,r) => Math.max(m, Number(r.id)||0), 0) + 1;
+      const copy = { ...model, id, name:`${model.name} 복사`, email:`copy${id}@example.com`, updatedAt:new Date().toLocaleString('sv-SE').slice(0,16) };
+      state.baseData.unshift(copy);
+      await applyData('행 복제');
+      toast('선택 행을 복제했습니다.', 'success');
+    });
+
+    $('#btnDelete').addEventListener('click', async () => {
+      const { model } = await getFocusedContext();
+      if (!model || model._summary) return toast('삭제할 일반 데이터 셀을 먼저 선택하세요.', 'warning');
+      state.baseData = state.baseData.filter(r => r !== model && r.id !== model.id);
+      await applyData('행 삭제');
+      toast(`ID ${model.id} 행을 삭제했습니다.`, 'success');
+    });
+
+    $('#btnClearFilter').addEventListener('click', async () => {
+      state.searchText = ''; $('#quickSearch').value = '';
+      grid.filter = false; await sleep(20); grid.filter = true;
+      await applyData('필터 해제');
+      toast('빠른 검색과 내장 필터를 초기화했습니다.', 'success');
+    });
+    $('#btnClearSort').addEventListener('click', async () => { await grid.clearSorting(); toast('정렬을 해제했습니다.', 'success'); });
+
+    $('#groupSelect').addEventListener('change', e => {
+      const props = e.target.value ? e.target.value.split(',') : [];
+      grid.grouping = props.length ? { props, expandedAll:true } : undefined;
+      logEvent('grouping', props.join(' → ') || '해제');
+    });
+    $('#gridTheme').addEventListener('change', e => {
+      state.theme = e.target.value; grid.theme = state.theme;
+      document.body.classList.toggle('app-dark', state.theme.startsWith('dark'));
+      savePrefs();
+    });
+    $('#rowDensity').addEventListener('change', e => { state.rowSize = Number(e.target.value); grid.rowSize = state.rowSize; savePrefs(); });
+    $('#toggleColumnGroups').addEventListener('change', e => { state.groupedColumns = e.target.checked; applyColumns(); });
+    $('#togglePinned').addEventListener('change', e => { state.pinnedColumns = e.target.checked; applyColumns(); });
+    $('#toggleReadonly').addEventListener('change', e => { grid.readonly = e.target.checked; logEvent('readonly', String(e.target.checked)); });
+    $('#toggleRtl').addEventListener('change', e => { grid.rtl = e.target.checked; logEvent('rtl', String(e.target.checked)); });
+    $('#toggleLive').addEventListener('change', e => e.target.checked ? startLive() : stopLive());
+
+    $('#btnCsv').addEventListener('click', exportCsv);
+    $('#btnJson').addEventListener('click', exportJson);
+    $('#btnResetAll').addEventListener('click', resetAll);
+    $('#btnClearLog').addEventListener('click', () => { state.logs = []; $('#eventLog').innerHTML = ''; });
+    $$('.api-grid [data-api]').forEach(btn => btn.addEventListener('click', () => runApi(btn.dataset.api)));
+
+    $('#btnColumns').addEventListener('click', () => { renderColumnDialog(); $('#columnsDialog').showModal(); });
+    $('#btnHelp').addEventListener('click', () => $('#helpDialog').showModal());
+    $$('[data-close-dialog]').forEach(btn => btn.addEventListener('click', () => btn.closest('dialog').close()));
+    $('#btnAllColumns').addEventListener('click', () => $$('#columnList input').forEach(c => c.checked = true));
+    $('#btnCoreColumns').addEventListener('click', () => $$('#columnList input').forEach(c => c.checked = coreProps.has(c.value)));
+    $('#btnApplyColumns').addEventListener('click', () => {
+      state.hiddenProps = new Set($$('#columnList input').filter(c => !c.checked).map(c => c.value));
+      applyColumns(); $('#columnsDialog').close(); toast('열 표시 설정을 적용했습니다.', 'success');
+    });
+    $('#btnAppTheme').addEventListener('click', () => { document.body.classList.toggle('app-dark'); savePrefs(); });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === '?' && !/input|select|textarea/i.test(document.activeElement.tagName)) $('#helpDialog').showModal();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !/input/i.test(document.activeElement.tagName)) { e.preventDefault(); $('#quickSearch').focus(); }
+    });
+  }
+
+  async function init() {
+    try {
+      await Promise.race([
+        window.__revoReady,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('CDN 로딩 대기 시간 초과')), 15000))
+      ]);
+    } catch (error) {
+      setLoading(true, 'RevoGrid CDN 로드 실패', '인터넷 연결, 보안망 또는 CDN 접근 허용 여부를 확인하세요. 상세: ' + error.message);
+      $('#gridState').textContent = '라이브러리 로드 실패';
+      return;
+    }
+
+    try { await __waitRevoDefined(5000); }
+    catch (_) {
+      setLoading(true, 'RevoGrid 초기화 실패', 'CDN 파일은 내려받았지만 Web Component가 등록되지 않았습니다. 브라우저 콘솔을 확인하세요.');
+      $('#gridState').textContent = '초기화 실패';
+      return;
+    }
+
+    loadPrefs();
+    grid.theme = state.theme;
+    grid.rowSize = state.rowSize;
+    grid.resize = true;
+    grid.range = true;
+    grid.rowHeaders = true;
+    grid.canMoveColumns = true;
+    grid.autoSizeColumn = { allColumns:true, mode:'headerClickAutoSize', preciseSize:false };
+    grid.filter = true;
+    grid.exporting = true;
+    grid.useClipboard = true;
+    grid.stretch = true;
+    grid.rowClass = '_rowClass';
+    grid.frameSize = 2;
+    grid.readonly = false;
+    grid.rtl = false;
+
+    applyColumns();
+    installGridEvents();
+    wireUi();
+    await loadDataset(state.datasetSize);
+    state.renderStarted = performance.now();
+    $('#gridState').textContent = window.__revoFallbackMode ? '대체 모드' : '준비됨';
+    logEvent('ready', 'RevoGrid 종합 샘플 준비 완료');
+    if (window.__revoLoadedFrom) logEvent('cdn', window.__revoLoadedFrom);
+  }
+
+  init().catch(error => {
+    console.error(error);
+    setLoading(true, '샘플 초기화 오류', error.message);
+    logEvent('fatal', error.stack || error.message);
+  });
+})();
+</script>
+</body>
+</html>
