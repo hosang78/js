@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>autoNumeric 종합 기능 샘플</title>
+<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.10.10/dist/autoNumeric.min.js"></script>
+<style>
+:root{
+  --bg:#f3f6fb;--panel:#fff;--ink:#172033;--muted:#657089;--line:#dbe2ee;
+  --primary:#3559e0;--primary2:#1939aa;--ok:#18864b;--warn:#b86800;--danger:#c93737;
+  --shadow:0 12px 30px rgba(30,50,90,.08);--radius:18px
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(180deg,#eef3ff 0,#f7f9fc 240px,#f3f6fb 100%);color:var(--ink);
+ font-family:Pretendard,"Noto Sans KR","Segoe UI",Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.shell{max-width:1440px;margin:auto;padding:24px}
+.hero{background:linear-gradient(125deg,#182a75,#3559e0 58%,#6f86ff);color:white;border-radius:26px;
+ padding:30px;box-shadow:0 18px 50px rgba(40,69,180,.24);position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;width:380px;height:380px;border:70px solid rgba(255,255,255,.09);
+ border-radius:50%;right:-120px;top:-190px}
+.hero h1{margin:0 0 8px;font-size:clamp(26px,4vw,44px);letter-spacing:-.04em}
+.hero p{margin:0;max-width:850px;line-height:1.7;color:#e8ecff}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.badge{padding:7px 11px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);border-radius:999px;font-size:13px}
+.toolbar{position:sticky;top:0;z-index:20;margin:18px 0;padding:12px;background:rgba(255,255,255,.88);
+ backdrop-filter:blur(12px);border:1px solid rgba(210,220,235,.9);border-radius:16px;display:flex;gap:8px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.btn{border:0;border-radius:11px;padding:10px 13px;background:#e9eef9;color:#25314e;font-weight:700}
+.btn:hover{filter:brightness(.97)} .btn.primary{background:var(--primary);color:white}.btn.danger{background:#ffe7e7;color:#9c2222}
+.btn.ok{background:#e2f7ea;color:#17683b}.btn.ghost{background:white;border:1px solid var(--line)}
+.status{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);padding:0 8px}
+.dot{width:9px;height:9px;border-radius:50%;background:#bbb}.dot.on{background:#19a45b;box-shadow:0 0 0 4px #dff7e9}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px}
+.main{display:grid;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.card h2{font-size:20px;margin:0 0 5px;letter-spacing:-.025em}.card .desc{margin:0 0 17px;color:var(--muted);font-size:14px;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.field{background:#f9fbff;border:1px solid #e1e7f1;border-radius:14px;padding:14px}
+.field label{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800;margin-bottom:8px}
+.hint{font-size:11px;color:var(--muted);font-weight:500}
+.input-wrap{position:relative}
+input,select,textarea{width:100%;border:1px solid #cbd5e4;border-radius:10px;background:#fff;color:var(--ink);outline:none}
+input,select{height:44px;padding:0 12px} textarea{padding:12px;min-height:100px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(53,89,224,.13)}
+.output{margin-top:9px;padding:9px 10px;border-radius:9px;background:#edf2fa;color:#42506b;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;overflow:auto}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{padding:14px;border-radius:13px;background:linear-gradient(135deg,#f3f6ff,#eef2fc);border:1px solid #dfe6f4}
+.kpi b{display:block;font-size:20px;margin-top:4px}.kpi span{font-size:12px;color:var(--muted)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.controls .btn{padding:8px 10px;font-size:13px}
+.sidebar{display:grid;gap:18px;align-content:start;position:sticky;top:82px;height:max-content}
+pre{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.5;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.codebox{max-height:300px;overflow:auto;background:#10182c;color:#dfe8ff;border-radius:13px;padding:14px}
+.log{max-height:260px;overflow:auto;background:#10182c;color:#dbe6ff;border-radius:13px;padding:10px;font-family:ui-monospace,monospace;font-size:11px}
+.log div{padding:5px;border-bottom:1px solid rgba(255,255,255,.08)}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:650px}.table th,.table td{padding:11px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}.table th{background:#f4f7fc}
+.switchline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:9px 0}
+.check{width:auto;height:auto}
+.notice{display:none;margin:14px 0 0;padding:12px;border-radius:12px;background:#fff0d9;color:#885200;border:1px solid #ffd69c}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:26px 0}
+@media(max-width:1100px){.layout{grid-template-columns:1fr}.sidebar{position:static;grid-template-columns:1fr 1fr}.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.shell{padding:12px}.hero{padding:22px}.grid,.kpis,.sidebar{grid-template-columns:1fr}.toolbar{top:4px}.status{width:100%;margin-left:0}.card{padding:15px}.field{padding:12px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="hero">
+    <h1>autoNumeric 종합 기능 실험실</h1>
+    <p>숫자·통화 입력을 입력 즉시 포맷하고, 원시값 추출·옵션 변경·범위 제한·수식 계산·이벤트 감시·다중 인스턴스 제어까지 한 페이지에서 확인하는 샘플이다.</p>
+    <div class="badges"><span class="badge">v4.10.10</span><span class="badge">단일 HTML</span><span class="badge">반응형</span><span class="badge">외부 의존성 없음(autoNumeric 제외)</span></div>
+  </header>
+
+  <div id="loadNotice" class="notice">autoNumeric 라이브러리를 불러오지 못했다. 인터넷 연결 또는 CDN 접근 상태를 확인해 줘.</div>
+
+  <nav class="toolbar">
+    <button class="btn primary" data-jump="formats">국가별 포맷</button>
+    <button class="btn" data-jump="rules">입력 규칙</button>
+    <button class="btn" data-jump="methods">메서드</button>
+    <button class="btn" data-jump="playground">옵션 실험실</button>
+    <button class="btn ok" id="randomizeAll">전체 랜덤값</button>
+    <button class="btn ghost" id="resetAll">초기화</button>
+    <div class="status"><span class="dot" id="libDot"></span><span id="libStatus">라이브러리 확인 중</span></div>
+  </nav>
+
+  <div class="layout">
+    <main class="main">
+      <section class="card" id="formats">
+        <h2>1. 국가별 숫자·통화 포맷</h2>
+        <p class="desc">통화 기호 위치, 천 단위 구분자, 소수점 문자, 인도식 구분, 음수 표기 차이를 비교한다.</p>
+        <div class="grid">
+          <div class="field"><label>대한민국 원화 <span class="hint">₩ / 정수</span></label><input id="krw" value="1234567"><div class="output" data-out="krw"></div></div>
+          <div class="field"><label>미국 달러 <span class="hint">$ / 2자리</span></label><input id="usd" value="1234567.89"><div class="output" data-out="usd"></div></div>
+          <div class="field"><label>유로 <span class="hint">1.234.567,89 €</span></label><input id="eur" value="1234567.89"><div class="output" data-out="eur"></div></div>
+          <div class="field"><label>일본 엔 <span class="hint">¥ / 정수</span></label><input id="jpy" value="1234567"><div class="output" data-out="jpy"></div></div>
+          <div class="field"><label>인도 루피 <span class="hint">12,34,567.89</span></label><input id="inr" value="1234567.89"><div class="output" data-out="inr"></div></div>
+          <div class="field"><label>회계식 음수 <span class="hint">괄호 표기</span></label><input id="accounting" value="-1234567.89"><div class="output" data-out="accounting"></div></div>
+        </div>
+      </section>
+
+      <section class="card" id="rules">
+        <h2>2. 입력 규칙과 특수 동작</h2>
+        <p class="desc">최솟값·최댓값, 소수 정밀도, 퍼센트 환산, 접두·접미 기호, leading zero, 빈 값 처리 등을 확인한다.</p>
+        <div class="grid">
+          <div class="field"><label>범위 제한 <span class="hint">0 ~ 1,000</span></label><input id="range" value="500"><div class="output" data-out="range"></div></div>
+          <div class="field"><label>고정 소수 4자리 <span class="hint">반올림</span></label><input id="precision" value="123.456789"><div class="output" data-out="precision"></div></div>
+          <div class="field"><label>퍼센트 <span class="hint">0.125 → 12.5%</span></label><input id="percent" value="0.125"><div class="output" data-out="percent"></div></div>
+          <div class="field"><label>단위 접미사 <span class="hint">kg</span></label><input id="weight" value="1250.5"><div class="output" data-out="weight"></div></div>
+          <div class="field"><label>양수/음수 기호 <span class="hint">+ / -</span></label><input id="signed" value="1234.5"><div class="output" data-out="signed"></div></div>
+          <div class="field"><label>수식 입력 <span class="hint">=1000*1.1 입력 후 Enter</span></label><input id="formula" value="1000"><div class="output" data-out="formula"></div></div>
+          <div class="field"><label>빈 값 대체 <span class="hint">focus/blur 확인</span></label><input id="empty" value=""><div class="output" data-out="empty"></div></div>
+          <div class="field"><label>leading zero 허용 <span class="hint">000123</span></label><input id="leading" value="000123"><div class="output" data-out="leading"></div></div>
+          <div class="field"><label>읽기 전용 표시 <span class="hint">contenteditable</span></label><div id="displayValue" contenteditable="true" style="min-height:44px;padding:11px;border:1px solid #cbd5e4;border-radius:10px;background:#fff">9876543.21</div><div class="output" data-out="displayValue"></div></div>
+        </div>
+      </section>
+
+      <section class="card" id="methods">
+        <h2>3. 인스턴스 메서드·값 제어</h2>
+        <p class="desc">set, getNumericString, getNumber, update, clear, remove, reformat 등 주요 메서드를 버튼으로 호출한다.</p>
+        <div class="kpis">
+          <div class="kpi"><span>표시값</span><b id="methodFormatted">-</b></div>
+          <div class="kpi"><span>원시 문자열</span><b id="methodRaw">-</b></div>
+          <div class="kpi"><span>Number 타입</span><b id="methodNumber">-</b></div>
+          <div class="kpi"><span>인스턴스 상태</span><b id="methodState">활성</b></div>
+        </div>
+        <div class="field">
+          <label>메서드 대상 필드 <span class="hint">버튼으로 값·설정 변경</span></label>
+          <input id="methodTarget" value="123456.78">
+          <div class="controls">
+            <button class="btn primary" id="setMillion">set(1,000,000)</button>
+            <button class="btn" id="addVat">부가세 10% 추가</button>
+            <button class="btn" id="toggleCurrency">₩ ↔ $</button>
+            <button class="btn" id="clearTarget">clear()</button>
+            <button class="btn" id="unformatTarget">unformat()</button>
+            <button class="btn" id="reformatTarget">reformat()</button>
+            <button class="btn danger" id="removeTarget">remove()</button>
+            <button class="btn ok" id="restoreTarget">재생성</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>4. 증감·휠·화살표 키</h2>
+        <p class="desc">step 값 기반 증감과 mouse wheel, 위·아래 방향키 처리 옵션을 실험한다.</p>
+        <div class="grid">
+          <div class="field"><label>수량 <span class="hint">step 1</span></label><input id="quantity" value="10"><div class="controls"><button class="btn" data-step="quantity,-1">−1</button><button class="btn" data-step="quantity,1">+1</button><button class="btn" data-step="quantity,10">+10</button></div><div class="output" data-out="quantity"></div></div>
+          <div class="field"><label>단가 <span class="hint">step 100</span></label><input id="unitPrice" value="25000"><div class="controls"><button class="btn" data-step="unitPrice,-100">−100</button><button class="btn" data-step="unitPrice,100">+100</button><button class="btn" data-step="unitPrice,1000">+1,000</button></div><div class="output" data-out="unitPrice"></div></div>
+          <div class="field"><label>합계 자동 계산 <span class="hint">수량 × 단가</span></label><input id="totalPrice" readonly><div class="output" data-out="totalPrice"></div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>5. 다중 필드·폼 데이터 처리</h2>
+        <p class="desc">여러 autoNumeric 필드의 원시값을 한 번에 수집하고 JSON 또는 쿼리 문자열 형태로 확인한다.</p>
+        <div class="grid" id="invoiceFields">
+          <div class="field"><label>공급가액</label><input class="invoice" id="supply" value="1000000"></div>
+          <div class="field"><label>부가세</label><input class="invoice" id="tax" value="100000"></div>
+          <div class="field"><label>할인</label><input class="invoice" id="discount" value="50000"></div>
+        </div>
+        <div class="controls"><button class="btn primary" id="collectJson">JSON 수집</button><button class="btn" id="collectQuery">쿼리 문자열</button><button class="btn" id="sumInvoice">합계 계산</button></div>
+        <div class="codebox" style="margin-top:12px"><pre id="formResult">버튼을 눌러 데이터를 수집해 봐.</pre></div>
+      </section>
+
+      <section class="card" id="playground">
+        <h2>6. 런타임 옵션 실험실</h2>
+        <p class="desc">선택한 옵션으로 즉시 update()를 실행해 포맷 변화를 비교한다.</p>
+        <div class="grid">
+          <div class="field"><label>통화 기호</label><select id="optCurrency"><option value="₩">₩ 원</option><option value="$">$ 달러</option><option value="€">€ 유로</option><option value="¥">¥ 엔</option><option value="">없음</option></select></div>
+          <div class="field"><label>기호 위치</label><select id="optPlacement"><option value="p">앞</option><option value="s">뒤</option></select></div>
+          <div class="field"><label>천 단위 구분</label><select id="optGroup"><option value=",">쉼표 (,)</option><option value=".">마침표 (.)</option><option value=" ">공백</option><option value="">없음</option></select></div>
+          <div class="field"><label>소수점 문자</label><select id="optDecimal"><option value=".">마침표 (.)</option><option value=",">쉼표 (,)</option></select></div>
+          <div class="field"><label>소수 자릿수</label><select id="optDigits"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
+          <div class="field"><label>음수 표기</label><select id="optNegative"><option value="leading">-1,234</option><option value="trailing">1,234-</option><option value="brackets">(1,234)</option></select></div>
+        </div>
+        <div class="switchline"><label><input class="check" type="checkbox" id="optSymbolFocus" checked> 포커스 시 통화 기호 표시</label><label><input class="check" type="checkbox" id="optGroupingFocus" checked> 포커스 시 구분자 표시</label></div>
+        <div class="field"><label>실험 대상</label><input id="sandbox" value="-1234567.891"><div class="output" data-out="sandbox"></div></div>
+        <div class="controls"><button class="btn primary" id="applyOptions">옵션 적용</button><button class="btn" id="negativeSandbox">부호 반전</button><button class="btn" id="copyOptions">옵션 JSON 복사</button></div>
+      </section>
+    </main>
+
+    <aside class="sidebar">
+      <section class="card"><h2>실시간 선택 필드</h2><p class="desc">마지막으로 조작한 필드의 상태</p><div class="codebox"><pre id="liveInspector">{}</pre></div></section>
+      <section class="card"><h2>이벤트 로그</h2><p class="desc">rawValueModified, formatted 등 커스텀 이벤트</p><div class="controls" style="margin:0 0 10px"><button class="btn" id="clearLog">로그 비우기</button></div><div class="log" id="eventLog"></div></section>
+      <section class="card"><h2>정적 헬퍼</h2><p class="desc">AutoNumeric.format / unformat 결과</p><textarea id="helperInput">1234567.89</textarea><div class="controls"><button class="btn primary" id="helperFormat">format()</button><button class="btn" id="helperUnformat">unformat()</button></div><div class="output" id="helperOutput">결과 대기</div></section>
+    </aside>
+  </div>
+  <footer>autoNumeric v4.10.10 기능 확인용 샘플 · CDN 연결 필요</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const instances={}, initialValues={}; let methodInstance=null, sandboxOptions={};
+function log(msg,data){
+  const row=document.createElement('div');
+  row.textContent=`${new Date().toLocaleTimeString()}  ${msg}${data!==undefined?'  '+JSON.stringify(data):''}`;
+  $('#eventLog').prepend(row);
+  while($('#eventLog').children.length>80) $('#eventLog').lastChild.remove();
+}
+function numeric(id){ const a=instances[id]||AutoNumeric.getAutoNumericElement(document.getElementById(id)); return a ? a.getNumber() : Number(String(document.getElementById(id).value).replace(/[^0-9.-]/g,''))||0; }
+function inspect(el){
+  const a=AutoNumeric.getAutoNumericElement(el);
+  const payload={id:el.id||'(no id)',display:el.value??el.textContent,active:!!a};
+  if(a){payload.rawValue=a.getNumericString();payload.number=a.getNumber();payload.formatted=a.getFormatted();payload.settings=a.getSettings();}
+  $('#liveInspector').textContent=JSON.stringify(payload,null,2);
+}
+function updateOutput(id){
+  const el=document.getElementById(id), out=document.querySelector(`[data-out="${id}"]`); if(!out||!el)return;
+  const a=AutoNumeric.getAutoNumericElement(el);
+  out.textContent=a?`raw: ${a.getNumericString()}  |  number: ${a.getNumber()}`:'인스턴스 없음';
+}
+function bind(id,options){
+  const el=document.getElementById(id); initialValues[id]=('value' in el?el.value:el.textContent);
+  try{
+    const a=new AutoNumeric(el,options); instances[id]=a;
+    ['autoNumeric:rawValueModified','autoNumeric:formatted','autoNumeric:minExceeded','autoNumeric:maxExceeded','autoNumeric:invalidFormula'].forEach(ev=>{
+      el.addEventListener(ev,e=>{log(`${id} · ${ev}`,e.detail&&e.detail.newRawValue);updateOutput(id);inspect(el);});
+    });
+    ['input','change','focus','blur'].forEach(ev=>el.addEventListener(ev,()=>{updateOutput(id);inspect(el);}));
+    updateOutput(id); return a;
+  }catch(e){log(`${id} 초기화 오류`,e.message);console.error(e);return null}
+}
+function init(){
+  if(typeof AutoNumeric==='undefined'){
+    $('#loadNotice').style.display='block';$('#libStatus').textContent='로드 실패';return;
+  }
+  $('#libDot').classList.add('on');$('#libStatus').textContent='autoNumeric v4.10.10 로드 완료';
+  bind('krw',{currencySymbol:'₩ ',decimalPlaces:0,digitGroupSeparator:',',decimalCharacter:'.'});
+  bind('usd',{currencySymbol:'$',decimalPlaces:2,digitGroupSeparator:',',decimalCharacter:'.'});
+  bind('eur',{currencySymbol:' €',currencySymbolPlacement:'s',decimalPlaces:2,digitGroupSeparator:'.',decimalCharacter:',',decimalCharacterAlternative:'.'});
+  bind('jpy',{currencySymbol:'¥ ',decimalPlaces:0});
+  bind('inr',{currencySymbol:'₹ ',digitalGroupSpacing:'2s',decimalPlaces:2});
+  bind('accounting',{currencySymbol:'$',negativePositiveSignPlacement:'l',negativeBracketsTypeOnBlur:'()'});
+  bind('range',{minimumValue:'0',maximumValue:'1000',overrideMinMaxLimits:'invalid'});
+  bind('precision',{decimalPlaces:4,decimalPlacesRawValue:6,roundingMethod:'S'});
+  bind('percent',{suffixText:'%',rawValueDivisor:100,decimalPlaces:2});
+  bind('weight',{suffixText:' kg',decimalPlaces:2});
+  bind('signed',{showPositiveSign:true,negativePositiveSignPlacement:'p',decimalPlaces:2});
+  bind('formula',{formulaMode:true,decimalPlaces:2});
+  bind('empty',{emptyInputBehavior:'zero',currencySymbol:'₩ ',decimalPlaces:0});
+  bind('leading',{leadingZero:'keep',decimalPlaces:0});
+  bind('displayValue',{currencySymbol:'₩ ',decimalPlaces:2});
+  methodInstance=bind('methodTarget',{currencySymbol:'₩ ',decimalPlaces:2});
+  bind('quantity',{decimalPlaces:0,minimumValue:'0',maximumValue:'9999',modifyValueOnWheel:true,wheelStep:1,modifyValueOnUpDownArrow:true,upDownStep:1});
+  bind('unitPrice',{currencySymbol:'₩ ',decimalPlaces:0,minimumValue:'0',modifyValueOnWheel:true,wheelStep:100,modifyValueOnUpDownArrow:true,upDownStep:100});
+  bind('totalPrice',{currencySymbol:'₩ ',decimalPlaces:0,readOnly:true});
+  ['supply','tax','discount'].forEach(id=>bind(id,{currencySymbol:'₩ ',decimalPlaces:0,minimumValue:'0'}));
+  sandboxOptions={currencySymbol:'₩',currencySymbolPlacement:'p',digitGroupSeparator:',',decimalCharacter:'.',decimalPlaces:2,negativePositiveSignPlacement:'p'};
+  bind('sandbox',sandboxOptions);
+  updateMethodStats();calcTotal();
+}
+function updateMethodStats(){
+  const el=$('#methodTarget'); const a=AutoNumeric.getAutoNumericElement(el);
+  $('#methodState').textContent=a?'활성':'제거됨';
+  $('#methodFormatted').textContent=a?a.getFormatted():el.value||'-';
+  $('#methodRaw').textContent=a?a.getNumericString():'-';
+  $('#methodNumber').textContent=a?String(a.getNumber()):'-';
+}
+function calcTotal(){ const q=numeric('quantity'),p=numeric('unitPrice'); if(instances.totalPrice)instances.totalPrice.set(q*p);updateOutput('totalPrice');}
+document.addEventListener('DOMContentLoaded',()=>{
+  init();
+  $$('[data-jump]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.jump).scrollIntoView({behavior:'smooth'}));
+  $('#randomizeAll').onclick=()=>Object.entries(instances).forEach(([id,a])=>{if(a&&id!=='totalPrice')a.set((Math.random()-.25)*1000000);updateOutput(id)}); 
+  $('#resetAll').onclick=()=>{Object.entries(initialValues).forEach(([id,v])=>{let a=AutoNumeric.getAutoNumericElement(document.getElementById(id));if(a)a.set(v||0)});calcTotal();log('전체 초기화')};
+  $('#setMillion').onclick=()=>{if(methodInstance)methodInstance.set(1000000);updateMethodStats()};
+  $('#addVat').onclick=()=>{if(methodInstance)methodInstance.set(methodInstance.getNumber()*1.1);updateMethodStats()};
+  $('#toggleCurrency').onclick=()=>{if(!methodInstance)return;const s=methodInstance.getSettings();methodInstance.update({currencySymbol:s.currencySymbol.includes('₩')?'$':'₩ '});updateMethodStats()};
+  $('#clearTarget').onclick=()=>{if(methodInstance)methodInstance.clear();updateMethodStats()};
+  $('#unformatTarget').onclick=()=>{if(methodInstance)methodInstance.unformat();updateMethodStats()};
+  $('#reformatTarget').onclick=()=>{if(methodInstance)methodInstance.reformat();updateMethodStats()};
+  $('#removeTarget').onclick=()=>{if(methodInstance){methodInstance.remove();methodInstance=null;instances.methodTarget=null;updateMethodStats();log('methodTarget remove()')}};
+  $('#restoreTarget').onclick=()=>{if(!AutoNumeric.getAutoNumericElement($('#methodTarget'))){methodInstance=new AutoNumeric('#methodTarget',{currencySymbol:'₩ ',decimalPlaces:2});instances.methodTarget=methodInstance;updateMethodStats();log('methodTarget 재생성')}};
+  $$('[data-step]').forEach(b=>b.onclick=()=>{const [id,n]=b.dataset.step.split(',');const a=instances[id];a.set(a.getNumber()+Number(n));updateOutput(id);calcTotal()});
+  ['quantity','unitPrice'].forEach(id=>document.getElementById(id).addEventListener('autoNumeric:rawValueModified',calcTotal));
+  $('#collectJson').onclick=()=>{$('#formResult').textContent=JSON.stringify({supply:numeric('supply'),tax:numeric('tax'),discount:numeric('discount')},null,2)};
+  $('#collectQuery').onclick=()=>{$('#formResult').textContent=new URLSearchParams({supply:numeric('supply'),tax:numeric('tax'),discount:numeric('discount')}).toString()};
+  $('#sumInvoice').onclick=()=>{$('#formResult').textContent=`청구 합계: ${(numeric('supply')+numeric('tax')-numeric('discount')).toLocaleString('ko-KR')}원`};
+  $('#applyOptions').onclick=()=>{
+    const neg=$('#optNegative').value;
+    sandboxOptions={currencySymbol:$('#optCurrency').value,currencySymbolPlacement:$('#optPlacement').value,digitGroupSeparator:$('#optGroup').value,
+      decimalCharacter:$('#optDecimal').value,decimalPlaces:Number($('#optDigits').value),
+      negativePositiveSignPlacement:neg==='trailing'?'s':'p',negativeBracketsTypeOnBlur:neg==='brackets'?'()':null,
+      showCurrencySymbolOnFocus:$('#optSymbolFocus').checked,showDigitGroupSeparatorOnFocus:$('#optGroupingFocus').checked};
+    try{instances.sandbox.update(sandboxOptions);updateOutput('sandbox');log('sandbox options update',sandboxOptions)}catch(e){alert('옵션 조합 오류: '+e.message)}
+  };
+  $('#negativeSandbox').onclick=()=>instances.sandbox.set(-instances.sandbox.getNumber());
+  $('#copyOptions').onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(sandboxOptions,null,2));log('옵션 JSON 복사 완료')}catch(e){$('#liveInspector').textContent=JSON.stringify(sandboxOptions,null,2)}};
+  $('#clearLog').onclick=()=>$('#eventLog').innerHTML='';
+  $('#helperFormat').onclick=()=>{try{$('#helperOutput').textContent=AutoNumeric.format($('#helperInput').value,{currencySymbol:'₩ ',decimalPlaces:2})}catch(e){$('#helperOutput').textContent=e.message}};
+  $('#helperUnformat').onclick=()=>{try{$('#helperOutput').textContent=AutoNumeric.unformat($('#helperInput').value,{currencySymbol:'₩ ',decimalPlaces:2})}catch(e){$('#helperOutput').textContent=e.message}};
+  document.addEventListener('click',e=>{if(e.target.matches('input,[contenteditable]'))inspect(e.target)});
+  $('#methodTarget').addEventListener('autoNumeric:rawValueModified',updateMethodStats);
+});
+})();
+</script>
+</body>
+</html>
