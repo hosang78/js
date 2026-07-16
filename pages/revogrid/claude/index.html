@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>RevoGrid</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@revolist/revogrid@4.23.22/dist/revo-grid/revo-grid.esm.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  revo-grid {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    height: 220px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>RevoGrid 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>RevoGrid</strong>는 표준 웹 컴포넌트(<code class="inline">&lt;revo-grid&gt;</code>)로 만든
+    가상 스크롤 데이터 그리드입니다. React/Vue/Angular 없이도 커스텀 엘리먼트 하나만 페이지에
+    넣고 <code class="inline">.columns</code>·<code class="inline">.source</code> 속성만 채워주면
+    바로 동작합니다.
+    <ul>
+      <li>열 헤더를 클릭해 오름차순/내림차순으로 바꾸는 <strong>정렬</strong></li>
+      <li>더블클릭으로 바로 고치는 <strong>인라인 셀 편집</strong></li>
+      <li>마우스로 드래그해 여러 칸을 선택하는 <strong>스프레드시트형 범위 선택</strong></li>
+      <li><code class="inline">grouping</code> 속성으로 켜는 <strong>행 그룹핑</strong>(접기/펼치기)</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. RevoGrid(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 정렬</h2>
+    <div class="desc">
+      열 헤더를 클릭하면 정렬 화살표가 나타나고, 화면에 보이는 행 순서가 바로 바뀝니다.
+    </div>
+    <revo-grid id="grid1"></revo-grid>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const grid = document.getElementById('grid1');
+grid.columns = [
+  { prop: 'market', name: '위판장', sortable: true },
+  { prop: 'species', name: '어종', sortable: true },
+  { prop: 'qty', name: '수량', sortable: true },
+  { prop: 'price', name: '단가', sortable: true },
+];
+grid.source = records;   // [{ market, species, qty, price }, ...]</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 인라인 셀 편집</h2>
+    <div class="desc">
+      어종·수량 칸을 더블클릭하면 바로 수정할 수 있습니다(위판장 열은
+      <code class="inline">readonly</code>로 잠가뒀습니다). 수정하면
+      <code class="inline">afteredit</code> 이벤트가 발생합니다.
+    </div>
+    <revo-grid id="grid2"></revo-grid>
+    <div class="stat-box" id="s2-stat">칸을 더블클릭해서 값을 바꿔보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>grid.columns = [
+  { prop: 'market', name: '위판장', readonly: true },
+  { prop: 'species', name: '어종' },
+  { prop: 'qty', name: '수량' },
+];
+grid.addEventListener('afteredit', (e) => {
+  console.log(e.detail.prop, '→', e.detail.val);
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 범위 선택</h2>
+    <div class="desc">
+      <code class="inline">range: true</code> 하나만 켜면, 엑셀처럼 마우스 드래그로 여러 칸을 한
+      번에 선택할 수 있습니다.
+    </div>
+    <revo-grid id="grid3"></revo-grid>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>grid.range = true;   // 드래그로 셀 범위 선택 활성화</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 행 그룹핑</h2>
+    <div class="desc">
+      위판장별로 묶었습니다. 그룹 줄의 화살표를 클릭하면 접고 펼 수 있습니다.
+    </div>
+    <revo-grid id="grid4"></revo-grid>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>grid.grouping = { props: ['market'] };   // market 값 기준으로 행을 그룹핑</pre>
+    </details>
+  </section>
+
+<script>
+const records = [
+  { market: 'A위판장', species: '고등어', qty: 1200, price: 4200 },
+  { market: 'A위판장', species: '갈치', qty: 300, price: 8100 },
+  { market: 'A위판장', species: '오징어', qty: 650, price: 6000 },
+  { market: 'B위판장', species: '고등어', qty: 800, price: 4100 },
+  { market: 'B위판장', species: '오징어', qty: 500, price: 6200 },
+  { market: 'B위판장', species: '갈치', qty: 150, price: 8000 },
+  { market: 'C위판장', species: '고등어', qty: 1500, price: 4300 },
+  { market: 'C위판장', species: '갈치', qty: 200, price: 8300 },
+  { market: 'C위판장', species: '오징어', qty: 900, price: 6100 },
+];
+
+async function main() {
+  await customElements.whenDefined('revo-grid');
+
+  // ---- 섹션 1: 정렬 ----
+  const grid1 = document.getElementById('grid1');
+  grid1.columns = [
+    { prop: 'market', name: '위판장', sortable: true },
+    { prop: 'species', name: '어종', sortable: true },
+    { prop: 'qty', name: '수량', sortable: true },
+    { prop: 'price', name: '단가', sortable: true },
+  ];
+  grid1.source = records;
+
+  // ---- 섹션 2: 인라인 셀 편집 ----
+  const grid2 = document.getElementById('grid2');
+  grid2.columns = [
+    { prop: 'market', name: '위판장', readonly: true },
+    { prop: 'species', name: '어종' },
+    { prop: 'qty', name: '수량' },
+  ];
+  grid2.source = JSON.parse(JSON.stringify(records));
+  const s2Stat = document.getElementById('s2-stat');
+  grid2.addEventListener('afteredit', (e) => {
+    const { column, val } = e.detail;
+    s2Stat.innerHTML = `<strong>${column.name}</strong> 값을 <strong>${val}</strong>(으)로 수정했습니다.`;
+  });
+
+  // ---- 섹션 3: 범위 선택 ----
+  const grid3 = document.getElementById('grid3');
+  grid3.range = true;
+  grid3.columns = [
+    { prop: 'market', name: '위판장' },
+    { prop: 'species', name: '어종' },
+    { prop: 'qty', name: '수량' },
+    { prop: 'price', name: '단가' },
+  ];
+  grid3.source = records;
+
+  // ---- 섹션 4: 행 그룹핑 ----
+  const grid4 = document.getElementById('grid4');
+  grid4.columns = [
+    { prop: 'market', name: '위판장' },
+    { prop: 'species', name: '어종' },
+    { prop: 'qty', name: '수량' },
+  ];
+  grid4.source = records;
+  grid4.grouping = { props: ['market'] };
+}
+main();
+</script>
+</body>
+</html>
