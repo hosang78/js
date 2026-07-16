@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Arquero</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .table-wrap { overflow-x: auto; }
+  .table-wrap table {
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 320px;
+  }
+  .table-wrap th, .table-wrap td {
+    border: 1px solid #e4e7ec;
+    padding: 6px 12px;
+  }
+  .table-wrap th {
+    background: #eef2fb;
+    color: #333;
+    font-weight: 600;
+  }
+  .table-wrap tr:nth-child(even) td { background: #fafbfc; }
+  .arrow-note {
+    font-size: 12.5px;
+    color: #555;
+    margin: 8px 0 12px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Arquero 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Arquero</strong>는 워싱턴대 데이터 시각화 연구실(Vega·Observable Plot과 같은 팀)이
+    만든 데이터 가공 라이브러리입니다. R의 dplyr나 pandas처럼, 테이블 데이터를 필터링·집계·정렬·병합하는
+    파이프라인을 체이닝 방식으로 작성할 수 있습니다.
+    <ul>
+      <li><code class="inline">.filter()</code> + <code class="inline">.derive()</code>로 하는 <strong>행 필터링과 파생 열 계산</strong></li>
+      <li><code class="inline">.groupby()</code> + <code class="inline">.rollup()</code>으로 하는 <strong>그룹별 집계</strong></li>
+      <li><code class="inline">.orderby()</code> + <code class="inline">.slice()</code>로 하는 <strong>정렬 후 상위 N개 추출</strong></li>
+      <li><code class="inline">.join()</code>으로 하는 <strong>테이블 병합</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. Arquero(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다. 결과 테이블은 Arquero의 <code class="inline">table.toHTML()</code>로
+      그대로 렌더링한 것입니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 필터링 + 파생 열 계산</h2>
+    <div class="desc">
+      원본 위판 기록에서 수량이 400건 이상인 행만 남기고, 수량×단가로 계산한 "위판 금액" 열을
+      새로 추가했습니다.
+    </div>
+    <div class="table-wrap" id="out1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const dt = aq.from(records);   // records: 위판장, 어종, 수량, 단가로 이뤄진 배열
+
+const result = dt
+  .filter(d => d.qty >= 400)
+  .derive({ amount: d => d.qty * d.price });
+
+document.getElementById('out1').innerHTML = result.toHTML();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 그룹별 집계</h2>
+    <div class="desc">
+      위판장별로 묶어서 총 위판량·평균 단가·기록 건수를 한 번에 계산했습니다.
+      <code class="inline">aq.op</code>가 <code class="inline">sum</code>·<code class="inline">average</code>·
+      <code class="inline">count</code> 같은 집계 함수를 제공합니다.
+    </div>
+    <div class="table-wrap" id="out2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const result = dt.groupby('market').rollup({
+  totalQty: d => aq.op.sum(d.qty),
+  avgPrice: d => Math.round(aq.op.average(d.price)),
+  n: d => aq.op.count(),
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 정렬 + 상위 N개 추출</h2>
+    <div class="desc">
+      위판 금액(수량×단가)이 가장 큰 순서로 정렬한 뒤, 상위 3건만 잘라냈습니다.
+    </div>
+    <div class="table-wrap" id="out3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const result = dt
+  .derive({ amount: d => d.qty * d.price })
+  .orderby(aq.desc('amount'))   // 내림차순
+  .slice(0, 3);                 // 상위 3건</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 테이블 조인</h2>
+    <div class="desc">
+      위판장별 지역 정보가 담긴 별도의 작은 테이블을 <code class="inline">market</code> 열 기준으로
+      합쳤습니다. SQL의 <code class="inline">JOIN</code>과 동일한 개념입니다.
+    </div>
+    <div class="table-wrap" id="out4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const regions = aq.from([
+  { market: 'A위판장', region: '동해' },
+  { market: 'B위판장', region: '서해' },
+  { market: 'C위판장', region: '남해' },
+]);
+
+const result = dt.join(regions, 'market');   // market 열 기준으로 병합</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/arquero@8.0.3/dist/arquero.min.js"></script>
+<script>
+const records = [
+  { market: 'A위판장', species: '고등어', qty: 1200, price: 4200 },
+  { market: 'A위판장', species: '갈치', qty: 300, price: 8100 },
+  { market: 'A위판장', species: '오징어', qty: 650, price: 6000 },
+  { market: 'B위판장', species: '고등어', qty: 800, price: 4100 },
+  { market: 'B위판장', species: '오징어', qty: 500, price: 6200 },
+  { market: 'B위판장', species: '갈치', qty: 150, price: 8000 },
+  { market: 'C위판장', species: '고등어', qty: 1500, price: 4300 },
+  { market: 'C위판장', species: '갈치', qty: 200, price: 8300 },
+  { market: 'C위판장', species: '오징어', qty: 900, price: 6100 },
+];
+
+const dt = aq.from(records);
+
+// ---- 섹션 1: 필터링 + 파생 열 계산 ----
+(function section1() {
+  const result = dt
+    .filter(d => d.qty >= 400)
+    .derive({ amount: d => d.qty * d.price });
+  document.getElementById('out1').innerHTML = result.toHTML();
+})();
+
+// ---- 섹션 2: 그룹별 집계 ----
+(function section2() {
+  const result = dt.groupby('market').rollup({
+    totalQty: d => aq.op.sum(d.qty),
+    avgPrice: d => Math.round(aq.op.average(d.price)),
+    n: d => aq.op.count(),
+  });
+  document.getElementById('out2').innerHTML = result.toHTML();
+})();
+
+// ---- 섹션 3: 정렬 + 상위 N개 ----
+(function section3() {
+  const result = dt
+    .derive({ amount: d => d.qty * d.price })
+    .orderby(aq.desc('amount'))
+    .slice(0, 3);
+  document.getElementById('out3').innerHTML = result.toHTML();
+})();
+
+// ---- 섹션 4: 테이블 조인 ----
+(function section4() {
+  const regions = aq.from([
+    { market: 'A위판장', region: '동해' },
+    { market: 'B위판장', region: '서해' },
+    { market: 'C위판장', region: '남해' },
+  ]);
+  const result = dt.join(regions, 'market');
+  document.getElementById('out4').innerHTML = result.toHTML();
+})();
+</script>
+</body>
+</html>
