@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>SlickGrid</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slickgrid@5.18.6/dist/styles/css/slick.grid.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slickgrid@5.18.6/dist/styles/css/slick-default-theme.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .grid-wrap {
+    width: 100%;
+    max-width: 620px;
+    height: 220px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>SlickGrid 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>SlickGrid</strong>는 2009년부터 이어져 온 초고성능 데이터 그리드로, 행을 가상 스크롤로
+    렌더링해 수만 개의 행도 매끄럽게 다룹니다. 이 데모는 jQuery 없이 동작하는 모던(ESM) 버전을
+    사용합니다. 데이터는 <code class="inline">SlickDataView</code>가 관리하고, 그리드는 그 결과를
+    화면에 그리기만 하는 구조입니다.
+    <ul>
+      <li><code class="inline">SlickDataView</code> 기반 <strong>정렬</strong></li>
+      <li><code class="inline">Editors</code>로 켜는 <strong>셀 인라인 편집</strong></li>
+      <li><code class="inline">setGrouping()</code> + <code class="inline">Aggregators</code>로 하는 <strong>그룹핑과 합계</strong></li>
+      <li><code class="inline">SlickRowSelectionModel</code>로 하는 <strong>행 선택</strong>(Shift/Ctrl 다중 선택)</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. SlickGrid는 열 순서 변경(드래그)에 필요한 SortableJS를
+      의존성으로 요구해 함께 CDN으로 불러왔습니다. 그 외 다른 외부 라이브러리나 API는 사용하지
+      않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. DataView 기반 정렬</h2>
+    <div class="desc">
+      열 헤더를 클릭하면 오름차순/내림차순으로 정렬됩니다. 실제 정렬은 그리드가 아니라
+      <code class="inline">SlickDataView</code>가 수행하고, 그리드는 <code class="inline">onSort</code>
+      이벤트를 받아 다시 그리기만 합니다.
+    </div>
+    <div class="grid-wrap" id="grid1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const dataView = new SlickDataView();
+const grid = new SlickGrid('#grid1', dataView, columns, options);
+
+grid.onSort.subscribe((e, args) => {
+  dataView.sort((a, b) => {
+    const v = a[args.sortCol.field] > b[args.sortCol.field] ? 1 : -1;
+    return args.sortAsc ? v : -v;
+  });
+});
+dataView.onRowsChanged.subscribe((e, args) => grid.invalidateRows(args.rows));
+dataView.onRowsChanged.subscribe(() => grid.render());
+dataView.setItems(records);   // 각 행은 고유한 id 필드가 필요</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 셀 인라인 편집</h2>
+    <div class="desc">
+      어종·수량 칸을 더블클릭하면 바로 수정할 수 있습니다. 값을 바꾸고 Enter를 누르면
+      <code class="inline">onCellChange</code> 이벤트로 원본 데이터가 갱신됩니다.
+    </div>
+    <div class="grid-wrap" id="grid2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const columns = [
+  { id: 'market', name: '위판장', field: 'market' },
+  { id: 'species', name: '어종', field: 'species', editor: Editors.Text },
+  { id: 'qty', name: '수량', field: 'qty', editor: Editors.Integer },
+];
+const grid = new SlickGrid('#grid2', dataView, columns, { editable: true, autoEdit: false });
+
+grid.onCellChange.subscribe((e, args) => {
+  dataView.updateItem(args.item.id, args.item);   // 수정된 값을 DataView에 반영
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 그룹핑 + 집계 합계</h2>
+    <div class="desc">
+      위판장별로 묶고, 각 그룹 아래에 수량 합계 행을 표시했습니다. 그룹 제목을 클릭하면 접고 펼 수
+      있습니다.
+    </div>
+    <div class="grid-wrap" id="grid3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>dataView.setGrouping({
+  getter: 'market',
+  formatter: (g) => `${g.value} (${g.count}건)`,
+  aggregators: [new Aggregators.Sum('qty')],
+  displayTotalsRow: true,
+});
+
+// '수량' 열에 그룹 합계 전용 포맷터를 지정해야 합계 행에 값이 표시된다
+{ id: 'qty', name: '수량', field: 'qty',
+  groupTotalsFormatter: (totals, col) => `합계: ${totals.sum[col.field].toLocaleString()}` }</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 행 선택 모델</h2>
+    <div class="desc">
+      행을 클릭해서 선택하고, Shift/Ctrl(⌘)을 누른 채 클릭하면 여러 행을 함께 선택할 수 있습니다.
+    </div>
+    <div class="grid-wrap" id="grid4"></div>
+    <div class="stat-box" id="s4-stat">선택된 행: 0개</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>grid.setSelectionModel(new SlickRowSelectionModel());
+
+grid.onSelectedRowsChanged.subscribe((e, args) => {
+  console.log('선택된 행 수:', args.rows.length);
+});</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js"></script>
+<script type="module">
+import {
+  SlickGrid, SlickDataView, Editors, Aggregators,
+  SlickGroupItemMetadataProvider, SlickRowSelectionModel,
+} from 'https://cdn.jsdelivr.net/npm/slickgrid@5.18.6/dist/esm/index.mjs';
+
+function withId(rows) {
+  return rows.map((r, i) => ({ id: i, ...r }));
+}
+
+const numberFormatter = (row, cell, value) => (value != null ? value.toLocaleString() : '');
+
+const baseData = withId([
+  { market: 'A위판장', species: '고등어', qty: 1200, price: 4200 },
+  { market: 'A위판장', species: '갈치', qty: 300, price: 8100 },
+  { market: 'A위판장', species: '오징어', qty: 650, price: 6000 },
+  { market: 'B위판장', species: '고등어', qty: 800, price: 4100 },
+  { market: 'B위판장', species: '오징어', qty: 500, price: 6200 },
+  { market: 'B위판장', species: '갈치', qty: 150, price: 8000 },
+  { market: 'C위판장', species: '고등어', qty: 1500, price: 4300 },
+  { market: 'C위판장', species: '갈치', qty: 200, price: 8300 },
+  { market: 'C위판장', species: '오징어', qty: 900, price: 6100 },
+]);
+
+function wireDataView(dataView, grid) {
+  dataView.onRowCountChanged.subscribe(() => grid.updateRowCount());
+  dataView.onRowsChanged.subscribe((e, args) => grid.invalidateRows(args.rows));
+  dataView.onRowsChanged.subscribe(() => grid.render());
+}
+
+// ---- 섹션 1: DataView 기반 정렬 ----
+(function section1() {
+  const columns = [
+    { id: 'market', name: '위판장', field: 'market', sortable: true },
+    { id: 'species', name: '어종', field: 'species', sortable: true },
+    { id: 'qty', name: '수량', field: 'qty', sortable: true, formatter: numberFormatter },
+    { id: 'price', name: '단가', field: 'price', sortable: true, formatter: numberFormatter },
+  ];
+  const options = { enableCellNavigation: true, forceFitColumns: true };
+  const dataView = new SlickDataView();
+  const grid = new SlickGrid('#grid1', dataView, columns, options);
+
+  grid.onSort.subscribe((e, args) => {
+    dataView.sort((a, b) => {
+      const v = a[args.sortCol.field] > b[args.sortCol.field] ? 1 : -1;
+      return args.sortAsc ? v : -v;
+    });
+  });
+  wireDataView(dataView, grid);
+  dataView.setItems(baseData);
+})();
+
+// ---- 섹션 2: 셀 인라인 편집 ----
+(function section2() {
+  const columns = [
+    { id: 'market', name: '위판장', field: 'market' },
+    { id: 'species', name: '어종', field: 'species', editor: Editors.Text },
+    { id: 'qty', name: '수량', field: 'qty', editor: Editors.Integer, formatter: numberFormatter },
+  ];
+  const options = { editable: true, autoEdit: false, enableCellNavigation: true, forceFitColumns: true };
+  const dataView = new SlickDataView();
+  const grid = new SlickGrid('#grid2', dataView, columns, options);
+
+  grid.onCellChange.subscribe((e, args) => {
+    dataView.updateItem(args.item.id, args.item);
+  });
+  wireDataView(dataView, grid);
+  dataView.setItems(JSON.parse(JSON.stringify(baseData)));
+})();
+
+// ---- 섹션 3: 그룹핑 + 집계 합계 ----
+(function section3() {
+  const groupItemProvider = new SlickGroupItemMetadataProvider();
+  const columns = [
+    { id: 'market', name: '위판장', field: 'market' },
+    { id: 'species', name: '어종', field: 'species' },
+    {
+      id: 'qty', name: '수량', field: 'qty',
+      formatter: numberFormatter,
+      groupTotalsFormatter: (totals, columnDef) => `합계: ${(totals.sum[columnDef.field] || 0).toLocaleString()}`,
+    },
+  ];
+  const options = {
+    enableCellNavigation: true,
+    forceFitColumns: true,
+    groupingItemMetadataProvider: groupItemProvider,
+  };
+  const dataView = new SlickDataView({ groupItemMetadataProvider: groupItemProvider });
+  const grid = new SlickGrid('#grid3', dataView, columns, options);
+  grid.registerPlugin(groupItemProvider);
+
+  wireDataView(dataView, grid);
+  dataView.setItems(baseData);
+  dataView.setGrouping({
+    getter: 'market',
+    formatter: (g) => `${g.value} (${g.count}건)`,
+    aggregators: [new Aggregators.Sum('qty')],
+    aggregateCollapsed: false,
+    collapsed: false,
+    displayTotalsRow: true,
+  });
+})();
+
+// ---- 섹션 4: 행 선택 모델 ----
+(function section4() {
+  const columns = [
+    { id: 'market', name: '위판장', field: 'market' },
+    { id: 'species', name: '어종', field: 'species' },
+    { id: 'qty', name: '수량', field: 'qty', formatter: numberFormatter },
+  ];
+  const options = { enableCellNavigation: true, forceFitColumns: true, multiSelect: true };
+  const dataView = new SlickDataView();
+  const grid = new SlickGrid('#grid4', dataView, columns, options);
+  grid.setSelectionModel(new SlickRowSelectionModel());
+
+  const statEl = document.getElementById('s4-stat');
+  grid.onSelectedRowsChanged.subscribe((e, args) => {
+    statEl.innerHTML = `선택된 행: <strong>${args.rows.length}개</strong>`;
+  });
+
+  wireDataView(dataView, grid);
+  dataView.setItems(baseData);
+})();
+</script>
+</body>
+</html>
