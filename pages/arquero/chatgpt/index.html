@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arquero 기능 종합 샘플</title>
+  <script src="https://cdn.jsdelivr.net/npm/arquero@latest/dist/arquero.min.js"></script>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --panel2:#162033; --ink:#e5e7eb; --muted:#9ca3af;
+      --line:#293548; --accent:#60a5fa; --ok:#34d399; --warn:#f59e0b; --bad:#fb7185;
+      --chip:#1e293b; --paper:#f8fafc; --paperink:#0f172a;
+    }
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#0b1120,#172554);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    header{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(15,23,42,.84);position:sticky;top:0;z-index:5;backdrop-filter:blur(10px)}
+    h1{margin:0;font-size:clamp(24px,4vw,40px);letter-spacing:-.03em} .sub{margin-top:8px;color:var(--muted);line-height:1.55}
+    .wrap{max-width:1500px;margin:0 auto;padding:18px} .grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+    aside{position:sticky;top:118px;background:rgba(17,24,39,.86);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 18px 40px rgba(0,0,0,.22)}
+    .controls label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}.controls input,.controls select,.controls textarea{width:100%;background:#0b1220;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px} .controls textarea{min-height:160px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+    button{border:0;background:linear-gradient(135deg,#2563eb,#0891b2);color:white;border-radius:11px;padding:10px 12px;font-weight:700;cursor:pointer} button.secondary{background:#243044;color:#dbeafe;border:1px solid #334155} button.warn{background:#92400e}.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.small{font-size:12px;color:var(--muted);line-height:1.45}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.chip{background:var(--chip);border:1px solid var(--line);padding:6px 8px;border-radius:999px;font-size:12px;color:#cbd5e1}
+    main{display:grid;gap:16px}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{background:rgba(17,24,39,.82);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 14px 36px rgba(0,0,0,.18)}.kpi{font-size:26px;font-weight:800}.kpiLabel{color:var(--muted);font-size:12px;margin-top:4px}.section{background:rgba(17,24,39,.86);border:1px solid var(--line);border-radius:20px;overflow:hidden}.section h2{font-size:18px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}.section .body{padding:16px 18px}.tabs{display:flex;flex-wrap:wrap;gap:8px}.tabs button{background:#1f2937;border:1px solid #334155;color:#dbeafe}.tabs button.active{background:linear-gradient(135deg,#1d4ed8,#0e7490)}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#0b1220;max-height:420px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #1f2937;padding:8px 10px;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#111827;color:#bfdbfe;z-index:1}tr:hover td{background:#111827}pre{margin:0;white-space:pre-wrap;background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:12px;color:#d1d5db;font-size:12px;line-height:1.55;max-height:420px;overflow:auto}.note{border-left:4px solid var(--accent);padding:10px 12px;background:#0b1220;border-radius:12px;color:#cbd5e1}.error{border-left-color:var(--bad);color:#fecdd3}.svgbox{background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:12px;min-height:250px}.footer{color:var(--muted);padding:16px 4px 40px;font-size:12px}
+    .pill{font-size:12px;border:1px solid var(--line);background:#0b1220;color:#cbd5e1;padding:5px 8px;border-radius:999px}.opList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.opList button{text-align:left;background:#132033;border:1px solid #334155;color:#dbeafe}.opList button b{display:block}.opList button span{display:block;color:#9ca3af;font-size:12px;margin-top:3px;font-weight:400}.wide{grid-column:1/-1}@media(max-width:1000px){.grid{grid-template-columns:1fr}aside{position:static}.cards{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}.opList{grid-template-columns:1fr 1fr}}@media(max-width:640px){.cards{grid-template-columns:1fr}.opList{grid-template-columns:1fr}.wrap{padding:10px}header{position:static}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding:0">
+    <h1>Arquero 기능 종합 샘플</h1>
+    <div class="sub">JavaScript 데이터프레임/테이블 처리 라이브러리 Arquero의 주요 기능을 한 화면에서 실행해보는 단일 HTML 데모. 샘플 데이터는 수산물 판매·지역·월별 실적 형태로 구성했다.</div>
+  </div>
+</header>
+<div class="wrap grid">
+  <aside>
+    <div class="controls">
+      <label>지역 필터</label><select id="regionFilter"><option value="ALL">전체</option><option>동부</option><option>서부</option><option>남부</option><option>북부</option></select>
+      <label>최소 매출</label><input id="minRevenue" type="range" min="0" max="900" value="250" step="10" /><div class="small">현재값: <b id="minRevenueLabel">250</b></div>
+      <label>제품 검색</label><input id="searchText" placeholder="예: 고등어, 오징어" />
+      <label>직접 CSV 붙여넣기</label><textarea id="csvInput"></textarea>
+      <div class="btnrow"><button id="loadCsvBtn">CSV 적용</button><button class="secondary" id="resetBtn">기본 데이터</button></div>
+      <div class="btnrow"><button class="secondary" id="downloadCsvBtn">현재 결과 CSV</button><button class="secondary" id="downloadJsonBtn">현재 결과 JSON</button></div>
+      <div class="chips">
+        <span class="chip">fromCSV</span><span class="chip">filter</span><span class="chip">derive</span><span class="chip">groupby</span><span class="chip">rollup</span><span class="chip">join</span><span class="chip">pivot</span><span class="chip">fold</span><span class="chip">impute</span><span class="chip">rolling</span>
+      </div>
+      <p class="small">CDN을 쓰므로 인터넷 연결이 필요하다. 내부망에서 쓰려면 arquero.min.js 파일을 내려받아 로컬 경로로 바꾸면 된다.</p>
+    </div>
+  </aside>
+  <main>
+    <section class="cards">
+      <div class="card"><div class="kpi" id="kpiRows">-</div><div class="kpiLabel">현재 행 수</div></div>
+      <div class="card"><div class="kpi" id="kpiRevenue">-</div><div class="kpiLabel">매출 합계</div></div>
+      <div class="card"><div class="kpi" id="kpiMargin">-</div><div class="kpiLabel">평균 마진율</div></div>
+      <div class="card"><div class="kpi" id="kpiTop">-</div><div class="kpiLabel">최고 매출 제품</div></div>
+    </section>
+
+    <section class="section">
+      <h2>1. 원본/필터/파생 컬럼 <span class="pill">select · filter · derive · orderby · params</span></h2>
+      <div class="body split">
+        <div><div class="tableWrap" id="mainTable"></div></div>
+        <div><pre id="mainCode"></pre></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. 기능별 실행 샘플 <span class="pill">클릭 실행</span></h2>
+      <div class="body">
+        <div class="opList" id="opButtons"></div>
+        <div class="split" style="margin-top:14px">
+          <div><div class="tableWrap" id="opTable"></div></div>
+          <div><pre id="opCode"></pre></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3. 간단 시각화 <span class="pill">Arquero 결과 → SVG</span></h2>
+      <div class="body split">
+        <div class="svgbox" id="barChart"></div>
+        <div class="svgbox" id="lineChart"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. 출력 포맷 비교 <span class="pill">toCSV · toJSON · toMarkdown · toHTML</span></h2>
+      <div class="body">
+        <div class="tabs"><button data-out="csv" class="active">CSV</button><button data-out="json">JSON</button><button data-out="md">Markdown</button><button data-out="html">HTML</button></div>
+        <pre id="outputBox" style="margin-top:12px"></pre>
+      </div>
+    </section>
+    <div class="footer">포함 기능: 테이블 생성, CSV/JSON 파싱, 컬럼 선택·이름변경·재배치, 행 필터링·정렬·슬라이스, 파생 컬럼, 그룹 집계, 카운트, 샘플링, 조인류, 결측치 보정, 중복 제거, 피벗/폴드/스프레드/언롤, 집합 연산, rolling window, 다운로드.</div>
+  </main>
+</div>
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const money = v => Number(v||0).toLocaleString('ko-KR');
+  const pct = v => (Number(v||0)*100).toFixed(1) + '%';
+  const defaultCsv = `month,region,channel,product,qty,revenue,cost,grade,tags
+2026-01,동부,온라인,고등어,120,480,310,A,"신선|등푸른"
+2026-01,서부,매장,갈치,65,520,380,B,"제주|선물"
+2026-01,남부,도매,오징어,180,450,300,A,"냉동|행사"
+2026-02,동부,도매,멸치,260,390,210,A,"건어물|소포장"
+2026-02,북부,온라인,전복,40,620,430,S,"고급|선물"
+2026-02,남부,매장,김,300,330,180,A,"가공|상온"
+2026-03,서부,온라인,고등어,90,360,230,B,"신선|등푸른"
+2026-03,동부,매장,갈치,88,710,510,A,"제주|선물"
+2026-03,북부,도매,오징어,150,410,260,B,"냉동|행사"
+2026-04,남부,온라인,전복,55,820,560,S,"고급|선물"
+2026-04,서부,도매,멸치,310,470,260,A,"건어물|소포장"
+2026-04,북부,매장,김,270,295,160,B,"가공|상온"
+2026-05,동부,온라인,오징어,170,540,340,A,"냉동|행사"
+2026-05,남부,매장,갈치,72,610,420,A,"제주|선물"
+2026-05,서부,온라인,전복,37,590,410,S,"고급|선물"
+2026-06,북부,도매,고등어,140,505,330,A,"신선|등푸른"
+2026-06,동부,매장,김,360,405,210,A,"가공|상온"
+2026-06,남부,도매,멸치,280,430,250,B,"건어물|소포장"`;
+  let dt, current, outputMode = 'csv';
+  $('csvInput').value = defaultCsv;
+
+  function requireAq(){ if(!window.aq) throw new Error('Arquero CDN을 불러오지 못했습니다. 인터넷 연결 또는 CDN 차단 여부를 확인하세요.'); return window.aq; }
+  function loadDefault(){ const aq = requireAq(); dt = aq.fromCSV(defaultCsv); current = dt; updateAll(); }
+  function safeObjects(t, limit=200){ try { return t.objects({limit}); } catch(e){ return [{error:e.message}]; } }
+  function renderTable(el, t, limit=200){
+    if(!t){ el.innerHTML='<div class="note error">표시할 테이블 없음</div>'; return; }
+    const rows = Array.isArray(t) ? t : safeObjects(t, limit);
+    if(!rows.length){ el.innerHTML='<div class="note">결과 행 없음</div>'; return; }
+    const cols = Object.keys(rows[0]);
+    el.innerHTML = '<table><thead><tr>'+cols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+cols.map(c=>`<td>${formatCell(r[c])}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+  }
+  function escapeHtml(x){return String(x).replace(/[&<>"]/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));}
+  function formatCell(v){ if(v instanceof Date) return v.toISOString().slice(0,10); if(Array.isArray(v)) return escapeHtml(v.join(' | ')); if(v==null || Number.isNaN(v)) return '<span style="color:#fb7185">NA</span>'; if(typeof v==='number') return Number.isInteger(v)?money(v):v.toFixed(3); return escapeHtml(v); }
+  function download(name, text, type){ const blob = new Blob([text], {type}); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+
+  function filtered(){
+    const aq = requireAq(), op = aq.op;
+    const region = $('regionFilter').value;
+    const minRevenue = +$('minRevenue').value;
+    const search = $('searchText').value.trim();
+    return dt
+      .params({ region, minRevenue, search })
+      .derive({ profit: d => d.revenue - d.cost, margin: d => (d.revenue - d.cost) / d.revenue, tagList: d => op.split(d.tags, '|') })
+      .filter((d,$) => ($.region === 'ALL' || d.region === $.region) && d.revenue >= $.minRevenue && (!$.search || op.indexof(d.product, $.search) >= 0))
+      .orderby('month', aq.desc('revenue'))
+      .select('month','region','channel','product','qty','revenue','cost','profit','margin','grade','tagList');
+  }
+  function updateAll(){
+    try{
+      current = filtered();
+      renderTable($('mainTable'), current);
+      $('mainCode').textContent = `dt
+  .params({ region, minRevenue, search })
+  .derive({
+    profit: d => d.revenue - d.cost,
+    margin: d => (d.revenue - d.cost) / d.revenue,
+    tagList: d => op.split(d.tags, '|')
+  })
+  .filter((d,$) => ($.region === 'ALL' || d.region === $.region)
+    && d.revenue >= $.minRevenue
+    && (!$.search || op.indexof(d.product, $.search) >= 0))
+  .orderby('month', aq.desc('revenue'))
+  .select('month','region','channel','product','qty','revenue','cost','profit','margin','grade','tagList')`;
+      updateKpis(); updateCharts(); updateOutput();
+    }catch(e){ $('mainTable').innerHTML = `<div class="note error">${escapeHtml(e.message)}</div>`; }
+  }
+  function updateKpis(){
+    const aq = requireAq(), op = aq.op;
+    const summary = current.rollup({ rows: op.count(), revenue: op.sum('revenue'), margin: op.mean('margin') }).object();
+    const top = current.orderby(aq.desc('revenue')).object(0) || {};
+    $('kpiRows').textContent = money(summary.rows); $('kpiRevenue').textContent = money(summary.revenue); $('kpiMargin').textContent = pct(summary.margin); $('kpiTop').textContent = top.product || '-';
+  }
+  function updateCharts(){
+    const aq = requireAq(), op = aq.op;
+    const byProduct = current.groupby('product').rollup({ revenue: op.sum('revenue'), profit: op.sum('profit') }).orderby(aq.desc('revenue'));
+    drawBar($('barChart'), byProduct.objects(), '제품별 매출/이익', 'product', ['revenue','profit']);
+    const byMonth = current.groupby('month').rollup({ revenue: op.sum('revenue'), qty: op.sum('qty') }).orderby('month');
+    drawLine($('lineChart'), byMonth.objects(), '월별 매출 추이', 'month', 'revenue');
+  }
+  function drawBar(el, rows, title, key, vals){
+    const w=620,h=260,p=38; const max=Math.max(1,...rows.flatMap(r=>vals.map(v=>r[v]||0))); const bw=(w-p*2)/Math.max(1,rows.length); let s=`<h3 style="margin:0 0 10px;color:#bfdbfe">${title}</h3><svg viewBox="0 0 ${w} ${h}" width="100%" height="230">`;
+    s+=`<line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#334155"/>`;
+    rows.forEach((r,i)=>{ vals.forEach((v,j)=>{ const barW=bw/(vals.length+1); const x=p+i*bw+j*barW+6; const bh=(h-p*2)*(r[v]||0)/max; const y=h-p-bh; s+=`<rect x="${x}" y="${y}" width="${barW-4}" height="${bh}" rx="4" fill="${j?'#34d399':'#60a5fa'}"><title>${r[key]} ${v}: ${r[v]}</title></rect>`; }); s+=`<text x="${p+i*bw+bw/2}" y="${h-13}" text-anchor="middle" font-size="10" fill="#cbd5e1">${r[key]}</text>`; });
+    s+=`<text x="${p}" y="20" fill="#60a5fa" font-size="12">매출</text><text x="${p+45}" y="20" fill="#34d399" font-size="12">이익</text></svg>`; el.innerHTML=s;
+  }
+  function drawLine(el, rows, title, key, val){
+    const w=620,h=260,p=38; const max=Math.max(1,...rows.map(r=>r[val]||0)); const step=(w-p*2)/Math.max(1,rows.length-1); const pts=rows.map((r,i)=>[p+i*step,h-p-(h-p*2)*(r[val]||0)/max]); let s=`<h3 style="margin:0 0 10px;color:#bfdbfe">${title}</h3><svg viewBox="0 0 ${w} ${h}" width="100%" height="230">`;
+    s+=`<line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" stroke="#334155"/>`; s+=`<polyline points="${pts.map(d=>d.join(',')).join(' ')}" fill="none" stroke="#f59e0b" stroke-width="3"/>`;
+    pts.forEach((pt,i)=>{s+=`<circle cx="${pt[0]}" cy="${pt[1]}" r="5" fill="#f59e0b"><title>${rows[i][key]}: ${rows[i][val]}</title></circle><text x="${pt[0]}" y="${h-13}" text-anchor="middle" font-size="10" fill="#cbd5e1">${rows[i][key].slice(5)}</text>`});
+    s+=`</svg>`; el.innerHTML=s;
+  }
+  function updateOutput(){
+    try{
+      const t=current.select('month','region','product','revenue','profit','margin');
+      const box=$('outputBox');
+      if(outputMode==='csv') box.textContent=t.toCSV({limit:20});
+      if(outputMode==='json') box.textContent=t.toJSON({limit:20, type:'rows'});
+      if(outputMode==='md') box.textContent=t.toMarkdown({limit:20});
+      if(outputMode==='html') box.textContent=t.toHTML({limit:20});
+    }catch(e){ $('outputBox').textContent=e.message; }
+  }
+  const ops = [
+    ['집계 요약','groupby · rollup',()=>current.groupby('region','channel').rollup({rows: aq.op.count(), qty: aq.op.sum('qty'), revenue: aq.op.sum('revenue'), avg_margin: aq.op.mean('margin')}).orderby('region', aq.desc('revenue')),`current.groupby('region','channel')
+  .rollup({ rows: op.count(), qty: op.sum('qty'), revenue: op.sum('revenue'), avg_margin: op.mean('margin') })
+  .orderby('region', aq.desc('revenue'))`],
+    ['상위 N 슬라이스','orderby · slice',()=>current.orderby(aq.desc('revenue')).slice(0,5),`current.orderby(aq.desc('revenue')).slice(0,5)`],
+    ['컬럼 선택/변경','select · rename · relocate',()=>current.select({month:'월'}, {region:'권역'}, {product:'품목'}, 'revenue','profit').rename({revenue:'매출',profit:'이익'}).relocate('품목',{before:'권역'}),`current
+  .select({month:'월'}, {region:'권역'}, {product:'품목'}, 'revenue','profit')
+  .rename({ revenue:'매출', profit:'이익' })
+  .relocate('품목', { before:'권역' })`],
+    ['피벗','pivot cross-tab',()=>current.groupby('region').pivot('product', { revenue: d => aq.op.sum(d.revenue) }).orderby('region'),`current.groupby('region')
+  .pivot('product', { revenue: d => op.sum(d.revenue) })`],
+    ['폴드','fold wide→long',()=>current.groupby('product').rollup({revenue:aq.op.sum('revenue'), cost:aq.op.sum('cost'), profit:aq.op.sum('profit')}).fold(['revenue','cost','profit'], {as:['metric','amount']}),`summary.fold(['revenue','cost','profit'], { as:['metric','amount'] })`],
+    ['조인','join_left',()=>current.join_left(aq.from([{product:'고등어',buyer:'일반가정'},{product:'갈치',buyer:'선물수요'},{product:'전복',buyer:'고급수요'},{product:'김',buyer:'대량소비'}]), 'product'),`current.join_left(productMaster, 'product')`],
+    ['세미/안티 조인','semijoin · antijoin',()=>current.semijoin(aq.from([{product:'전복'},{product:'갈치'}]), 'product').concat(current.antijoin(aq.from([{product:'전복'},{product:'갈치'}]), 'product')).derive({match_type:d=>d.product==='전복'||d.product==='갈치'?'semijoin 대상':'antijoin 대상'}),`current.semijoin(targets, 'product')
+current.antijoin(targets, 'product')`],
+    ['결측치 보정','impute',()=>aq.fromCSV('region,product,revenue\n동부,고등어,480\n서부,갈치,\n남부,오징어,450\n북부,전복,').impute({revenue:d=>aq.op.mean(d.revenue)}),`aq.fromCSV(csvWithMissing)
+  .impute({ revenue: d => op.mean(d.revenue) })`],
+    ['중복 제거','dedupe',()=>current.concat(current.slice(0,3)).dedupe('month','region','product'),`current.concat(current.slice(0,3))
+  .dedupe('month','region','product')`],
+    ['배열 펼치기','spread · unroll',()=>current.select('product','tagList').spread('tagList',{as:['태그1','태그2'], drop:false}).slice(0,10),`current.select('product','tagList')
+  .spread('tagList', { as:['태그1','태그2'], drop:false })`],
+    ['배열 행 확장','unroll',()=>current.select('product','tagList').unroll('tagList',{index:'tag_index'}).slice(0,20),`current.select('product','tagList')
+  .unroll('tagList', { index:'tag_index' })`],
+    ['집합 연산','union · intersect · except',()=>{const a=current.select('product').slice(0,8); const b=current.select('product').slice(4,12); return a.union(b).derive({set_result:()=> 'union'}).concat(a.intersect(b).derive({set_result:()=> 'intersect'}), a.except(b).derive({set_result:()=> 'except'}));},`const a = current.select('product').slice(0,8)
+const b = current.select('product').slice(4,12)
+a.union(b); a.intersect(b); a.except(b)`],
+    ['롤링/누계','rolling window',()=>current.groupby('product').orderby('month').derive({cum_revenue: aq.rolling(d=>aq.op.sum(d.revenue)), moving_avg_3: aq.rolling(d=>aq.op.mean(d.revenue), [-2,0])}).select('month','product','revenue','cum_revenue','moving_avg_3'),`current.groupby('product').orderby('month')
+  .derive({
+    cum_revenue: aq.rolling(d => op.sum(d.revenue)),
+    moving_avg_3: aq.rolling(d => op.mean(d.revenue), [-2,0])
+  })`],
+    ['빈도/구간','bin · count',()=>current.derive({ revenue_bin: aq.bin('revenue', {step:100}) }).groupby('revenue_bin').count({as:'rows'}).orderby('revenue_bin'),`current.derive({ revenue_bin: aq.bin('revenue', { step:100 }) })
+  .groupby('revenue_bin').count({ as:'rows' })`],
+    ['샘플링','seed · sample · frac',()=>{ aq.seed(1234); return current.groupby('region').sample(aq.frac(0.5));},`aq.seed(1234)
+current.groupby('region').sample(aq.frac(0.5))`],
+    ['메타데이터','numRows · columnNames · object',()=>aq.from([{항목:'numRows()',값:current.numRows()},{항목:'numCols()',값:current.numCols()},{항목:'columnNames()',값:current.columnNames().join(', ')},{항목:'첫 행 object()',값:JSON.stringify(current.object(0))}]),`current.numRows()
+current.numCols()
+current.columnNames()
+current.object(0)`]
+  ];
+  function buildOps(){ const box=$('opButtons'); box.innerHTML=ops.map((o,i)=>`<button data-op="${i}"><b>${o[0]}</b><span>${o[1]}</span></button>`).join(''); box.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>runOp(+b.dataset.op))); runOp(0); }
+  function runOp(i){ try{ const result=ops[i][2](); renderTable($('opTable'), result); $('opCode').textContent=ops[i][3]; document.querySelectorAll('#opButtons button').forEach((b,j)=>b.classList.toggle('active', i===j)); }catch(e){ $('opTable').innerHTML=`<div class="note error">${escapeHtml(e.message)}</div>`; $('opCode').textContent=ops[i][3]; } }
+
+  $('regionFilter').addEventListener('change', updateAll); $('minRevenue').addEventListener('input', e=>{ $('minRevenueLabel').textContent=e.target.value; updateAll(); }); $('searchText').addEventListener('input', updateAll);
+  $('loadCsvBtn').addEventListener('click',()=>{ try{ dt=requireAq().fromCSV($('csvInput').value); updateAll(); buildOps(); }catch(e){ alert(e.message); } });
+  $('resetBtn').addEventListener('click',()=>{ $('csvInput').value=defaultCsv; $('regionFilter').value='ALL'; $('minRevenue').value=250; $('minRevenueLabel').textContent='250'; $('searchText').value=''; loadDefault(); buildOps(); });
+  $('downloadCsvBtn').addEventListener('click',()=>download('arquero_current.csv', current.toCSV(), 'text/csv;charset=utf-8'));
+  $('downloadJsonBtn').addEventListener('click',()=>download('arquero_current.json', current.toJSON({type:'rows'}), 'application/json;charset=utf-8'));
+  document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{ outputMode=b.dataset.out; document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('active',x===b)); updateOutput(); }));
+  window.addEventListener('load',()=>{ try{ loadDefault(); buildOps(); }catch(e){ document.body.innerHTML = '<div style="padding:30px;color:#fff;background:#111827;min-height:100vh"><h1>Arquero 로드 실패</h1><p>'+escapeHtml(e.message)+'</p><p>인터넷이 차단된 환경이면 arquero.min.js를 로컬에 저장하고 script src를 로컬 파일로 수정하세요.</p></div>'; } });
+})();
+</script>
+</body>
+</html>
