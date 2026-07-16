@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>simple-statistics 종합 기능 실험실</title>
+<script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.9.3/dist/simple-statistics.min.js"></script>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--ink:#172033;--muted:#65718a;--line:#dfe5ef;--accent:#3157d5;--accent2:#1b9aaa;--danger:#c23b4a;--ok:#16845b;--shadow:0 8px 28px rgba(27,42,78,.08)}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",Segoe UI,sans-serif}
+header{background:linear-gradient(125deg,#172654,#3157d5 60%,#1b9aaa);color:#fff;padding:28px 24px}
+header .wrap{max-width:1450px;margin:auto}.eyebrow{opacity:.8;font-size:13px}.title{font-size:clamp(26px,4vw,44px);font-weight:800;margin:6px 0}.lead{max-width:950px;line-height:1.65;opacity:.92}
+.status{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.badge{padding:7px 11px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.1);font-size:12px}
+.layout{max-width:1450px;margin:0 auto;padding:18px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px}
+nav{position:sticky;top:12px;align-self:start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow)}
+nav button{width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:10px;color:var(--ink);font-weight:650;cursor:pointer}
+nav button:hover,nav button.active{background:#edf1ff;color:var(--accent)}
+main{min-width:0}.section{display:none}.section.active{display:block}
+.section-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin:4px 0 14px}.section-head h2{margin:0;font-size:24px}.section-head p{margin:4px 0 0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{grid-column:span 6;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.card.wide{grid-column:span 12}.card.third{grid-column:span 4}.card h3{margin:0 0 5px;font-size:17px}.desc{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:12px}
+label{font-size:12px;font-weight:700;color:#46516a;display:block;margin:8px 0 5px}
+textarea,input,select{width:100%;border:1px solid #cdd5e3;border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink);font:inherit}
+textarea{min-height:72px;resize:vertical}.row{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0}button.action{border:0;border-radius:9px;padding:9px 12px;background:var(--accent);color:#fff;font-weight:750;cursor:pointer}button.alt{background:#e9edf6;color:#2d3852}button.action:hover{filter:brightness(.96)}
+.result{background:#f7f9fd;border:1px solid var(--line);border-radius:11px;padding:11px;min-height:45px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px;white-space:pre-wrap;overflow:auto}
+.error{color:var(--danger)}.ok{color:var(--ok)} canvas{width:100%;height:260px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px}.stat{padding:11px;border:1px solid var(--line);border-radius:11px;background:#fafbfe}.stat b{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}.stat span{font-size:18px;font-weight:800;word-break:break-all}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:11px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}th{background:#f1f4fa;position:sticky;top:0}
+.code{background:#172033;color:#dbe5ff;border-radius:11px;padding:12px;font:12px ui-monospace,monospace;overflow:auto;white-space:pre}
+.note{border-left:4px solid var(--accent2);background:#eefafb;padding:11px 13px;border-radius:8px;font-size:13px;line-height:1.55}
+.api-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px}.api{border:1px solid var(--line);border-radius:11px;padding:10px;background:#fbfcff}.api code{color:var(--accent);font-weight:800}.api small{display:block;color:var(--muted);margin-top:5px}
+footer{max-width:1450px;margin:10px auto 30px;padding:0 18px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}nav{position:relative;display:flex;overflow:auto}nav button{min-width:max-content}.card,.card.third{grid-column:span 12}.row,.row3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<div class="eyebrow">JavaScript Statistics Playground</div>
+<div class="title">simple-statistics 종합 기능 실험실</div>
+<div class="lead">배열 입력만으로 기술통계, 분위수, 산포도, 상관·회귀, 분류·군집, 확률분포, 통계검정, 조합·샘플링을 직접 실행하고 결과를 시각화하는 단일 HTML 샘플입니다.</div>
+<div class="status"><span class="badge" id="libStatus">라이브러리 확인 중</span><span class="badge">CDN 7.9.3</span><span class="badge">외부 프레임워크 없음</span><span class="badge">반응형 UI</span></div>
+</div></header>
+
+<div class="layout">
+<nav id="nav">
+<button class="active" data-tab="overview">종합 대시보드</button>
+<button data-tab="descriptive">기술통계</button>
+<button data-tab="quantile">분위수·순위</button>
+<button data-tab="relation">상관·회귀</button>
+<button data-tab="grouping">군집·구간</button>
+<button data-tab="probability">확률·분포</button>
+<button data-tab="inference">통계 검정</button>
+<button data-tab="ml">분류 모델</button>
+<button data-tab="combinatorics">조합·샘플링</button>
+<button data-tab="catalog">API 카탈로그</button>
+</nav>
+
+<main>
+<section id="overview" class="section active">
+<div class="section-head"><div><h2>종합 대시보드</h2><p>하나의 데이터로 핵심 통계량과 분포를 일괄 계산</p></div></div>
+<div class="grid">
+<div class="card wide"><h3>데이터 입력</h3><div class="desc">쉼표, 공백, 줄바꿈으로 숫자를 구분할 수 있습니다.</div>
+<textarea id="mainData">12, 15, 15, 18, 21, 22, 22, 22, 25, 28, 31, 35, 40, 42, 55</textarea>
+<div class="actions"><button class="action" onclick="runOverview()">전체 분석</button><button class="action alt" onclick="setDemo('normal')">정규형 예제</button><button class="action alt" onclick="setDemo('outlier')">이상치 예제</button><button class="action alt" onclick="setDemo('random')">무작위 생성</button></div></div>
+<div class="card wide"><h3>핵심 통계량</h3><div id="overviewStats" class="stat-grid"></div></div>
+<div class="card"><h3>히스토그램</h3><canvas id="histCanvas" width="700" height="300"></canvas></div>
+<div class="card"><h3>상자그림</h3><canvas id="boxCanvas" width="700" height="300"></canvas></div>
+<div class="card wide"><h3>5수치 요약·이상치 탐지</h3><div id="overviewDetail" class="result"></div></div>
+</div></section>
+
+<section id="descriptive" class="section">
+<div class="section-head"><div><h2>기술통계</h2><p>중심경향, 산포, 형태, 배열 연산</p></div></div>
+<div class="grid">
+<div class="card"><h3>중심경향</h3><textarea id="descData">4, 7, 7, 8, 10, 12, 15</textarea><div class="actions"><button class="action" onclick="runCentral()">계산</button></div><div id="centralResult" class="result"></div></div>
+<div class="card"><h3>산포도</h3><textarea id="spreadData">4, 7, 7, 8, 10, 12, 15</textarea><div class="actions"><button class="action" onclick="runSpread()">계산</button></div><div id="spreadResult" class="result"></div></div>
+<div class="card"><h3>배열 기본 연산</h3><textarea id="arrayData">2, 3, 5, 7, 11</textarea><div class="actions"><button class="action" onclick="runArrayOps()">계산</button></div><div id="arrayResult" class="result"></div></div>
+<div class="card"><h3>누적 평균 업데이트</h3><div class="row3"><div><label>현재 평균</label><input id="oldMean" type="number" value="10"></div><div><label>현재 개수</label><input id="oldCount" type="number" value="5"></div><div><label>새 값</label><input id="newValue" type="number" value="16"></div></div><div class="actions"><button class="action" onclick="runAddMean()">업데이트</button></div><div id="addMeanResult" class="result"></div></div>
+</div></section>
+
+<section id="quantile" class="section">
+<div class="section-head"><div><h2>분위수·순위</h2><p>백분위수, 분위수 순위, 사분위 범위</p></div></div>
+<div class="grid">
+<div class="card"><h3>분위수 계산</h3><textarea id="qData">3, 5, 8, 9, 12, 15, 18, 21, 30</textarea><label>확률 p (0~1, 여러 값 가능)</label><input id="qP" value="0, 0.1, 0.25, 0.5, 0.75, 0.9, 1"><div class="actions"><button class="action" onclick="runQuantiles()">계산</button></div><div id="qResult" class="result"></div></div>
+<div class="card"><h3>분위수 순위</h3><textarea id="rankData">3, 5, 8, 9, 12, 15, 18, 21, 30</textarea><label>대상 값</label><input id="rankValue" type="number" value="15"><div class="actions"><button class="action" onclick="runRank()">계산</button></div><div id="rankResult" class="result"></div></div>
+<div class="card wide"><h3>분위수 곡선</h3><canvas id="quantileCanvas" width="1000" height="320"></canvas></div>
+</div></section>
+
+<section id="relation" class="section">
+<div class="section-head"><div><h2>상관·회귀</h2><p>공분산, Pearson 상관계수, 최소제곱 선형회귀</p></div></div>
+<div class="grid">
+<div class="card"><h3>X·Y 데이터</h3><label>X</label><textarea id="xData">1,2,3,4,5,6,7,8</textarea><label>Y</label><textarea id="yData">2,4,5,4,7,8,9,11</textarea><div class="actions"><button class="action" onclick="runRelation()">분석</button></div><div id="relationResult" class="result"></div></div>
+<div class="card"><h3>예측</h3><label>예측할 X</label><input id="predictX" type="number" value="10"><div class="actions"><button class="action" onclick="runPredict()">예측</button></div><div id="predictResult" class="result"></div><div class="note">상관관계는 인과관계를 의미하지 않습니다.</div></div>
+<div class="card wide"><h3>산점도·회귀선</h3><canvas id="regCanvas" width="1000" height="370"></canvas></div>
+</div></section>
+
+<section id="grouping" class="section">
+<div class="section-head"><div><h2>군집·구간화</h2><p>CKMeans 자연구간과 동일간격 구간 비교</p></div></div>
+<div class="grid">
+<div class="card"><h3>데이터 및 그룹 수</h3><textarea id="clusterData">1,2,2,3,4,5,11,12,13,14,28,29,30,31,32,55,56</textarea><label>그룹 수</label><input id="clusterK" type="number" min="2" max="8" value="4"><div class="actions"><button class="action" onclick="runClusters()">구간 생성</button></div><div id="clusterResult" class="result"></div></div>
+<div class="card"><h3>용도 예시</h3><div class="note">지도 등급 구간, 고객 세그먼트, 점수 등급, 이상치 전처리 등에 활용할 수 있습니다. CKMeans는 데이터 분산을 최소화하도록 자연스러운 군집 경계를 찾습니다.</div></div>
+<div class="card wide"><h3>군집 시각화</h3><canvas id="clusterCanvas" width="1000" height="320"></canvas></div>
+</div></section>
+
+<section id="probability" class="section">
+<div class="section-head"><div><h2>확률·분포</h2><p>정규, 이항, 포아송 분포 관련 계산</p></div></div>
+<div class="grid">
+<div class="card third"><h3>표준정규 누적확률</h3><label>Z 값</label><input id="zValue" type="number" step=".1" value="1.96"><div class="actions"><button class="action" onclick="runNormal()">계산</button></div><div id="normalResult" class="result"></div></div>
+<div class="card third"><h3>이항분포</h3><div class="row"><div><label>시행 n</label><input id="binN" type="number" value="10"></div><div><label>성공확률 p</label><input id="binP" type="number" step=".05" value=".4"></div></div><div class="actions"><button class="action" onclick="runBinomial()">분포 생성</button></div><div id="binResult" class="result"></div></div>
+<div class="card third"><h3>포아송분포</h3><label>평균 발생률 λ</label><input id="poiLambda" type="number" step=".5" value="3"><div class="actions"><button class="action" onclick="runPoisson()">분포 생성</button></div><div id="poiResult" class="result"></div></div>
+<div class="card wide"><h3>확률질량함수 차트</h3><canvas id="distCanvas" width="1000" height="350"></canvas></div>
+</div></section>
+
+<section id="inference" class="section">
+<div class="section-head"><div><h2>통계 검정</h2><p>단일표본 t 검정, 두 표본 t 검정, 카이제곱 적합도 검정</p></div></div>
+<div class="grid">
+<div class="card"><h3>단일표본 t 검정</h3><textarea id="t1Data">12,13,15,14,16,17,13,15</textarea><label>귀무가설 평균</label><input id="t1Mean" type="number" value="14"><div class="actions"><button class="action" onclick="runT1()">검정통계량</button></div><div id="t1Result" class="result"></div></div>
+<div class="card"><h3>두 표본 t 검정</h3><label>표본 A</label><textarea id="t2A">12,14,15,13,16,17</textarea><label>표본 B</label><textarea id="t2B">18,17,19,20,16,21</textarea><div class="actions"><button class="action" onclick="runT2()">검정통계량</button></div><div id="t2Result" class="result"></div></div>
+<div class="card wide"><h3>카이제곱 적합도</h3><div class="row"><div><label>관측 빈도</label><input id="chiObserved" value="18, 22, 25, 15"></div><div><label>기대 확률</label><input id="chiExpected" value="0.25, 0.25, 0.25, 0.25"></div></div><label>유의수준</label><input id="chiAlpha" type="number" step=".01" value=".05"><div class="actions"><button class="action" onclick="runChi()">검정</button></div><div id="chiResult" class="result"></div></div>
+</div></section>
+
+<section id="ml" class="section">
+<div class="section-head"><div><h2>분류 모델</h2><p>BayesianClassifier와 PerceptronModel 실행 예제</p></div></div>
+<div class="grid">
+<div class="card"><h3>나이브 베이즈 텍스트성 특성</h3><div class="desc">날씨·온도 특성으로 활동 여부를 학습하는 간단한 예제</div><div class="actions"><button class="action" onclick="runBayes()">학습·예측</button></div><div id="bayesResult" class="result"></div></div>
+<div class="card"><h3>퍼셉트론 이진 분류</h3><div class="desc">AND 논리 데이터를 학습해 새 좌표를 분류합니다.</div><div class="row"><div><label>X1</label><input id="px1" type="number" value="1"></div><div><label>X2</label><input id="px2" type="number" value="1"></div></div><div class="actions"><button class="action" onclick="runPerceptron()">학습·예측</button></div><div id="perceptronResult" class="result"></div></div>
+</div></section>
+
+<section id="combinatorics" class="section">
+<div class="section-head"><div><h2>조합·샘플링</h2><p>팩토리얼, 조합 생성, 순열, 무작위 표본</p></div></div>
+<div class="grid">
+<div class="card third"><h3>팩토리얼</h3><input id="factN" type="number" value="6"><div class="actions"><button class="action" onclick="runFactorial()">계산</button></div><div id="factResult" class="result"></div></div>
+<div class="card third"><h3>조합</h3><div class="row"><input id="combN" type="number" value="5"><input id="combK" type="number" value="3"></div><div class="actions"><button class="action" onclick="runComb()">생성</button></div><div id="combResult" class="result"></div></div>
+<div class="card third"><h3>무작위 표본</h3><textarea id="sampleData">A,B,C,D,E,F,G,H,I,J</textarea><label>표본 크기</label><input id="sampleK" type="number" value="4"><div class="actions"><button class="action" onclick="runSample()">추출</button></div><div id="sampleResult" class="result"></div></div>
+<div class="card wide"><h3>순열 생성</h3><input id="permData" value="A,B,C"><div class="actions"><button class="action" onclick="runPerm()">전체 순열</button></div><div id="permResult" class="result"></div></div>
+</div></section>
+
+<section id="catalog" class="section">
+<div class="section-head"><div><h2>API 카탈로그</h2><p>현재 로드된 라이브러리 함수 탐색 및 즉시 검색</p></div></div>
+<div class="grid"><div class="card wide"><label>함수명 검색</label><input id="apiSearch" placeholder="예: mean, regression, variance" oninput="renderCatalog()"><div id="apiCount" class="desc"></div><div id="apiList" class="api-list"></div></div>
+<div class="card wide"><h3>브라우저 사용 예시</h3><div class="code">&lt;script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.9.3/dist/simple-statistics.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const average = ss.mean([1, 2, 3, 4, 5]);
+  const model = ss.linearRegression([[1, 2], [2, 4], [3, 5]]);
+&lt;/script&gt;</div></div></div>
+</section>
+</main></div>
+<footer>본 페이지는 학습·기능 검증용 샘플입니다. 실제 의사결정에는 표본 설계, 가정 검토, 신뢰구간과 효과크기 등 추가 통계 검토가 필요합니다.</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=v=>{
+ if(v===undefined)return "지원되지 않음";
+ if(Number.isNaN(v))return "NaN";
+ if(typeof v==="number")return Math.abs(v)>=1e6||Math.abs(v)<1e-5&&v!==0?v.toExponential(5):Number(v.toFixed(6)).toString();
+ return typeof v==="object"?JSON.stringify(v,null,2):String(v);
+};
+function nums(id){const a=$(id).value.trim().split(/[\s,;]+/).filter(Boolean).map(Number);if(!a.length||a.some(Number.isNaN))throw Error("유효한 숫자 배열을 입력하세요.");return a}
+function values(id){return $(id).value.trim().split(/[\s,;]+/).filter(Boolean)}
+function out(id,obj){$(id).className="result";$(id).textContent=typeof obj==="string"?obj:Object.entries(obj).map(([k,v])=>`${k}: ${fmt(v)}`).join("\n")}
+function err(id,e){$(id).className="result error";$(id).textContent="오류: "+e.message}
+function call(name,...args){if(!window.ss||typeof ss[name]!=="function")return undefined;return ss[name](...args)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active");if(b.dataset.tab==="catalog")renderCatalog()});
+function stats(data){
+ const s=[...data].sort((a,b)=>a-b);
+ return {개수:data.length,합계:call("sum",data),최소:call("min",data),최대:call("max",data),평균:call("mean",data),중앙값:call("median",data),최빈값:call("mode",data),범위:s.at(-1)-s[0],분산:call("variance",data),표본분산:call("sampleVariance",data),표준편차:call("standardDeviation",data),표본표준편차:call("sampleStandardDeviation",data),사분위범위:call("interquartileRange",data),중앙절대편차:call("medianAbsoluteDeviation",data),표본왜도:call("sampleSkewness",data),기하평균:data.every(x=>x>0)?call("geometricMean",data):"양수만 가능",조화평균:data.every(x=>x>0)?call("harmonicMean",data):"양수만 가능",제곱평균제곱근:call("rootMeanSquare",data)}
+}
+function runOverview(){
+ try{const d=nums("mainData"),st=stats(d);$("overviewStats").innerHTML=Object.entries(st).slice(0,12).map(([k,v])=>`<div class="stat"><b>${k}</b><span>${fmt(v)}</span></div>`).join("");
+ const s=[...d].sort((a,b)=>a-b),q1=call("quantileSorted",s,.25)??call("quantile",s,.25),q2=call("medianSorted",s)??call("median",s),q3=call("quantileSorted",s,.75)??call("quantile",s,.75),iqr=q3-q1,lo=q1-1.5*iqr,hi=q3+1.5*iqr;
+ out("overviewDetail",{"정렬 데이터":s,"Q1":q1,"Q2":q2,"Q3":q3,"IQR":iqr,"하한 경계":lo,"상한 경계":hi,"이상치":d.filter(x=>x<lo||x>hi)});
+ drawHistogram("histCanvas",d);drawBox("boxCanvas",d,q1,q2,q3,lo,hi)}catch(e){err("overviewDetail",e)}
+}
+function setDemo(t){if(t==="normal")$("mainData").value="42,45,47,48,49,50,50,51,52,53,55,58";if(t==="outlier")$("mainData").value="10,11,11,12,12,13,13,14,14,15,48";if(t==="random")$("mainData").value=Array.from({length:30},()=>Math.round((Math.random()*50+25)*10)/10).join(", ");runOverview()}
+function runCentral(){try{let d=nums("descData");out("centralResult",{"산술평균":call("mean",d),"중앙값":call("median",d),"최빈값":call("mode",d),"빠른 최빈값":call("modeFast",d),"기하평균":call("geometricMean",d),"조화평균":call("harmonicMean",d),"제곱평균제곱근":call("rootMeanSquare",d)})}catch(e){err("centralResult",e)}}
+function runSpread(){try{let d=nums("spreadData");out("spreadResult",{"분산(모집단)":call("variance",d),"분산(표본)":call("sampleVariance",d),"표준편차(모집단)":call("standardDeviation",d),"표준편차(표본)":call("sampleStandardDeviation",d),"평균절대편차":call("meanAbsoluteDeviation",d),"중앙절대편차":call("medianAbsoluteDeviation",d),"사분위범위":call("interquartileRange",d),"표본왜도":call("sampleSkewness",d)})}catch(e){err("spreadResult",e)}}
+function runArrayOps(){try{let d=nums("arrayData"),s=[...d].sort((a,b)=>a-b);out("arrayResult",{"합":call("sum",d),"단순 합":call("sumSimple",d),"곱":call("product",d),"최소":call("min",d),"최대":call("max",d),"범위 배열":call("extent",d),"정렬 최소":call("minSorted",s),"정렬 최대":call("maxSorted",s)})}catch(e){err("arrayResult",e)}}
+function runAddMean(){try{out("addMeanResult",{"새 평균":call("addToMean",+$("oldMean").value,+$("oldCount").value,+$("newValue").value)})}catch(e){err("addMeanResult",e)}}
+function runQuantiles(){try{let d=nums("qData"),p=nums("qP");out("qResult",Object.fromEntries(p.map(x=>[`p=${x}`,call("quantile",d,x)])));drawQuantiles(d)}catch(e){err("qResult",e)}}
+function runRank(){try{let d=nums("rankData"),v=+$("rankValue").value;out("rankResult",{"값":v,"분위수 순위":call("quantileRank",d,v),"백분위":call("quantileRank",d,v)*100+"%"})}catch(e){err("rankResult",e)}}
+let lastReg=null;
+function runRelation(){try{let x=nums("xData"),y=nums("yData");if(x.length!==y.length)throw Error("X와 Y의 개수가 같아야 합니다.");let pairs=x.map((v,i)=>[v,y[i]]),lr=call("linearRegression",pairs),line=call("linearRegressionLine",lr),r2=call("rSquared",pairs,line);lastReg={x,y,lr,line};out("relationResult",{"공분산(모집단)":call("covariance",x,y),"공분산(표본)":call("sampleCovariance",x,y),"Pearson 상관계수":call("sampleCorrelation",x,y),"절편 m":lr?.m,"기울기 b":lr?.b,"결정계수 R²":r2});drawRegression(x,y,line)}catch(e){err("relationResult",e)}}
+function runPredict(){try{if(!lastReg)runRelation();let x=+$("predictX").value;out("predictResult",{"X":x,"예측 Y":lastReg.line(x)})}catch(e){err("predictResult",e)}}
+function runClusters(){try{let d=nums("clusterData"),k=+$("clusterK").value,ck=call("ckmeans",d,k),eq=call("equalIntervalBreaks",d,k);out("clusterResult",{"CKMeans 군집":ck,"동일간격 경계":eq});drawClusters(d,ck)}catch(e){err("clusterResult",e)}}
+function runNormal(){try{let z=+$("zValue").value;out("normalResult",{"Z":z,"누적확률 Φ(z)":call("cumulativeStdNormalProbability",z),"오차함수 erf(z)":call("errorFunction",z),"probit(0.975)":call("probit",.975)})}catch(e){err("normalResult",e)}}
+function runBinomial(){try{let n=+$("binN").value,p=+$("binP").value,d=call("binomialDistribution",n,p);out("binResult",d??"현재 버전에서 함수 확인 필요");drawDistribution(d,"이항분포")}catch(e){err("binResult",e)}}
+function runPoisson(){try{let l=+$("poiLambda").value,d=call("poissonDistribution",l);out("poiResult",d??"현재 버전에서 함수 확인 필요");drawDistribution(d,"포아송분포")}catch(e){err("poiResult",e)}}
+function runT1(){try{out("t1Result",{"t 통계량":call("tTest",nums("t1Data"),+$("t1Mean").value),"주의":"함수 반환값은 검정통계량이며 p-value 해석은 자유도와 분포표가 추가로 필요합니다."})}catch(e){err("t1Result",e)}}
+function runT2(){try{out("t2Result",{"t 통계량":call("tTestTwoSample",nums("t2A"),nums("t2B"),0),"평균 차이 귀무가설":0})}catch(e){err("t2Result",e)}}
+function runChi(){try{let o=nums("chiObserved"),p=nums("chiExpected");if(o.length!==p.length)throw Error("관측 빈도와 기대 확률 개수가 같아야 합니다.");let fn=ss.chiSquaredGoodnessOfFit;if(typeof fn!=="function")throw Error("chiSquaredGoodnessOfFit 함수가 현재 빌드에 없습니다.");let distribution=()=>p;out("chiResult",{"귀무가설 기각 여부":fn(o,distribution,+$("chiAlpha").value),"반환값 의미":"true이면 지정 유의수준에서 귀무가설 기각"})}catch(e){err("chiResult",e)}}
+function runBayes(){try{if(typeof ss.BayesianClassifier!=="function")throw Error("BayesianClassifier 미지원");let c=new ss.BayesianClassifier();c.train({weather:"sunny",temp:"warm"},"go");c.train({weather:"sunny",temp:"hot"},"go");c.train({weather:"rainy",temp:"cool"},"stay");c.train({weather:"rainy",temp:"warm"},"stay");let q={weather:"sunny",temp:"cool"};out("bayesResult",{"학습 건수":4,"질의":q,"범주별 점수":c.score(q)})}catch(e){err("bayesResult",e)}}
+function runPerceptron(){try{if(typeof ss.PerceptronModel!=="function")throw Error("PerceptronModel 미지원");let m=new ss.PerceptronModel();[[[0,0],0],[[0,1],0],[[1,0],0],[[1,1],1]].forEach(([x,y])=>{for(let i=0;i<20;i++)m.train(x,y)});let q=[+$("px1").value,+$("px2").value];out("perceptronResult",{"입력":q,"예측":m.predict(q),"가중치":m.weights,"편향":m.bias})}catch(e){err("perceptronResult",e)}}
+function runFactorial(){try{out("factResult",{"n!":call("factorial",+$("factN").value)})}catch(e){err("factResult",e)}}
+function runComb(){try{let n=+$("combN").value,k=+$("combK").value,a=Array.from({length:n},(_,i)=>i+1);out("combResult",{"조합 수":call("combinations",n,k),"실제 조합":call("combinationsReplacement",a,k)??"함수 용도는 중복조합 생성"})}catch(e){err("combResult",e)}}
+function runSample(){try{let a=values("sampleData"),k=+$("sampleK").value;if(k>a.length)throw Error("표본 크기는 전체 개수 이하여야 합니다.");let shuffled=[...a].sort(()=>Math.random()-.5);out("sampleResult",{"원본":a,"추출":shuffled.slice(0,k),"설명":"브라우저 기본 난수 기반 예제"})}catch(e){err("sampleResult",e)}}
+function runPerm(){try{let a=values("permData"),r=call("permutationsHeap",a);out("permResult",{"개수":r?.length,"순열":r})}catch(e){err("permResult",e)}}
+function canvas(id){let c=$(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);return [c,ctx]}
+function axes(ctx,w,h,p=38){ctx.strokeStyle="#c7cfdd";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p,15);ctx.lineTo(p,h-p);ctx.lineTo(w-12,h-p);ctx.stroke();return p}
+function drawHistogram(id,d){let[c,x]=canvas(id),p=axes(x,c.width,c.height),bins=Math.max(5,Math.round(Math.sqrt(d.length))),min=Math.min(...d),max=Math.max(...d),step=(max-min||1)/bins,counts=Array(bins).fill(0);d.forEach(v=>counts[Math.min(bins-1,Math.floor((v-min)/step))]++);let bw=(c.width-p-20)/bins,m=Math.max(...counts);counts.forEach((n,i)=>{let h=n/(m||1)*(c.height-p-35);x.fillStyle="#3157d5";x.fillRect(p+i*bw+2,c.height-p-h,bw-4,h);x.fillStyle="#65718a";x.font="11px sans-serif";x.fillText(n,p+i*bw+bw/2-3,c.height-p-h-5)})}
+function drawBox(id,d,q1,med,q3,lo,hi){let[c,x]=canvas(id),p=50,min=Math.min(...d),max=Math.max(...d),sx=v=>p+(v-min)/(max-min||1)*(c.width-2*p),y=c.height/2;x.strokeStyle="#3157d5";x.lineWidth=3;x.beginPath();x.moveTo(sx(Math.max(min,lo)),y);x.lineTo(sx(Math.min(max,hi)),y);x.stroke();x.fillStyle="#dce4ff";x.fillRect(sx(q1),y-45,sx(q3)-sx(q1),90);x.strokeRect(sx(q1),y-45,sx(q3)-sx(q1),90);x.beginPath();x.moveTo(sx(med),y-45);x.lineTo(sx(med),y+45);x.stroke();d.filter(v=>v<lo||v>hi).forEach(v=>{x.beginPath();x.arc(sx(v),y,6,0,7);x.fillStyle="#c23b4a";x.fill()});[min,q1,med,q3,max].forEach(v=>{x.fillStyle="#46516a";x.fillText(fmt(v),sx(v)-10,y+72)})}
+function drawQuantiles(d){let[c,x]=canvas("quantileCanvas"),p=axes(x,c.width,c.height),pts=Array.from({length:101},(_,i)=>[i/100,call("quantile",d,i/100)]),min=Math.min(...d),max=Math.max(...d),sx=v=>p+v*(c.width-p-20),sy=v=>c.height-p-(v-min)/(max-min||1)*(c.height-p-30);x.strokeStyle="#3157d5";x.lineWidth=3;x.beginPath();pts.forEach(([a,b],i)=>i?x.lineTo(sx(a),sy(b)):x.moveTo(sx(a),sy(b)));x.stroke()}
+function drawRegression(a,b,line){let[c,x]=canvas("regCanvas"),p=axes(x,c.width,c.height),xmin=Math.min(...a),xmax=Math.max(...a),ymin=Math.min(...b),ymax=Math.max(...b),sx=v=>p+(v-xmin)/(xmax-xmin||1)*(c.width-p-25),sy=v=>c.height-p-(v-ymin)/(ymax-ymin||1)*(c.height-p-30);x.fillStyle="#3157d5";a.forEach((v,i)=>{x.beginPath();x.arc(sx(v),sy(b[i]),6,0,7);x.fill()});x.strokeStyle="#c23b4a";x.lineWidth=3;x.beginPath();x.moveTo(sx(xmin),sy(line(xmin)));x.lineTo(sx(xmax),sy(line(xmax)));x.stroke()}
+function drawClusters(d,groups){let[c,x]=canvas("clusterCanvas"),p=45,min=Math.min(...d),max=Math.max(...d),sx=v=>p+(v-min)/(max-min||1)*(c.width-2*p);x.strokeStyle="#c7cfdd";x.beginPath();x.moveTo(p,c.height/2);x.lineTo(c.width-p,c.height/2);x.stroke();(groups||[d]).forEach((g,gi)=>g.forEach((v,i)=>{x.fillStyle=`hsl(${gi*75%360} 65% 48%)`;x.beginPath();x.arc(sx(v),c.height/2+(i%3-1)*28,7,0,7);x.fill()}))}
+function drawDistribution(obj,title){let[c,x]=canvas("distCanvas"),p=axes(x,c.width,c.height);if(!obj)return;let entries=Array.isArray(obj)?obj.map((v,i)=>[i,v]):Object.entries(obj).map(([k,v])=>[+k,v]),m=Math.max(...entries.map(e=>e[1])),bw=(c.width-p-20)/entries.length;x.fillStyle="#172033";x.font="bold 14px sans-serif";x.fillText(title,p,18);entries.forEach(([k,v],i)=>{let h=v/(m||1)*(c.height-p-45);x.fillStyle="#1b9aaa";x.fillRect(p+i*bw+2,c.height-p-h,bw-4,h);x.fillStyle="#65718a";x.font="10px sans-serif";x.fillText(k,p+i*bw+bw/2-3,c.height-p+14)})}
+const apiDescriptions={mean:"산술평균",median:"중앙값",mode:"최빈값",variance:"모집단 분산",sampleVariance:"표본 분산",standardDeviation:"모집단 표준편차",sampleStandardDeviation:"표본 표준편차",quantile:"분위수",linearRegression:"최소제곱 선형회귀",sampleCorrelation:"표본 Pearson 상관계수",ckmeans:"자연구간 군집",equalIntervalBreaks:"동일간격 경계",binomialDistribution:"이항분포",poissonDistribution:"포아송분포",BayesianClassifier:"베이지안 분류기",PerceptronModel:"퍼셉트론 모델",tTest:"단일표본 t 검정",tTestTwoSample:"두 표본 t 검정",chiSquaredGoodnessOfFit:"카이제곱 적합도 검정"};
+function renderCatalog(){let q=$("apiSearch").value.toLowerCase(),keys=window.ss?Object.keys(ss).filter(k=>typeof ss[k]==="function"&&k.toLowerCase().includes(q)).sort():[];$("apiCount").textContent=`로드된 함수/생성자 ${keys.length}개`;$("apiList").innerHTML=keys.map(k=>`<div class="api"><code>ss.${k}</code><small>${apiDescriptions[k]||"simple-statistics 제공 API"}</small></div>`).join("")}
+window.addEventListener("load",()=>{if(window.ss){$("libStatus").textContent=`라이브러리 로드 완료 · API ${Object.keys(ss).length}개`;$("libStatus").classList.add("ok");runOverview();runRelation();renderCatalog()}else{$("libStatus").textContent="CDN 로드 실패 · 인터넷 연결 확인";$("libStatus").classList.add("error")}});
+</script>
+</body></html>
