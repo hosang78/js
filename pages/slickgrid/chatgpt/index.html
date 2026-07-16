@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>SlickGrid 종합 기능 실험실</title>
+  <link id="slick-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/slickgrid@5.17.0/dist/styles/css/slick-alpine-theme.min.css" onerror="this.onerror=null;this.href='https://unpkg.com/slickgrid@5.17.0/dist/styles/css/slick-alpine-theme.min.css'" />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --accent: #2563eb;
+      --accent-2: #1d4ed8;
+      --good: #0f9f6e;
+      --warn: #d97706;
+      --bad: #dc2626;
+      --shadow: 0 12px 34px rgba(15, 23, 42, .09);
+      --radius: 16px;
+    }
+    body.dark {
+      --bg: #0f172a;
+      --panel: #111c30;
+      --panel-2: #17233a;
+      --text: #e5edf8;
+      --muted: #9fb0c7;
+      --line: #2b3a52;
+      --accent: #60a5fa;
+      --accent-2: #93c5fd;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --shadow: 0 18px 40px rgba(0,0,0,.28);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 8% 0%, rgba(37,99,235,.10), transparent 28%), var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", Segoe UI, sans-serif;
+      overflow: hidden;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { height: 100%; display: grid; grid-template-rows: auto auto minmax(0,1fr) auto; }
+    .hero {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 16px 20px 12px; border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(12px);
+    }
+    .brand { min-width: 0; }
+    .eyebrow { color: var(--accent); font-weight: 800; font-size: 12px; letter-spacing: .09em; text-transform: uppercase; }
+    h1 { margin: 4px 0 2px; font-size: clamp(21px, 2.3vw, 31px); line-height: 1.15; }
+    .subtitle { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .toolbar {
+      display: grid; grid-template-columns: minmax(210px, 1fr) auto; gap: 10px;
+      padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+    }
+    .search-box { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; background: var(--panel-2); }
+    .search-box input { width: 100%; border: 0; outline: 0; padding: 10px 0; color: var(--text); background: transparent; }
+    .toolbar-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+    .toolbar-actions .btn { white-space: nowrap; flex: 0 0 auto; }
+    .btn {
+      border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 10px;
+      min-height: 38px; padding: 7px 11px; font-weight: 700; font-size: 13px; transition: .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn.danger { color: var(--bad); }
+    .btn.active { color: white; background: var(--accent); border-color: var(--accent); }
+    .btn.icon { width: 40px; padding: 0; }
+    .workspace { min-height: 0; display: grid; grid-template-columns: 300px minmax(0,1fr); gap: 12px; padding: 12px 20px; }
+    .sidebar { min-height: 0; overflow: auto; padding-right: 3px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 10px; overflow: hidden; }
+    .panel summary { list-style: none; padding: 13px 14px; font-weight: 850; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+    .panel summary::-webkit-details-marker { display:none; }
+    .panel summary::after { content: "＋"; color: var(--muted); font-size: 18px; }
+    .panel[open] summary::after { content: "−"; }
+    .panel-body { border-top: 1px solid var(--line); padding: 12px 14px 14px; }
+    .field { display: grid; gap: 5px; margin-bottom: 10px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label, .label { font-size: 12px; color: var(--muted); font-weight: 750; }
+    .field input, .field select, .field textarea, .compact-input {
+      width: 100%; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 9px; padding: 8px 9px; outline: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus, .compact-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .button-grid .btn { min-height: 34px; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; font-size: 13px; }
+    .switch { position: relative; width: 43px; height: 24px; flex: none; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: #9aa7b8; border-radius: 99px; transition: .2s; }
+    .slider::before { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; border-radius:50%; background:#fff; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+    .switch input:checked + .slider { background: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(19px); }
+    .main { min-height: 0; display: grid; grid-template-rows: auto minmax(0,1fr) auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(95px, 1fr)); border-bottom: 1px solid var(--line); background: var(--panel-2); }
+    .stat { padding: 10px 12px; border-right: 1px solid var(--line); min-width: 0; }
+    .stat:last-child { border-right: 0; }
+    .stat-label { color: var(--muted); font-size: 11px; font-weight: 750; }
+    .stat-value { margin-top: 3px; font-size: 18px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .grid-wrap { min-height: 0; position: relative; }
+    #myGrid { width: 100%; height: 100%; min-height: 260px; }
+    .grid-footer { min-height: 45px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-top: 1px solid var(--line); background: var(--panel-2); font-size: 12px; }
+    .pager { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .pager button { min-width: 31px; min-height: 30px; border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; font-weight: 800; }
+    .pager button:disabled { opacity: .38; cursor: default; }
+    .status { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bottom-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 20px 12px; color: var(--muted); font-size: 12px; }
+    .kbd { border: 1px solid var(--line); border-bottom-width: 2px; background: var(--panel); border-radius: 5px; padding: 1px 5px; color: var(--text); font-weight: 800; }
+    .badge { display: inline-flex; align-items:center; gap:5px; padding: 3px 8px; border-radius:999px; font-size:11px; font-weight:850; white-space:nowrap; }
+    .badge.blue { color:#1d4ed8; background:#dbeafe; } .badge.green { color:#047857; background:#d1fae5; }
+    .badge.orange { color:#b45309; background:#fef3c7; } .badge.red { color:#b91c1c; background:#fee2e2; }
+    .badge.gray { color:#475569; background:#e2e8f0; }
+    .progress { position:relative; height:17px; width:100%; border-radius:999px; background: color-mix(in srgb, var(--line) 72%, transparent); overflow:hidden; }
+    .progress > span { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#60a5fa,#2563eb); }
+    .progress em { position:absolute; inset:0; display:grid; place-items:center; font-size:10px; font-style:normal; font-weight:900; color:#0f172a; text-shadow:0 1px 2px #fff; }
+    .select-cell { display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+    .select-cell input { width:16px; height:16px; accent-color:var(--accent); }
+    .cell-right { text-align:right; justify-content:flex-end !important; font-variant-numeric: tabular-nums; }
+    .cell-center { text-align:center; justify-content:center !important; }
+    .cell-title { font-weight: 750; }
+    .inactive-row { opacity:.62; }
+    .risk-high { background: color-mix(in srgb, var(--bad) 10%, transparent) !important; }
+    .overdue-cell { color: var(--bad); font-weight: 850; }
+    .slick-headerrow-column { padding: 3px !important; }
+    .slick-headerrow-column input {
+      width: 100%; height: 27px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; color: var(--text); background: var(--panel);
+    }
+    .slick-header-column { font-weight: 850 !important; }
+    .slick-cell { align-items: center; }
+    body.dark .slick-container { --alpine-bg-color: #111c30; --alpine-cell-bg-color: #111c30; --alpine-header-bg-color: #17233a; --alpine-text-color: #e5edf8; --alpine-border-color: #2b3a52; }
+    .loading {
+      position:absolute; inset:0; display:grid; place-items:center; background: color-mix(in srgb, var(--panel) 92%, transparent); z-index:20; text-align:center; padding:30px;
+    }
+    .loading.hidden { display:none; }
+    .loader { width:36px; height:36px; border-radius:50%; border:4px solid var(--line); border-top-color:var(--accent); animation:spin .8s linear infinite; margin:0 auto 12px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .toast-stack { position:fixed; right:18px; bottom:18px; z-index:1000; display:grid; gap:8px; pointer-events:none; }
+    .toast { max-width:min(390px,calc(100vw - 36px)); padding:11px 13px; color:#fff; background:#172033; border-radius:11px; box-shadow:0 14px 40px rgba(0,0,0,.24); font-size:13px; animation:toastIn .2s ease-out; }
+    .toast.good { background:#047857; } .toast.bad { background:#b91c1c; } .toast.warn { background:#b45309; }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } }
+    .modal-backdrop { position:fixed; inset:0; z-index:900; display:none; place-items:center; padding:20px; background:rgba(15,23,42,.56); backdrop-filter:blur(5px); }
+    .modal-backdrop.open { display:grid; }
+    .modal { width:min(620px,100%); max-height:min(760px,92vh); overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:0 24px 70px rgba(0,0,0,.3); }
+    .modal-head, .modal-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; border-bottom:1px solid var(--line); }
+    .modal-foot { border-top:1px solid var(--line); border-bottom:0; justify-content:flex-end; }
+    .modal-body { padding:15px 16px; }
+    .column-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .column-item { display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--panel-2); border-radius:9px; padding:8px 9px; }
+    .context-menu { position:fixed; z-index:1200; display:none; min-width:190px; padding:6px; background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:11px; box-shadow:0 18px 55px rgba(0,0,0,.26); }
+    .context-menu.open { display:block; }
+    .context-menu button { width:100%; text-align:left; border:0; border-radius:7px; background:transparent; color:inherit; padding:8px 9px; }
+    .context-menu button:hover { background:var(--panel-2); color:var(--accent); }
+    .context-menu hr { border:0; border-top:1px solid var(--line); margin:5px; }
+    .mobile-sidebar-btn { display:none; }
+    @media (max-width: 980px) {
+      body { overflow:auto; }
+      .app { min-height:100vh; height:auto; grid-template-rows:auto auto auto auto; }
+      .workspace { grid-template-columns:1fr; }
+      .sidebar { display:none; max-height:none; }
+      .sidebar.open { display:block; }
+      .main { height:72vh; min-height:560px; }
+      .mobile-sidebar-btn { display:inline-flex; }
+      .stats { grid-template-columns:repeat(3,1fr); }
+      .stat:nth-child(3) { border-right:0; }
+      .stat:nth-child(n+4) { border-top:1px solid var(--line); }
+    }
+    @media (max-width: 680px) {
+      .hero { align-items:flex-start; padding:13px 12px 10px; }
+      .subtitle { white-space:normal; }
+      .hero-actions .btn:not(.icon) { display:none; }
+      .toolbar { grid-template-columns:1fr; padding:8px 12px; }
+      .toolbar-actions { justify-content:flex-start; overflow-x:auto; flex-wrap:nowrap; padding-bottom:2px; }
+      .workspace { padding:8px 12px; }
+      .main { height:76vh; min-height:530px; }
+      .stats { grid-template-columns:repeat(2,1fr); }
+      .stat { border-top:1px solid var(--line); }
+      .stat:nth-child(-n+2) { border-top:0; }
+      .stat:nth-child(2n) { border-right:0; }
+      .column-list { grid-template-columns:1fr; }
+      .bottom-bar { padding:4px 12px 9px; }
+      .bottom-bar > :last-child { display:none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div class="brand">
+      <div class="eyebrow">SlickGrid 5.17.0 · Feature Lab</div>
+      <h1>SlickGrid 종합 기능 실험실</h1>
+      <div class="subtitle">가상 스크롤·편집·정렬·필터·그룹 집계·페이징·열 관리·입출력을 한 페이지에서 체험</div>
+    </div>
+    <div class="hero-actions">
+      <button class="btn mobile-sidebar-btn" id="toggleSidebar">☰ 기능 패널</button>
+      <button class="btn" id="saveStateBtn">상태 저장</button>
+      <button class="btn" id="restoreStateBtn">상태 복원</button>
+      <button class="btn icon" id="darkBtn" title="다크 모드">◐</button>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="search-box">
+      <span>⌕</span>
+      <input id="globalSearch" type="search" placeholder="전체 검색: 과제명, 부서, 담당자, 상태, 메모… (Esc 초기화)" />
+      <span class="kbd">Ctrl K</span>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn primary" id="addRowBtn">＋ 행 추가</button>
+      <button class="btn" id="duplicateBtn">복제</button>
+      <button class="btn danger" id="deleteBtn">삭제</button>
+      <button class="btn" id="undoBtn">↶ 실행취소</button>
+      <button class="btn" id="redoBtn">↷ 다시실행</button>
+      <button class="btn" id="columnsBtn">열 설정</button>
+      <button class="btn" id="exportCsvBtn">CSV</button>
+      <button class="btn" id="exportJsonBtn">JSON</button>
+      <button class="btn" id="importBtn">가져오기</button>
+      <input id="importFile" type="file" accept="application/json,.json" hidden />
+    </div>
+  </section>
+
+  <section class="workspace">
+    <aside class="sidebar" id="sidebar">
+      <details class="panel" open>
+        <summary>데이터 및 성능</summary>
+        <div class="panel-body">
+          <div class="field">
+            <label for="rowCount">샘플 데이터 행 수</label>
+            <select id="rowCount">
+              <option value="100">100행</option>
+              <option value="1000">1,000행</option>
+              <option value="5000" selected>5,000행</option>
+              <option value="50000">50,000행</option>
+              <option value="100000">100,000행</option>
+            </select>
+          </div>
+          <button class="btn primary" id="generateBtn" style="width:100%">데이터 재생성</button>
+          <div class="switch-row"><span>실시간 임의 갱신</span><label class="switch"><input id="realtimeToggle" type="checkbox"><span class="slider"></span></label></div>
+          <div class="switch-row"><span>비활성 행 흐리게</span><label class="switch"><input id="dimInactiveToggle" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+      </details>
+
+      <details class="panel" open>
+        <summary>고급 필터</summary>
+        <div class="panel-body">
+          <div class="field-row">
+            <div class="field"><label>진행률 최소</label><input id="progressMin" type="number" min="0" max="100" value="0"></div>
+            <div class="field"><label>위험도 최대</label><input id="riskMax" type="number" min="1" max="10" value="10"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>시작일 이후</label><input id="dateFrom" type="date"></div>
+            <div class="field"><label>마감일 이전</label><input id="dateTo" type="date"></div>
+          </div>
+          <div class="field"><label>상태</label><select id="statusFilter"><option value="">전체</option><option>대기</option><option>진행</option><option>검토</option><option>완료</option><option>보류</option></select></div>
+          <div class="button-grid"><button class="btn primary" id="applyFilterBtn">필터 적용</button><button class="btn" id="clearFilterBtn">전체 초기화</button></div>
+        </div>
+      </details>
+
+      <details class="panel" open>
+        <summary>그룹화 및 집계</summary>
+        <div class="panel-body">
+          <div class="field"><label>그룹 기준</label><select id="groupBy"><option value="">그룹 없음</option><option value="department">부서</option><option value="status">상태</option><option value="priority">우선순위</option><option value="owner">담당자</option></select></div>
+          <div class="field"><label>2차 그룹</label><select id="groupBy2"><option value="">사용 안 함</option><option value="status">상태</option><option value="priority">우선순위</option><option value="department">부서</option></select></div>
+          <div class="button-grid"><button class="btn" id="collapseBtn">모두 접기</button><button class="btn" id="expandBtn">모두 펼치기</button></div>
+          <p style="margin:9px 0 0;color:var(--muted);font-size:11px;line-height:1.5">그룹 합계: 예산 합계·진행률 평균·위험도 평균</p>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>표시 및 레이아웃</summary>
+        <div class="panel-body">
+          <div class="field"><label>페이지 크기</label><select id="pageSize"><option value="0">전체(가상 스크롤)</option><option value="25">25행</option><option value="50">50행</option><option value="100" selected>100행</option><option value="500">500행</option></select></div>
+          <div class="field"><label>행 높이</label><select id="rowHeight"><option value="26">촘촘함 26px</option><option value="34" selected>기본 34px</option><option value="42">넓게 42px</option></select></div>
+          <div class="field"><label>고정 열</label><select id="frozenColumn"><option value="-1">사용 안 함</option><option value="0">선택 열</option><option value="1">ID까지</option><option value="2">과제명까지</option></select></div>
+          <div class="switch-row"><span>헤더 필터 행</span><label class="switch"><input id="headerFilterToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>열 너비 자동 맞춤</span><label class="switch"><input id="forceFitToggle" type="checkbox"><span class="slider"></span></label></div>
+          <div class="button-grid"><button class="btn" id="autosizeBtn">열 자동크기</button><button class="btn" id="resetLayoutBtn">레이아웃 초기화</button></div>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>선택 및 이동</summary>
+        <div class="panel-body">
+          <div class="button-grid"><button class="btn" id="select10Btn">앞 10행 선택</button><button class="btn" id="clearSelectionBtn">선택 해제</button><button class="btn" id="topBtn">맨 위로</button><button class="btn" id="bottomBtn">맨 아래로</button></div>
+          <div class="field" style="margin-top:9px"><label>행 번호로 이동</label><div style="display:grid;grid-template-columns:1fr auto;gap:6px"><input id="gotoRow" type="number" min="1" value="1"><button class="btn" id="gotoBtn">이동</button></div></div>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>사용법</summary>
+        <div class="panel-body" style="font-size:12px;line-height:1.65;color:var(--muted)">
+          <b style="color:var(--text)">편집</b>: 셀 더블클릭 또는 Enter<br>
+          <b style="color:var(--text)">다중 정렬</b>: Shift + 열 제목 클릭<br>
+          <b style="color:var(--text)">전체 선택</b>: Ctrl + A<br>
+          <b style="color:var(--text)">검색</b>: Ctrl + K<br>
+          <b style="color:var(--text)">우클릭</b>: 복사·복제·삭제·값 필터<br>
+          <b style="color:var(--text)">열 이동</b>: 열 제목 드래그
+        </div>
+      </details>
+    </aside>
+
+    <main class="main">
+      <div class="stats">
+        <div class="stat"><div class="stat-label">전체 데이터</div><div class="stat-value" id="totalStat">0</div></div>
+        <div class="stat"><div class="stat-label">필터 결과</div><div class="stat-value" id="filteredStat">0</div></div>
+        <div class="stat"><div class="stat-label">선택 행</div><div class="stat-value" id="selectedStat">0</div></div>
+        <div class="stat"><div class="stat-label">예산 합계</div><div class="stat-value" id="budgetStat">₩0</div></div>
+        <div class="stat"><div class="stat-label">평균 진행률</div><div class="stat-value" id="progressStat">0%</div></div>
+      </div>
+      <div class="grid-wrap">
+        <div id="myGrid" class="slick-container alpine-theme"></div>
+        <div class="loading" id="loading"><div><div class="loader"></div><b>SlickGrid 모듈을 불러오는 중…</b><div id="loadingMsg" style="margin-top:8px;color:var(--muted);font-size:12px">인터넷 연결이 필요합니다.</div></div></div>
+      </div>
+      <div class="grid-footer">
+        <div class="status" id="statusText">초기화 중</div>
+        <div class="pager">
+          <button id="firstPage" title="첫 페이지">«</button><button id="prevPage" title="이전 페이지">‹</button>
+          <span id="pageInfo" style="min-width:90px;text-align:center;font-weight:800">1 / 1</span>
+          <button id="nextPage" title="다음 페이지">›</button><button id="lastPage" title="마지막 페이지">»</button>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <footer class="bottom-bar">
+    <div>외부 라이브러리: SlickGrid 5.17.0 + SortableJS · 데이터는 브라우저 안에서만 처리</div>
+    <div><span class="kbd">Enter</span> 편집 · <span class="kbd">Esc</span> 취소 · <span class="kbd">Ctrl Z</span> 실행취소</div>
+  </footer>
+</div>
+
+<div class="toast-stack" id="toasts"></div>
+
+<div class="modal-backdrop" id="columnsModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="columnsTitle">
+    <div class="modal-head"><div><b id="columnsTitle">열 표시 설정</b><div style="font-size:12px;color:var(--muted);margin-top:3px">표시할 열을 선택하고 적용</div></div><button class="btn icon" data-close-modal>×</button></div>
+    <div class="modal-body"><div class="column-list" id="columnList"></div></div>
+    <div class="modal-foot"><button class="btn" id="allColumnsBtn">모두 표시</button><button class="btn primary" id="applyColumnsBtn">적용</button></div>
+  </div>
+</div>
+
+<div class="context-menu" id="contextMenu">
+  <button data-action="copy">셀 값 복사</button>
+  <button data-action="edit">행 편집 시작</button>
+  <button data-action="filter">이 값으로 필터</button>
+  <hr>
+  <button data-action="duplicate">행 복제</button>
+  <button data-action="delete" style="color:var(--bad)">행 삭제</button>
+</div>
+
+<script type="module">
+const VERSION = '5.17.0';
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function toast(message, type = '') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 2700);
+}
+
+function loadScript(urls) {
+  return new Promise((resolve, reject) => {
+    let idx = 0;
+    const next = () => {
+      if (idx >= urls.length) return reject(new Error('외부 스크립트를 불러오지 못했습니다.'));
+      const s = document.createElement('script');
+      s.src = urls[idx++];
+      s.onload = resolve;
+      s.onerror = () => { s.remove(); next(); };
+      document.head.appendChild(s);
+    };
+    next();
+  });
+}
+
+async function importSlickGrid() {
+  const urls = [
+    `https://cdn.jsdelivr.net/npm/slickgrid@${VERSION}/dist/esm/index.js`,
+    `https://unpkg.com/slickgrid@${VERSION}/dist/esm/index.js?module`
+  ];
+  let lastError;
+  for (const url of urls) {
+    try { return await import(url); } catch (err) { lastError = err; }
+  }
+  throw lastError || new Error('SlickGrid 모듈 로드 실패');
+}
+
+try {
+  if (!window.Sortable) {
+    await loadScript([
+      'https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js',
+      'https://unpkg.com/sortablejs@1.15.6/Sortable.min.js'
+    ]);
+  }
+  const Slick = await importSlickGrid();
+  const {
+    Aggregators, Editors, SlickGlobalEditorLock, SlickGroupItemMetadataProvider,
+    SlickRowSelectionModel, SlickDataView, SlickGrid
+  } = Slick;
+
+  const DEPARTMENTS = ['ICT전략실', '기획조정실', '회원지원부', '어업양식지원부', '홍보부', '정보보호본부'];
+  const OWNERS = ['김민수', '이지은', '박준호', '최서연', '정우진', '한유진', '오현석', '강수빈'];
+  const STATUSES = ['대기', '진행', '검토', '완료', '보류'];
+  const PRIORITIES = ['긴급', '높음', '보통', '낮음'];
+  const TASKS = ['업무 프로세스 개선', '데이터 정비 및 검증', '시스템 성능 점검', '사용자 요구사항 분석', '보안 취약점 조치', '운영 매뉴얼 현행화', '대시보드 고도화', '인터페이스 연계 점검', '백업 복구 훈련', '교육 콘텐츠 제작'];
+  const NOTES = ['정기 점검 대상', '부서 협의 필요', '사용자 검증 예정', '우선 조치 요청', '이슈 없음', '차기 회의 보고'];
+
+  let grid, dataView, groupProvider;
+  let masterData = [];
+  let columnFilters = {};
+  let sortState = [];
+  let selectedIds = new Set();
+  let undoStack = [];
+  let redoStack = [];
+  let editBefore = null;
+  let realtimeTimer = null;
+  let contextCell = null;
+  let currentPage = 0;
+  let currentPageSize = 100;
+  let currentFrozenColumn = -1;
+  let currentRowHeight = 34;
+  let forceFit = false;
+  let showHeaderRow = true;
+  let dimInactive = true;
+  let groupingFields = [];
+  const initialWidths = {};
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const won = value => new Intl.NumberFormat('ko-KR', { style:'currency', currency:'KRW', maximumFractionDigits:0 }).format(Number(value || 0));
+  const fmtNumber = value => new Intl.NumberFormat('ko-KR').format(Number(value || 0));
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const addDays = (date, days) => { const d = new Date(date); d.setDate(d.getDate() + days); return d.toISOString().slice(0,10); };
+  const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+  const randomInt = (min, max) => Math.floor(Math.random() * (max-min+1)) + min;
+  const deepClone = value => typeof structuredClone === 'function' ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+
+  class SelectEditor {
+    constructor(args) { this.args = args; this.defaultValue = null; this.select = null; this.init(); }
+    init() {
+      this.select = document.createElement('select');
+      this.select.className = 'editor-select';
+      this.select.style.cssText = 'width:100%;height:100%;border:0;padding:0 5px;background:var(--panel);color:var(--text)';
+      const values = this.args.column.options || [];
+      values.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; this.select.appendChild(o); });
+      this.args.container.appendChild(this.select); this.select.focus();
+    }
+    destroy() { this.select?.remove(); }
+    focus() { this.select?.focus(); }
+    loadValue(item) { this.defaultValue = item[this.args.column.field] ?? ''; this.select.value = this.defaultValue; }
+    serializeValue() { return this.select.value; }
+    applyValue(item, state) { item[this.args.column.field] = state; }
+    isValueChanged() { return this.select.value !== this.defaultValue; }
+    validate() { return { valid:true, msg:null }; }
+  }
+
+  function requiredValidator(value) { return String(value ?? '').trim() ? {valid:true,msg:null} : {valid:false,msg:'필수 입력값입니다.'}; }
+  function nonNegativeValidator(value) { const n = Number(value); return Number.isFinite(n) && n >= 0 ? {valid:true,msg:null} : {valid:false,msg:'0 이상의 숫자를 입력하세요.'}; }
+  function percentValidator(value) { const n = Number(value); return Number.isFinite(n) && n >= 0 && n <= 100 ? {valid:true,msg:null} : {valid:false,msg:'0~100 범위로 입력하세요.'}; }
+  function riskValidator(value) { const n = Number(value); return Number.isInteger(n) && n >= 1 && n <= 10 ? {valid:true,msg:null} : {valid:false,msg:'1~10 정수를 입력하세요.'}; }
+
+  const checkboxFormatter = (_row, _cell, value, _column, item) => `<span class="select-cell"><input class="row-selector" type="checkbox" ${selectedIds.has(item.id) ? 'checked' : ''} aria-label="행 선택"></span>`;
+  const statusFormatter = (_r,_c,v) => {
+    const cls = ({'완료':'green','진행':'blue','검토':'orange','보류':'red','대기':'gray'})[v] || 'gray';
+    return `<span class="badge ${cls}">${escapeHtml(v)}</span>`;
+  };
+  const priorityFormatter = (_r,_c,v) => {
+    const cls = ({'긴급':'red','높음':'orange','보통':'blue','낮음':'gray'})[v] || 'gray';
+    return `<span class="badge ${cls}">${escapeHtml(v)}</span>`;
+  };
+  const progressFormatter = (_r,_c,v) => { const n = clamp(Number(v)||0,0,100); return `<div class="progress"><span style="width:${n}%"></span><em>${n}%</em></div>`; };
+  const currencyFormatter = (_r,_c,v) => won(v);
+  const activeFormatter = (_r,_c,v) => v ? '<span class="badge green">사용</span>' : '<span class="badge gray">중지</span>';
+  const dateFormatter = (_r,_c,v) => `<span class="${v && v < todayISO() ? 'overdue-cell' : ''}">${escapeHtml(v)}</span>`;
+  const sumTotalsFormatter = (totals, columnDef) => totals.sum?.[columnDef.field] != null ? `합계 ${won(totals.sum[columnDef.field])}` : '';
+  const avgTotalsFormatter = (totals, columnDef) => totals.avg?.[columnDef.field] != null ? `평균 ${Math.round(totals.avg[columnDef.field] * 10) / 10}` : '';
+
+  const allColumns = [
+    { id:'_sel', name:'✓', field:'_sel', width:42, minWidth:42, maxWidth:42, resizable:false, sortable:false, selectable:false, focusable:false, formatter:checkboxFormatter, excludeFromExport:true },
+    { id:'id', name:'ID', field:'id', width:78, minWidth:65, sortable:true, cssClass:'cell-center' },
+    { id:'taskName', name:'과제명', field:'taskName', width:210, minWidth:130, sortable:true, editor:Editors.Text, validator:requiredValidator, cssClass:'cell-title' },
+    { id:'department', name:'부서', field:'department', width:125, minWidth:95, sortable:true, editor:SelectEditor, options:DEPARTMENTS },
+    { id:'owner', name:'담당자', field:'owner', width:95, minWidth:75, sortable:true, editor:SelectEditor, options:OWNERS },
+    { id:'status', name:'상태', field:'status', width:90, minWidth:80, sortable:true, editor:SelectEditor, options:STATUSES, formatter:statusFormatter },
+    { id:'priority', name:'우선순위', field:'priority', width:92, minWidth:82, sortable:true, editor:SelectEditor, options:PRIORITIES, formatter:priorityFormatter },
+    { id:'budget', name:'예산', field:'budget', width:125, minWidth:105, sortable:true, editor:Editors.Float, validator:nonNegativeValidator, formatter:currencyFormatter, cssClass:'cell-right', groupTotalsFormatter:sumTotalsFormatter },
+    { id:'progress', name:'진행률', field:'progress', width:125, minWidth:105, sortable:true, editor:Editors.PercentComplete, validator:percentValidator, formatter:progressFormatter, groupTotalsFormatter:avgTotalsFormatter },
+    { id:'startDate', name:'시작일', field:'startDate', width:112, minWidth:98, sortable:true, editor:Editors.Text },
+    { id:'dueDate', name:'마감일', field:'dueDate', width:112, minWidth:98, sortable:true, editor:Editors.Text, formatter:dateFormatter },
+    { id:'risk', name:'위험도', field:'risk', width:85, minWidth:75, sortable:true, editor:Editors.Integer, validator:riskValidator, cssClass:'cell-center', groupTotalsFormatter:avgTotalsFormatter },
+    { id:'active', name:'운영', field:'active', width:78, minWidth:70, sortable:true, editor:Editors.Checkbox, formatter:activeFormatter, cssClass:'cell-center' },
+    { id:'notes', name:'메모', field:'notes', width:230, minWidth:130, sortable:true, editor:Editors.LongText }
+  ];
+  allColumns.forEach(c => initialWidths[c.id] = c.width);
+  let visibleColumnIds = allColumns.map(c => c.id);
+
+  function makeData(count) {
+    const base = new Date(); base.setMonth(base.getMonth() - 5);
+    const data = new Array(count);
+    for (let i=0; i<count; i++) {
+      const start = addDays(base, randomInt(0, 280));
+      const progress = randomInt(0, 100);
+      let status = progress === 100 ? '완료' : progress > 70 ? '검토' : progress > 10 ? '진행' : rand(['대기','보류']);
+      data[i] = {
+        id: `WK-${String(i+1).padStart(6,'0')}`,
+        taskName: `${rand(TASKS)} ${i+1}`,
+        department: rand(DEPARTMENTS), owner: rand(OWNERS), status, priority: rand(PRIORITIES),
+        budget: randomInt(10, 2500) * 10000, progress, startDate: start,
+        dueDate: addDays(start, randomInt(7, 120)), risk: randomInt(1,10),
+        active: Math.random() > .12, notes: rand(NOTES)
+      };
+    }
+    return data;
+  }
+
+  function getVisibleColumns() {
+    const map = new Map(allColumns.map(c => [c.id, c]));
+    return visibleColumnIds.map(id => map.get(id)).filter(Boolean);
+  }
+
+  function baseGridOptions() {
+    return {
+      editable:true, enableAddRow:true, enableCellNavigation:true, autoEdit:false,
+      asyncEditorLoading:false, enableColumnReorder:true, multiColumnSort:true,
+      showHeaderRow, headerRowHeight:34, rowHeight:currentRowHeight,
+      forceFitColumns:forceFit, frozenColumn:currentFrozenColumn,
+      explicitInitialization:true, fullWidthRows:true, syncColumnCellResize:true,
+      rowTopOffsetRenderType:'transform'
+    };
+  }
+
+  function itemMetadata(item) {
+    if (!item || item.__group || item.__groupTotals) return null;
+    const classes = [];
+    if (dimInactive && !item.active) classes.push('inactive-row');
+    if (item.risk >= 8) classes.push('risk-high');
+    return classes.length ? { cssClasses: classes.join(' ') } : null;
+  }
+
+  function createGrid() {
+    const oldActive = grid?.getActiveCell?.();
+    if (grid) { try { grid.destroy(); } catch {} }
+    $('#myGrid').innerHTML = '';
+    groupProvider = new SlickGroupItemMetadataProvider();
+    const rowMetadataProvider = { getRowMetadata: (item) => itemMetadata(item) };
+    dataView = new SlickDataView({
+      groupItemMetadataProvider: groupProvider,
+      globalItemMetadataProvider: rowMetadataProvider,
+      // 열 필터는 외부 상태(columnFilters)를 참조하므로 DataView의 함수 인라인 컴파일을 끕니다.
+      inlineFilters:false
+    });
+    grid = new SlickGrid('#myGrid', dataView, getVisibleColumns(), baseGridOptions());
+    grid.registerPlugin(groupProvider);
+    grid.setSelectionModel(new SlickRowSelectionModel({ selectActiveRow:false }));
+
+    grid.onHeaderRowCellRendered.subscribe((_e,args) => {
+      args.node.innerHTML = '';
+      if (args.column.id === '_sel') {
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.title='현재 화면 전체 선택'; cb.id='selectPageCheckbox';
+        cb.addEventListener('change', () => selectCurrentPage(cb.checked)); args.node.appendChild(cb); return;
+      }
+      const input = document.createElement('input');
+      input.dataset.columnid = args.column.id; input.value = columnFilters[args.column.id] || '';
+      input.placeholder = args.column.field && ['budget','progress','risk'].includes(args.column.field) ? '>= 값' : '필터';
+      input.addEventListener('input', debounce(() => { columnFilters[args.column.id] = input.value.trim(); refreshFilter(); }, 120));
+      args.node.appendChild(input);
+    });
+
+    grid.onClick.subscribe((e,args) => {
+      const col = grid.getColumns()[args.cell];
+      const item = dataView.getItem(args.row);
+      if (col?.id === '_sel' && item && !item.__group && !item.__groupTotals) {
+        e.stopImmediatePropagation?.(); toggleSelectedId(item.id); syncSelectionFromIds();
+      }
+    });
+    grid.onBeforeEditCell.subscribe((_e,args) => { editBefore = args.item && !args.item.__group ? deepClone(args.item) : null; });
+    grid.onCellChange.subscribe((_e,args) => {
+      if (!args.item?.id) return;
+      const before = editBefore ? deepClone(editBefore) : null;
+      const after = deepClone(args.item);
+      dataView.updateItem(args.item.id,args.item);
+      if (before) pushUndo({ type:'update', before, after });
+      editBefore = null; updateStats(); scheduleStateSave();
+    });
+    grid.onAddNewRow.subscribe((_e,args) => {
+      const item = { id:newId(), taskName:'새 업무 과제', department:DEPARTMENTS[0], owner:OWNERS[0], status:'대기', priority:'보통', budget:0, progress:0, startDate:todayISO(), dueDate:addDays(todayISO(),30), risk:3, active:true, notes:'신규 등록' };
+      Object.assign(item,args.item); dataView.addItem(item); masterData = dataView.getItems(); pushUndo({type:'add', item:deepClone(item)}); updateStats();
+    });
+    grid.onSort.subscribe((_e,args) => {
+      sortState = args.multiColumnSort ? args.sortCols.map(s => ({field:s.sortCol.field, asc:s.sortAsc})) : [{field:args.sortCol.field, asc:args.sortAsc}];
+      dataView.sort(multiComparer, true); updateStatus(); scheduleStateSave();
+    });
+    grid.onSelectedRowsChanged.subscribe((_e,args) => {
+      const visibleIds = new Set(pageItems().map(item => item.id));
+      const selectedVisibleIds = new Set(args.rows.map(row => dataView.getItem(row)?.id).filter(Boolean));
+      for (const id of visibleIds) selectedVisibleIds.has(id) ? selectedIds.add(id) : selectedIds.delete(id);
+      updateStats(); grid.invalidate(); grid.render();
+    });
+    grid.onColumnsReordered.subscribe(() => { visibleColumnIds = grid.getColumns().map(c=>c.id); scheduleStateSave(); });
+    grid.onColumnsResized.subscribe(() => { scheduleStateSave(); });
+    grid.onKeyDown.subscribe(e => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase()==='a') { e.preventDefault(); selectCurrentPage(true); }
+      if (ctrl && e.key.toLowerCase()==='z') { e.preventDefault(); undo(); }
+      if (ctrl && e.key.toLowerCase()==='y') { e.preventDefault(); redo(); }
+      if (e.key==='Delete' && !SlickGlobalEditorLock.isActive() && selectedIds.size) { deleteSelected(); }
+    });
+
+    dataView.onRowCountChanged.subscribe(() => { grid.updateRowCount(); grid.render(); updateStats(); updatePager(); });
+    dataView.onRowsChanged.subscribe((_e,args) => { grid.invalidateRows(args.rows); grid.render(); updateStats(); });
+    dataView.onPagingInfoChanged.subscribe((_e,info) => { currentPage = info.pageNum || 0; updatePager(info); syncSelectionFromIds(); });
+    dataView.setFilter(filterItem);
+    dataView.setFilterArgs(getFilterArgs());
+    grid.init();
+    dataView.beginUpdate(); dataView.setItems(masterData); applyGrouping(false); dataView.setPagingOptions({pageSize:currentPageSize,pageNum:currentPage}); dataView.endUpdate();
+    syncSelectionFromIds();
+    if (oldActive) try { grid.setActiveCell(oldActive.row, Math.min(oldActive.cell, grid.getColumns().length-1)); } catch {}
+    requestAnimationFrame(() => grid.resizeCanvas());
+  }
+
+  function multiComparer(a,b) {
+    for (const s of sortState) {
+      const x=a[s.field], y=b[s.field]; let c=0;
+      if (x==null && y!=null) c=-1; else if (x!=null && y==null) c=1;
+      else if (typeof x==='number' && typeof y==='number') c=x-y;
+      else c=String(x??'').localeCompare(String(y??''),'ko',{numeric:true,sensitivity:'base'});
+      if (c) return s.asc ? c : -c;
+    }
+    return 0;
+  }
+
+  function matchesColumnFilter(item,columnId,term) {
+    if (!term) return true;
+    const col=allColumns.find(c=>c.id===columnId); if (!col?.field) return true;
+    const value=item[col.field]; const text=String(value??'').toLowerCase(); const q=term.toLowerCase().trim();
+    const op=q.match(/^(>=|<=|>|<|=|!=)\s*(.+)$/);
+    if (op) {
+      const target=Number(op[2]); const num=Number(value);
+      if (Number.isFinite(target) && Number.isFinite(num)) return ({'>':num>target,'<':num<target,'>=':num>=target,'<=':num<=target,'=':num===target,'!=':num!==target})[op[1]];
+      return op[1]==='!=' ? text!==op[2].toLowerCase() : text===op[2].toLowerCase();
+    }
+    return text.includes(q);
+  }
+
+  function filterItem(item,args) {
+    const q=args.search.toLowerCase();
+    if (q && ![item.taskName,item.department,item.owner,item.status,item.priority,item.notes,item.id].some(v=>String(v??'').toLowerCase().includes(q))) return false;
+    if (Number(item.progress)<args.progressMin || Number(item.risk)>args.riskMax) return false;
+    if (args.status && item.status!==args.status) return false;
+    if (args.dateFrom && item.startDate<args.dateFrom) return false;
+    if (args.dateTo && item.dueDate>args.dateTo) return false;
+    for (const [id,term] of Object.entries(columnFilters)) if (!matchesColumnFilter(item,id,term)) return false;
+    return true;
+  }
+
+  function getFilterArgs() { return { search:$('#globalSearch').value.trim(), progressMin:Number($('#progressMin').value||0), riskMax:Number($('#riskMax').value||10), status:$('#statusFilter').value, dateFrom:$('#dateFrom').value, dateTo:$('#dateTo').value }; }
+  function refreshFilter() { SlickGlobalEditorLock.cancelCurrentEdit(); dataView.setFilterArgs(getFilterArgs()); dataView.refresh(); currentPage=0; dataView.setPagingOptions({pageSize:currentPageSize,pageNum:0}); syncSelectionFromIds(); updateStats(); scheduleStateSave(); }
+  function debounce(fn,ms) { let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args),ms); }; }
+
+  function applyGrouping(notify=true) {
+    groupingFields = [$('#groupBy').value,$('#groupBy2').value].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+    if (!groupingFields.length) { dataView.setGrouping([]); if(notify) toast('그룹화를 해제했습니다.'); return; }
+    if (currentPageSize!==0) { currentPageSize=0; $('#pageSize').value='0'; dataView.setPagingOptions({pageSize:0,pageNum:0}); }
+    const defs=groupingFields.map(field=>({
+      getter:field,
+      formatter:g=>`${escapeHtml(columnName(field))}: <b>${escapeHtml(g.value)}</b> <span style="color:var(--muted)">(${fmtNumber(g.count)}건)</span>`,
+      aggregators:[new Aggregators.Sum('budget'),new Aggregators.Avg('progress'),new Aggregators.Avg('risk')],
+      aggregateCollapsed:false,lazyTotalsCalculation:true
+    }));
+    dataView.setGrouping(defs); grid.invalidate(); if(notify) toast(`${groupingFields.map(columnName).join(' → ')} 기준으로 그룹화했습니다.`,'good');
+  }
+  function columnName(field) { return allColumns.find(c=>c.field===field)?.name || field; }
+
+  function filteredItemsAllPages() { const args=getFilterArgs(); let arr=masterData.filter(item=>filterItem(item,args)); if(sortState.length) arr=[...arr].sort(multiComparer); return arr; }
+  function pageItems() { const result=[]; for(let i=0;i<dataView.getLength();i++){ const item=dataView.getItem(i); if(item && !item.__group && !item.__groupTotals) result.push(item); } return result; }
+  function updateStats() {
+    const filtered=filteredItemsAllPages(); const budget=filtered.reduce((s,x)=>s+Number(x.budget||0),0); const avg=filtered.length?filtered.reduce((s,x)=>s+Number(x.progress||0),0)/filtered.length:0;
+    $('#totalStat').textContent=fmtNumber(masterData.length); $('#filteredStat').textContent=fmtNumber(filtered.length); $('#selectedStat').textContent=fmtNumber(selectedIds.size); $('#budgetStat').textContent=won(budget); $('#progressStat').textContent=`${Math.round(avg)}%`; updateStatus();
+  }
+  function updateStatus() {
+    const group=groupingFields.length?` · 그룹 ${groupingFields.map(columnName).join('→')}`:''; const sort=sortState.length?` · 정렬 ${sortState.map(s=>`${columnName(s.field)} ${s.asc?'↑':'↓'}`).join(', ')}`:'';
+    $('#statusText').textContent=`표시 ${fmtNumber(pageItems().length)}행 · 선택 ${fmtNumber(selectedIds.size)}행${group}${sort}`;
+  }
+  function updatePager(info=dataView.getPagingInfo()) {
+    const pages=Math.max(1,info.totalPages||1), page=Math.min((info.pageNum||0)+1,pages); $('#pageInfo').textContent=currentPageSize===0?'전체 보기':`${page} / ${pages}`;
+    $('#firstPage').disabled=$('#prevPage').disabled=currentPageSize===0||page<=1; $('#nextPage').disabled=$('#lastPage').disabled=currentPageSize===0||page>=pages;
+  }
+  function goPage(page) { const info=dataView.getPagingInfo(); const max=Math.max(0,(info.totalPages||1)-1); currentPage=clamp(page,0,max); dataView.setPagingOptions({pageSize:currentPageSize,pageNum:currentPage}); }
+
+  function newId() { let n=masterData.length+1; while(masterData.some(x=>x.id===`WK-${String(n).padStart(6,'0')}`)) n++; return `WK-${String(n).padStart(6,'0')}`; }
+  function pushUndo(action) { undoStack.push(action); if(undoStack.length>100) undoStack.shift(); redoStack=[]; updateUndoButtons(); }
+  function updateUndoButtons() { $('#undoBtn').disabled=!undoStack.length; $('#redoBtn').disabled=!redoStack.length; }
+  function applyAction(action,reverse=false) {
+    if(action.type==='update'){ const item=deepClone(reverse?action.before:action.after); dataView.updateItem(item.id,item); }
+    if(action.type==='add'){ if(reverse) dataView.deleteItem(action.item.id); else dataView.addItem(deepClone(action.item)); }
+    if(action.type==='delete'){ if(reverse) action.items.forEach(x=>{ if(!dataView.getItemById(x.id)) dataView.addItem(deepClone(x)); }); else action.items.forEach(x=>{ if(dataView.getItemById(x.id)) dataView.deleteItem(x.id); }); }
+    masterData=dataView.getItems(); updateStats();
+  }
+  function undo(){ if(!undoStack.length)return; SlickGlobalEditorLock.cancelCurrentEdit(); const a=undoStack.pop(); applyAction(a,true); redoStack.push(a); updateUndoButtons(); toast('마지막 작업을 취소했습니다.'); }
+  function redo(){ if(!redoStack.length)return; const a=redoStack.pop(); applyAction(a,false); undoStack.push(a); updateUndoButtons(); toast('작업을 다시 적용했습니다.'); }
+
+  function toggleSelectedId(id){ selectedIds.has(id)?selectedIds.delete(id):selectedIds.add(id); }
+  function syncSelectionFromIds(){ const rows=[]; for(let i=0;i<dataView.getLength();i++){ const item=dataView.getItem(i); if(item?.id&&selectedIds.has(item.id)) rows.push(i); } grid.setSelectedRows(rows); grid.invalidate(); grid.render(); updateStats(); }
+  function selectCurrentPage(checked){ for(const item of pageItems()) checked?selectedIds.add(item.id):selectedIds.delete(item.id); syncSelectionFromIds(); }
+  function clearSelection(){ selectedIds.clear(); syncSelectionFromIds(); }
+  function selectedItems(){ return [...selectedIds].map(id=>dataView.getItemById(id)||masterData.find(x=>x.id===id)).filter(Boolean); }
+
+  function addRow(){ const item={id:newId(),taskName:'새 업무 과제',department:DEPARTMENTS[0],owner:OWNERS[0],status:'대기',priority:'보통',budget:0,progress:0,startDate:todayISO(),dueDate:addDays(todayISO(),30),risk:3,active:true,notes:'신규 등록'}; dataView.addItem(item); masterData=dataView.getItems(); pushUndo({type:'add',item:deepClone(item)}); dataView.refresh(); const row=dataView.getRowById(item.id); if(row>=0){grid.scrollRowIntoView(row);grid.setActiveCell(row,2);grid.editActiveCell();} updateStats(); }
+  function duplicateSelected(){ const items=selectedItems(); if(!items.length){toast('복제할 행을 먼저 선택하세요.','warn');return;} let nextNumber=masterData.length+1; const reserved=new Set(masterData.map(x=>x.id)); const newIdUnique=()=>{let id;do{id=`WK-${String(nextNumber++).padStart(6,'0')}`;}while(reserved.has(id));reserved.add(id);return id;}; const added=items.map(src=>({...deepClone(src),id:newIdUnique(),taskName:`${src.taskName} (복사본)`})); dataView.beginUpdate();added.forEach(x=>dataView.addItem(x));dataView.endUpdate();masterData=dataView.getItems();added.forEach(x=>undoStack.push({type:'add',item:deepClone(x)}));redoStack=[];updateUndoButtons();toast(`${added.length}개 행을 복제했습니다.`,'good');updateStats(); }
+  function deleteSelected(){ const items=selectedItems(); if(!items.length){toast('삭제할 행을 먼저 선택하세요.','warn');return;} if(!confirm(`${items.length}개 행을 삭제할까요?`))return; dataView.beginUpdate();items.forEach(x=>dataView.deleteItem(x.id));dataView.endUpdate();pushUndo({type:'delete',items:deepClone(items)});items.forEach(x=>selectedIds.delete(x.id));masterData=dataView.getItems();syncSelectionFromIds();toast(`${items.length}개 행을 삭제했습니다.`,'good'); }
+
+  function csvEscape(v){ const s=String(v??'');return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; }
+  function downloadBlob(content,type,filename){ const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000); }
+  function exportCsv(){ const cols=getVisibleColumns().filter(c=>!c.excludeFromExport&&c.field);const rows=filteredItemsAllPages();const csv='\ufeff'+[cols.map(c=>csvEscape(c.name)).join(','),...rows.map(r=>cols.map(c=>csvEscape(r[c.field])).join(','))].join('\n');downloadBlob(csv,'text/csv;charset=utf-8',`slickgrid_${todayISO()}.csv`);toast(`${rows.length}행을 CSV로 저장했습니다.`,'good'); }
+  function exportJson(){ const rows=filteredItemsAllPages();downloadBlob(JSON.stringify(rows,null,2),'application/json',`slickgrid_${todayISO()}.json`);toast(`${rows.length}행을 JSON으로 저장했습니다.`,'good'); }
+  async function importJson(file){ try{const text=await file.text();const arr=JSON.parse(text);if(!Array.isArray(arr))throw new Error('JSON 최상위 값이 배열이 아닙니다.');const ids=new Set();const normalized=arr.map((x,i)=>{const id=String(x.id||`IMP-${String(i+1).padStart(6,'0')}`);if(ids.has(id))throw new Error(`중복 ID: ${id}`);ids.add(id);return{id,taskName:String(x.taskName||'가져온 과제'),department:DEPARTMENTS.includes(x.department)?x.department:DEPARTMENTS[0],owner:OWNERS.includes(x.owner)?x.owner:OWNERS[0],status:STATUSES.includes(x.status)?x.status:'대기',priority:PRIORITIES.includes(x.priority)?x.priority:'보통',budget:Number(x.budget||0),progress:clamp(Number(x.progress||0),0,100),startDate:String(x.startDate||todayISO()),dueDate:String(x.dueDate||addDays(todayISO(),30)),risk:clamp(Number(x.risk||3),1,10),active:x.active!==false,notes:String(x.notes||'')};}); masterData=normalized;selectedIds.clear();undoStack=[];redoStack=[];createGrid();updateUndoButtons();toast(`${normalized.length}행을 가져왔습니다.`,'good');}catch(err){toast(`가져오기 실패: ${err.message}`,'bad');} }
+
+  const STATE_KEY='slickgrid-feature-lab-state-v2';
+  function captureState(){ return {visibleColumnIds,widths:Object.fromEntries(grid.getColumns().map(c=>[c.id,c.width])),columnFilters,search:$('#globalSearch').value,progressMin:$('#progressMin').value,riskMax:$('#riskMax').value,status:$('#statusFilter').value,dateFrom:$('#dateFrom').value,dateTo:$('#dateTo').value,pageSize:currentPageSize,rowHeight:currentRowHeight,frozenColumn:currentFrozenColumn,forceFit,showHeaderRow,dark:document.body.classList.contains('dark'),groupBy:$('#groupBy').value,groupBy2:$('#groupBy2').value}; }
+  function saveState(notify=true){localStorage.setItem(STATE_KEY,JSON.stringify(captureState()));if(notify)toast('현재 표 상태를 저장했습니다.','good');}
+  const scheduleStateSave=debounce(()=>saveState(false),500);
+  function restoreState(notify=true){const raw=localStorage.getItem(STATE_KEY);if(!raw){if(notify)toast('저장된 상태가 없습니다.','warn');return false;}try{const s=JSON.parse(raw);visibleColumnIds=(s.visibleColumnIds||visibleColumnIds).filter(id=>allColumns.some(c=>c.id===id));Object.entries(s.widths||{}).forEach(([id,w])=>{const c=allColumns.find(x=>x.id===id);if(c)c.width=Number(w)||c.width;});columnFilters=s.columnFilters||{};$('#globalSearch').value=s.search||'';$('#progressMin').value=s.progressMin??0;$('#riskMax').value=s.riskMax??10;$('#statusFilter').value=s.status||'';$('#dateFrom').value=s.dateFrom||'';$('#dateTo').value=s.dateTo||'';currentPageSize=Number(s.pageSize??100);$('#pageSize').value=String(currentPageSize);currentRowHeight=Number(s.rowHeight??34);$('#rowHeight').value=String(currentRowHeight);currentFrozenColumn=Number(s.frozenColumn??-1);$('#frozenColumn').value=String(currentFrozenColumn);forceFit=!!s.forceFit;$('#forceFitToggle').checked=forceFit;showHeaderRow=s.showHeaderRow!==false;$('#headerFilterToggle').checked=showHeaderRow;document.body.classList.toggle('dark',!!s.dark);$('#groupBy').value=s.groupBy||'';$('#groupBy2').value=s.groupBy2||'';if(grid)createGrid();if(notify)toast('저장된 상태를 복원했습니다.','good');return true;}catch(err){if(notify)toast(`상태 복원 실패: ${err.message}`,'bad');return false;}}
+  function resetLayout(){visibleColumnIds=allColumns.map(c=>c.id);allColumns.forEach(c=>c.width=initialWidths[c.id]);currentFrozenColumn=-1;currentRowHeight=34;forceFit=false;showHeaderRow=true;$('#frozenColumn').value='-1';$('#rowHeight').value='34';$('#forceFitToggle').checked=false;$('#headerFilterToggle').checked=true;createGrid();toast('표시 레이아웃을 초기화했습니다.','good');}
+
+  function openColumnsModal(){const list=$('#columnList');list.innerHTML='';allColumns.forEach(c=>{const label=document.createElement('label');label.className='column-item';const cb=document.createElement('input');cb.type='checkbox';cb.value=c.id;cb.checked=visibleColumnIds.includes(c.id);if(c.id==='_sel')cb.disabled=true;label.append(cb,document.createTextNode(c.name));list.appendChild(label);});$('#columnsModal').classList.add('open');}
+  function applyColumns(){const checked=$$('#columnList input:checked').map(x=>x.value);const currentOrder=grid.getColumns().map(c=>c.id);visibleColumnIds=[...currentOrder.filter(id=>checked.includes(id)),...allColumns.map(c=>c.id).filter(id=>checked.includes(id)&&!currentOrder.includes(id))];if(!visibleColumnIds.includes('_sel'))visibleColumnIds.unshift('_sel');grid.setColumns(getVisibleColumns());$('#columnsModal').classList.remove('open');scheduleStateSave();toast('열 표시 설정을 적용했습니다.','good');}
+
+  function startRealtime(){stopRealtime();realtimeTimer=setInterval(()=>{if(!masterData.length)return;const count=Math.min(6,masterData.length);dataView.beginUpdate();for(let i=0;i<count;i++){const item=masterData[randomInt(0,masterData.length-1)];item.progress=clamp(item.progress+randomInt(-4,6),0,100);item.risk=clamp(item.risk+randomInt(-1,1),1,10);item.budget=Math.max(0,item.budget+randomInt(-20,25)*10000);item.status=item.progress===100?'완료':item.progress>70?'검토':item.progress>5?'진행':item.status;dataView.updateItem(item.id,item);}dataView.endUpdate();updateStats();},750);toast('실시간 갱신을 시작했습니다.','good');}
+  function stopRealtime(){if(realtimeTimer){clearInterval(realtimeTimer);realtimeTimer=null;toast('실시간 갱신을 중지했습니다.');}}
+
+  function copyText(text){if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(String(text));const ta=document.createElement('textarea');ta.value=String(text);ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();return Promise.resolve();}
+  function showContextMenu(e){const cell=grid.getCellFromEvent(e);if(!cell)return;const item=dataView.getItem(cell.row);if(!item||item.__group||item.__groupTotals)return;e.preventDefault();contextCell={...cell,item,column:grid.getColumns()[cell.cell]};const menu=$('#contextMenu');menu.style.left=`${Math.min(e.clientX,window.innerWidth-205)}px`;menu.style.top=`${Math.min(e.clientY,window.innerHeight-235)}px`;menu.classList.add('open');}
+  function handleContextAction(action){if(!contextCell)return;const {item,column,row,cell}=contextCell;if(action==='copy'){copyText(item[column.field]??'');toast('셀 값을 복사했습니다.','good');}if(action==='edit'){grid.setActiveCell(row,cell);grid.editActiveCell();}if(action==='filter'&&column.id!=='_sel'){columnFilters[column.id]=String(item[column.field]??'');refreshFilter();createGrid();toast('선택한 값으로 열 필터를 적용했습니다.','good');}if(action==='duplicate'){selectedIds=new Set([item.id]);duplicateSelected();}if(action==='delete'){selectedIds=new Set([item.id]);deleteSelected();}$('#contextMenu').classList.remove('open');}
+
+  function regenerate(){const count=Number($('#rowCount').value);const start=performance.now();masterData=makeData(count);selectedIds.clear();undoStack=[];redoStack=[];currentPage=0;createGrid();updateUndoButtons();toast(`${fmtNumber(count)}행 생성 완료 · ${Math.round(performance.now()-start)}ms`,'good');}
+
+  // UI 이벤트
+  $('#generateBtn').addEventListener('click',regenerate);
+  $('#globalSearch').addEventListener('input',debounce(refreshFilter,120));
+  $('#globalSearch').addEventListener('keydown',e=>{if(e.key==='Escape'){e.currentTarget.value='';refreshFilter();}});
+  $('#applyFilterBtn').addEventListener('click',refreshFilter);
+  $('#clearFilterBtn').addEventListener('click',()=>{$('#globalSearch').value='';$('#progressMin').value=0;$('#riskMax').value=10;$('#statusFilter').value='';$('#dateFrom').value='';$('#dateTo').value='';columnFilters={};createGrid();toast('모든 필터를 초기화했습니다.','good');});
+  $('#groupBy').addEventListener('change',()=>applyGrouping());$('#groupBy2').addEventListener('change',()=>applyGrouping());
+  $('#collapseBtn').addEventListener('click',()=>{dataView.collapseAllGroups();grid.invalidate();});$('#expandBtn').addEventListener('click',()=>{dataView.expandAllGroups();grid.invalidate();});
+  $('#pageSize').addEventListener('change',e=>{currentPageSize=Number(e.target.value);currentPage=0;dataView.setPagingOptions({pageSize:currentPageSize,pageNum:0});scheduleStateSave();});
+  $('#rowHeight').addEventListener('change',e=>{currentRowHeight=Number(e.target.value);createGrid();});
+  $('#frozenColumn').addEventListener('change',e=>{currentFrozenColumn=Number(e.target.value);createGrid();toast(currentFrozenColumn>=0?'고정 열을 적용했습니다.':'고정 열을 해제했습니다.','good');});
+  $('#headerFilterToggle').addEventListener('change',e=>{showHeaderRow=e.target.checked;grid.setHeaderRowVisibility(showHeaderRow);scheduleStateSave();});
+  $('#forceFitToggle').addEventListener('change',e=>{forceFit=e.target.checked;grid.setOptions({forceFitColumns:forceFit});grid.autosizeColumns();scheduleStateSave();});
+  $('#dimInactiveToggle').addEventListener('change',e=>{dimInactive=e.target.checked;grid.invalidate();grid.render();});
+  $('#autosizeBtn').addEventListener('click',()=>{grid.autosizeColumns();toast('열 너비를 화면에 맞췄습니다.','good');});
+  $('#resetLayoutBtn').addEventListener('click',resetLayout);
+  $('#addRowBtn').addEventListener('click',addRow);$('#duplicateBtn').addEventListener('click',duplicateSelected);$('#deleteBtn').addEventListener('click',deleteSelected);$('#undoBtn').addEventListener('click',undo);$('#redoBtn').addEventListener('click',redo);
+  $('#select10Btn').addEventListener('click',()=>{pageItems().slice(0,10).forEach(x=>selectedIds.add(x.id));syncSelectionFromIds();});$('#clearSelectionBtn').addEventListener('click',clearSelection);
+  $('#topBtn').addEventListener('click',()=>grid.navigateTop());$('#bottomBtn').addEventListener('click',()=>grid.navigateBottom());
+  $('#gotoBtn').addEventListener('click',()=>{const row=clamp(Number($('#gotoRow').value||1)-1,0,Math.max(0,dataView.getLength()-1));grid.scrollRowIntoView(row);grid.setActiveCell(row,Math.min(2,grid.getColumns().length-1));});
+  $('#firstPage').addEventListener('click',()=>goPage(0));$('#prevPage').addEventListener('click',()=>goPage(currentPage-1));$('#nextPage').addEventListener('click',()=>goPage(currentPage+1));$('#lastPage').addEventListener('click',()=>goPage((dataView.getPagingInfo().totalPages||1)-1));
+  $('#realtimeToggle').addEventListener('change',e=>e.target.checked?startRealtime():stopRealtime());
+  $('#exportCsvBtn').addEventListener('click',exportCsv);$('#exportJsonBtn').addEventListener('click',exportJson);$('#importBtn').addEventListener('click',()=>$('#importFile').click());$('#importFile').addEventListener('change',e=>{if(e.target.files[0])importJson(e.target.files[0]);e.target.value='';});
+  $('#saveStateBtn').addEventListener('click',()=>saveState(true));$('#restoreStateBtn').addEventListener('click',()=>restoreState(true));
+  $('#darkBtn').addEventListener('click',()=>{document.body.classList.toggle('dark');grid?.invalidate();grid?.render();scheduleStateSave();});
+  $('#columnsBtn').addEventListener('click',openColumnsModal);$('#applyColumnsBtn').addEventListener('click',applyColumns);$('#allColumnsBtn').addEventListener('click',()=>$$('#columnList input').forEach(x=>x.checked=true));
+  $$('[data-close-modal]').forEach(x=>x.addEventListener('click',()=>x.closest('.modal-backdrop').classList.remove('open')));$('#columnsModal').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
+  $('#toggleSidebar').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
+  $('#myGrid').addEventListener('contextmenu',showContextMenu);$('#contextMenu').addEventListener('click',e=>{const btn=e.target.closest('button[data-action]');if(btn)handleContextAction(btn.dataset.action);});document.addEventListener('click',e=>{if(!e.target.closest('#contextMenu'))$('#contextMenu').classList.remove('open');});
+  document.addEventListener('keydown',e=>{const ctrl=e.ctrlKey||e.metaKey;if(ctrl&&e.key.toLowerCase()==='k'){e.preventDefault();$('#globalSearch').focus();}if(e.key==='Escape'){$('#columnsModal').classList.remove('open');$('#contextMenu').classList.remove('open');}});
+  window.addEventListener('resize',debounce(()=>grid?.resizeCanvas(),100));
+
+  // 초기 데이터 및 저장 상태 반영
+  masterData=makeData(Number($('#rowCount').value));
+  restoreState(false);
+  if(!grid)createGrid();
+  updateUndoButtons();updateStats();
+  $('#loading').classList.add('hidden');
+  window.__slickGridFeatureLabReady=true;
+  toast('SlickGrid 종합 샘플이 준비되었습니다.','good');
+} catch (error) {
+  console.error(error);
+  $('#loadingMsg').innerHTML = `<span style="color:var(--bad);font-weight:800">초기화 실패</span><br>${String(error.message || error)}<br><br>CDN 접근, 브라우저 콘솔 오류, 스크립트 초기화 상태를 확인하세요.`;
+}
+</script>
+</body>
+</html>
