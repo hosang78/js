@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>math.js 기능 종합 샘플</title>
+<script src="https://unpkg.com/mathjs@15.2.0/lib/browser/math.js"></script>
+<style>
+:root{
+  --bg:#f5f7fb;--panel:#fff;--text:#182033;--muted:#667085;--line:#dfe4ec;
+  --primary:#4255ff;--primary2:#6c7cff;--good:#087e5b;--bad:#c43232;
+  --shadow:0 10px 30px rgba(31,41,55,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.hero{background:linear-gradient(135deg,#16213e,#4255ff 60%,#6c7cff);color:#fff;padding:42px 24px 72px}
+.hero-inner{max-width:1420px;margin:auto}
+.eyebrow{display:inline-flex;padding:6px 10px;border:1px solid rgba(255,255,255,.35);border-radius:999px;font-size:12px}
+h1{font-size:clamp(30px,5vw,58px);line-height:1.05;margin:18px 0 12px;letter-spacing:-.04em}
+.hero p{max-width:780px;color:#dce3ff;font-size:17px;line-height:1.65}
+.status{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.status span{background:rgba(255,255,255,.12);padding:8px 12px;border-radius:999px;font-size:13px}
+.shell{max-width:1420px;margin:-42px auto 60px;padding:0 18px}
+.toolbar{position:sticky;top:8px;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px;padding:10px;display:flex;gap:8px;overflow:auto}
+.toolbar a{white-space:nowrap;text-decoration:none;color:var(--text);padding:9px 12px;border-radius:10px;font-size:13px}
+.toolbar a:hover{background:#eef0ff;color:var(--primary)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;margin-top:18px}
+.card{grid-column:span 6;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;min-width:0}
+.card.wide{grid-column:span 12}
+.card.third{grid-column:span 4}
+.card h2{font-size:19px;margin:0 0 6px}
+.desc{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.stack{display:grid;gap:10px}
+input,textarea,select{width:100%;border:1px solid #cfd5df;border-radius:11px;background:#fff;padding:11px 12px;color:var(--text);outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(66,85,255,.12)}
+textarea{min-height:92px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.btn{border:0;background:var(--primary);color:#fff;border-radius:11px;padding:10px 14px;font-weight:700}
+.btn:hover{filter:brightness(.96)}
+.btn.secondary{background:#edf0ff;color:#3342ce}
+.btn.ghost{background:#f1f3f6;color:#3d4658}
+.btn.danger{background:#fff0f0;color:var(--bad)}
+.result{margin-top:12px;background:#101828;color:#e8ecf7;border-radius:12px;padding:13px;min-height:48px;white-space:pre-wrap;overflow:auto;font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+.result.error{background:#fff0f0;color:var(--bad);border:1px solid #ffd1d1}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.chip{border:1px solid #d9defc;background:#f7f8ff;color:#3948cf;border-radius:999px;padding:6px 9px;font-size:12px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi{background:#f7f8fb;border:1px solid #e6e9ef;border-radius:12px;padding:12px}
+.kpi b{display:block;font-size:18px;margin-top:5px}
+.kpi small{color:var(--muted)}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+th{background:#f8f9fc;position:sticky;top:0}
+.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#3544c9}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+canvas{width:100%;height:320px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.matrix-input{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.note{font-size:12px;color:var(--muted);line-height:1.6}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:10px}
+@media(max-width:980px){.card,.card.third{grid-column:span 12}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.hero{padding:30px 16px 66px}.shell{padding:0 10px}.card{padding:16px}.two,.three{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr 1fr}.row>.btn{flex:1}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">INTERACTIVE FEATURE LAB</span>
+    <h1>math.js 기능 종합 샘플</h1>
+    <p>숫자 계산부터 표현식 파서, 행렬·선형대수, 단위, 복소수, 분수, 고정밀 수, 통계, 미분, 조합·확률, 수열 및 함수 그래프까지 브라우저에서 직접 실행하는 단일 HTML 데모입니다.</p>
+    <div class="status">
+      <span id="libStatus">라이브러리 확인 중</span>
+      <span>math.js 15.2.0 CDN</span>
+      <span>설치 불필요</span>
+      <span>모바일 대응</span>
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+<nav class="toolbar">
+  <a href="#calc">계산기</a><a href="#parser">파서</a><a href="#matrix">행렬</a><a href="#units">단위</a>
+  <a href="#numbers">숫자형</a><a href="#stats">통계</a><a href="#symbolic">기호 계산</a>
+  <a href="#probability">확률·조합</a><a href="#sequence">수열</a><a href="#graph">그래프</a><a href="#catalog">함수 카탈로그</a>
+</nav>
+
+<section class="grid">
+<article class="card wide" id="calc">
+  <h2>1. 범용 표현식 계산기</h2>
+  <p class="desc">math.evaluate로 사칙연산, 함수, 상수, 배열, 단위, 복소수 등이 섞인 표현식을 계산합니다.</p>
+  <div class="chips">
+    <button class="chip" data-fill="calcExpr" data-value="sqrt(3^2 + 4^2)">피타고라스</button>
+    <button class="chip" data-fill="calcExpr" data-value="sin(45 deg)^2 + cos(45 deg)^2">삼각함수</button>
+    <button class="chip" data-fill="calcExpr" data-value="det([[1,2],[3,4]])">행렬식</button>
+    <button class="chip" data-fill="calcExpr" data-value="2 inch to cm">단위 변환</button>
+    <button class="chip" data-fill="calcExpr" data-value="(2 + 3i) * (4 - i)">복소수</button>
+    <button class="chip" data-fill="calcExpr" data-value="mean([12,18,25,31,44])">평균</button>
+  </div>
+  <textarea id="calcExpr">sqrt(3^2 + 4^2)</textarea>
+  <div class="row">
+    <button class="btn" onclick="runCalc()">계산</button>
+    <button class="btn secondary" onclick="copyResult('calcResult')">결과 복사</button>
+    <button class="btn ghost" onclick="document.getElementById('calcExpr').value=''">지우기</button>
+  </div>
+  <pre class="result" id="calcResult">실행 결과가 여기에 표시됩니다.</pre>
+</article>
+
+<article class="card" id="parser">
+  <h2>2. 변수·함수 스코프와 Parser</h2>
+  <p class="desc">변수 저장, 사용자 함수 정의, 여러 줄 실행 및 파서 상태 유지를 체험합니다.</p>
+  <textarea id="parserExpr">a = 12
+b = 7
+f(x) = x^2 + 2x + 1
+f(a) + b</textarea>
+  <div class="row">
+    <button class="btn" onclick="runParser()">줄별 실행</button>
+    <button class="btn secondary" onclick="showParserScope()">현재 스코프</button>
+    <button class="btn danger" onclick="clearParser()">초기화</button>
+  </div>
+  <pre class="result" id="parserResult">Parser는 변수 값을 다음 실행에도 유지합니다.</pre>
+</article>
+
+<article class="card">
+  <h2>3. 숫자 포맷·상수·타입 판별</h2>
+  <p class="desc">format, typeOf, 각종 상수와 숫자 판별 함수를 확인합니다.</p>
+  <div class="three">
+    <input id="formatNum" value="1234567.891234">
+    <select id="formatMode"><option value="auto">auto</option><option value="fixed">fixed</option><option value="exponential">exponential</option><option value="engineering">engineering</option></select>
+    <input id="formatPrecision" type="number" value="6" min="1" max="64">
+  </div>
+  <div class="row"><button class="btn" onclick="runFormat()">포맷 실행</button><button class="btn secondary" onclick="runConstants()">상수 보기</button></div>
+  <pre class="result" id="formatResult"></pre>
+</article>
+
+<article class="card wide" id="matrix">
+  <h2>4. 행렬·선형대수 실험실</h2>
+  <p class="desc">덧셈, 곱셈, 전치, 행렬식, 역행렬, LU, QR, 고유값, 크기 변경 및 부분 선택을 실행합니다. 입력은 JSON 배열 형식입니다.</p>
+  <div class="two">
+    <div><label>A 행렬</label><textarea id="matrixA" class="matrix-input">[[4, 2], [1, 3]]</textarea></div>
+    <div><label>B 행렬</label><textarea id="matrixB" class="matrix-input">[[2, 0], [1, 2]]</textarea></div>
+  </div>
+  <div class="chips">
+    <button class="chip" onclick="runMatrix('add')">A + B</button>
+    <button class="chip" onclick="runMatrix('multiply')">A × B</button>
+    <button class="chip" onclick="runMatrix('transpose')">transpose(A)</button>
+    <button class="chip" onclick="runMatrix('det')">det(A)</button>
+    <button class="chip" onclick="runMatrix('inv')">inv(A)</button>
+    <button class="chip" onclick="runMatrix('lusolve')">A·x=[1,1]</button>
+    <button class="chip" onclick="runMatrix('lu')">LU 분해</button>
+    <button class="chip" onclick="runMatrix('qr')">QR 분해</button>
+    <button class="chip" onclick="runMatrix('eigs')">고유값·고유벡터</button>
+    <button class="chip" onclick="runMatrix('reshape')">reshape</button>
+    <button class="chip" onclick="runMatrix('subset')">부분 선택</button>
+  </div>
+  <pre class="result" id="matrixResult">원하는 연산을 선택하세요.</pre>
+</article>
+
+<article class="card" id="units">
+  <h2>5. 단위 생성·변환·계산</h2>
+  <p class="desc">길이, 질량, 시간, 온도, 데이터 용량 등 호환 단위를 변환하거나 계산합니다.</p>
+  <div class="two"><input id="unitValue" value="10 km"><input id="unitTarget" value="mile"></div>
+  <div class="chips">
+    <button class="chip" data-unit="100 km/h|m/s">속도</button><button class="chip" data-unit="2.5 GB|MB">데이터</button>
+    <button class="chip" data-unit="72 degF|degC">온도</button><button class="chip" data-unit="5000 g|kg">질량</button>
+  </div>
+  <div class="row"><button class="btn" onclick="runUnit()">변환</button><button class="btn secondary" onclick="runUnitDemo()">복합 계산 예제</button></div>
+  <pre class="result" id="unitResult"></pre>
+</article>
+
+<article class="card" id="numbers">
+  <h2>6. 복소수·분수·BigNumber</h2>
+  <p class="desc">JavaScript Number로 어려운 데이터형을 math.js 통합 API로 처리합니다.</p>
+  <div class="chips">
+    <button class="chip" onclick="runNumberDemo('complex')">복소수</button>
+    <button class="chip" onclick="runNumberDemo('fraction')">분수</button>
+    <button class="chip" onclick="runNumberDemo('big')">BigNumber</button>
+    <button class="chip" onclick="runNumberDemo('compare')">정밀도 비교</button>
+  </div>
+  <pre class="result" id="numberResult">예제를 선택하세요.</pre>
+</article>
+
+<article class="card wide" id="stats">
+  <h2>7. 통계·집계·상관계수</h2>
+  <p class="desc">합계, 평균, 중앙값, 최빈값, 최소·최대, 범위, 분산, 표준편차, 분위수, 누적합, 상관계수를 계산합니다.</p>
+  <input id="statsData" value="12, 15, 18, 18, 21, 24, 27, 31, 35, 40">
+  <div class="row"><button class="btn" onclick="runStats()">통계 계산</button><button class="btn secondary" onclick="randomStats()">랜덤 데이터</button></div>
+  <div class="kpi-grid" id="statsKpis"></div>
+  <pre class="result" id="statsResult"></pre>
+</article>
+
+<article class="card" id="symbolic">
+  <h2>8. 미분·단순화·유리화</h2>
+  <p class="desc">symbolic derivative, simplify, rationalize 및 AST 변환을 실행합니다.</p>
+  <input id="symbolExpr" value="x^3 + 2*x^2 - 5*x + sin(x)">
+  <div class="chips">
+    <button class="chip" onclick="runSymbolic('derivative')">미분</button>
+    <button class="chip" onclick="runSymbolic('simplify')">단순화</button>
+    <button class="chip" onclick="runSymbolic('rationalize')">유리식 변환</button>
+    <button class="chip" onclick="runSymbolic('ast')">AST·LaTeX</button>
+  </div>
+  <pre class="result" id="symbolResult"></pre>
+</article>
+
+<article class="card" id="probability">
+  <h2>9. 조합·순열·확률 관련 함수</h2>
+  <p class="desc">factorial, permutations, combinations, combinationsWithRep, gamma, erf 등을 계산합니다.</p>
+  <div class="three"><input id="probN" type="number" value="10"><input id="probK" type="number" value="3"><input id="probX" type="number" value="1.5" step="0.1"></div>
+  <div class="row"><button class="btn" onclick="runProbability()">전체 계산</button></div>
+  <pre class="result" id="probResult"></pre>
+</article>
+
+<article class="card" id="sequence">
+  <h2>10. 수열·범위·집합·소수</h2>
+  <p class="desc">range, map, filter, sort, set 연산, gcd/lcm, 소수 판별과 인수분해 성격의 도구를 살펴봅니다.</p>
+  <div class="row"><button class="btn" onclick="runSequence()">예제 전체 실행</button></div>
+  <pre class="result" id="sequenceResult"></pre>
+</article>
+
+<article class="card wide" id="graph">
+  <h2>11. 함수 그래프</h2>
+  <p class="desc">compile을 이용해 표현식을 한 번 컴파일한 뒤 구간별로 반복 평가합니다. 확대·이동 없이 가벼운 Canvas 기반으로 구현했습니다.</p>
+  <div class="three"><input id="graphExpr" value="sin(x) + 0.3*cos(3*x)"><input id="graphMin" type="number" value="-10"><input id="graphMax" type="number" value="10"></div>
+  <div class="row"><button class="btn" onclick="drawGraph()">그래프 그리기</button><button class="btn secondary" onclick="document.getElementById('graphExpr').value='x^2 - 4*x + 1';drawGraph()">포물선 예제</button></div>
+  <canvas id="graphCanvas" width="1200" height="420"></canvas>
+  <pre class="result" id="graphResult">표현식 샘플링 정보</pre>
+</article>
+
+<article class="card wide" id="catalog">
+  <h2>12. 기능 카탈로그·일괄 실행</h2>
+  <p class="desc">대표 함수를 분야별로 실행해 결과와 오류 여부를 한 번에 확인합니다.</p>
+  <div class="row"><button class="btn" onclick="runCatalog()">대표 예제 40여 개 실행</button><button class="btn secondary" onclick="downloadReport()">결과 TXT 저장</button></div>
+  <div class="table-wrap"><table><thead><tr><th>분야</th><th>표현식 / API</th><th>결과</th><th>상태</th></tr></thead><tbody id="catalogBody"></tbody></table></div>
+</article>
+
+<article class="card wide">
+  <h2>13. 활용 시 주의사항</h2>
+  <p class="desc">표현식 평가 기능은 일반 JavaScript eval보다 제한적이지만, 외부 입력을 무제한 허용하는 서비스에서는 계산량·메모리 사용량 제한과 허용 함수 통제가 별도로 필요합니다.</p>
+  <div class="note">이 파일은 math.js 본체를 CDN에서 불러오므로 최초 실행 시 인터넷 연결이 필요합니다. 내부망에서 사용하려면 <span class="code">math.js</span> 파일을 내려받아 같은 폴더에 두고 script 경로를 로컬 파일로 변경하세요.</div>
+</article>
+</section>
+<footer>math.js Interactive Feature Lab · 단일 HTML 샘플</footer>
+</main>
+
+<script>
+'use strict';
+const parser = window.math ? math.parser() : null;
+let lastCatalogText = '';
+
+function fmt(v){
+  if (typeof v === 'string') return v;
+  try { return math.format(v, {precision: 14}); }
+  catch(e){ try{return JSON.stringify(v,null,2)}catch(_){return String(v)} }
+}
+function show(id, value, isError=false){
+  const el=document.getElementById(id); el.textContent=typeof value==='string'?value:fmt(value);
+  el.classList.toggle('error',isError);
+}
+function safe(id, fn){ try{show(id,fn(),false)}catch(e){show(id,'오류: '+e.message,true)} }
+function copyResult(id){
+  const text=document.getElementById(id).textContent;
+  navigator.clipboard?.writeText(text).then(()=>alert('결과를 복사했습니다.')).catch(()=>alert('복사할 수 없습니다.'));
+}
+document.querySelectorAll('[data-fill]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.fill).value=b.dataset.value));
+document.querySelectorAll('[data-unit]').forEach(b=>b.addEventListener('click',()=>{const [a,t]=b.dataset.unit.split('|');unitValue.value=a;unitTarget.value=t;runUnit()}));
+
+function runCalc(){safe('calcResult',()=>{const expr=calcExpr.value.trim();const val=math.evaluate(expr);return `표현식: ${expr}\n타입: ${math.typeOf(val)}\n결과: ${fmt(val)}`})}
+function runParser(){
+  safe('parserResult',()=>parserExpr.value.split(/\n+/).filter(x=>x.trim()).map(line=>`${line}\n→ ${fmt(parser.evaluate(line))}`).join('\n\n'));
+}
+function showParserScope(){safe('parserResult',()=>{const out={};parser.getAll().forEach((v,k)=>out[k]=fmt(v));return JSON.stringify(out,null,2)})}
+function clearParser(){parser.clear();show('parserResult','Parser 스코프를 초기화했습니다.')}
+function runFormat(){
+  safe('formatResult',()=>{const n=math.number(formatNum.value); const notation=formatMode.value; const precision=+formatPrecision.value;
+    return [`원본: ${n}`,`format: ${math.format(n,{notation,precision})}`,`typeOf: ${math.typeOf(n)}`,`isInteger: ${math.isInteger(n)}`,`isPositive: ${math.isPositive(n)}`,`sign: ${math.sign(n)}`,`round(2): ${math.round(n,2)}`].join('\n')});
+}
+function runConstants(){show('formatResult',[`pi = ${math.pi}`,`e = ${math.e}`,`tau = ${math.tau}`,`phi = ${math.phi}`,`SQRT2 = ${math.SQRT2}`,`Infinity = ${math.Infinity}`].join('\n'))}
+
+function matrices(){return [JSON.parse(matrixA.value),JSON.parse(matrixB.value)]}
+function runMatrix(op){
+ safe('matrixResult',()=>{const [A,B]=matrices();let r;
+  if(op==='add')r=math.add(A,B);
+  if(op==='multiply')r=math.multiply(A,B);
+  if(op==='transpose')r=math.transpose(A);
+  if(op==='det')r=math.det(A);
+  if(op==='inv')r=math.inv(A);
+  if(op==='lusolve')r=math.lusolve(A,[1,1]);
+  if(op==='lu')r=math.lup(A);
+  if(op==='qr')r=math.qr(A);
+  if(op==='eigs')r=math.eigs(A);
+  if(op==='reshape')r=math.reshape(math.flatten(A),[1,math.size(A).valueOf().reduce((a,b)=>a*b,1)]);
+  if(op==='subset')r=math.subset(A,math.index(0,math.range(0,math.size(A).get([1]))));
+  return `${op}\n${fmt(r)}`;
+ })}
+
+function runUnit(){safe('unitResult',()=>{const u=math.unit(unitValue.value);const out=u.to(unitTarget.value);return `입력: ${u}\n변환: ${out}\nSI 기준: ${u.toSI()}\n타입: ${math.typeOf(u)}`})}
+function runUnitDemo(){safe('unitResult',()=>[
+  `거리 합계: ${math.add(math.unit('5 km'),math.unit('800 m')).to('km')}`,
+  `속력: ${math.divide(math.unit('150 km'),math.unit('2 h')).to('km/h')}`,
+  `넓이: ${math.multiply(math.unit('12 m'),math.unit('8 m')).to('m2')}`,
+  `온도: ${math.unit('25 degC').to('degF')}`
+].join('\n'))}
+
+function runNumberDemo(type){
+ safe('numberResult',()=>{
+  if(type==='complex'){const z=math.complex(2,3);return [`z = ${z}`,`conj(z) = ${math.conj(z)}`,`abs(z) = ${math.abs(z)}`,`arg(z) = ${math.arg(z)}`,`sqrt(z) = ${math.sqrt(z)}`,`exp(z) = ${math.exp(z)}`].join('\n')}
+  if(type==='fraction'){const a=math.fraction(1,3),b=math.fraction(2,7);return [`a=${a}, b=${b}`,`a+b=${math.add(a,b)}`,`a×b=${math.multiply(a,b)}`,`a/b=${math.divide(a,b)}`,`0.125→${math.fraction(0.125)}`].join('\n')}
+  if(type==='big'){const a=math.bignumber('99999999999999999999'),b=math.bignumber('0.00000000000000000001');return [`큰 수 + 1 = ${math.add(a,1)}`,`미세 수 × 3 = ${math.multiply(b,3)}`,`sqrt(2), 40자리 = ${math.format(math.sqrt(math.bignumber(2)),{precision:40})}`].join('\n')}
+  return [`Number 0.1+0.2 = ${0.1+0.2}`,`BigNumber 0.1+0.2 = ${math.add(math.bignumber('0.1'),math.bignumber('0.2'))}`,`Fraction 1/3×3 = ${math.multiply(math.fraction(1,3),3)}`].join('\n');
+ })}
+
+function getStats(){return statsData.value.split(/[,\s]+/).filter(Boolean).map(Number)}
+function runStats(){
+ safe('statsResult',()=>{const a=getStats(); if(a.some(Number.isNaN)||!a.length)throw Error('숫자 목록을 확인하세요.');
+  const kv=[['개수',a.length],['합계',math.sum(a)],['평균',math.mean(a)],['중앙값',math.median(a)],['최소',math.min(a)],['최대',math.max(a)],['표준편차',math.std(a)],['분산',math.variance(a)]];
+  statsKpis.innerHTML=kv.map(([k,v])=>`<div class="kpi"><small>${k}</small><b>${fmt(v)}</b></div>`).join('');
+  const paired=a.map((v,i)=>v+i*2);
+  return [`최빈값: ${fmt(math.mode(a))}`,`범위: ${fmt(math.max(a)-math.min(a))}`,`25% 분위수: ${fmt(math.quantileSeq(a,.25))}`,`75% 분위수: ${fmt(math.quantileSeq(a,.75))}`,`누적합: ${fmt(math.cumsum(a))}`,`차분: ${fmt(math.diff(a))}`,`상관계수(가공 자료): ${fmt(math.corr(a,paired))}`].join('\n');
+ })}
+function randomStats(){statsData.value=Array.from({length:15},()=>math.randomInt(1,101)).join(', ');runStats()}
+
+function runSymbolic(type){
+ safe('symbolResult',()=>{const e=symbolExpr.value;
+  if(type==='derivative'){const d=math.derivative(e,'x');return `원식: ${e}\n도함수: ${d}\nLaTeX: ${d.toTex()}`}
+  if(type==='simplify')return `원식: ${e}\n단순화: ${math.simplify(e)}`;
+  if(type==='rationalize')return `원식: ${e}\n유리식: ${math.rationalize(e)}`;
+  const node=math.parse(e);return `노드 타입: ${node.type}\n문자열: ${node.toString()}\nLaTeX: ${node.toTex()}\n컴파일 후 x=2: ${node.compile().evaluate({x:2})}`;
+ })}
+function runProbability(){
+ safe('probResult',()=>{const n=+probN.value,k=+probK.value,x=+probX.value;return [
+  `${n}! = ${fmt(math.factorial(n))}`,`P(${n},${k}) = ${fmt(math.permutations(n,k))}`,
+  `C(${n},${k}) = ${fmt(math.combinations(n,k))}`,`중복조합 H(${n},${k}) = ${fmt(math.combinationsWithRep(n,k))}`,
+  `gamma(${x}) = ${fmt(math.gamma(x))}`,`erf(${x}) = ${fmt(math.erf(x))}`
+ ].join('\n')})}
+function runSequence(){
+ safe('sequenceResult',()=>{const r=math.range(1,11).toArray();return [
+  `range(1, 11): ${fmt(r)}`,`제곱 map: ${fmt(math.map(r,x=>x*x))}`,
+  `짝수 filter: ${fmt(math.filter(r,x=>x%2===0))}`,`내림차순: ${fmt(math.sort(r,'desc'))}`,
+  `집합 합집합: ${fmt(math.setUnion([1,2,3],[3,4,5]))}`,`교집합: ${fmt(math.setIntersect([1,2,3],[2,3,4]))}`,
+  `차집합: ${fmt(math.setDifference([1,2,3],[2,4]))}`,`gcd(84,126): ${math.gcd(84,126)}`,
+  `lcm(12,18): ${math.lcm(12,18)}`,`isPrime(97): ${math.isPrime(97)}`,
+  `숫자 12345의 자릿수: ${fmt(math.numberDigits(12345))}`
+ ].join('\n')})}
+
+function drawGraph(){
+ safe('graphResult',()=>{const canvas=graphCanvas,ctx=canvas.getContext('2d');const expr=graphExpr.value;const min=+graphMin.value,max=+graphMax.value;
+  if(!(min<max))throw Error('최솟값은 최댓값보다 작아야 합니다.');
+  const compiled=math.compile(expr),N=700,pts=[];for(let i=0;i<=N;i++){const x=min+(max-min)*i/N;let y;try{y=compiled.evaluate({x});y=typeof y==='number'&&isFinite(y)?y:null}catch(_){y=null}pts.push({x,y})}
+  const ys=pts.filter(p=>p.y!==null).map(p=>p.y).sort((a,b)=>a-b);if(!ys.length)throw Error('표시할 실수 결과가 없습니다.');
+  let yMin=ys[Math.floor(ys.length*.02)],yMax=ys[Math.floor(ys.length*.98)];if(yMin===yMax){yMin--;yMax++}const pad=(yMax-yMin)*.12;yMin-=pad;yMax+=pad;
+  const W=canvas.width,H=canvas.height,px=x=>(x-min)/(max-min)*W,py=y=>H-(y-yMin)/(yMax-yMin)*H;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.strokeStyle='#e5e8ef';ctx.lineWidth=1;
+  for(let i=0;i<=10;i++){ctx.beginPath();ctx.moveTo(i*W/10,0);ctx.lineTo(i*W/10,H);ctx.stroke()}
+  for(let i=0;i<=8;i++){ctx.beginPath();ctx.moveTo(0,i*H/8);ctx.lineTo(W,i*H/8);ctx.stroke()}
+  ctx.strokeStyle='#98a2b3';ctx.lineWidth=2;if(min<=0&&max>=0){ctx.beginPath();ctx.moveTo(px(0),0);ctx.lineTo(px(0),H);ctx.stroke()}if(yMin<=0&&yMax>=0){ctx.beginPath();ctx.moveTo(0,py(0));ctx.lineTo(W,py(0));ctx.stroke()}
+  ctx.strokeStyle='#4255ff';ctx.lineWidth=3;ctx.beginPath();let started=false;pts.forEach(p=>{if(p.y===null||p.y<yMin*5||p.y>yMax*5){started=false;return}const X=px(p.x),Y=py(p.y);if(!started){ctx.moveTo(X,Y);started=true}else ctx.lineTo(X,Y)});ctx.stroke();
+  return `식: ${expr}\nx 구간: ${min} ~ ${max}\ny 표시 구간: ${fmt(yMin)} ~ ${fmt(yMax)}\n평가 지점: ${pts.length}`;
+ })}
+function resizeCanvas(){const c=graphCanvas;const ratio=Math.min(devicePixelRatio||1,2);const w=Math.max(300,c.clientWidth);c.width=w*ratio;c.height=340*ratio;c.getContext('2d').setTransform(ratio,0,0,ratio,0,0);drawGraph()}
+
+const catalog=[
+ ['기본','2 + 3 * 4','2 + 3 * 4'],['기본','mod(17,5)','mod(17,5)'],['기본','gcd(48,18)','gcd(48,18)'],
+ ['거듭제곱','sqrt(81)','sqrt(81)'],['거듭제곱','nthRoot(32,5)','nthRoot(32,5)'],['로그','log(1000,10)','log(1000,10)'],
+ ['삼각','sin(pi/6)','sin(pi/6)'],['삼각','atan2(1,1)','atan2(1,1)'],['쌍곡','cosh(1)','cosh(1)'],
+ ['행렬','zeros(2,3)','zeros(2,3)'],['행렬','identity(3)','identity(3)'],['행렬','trace([[1,2],[3,4]])','trace([[1,2],[3,4]])'],
+ ['행렬','diag([2,4,6])','diag([2,4,6])'],['행렬','kron([[1,2],[3,4]], [[0,5],[6,7]])','kron([[1,2],[3,4]], [[0,5],[6,7]])'],
+ ['통계','mean([2,4,8,16])','mean([2,4,8,16])'],['통계','median([1,7,2,9])','median([1,7,2,9])'],['통계','std([2,4,4,4,5,5,7,9])','std([2,4,4,4,5,5,7,9])'],
+ ['통계','quantileSeq([1,2,3,4,5],.75)','quantileSeq([1,2,3,4,5],0.75)'],['통계','mad([1,2,2,4,6])','mad([1,2,2,4,6])'],
+ ['단위','5 cm + 2 inch','5 cm + 2 inch'],['단위','1 day to hours','1 day to hours'],['복소수','re(2+3i)','re(2+3i)'],
+ ['복소수','im(2+3i)','im(2+3i)'],['복소수','abs(3+4i)','abs(3+4i)'],['분수','fraction(2/7)','fraction(2/7)'],
+ ['논리','5 > 3 and 2 < 4','5 > 3 and 2 < 4'],['논리','xor(true,false)','xor(true,false)'],['비트','bitAnd(12,10)','bitAnd(12,10)'],
+ ['조합','factorial(8)','factorial(8)'],['조합','combinations(10,4)','combinations(10,4)'],['특수','gamma(5)','gamma(5)'],
+ ['특수','erf(1)','erf(1)'],['문자열','"hello" + " math.js"','"hello" + " math.js"'],['배열','flatten([[1,2],[3,4]])','flatten([[1,2],[3,4]])'],
+ ['배열','concat([1,2],[3,4])','concat([1,2],[3,4])'],['배열','range(1,10,2)','range(1,10,2)'],['집합','setUnion([1,2],[2,3])','setUnion([1,2],[2,3])'],
+ ['랜덤','pickRandom([10,20,30,40])','pickRandom([10,20,30,40])'],['검사','isPrime(101)','isPrime(101)'],['변환','hex(255)','hex(255)'],
+ ['변환','numeric("12.5","number")','numeric("12.5","number")'],['날짜·시간','duration(90,"minutes").format()','duration(90,"minutes").format()']
+];
+function runCatalog(){
+ let txt=[];catalogBody.innerHTML=catalog.map(([cat,label,expr])=>{try{const val=math.evaluate(expr);const out=fmt(val);txt.push(`[${cat}] ${label} = ${out}`);return `<tr><td>${cat}</td><td class="code">${label}</td><td>${escapeHtml(out)}</td><td style="color:var(--good)">성공</td></tr>`}catch(e){txt.push(`[오류] ${label}: ${e.message}`);return `<tr><td>${cat}</td><td class="code">${label}</td><td>${escapeHtml(e.message)}</td><td style="color:var(--bad)">오류</td></tr>`}}).join('');
+ lastCatalogText=txt.join('\n');
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function downloadReport(){if(!lastCatalogText)runCatalog();const b=new Blob([lastCatalogText],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mathjs-demo-results.txt';a.click();URL.revokeObjectURL(a.href)}
+
+window.addEventListener('load',()=>{
+ if(window.math){libStatus.textContent='라이브러리 로드 완료 · v'+(math.version||'확인됨');libStatus.style.background='rgba(8,126,91,.35)';runCalc();runStats();runCatalog();setTimeout(resizeCanvas,50)}
+ else{libStatus.textContent='라이브러리 로드 실패';libStatus.style.background='rgba(196,50,50,.5)';document.querySelectorAll('.result').forEach(e=>{e.textContent='math.js CDN을 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근 정책을 확인하세요.';e.classList.add('error')})}
+});
+window.addEventListener('resize',()=>{clearTimeout(window.__rt);window.__rt=setTimeout(resizeCanvas,150)});
+</script>
+</body>
+</html>
