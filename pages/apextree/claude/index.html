@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>ApexTree</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .tree-wrap {
+    width: 100%;
+    max-width: 760px;
+    height: 380px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .tree-wrap.tall { height: 440px; }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.active { background: #205fb0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>ApexTree 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>ApexTree</strong>는 SVG 기반으로 조직도·계층 구조를 그리는 차트 라이브러리입니다
+    (ApexCharts 팀 제작). 노드마다 확장/축소 버튼이 자동으로 붙고, 카드형 노드 템플릿·검색·
+    브레드크럼(경로 표시)·레이아웃 방향 전환 같은 조직도 특화 기능을 기본 옵션만으로 켤 수 있습니다.
+    <ul>
+      <li>계층형 데이터를 넣으면 자동 배치되는 <strong>조직도 트리</strong> + 확장/축소 버튼</li>
+      <li>아바타·직함·배지가 들어간 <strong>내장 카드 템플릿</strong>(<code class="inline">contentKey: 'data'</code>)</li>
+      <li><code class="inline">enableSearch</code> + <code class="inline">enableBreadcrumb</code>로 켜는 <strong>검색과 경로 추적</strong></li>
+      <li><code class="inline">changeLayout()</code>로 바꾸는 <strong>트리 방향</strong>과 다중 선택(<code class="inline">enableSelection</code>)</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 조직도는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      조직·직제와 무관합니다. ApexTree는 <strong>상업용 라이선스가 필요한 유료 라이브러리</strong>이며,
+      라이선스 키 없이 쓰면 배경에 "APEXCHARTS" 워터마크가 표시됩니다(아래 예시도 라이선스 키
+      없이 무료 상태 그대로 표시). ApexTree(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 조직도 + 확장/축소</h2>
+    <div class="desc">
+      계층형 JSON을 넣기만 하면 트리가 자동으로 배치됩니다. 자식이 있는 노드에는 <code class="inline">－</code>/<code class="inline">＋</code>
+      버튼이 자동으로 붙어 눌러서 접고 펼 수 있습니다.
+    </div>
+    <div class="tree-wrap" id="tree1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const tree = new ApexTree(document.getElementById('tree1'), {
+  width: 700, height: 380,
+  nodeWidth: 110, nodeHeight: 44,
+  direction: 'top',
+  edgeColorMode: 'node',              // 가지마다 자식 노드 테두리색을 따라감
+});
+tree.render({
+  id: 'root', name: '수협중앙회',
+  children: [
+    { id: 'a', name: '경제사업부문', children: [
+      { id: 'a1', name: '위판사업팀', children: [] },
+      { id: 'a2', name: '유통사업팀', children: [] },
+    ]},
+    { id: 'b', name: '신용사업부문', children: [ /* ... */ ] },
+  ],
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 내장 카드 템플릿</h2>
+    <div class="desc">
+      <code class="inline">contentKey: 'data'</code>로 바꾸고 각 노드에 <code class="inline">title</code>·
+      <code class="inline">subtitle</code>·<code class="inline">badge</code>·<code class="inline">accentColor</code>·
+      <code class="inline">meta</code>를 채우면, 커스텀 템플릿 없이도 직함·부서·상태 배지가 담긴 카드가
+      자동으로 그려집니다.
+    </div>
+    <div class="tree-wrap" id="tree2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const options = {
+  contentKey: 'data',
+  nodeWidth: 190, nodeHeight: 84,
+};
+const data = {
+  id: 'ceo', name: '회장',
+  data: {
+    name: '김OO 회장', title: '수협중앙회', subtitle: '임원진',
+    accentColor: '#2a78d6',
+    badge: { text: '재임중', color: '#e6f0fb' },
+    meta: [{ label: '가상 인물' }],
+  },
+  children: [ /* ... */ ],
+};</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 검색 + Breadcrumb + 툴바</h2>
+    <div class="desc">
+      좀 더 큰 조직도입니다. 상단 툴바 검색창에 부서명을 입력하면 일치하는 노드가 강조되고, 뿌리까지의
+      경로도 함께 표시됩니다. 노드를 클릭하면 그 아래의 브레드크럼(경로)이 갱신됩니다.
+    </div>
+    <div class="tree-wrap tall" id="tree3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new ApexTree(document.getElementById('tree3'), {
+  width: 700, height: 440,
+  nodeWidth: 110, nodeHeight: 40,
+  enableToolbar: true,
+  enableSearch: true,
+  enableBreadcrumb: true,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 레이아웃 방향 전환 + 다중 선택</h2>
+    <div class="desc">
+      버튼으로 <code class="inline">graph.changeLayout()</code>을 호출해 트리가 자라는 방향을 바꿔볼 수
+      있습니다. 노드를 클릭하면 <code class="inline">enableSelection: 'multi'</code>에 의해 여러 개를
+      동시에 선택할 수 있고, 선택된 노드 수가 아래에 표시됩니다.
+    </div>
+    <div class="controls">
+      <button id="s4-top" class="active">위→아래</button>
+      <button id="s4-bottom">아래→위</button>
+      <button id="s4-left">왼쪽→오른쪽</button>
+      <button id="s4-right">오른쪽→왼쪽</button>
+    </div>
+    <div class="tree-wrap" id="tree4"></div>
+    <div class="stat-box" id="s4-stat">선택된 노드: 0개</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const graph = tree.render(data);
+graph.changeLayout('left');    // 'top' | 'bottom' | 'left' | 'right'
+
+// enableSelection: 'multi' 옵션과 함께 사용
+graph.onSelectionChange((ids) => {
+  console.log('선택된 노드:', ids);
+});</pre>
+    </details>
+  </section>
+
+<script type="module">
+import ApexTree from 'https://cdn.jsdelivr.net/npm/apextree@1.14.0/apextree.es.min.js';
+
+const BRAND = { blue: '#2a78d6', aqua: '#1baf7a', yellow: '#eda100', violet: '#4a3aa7' };
+
+// ---- 섹션 1: 기본 조직도 + 확장/축소 ----
+(function section1() {
+  const data = {
+    id: 'root', name: '수협중앙회', children: [
+      { id: 'a', name: '경제사업부문', children: [
+        { id: 'a1', name: '위판사업팀', children: [] },
+        { id: 'a2', name: '유통사업팀', children: [] },
+        { id: 'a3', name: '가공사업팀', children: [] },
+      ]},
+      { id: 'b', name: '신용사업부문', children: [
+        { id: 'b1', name: '여신팀', children: [] },
+        { id: 'b2', name: '수신팀', children: [] },
+      ]},
+      { id: 'c', name: '지도교육부문', children: [
+        { id: 'c1', name: '조합지원팀', children: [] },
+      ]},
+    ],
+  };
+  const tree = new ApexTree(document.getElementById('tree1'), {
+    width: 700, height: 380,
+    nodeWidth: 110, nodeHeight: 44,
+    direction: 'top',
+    edgeColorMode: 'node',
+    borderColor: BRAND.blue,
+  });
+  tree.render(data);
+})();
+
+// ---- 섹션 2: 내장 카드 템플릿 ----
+(function section2() {
+  const data = {
+    id: 'ceo', name: '회장',
+    data: {
+      name: '김OO 회장', title: '수협중앙회', subtitle: '임원진',
+      accentColor: BRAND.blue,
+      badge: { text: '재임중', color: '#e6f0fb' },
+      meta: [{ label: '가상 인물' }],
+    },
+    children: [
+      {
+        id: 'v1', name: '부문장A',
+        data: {
+          name: '이OO 부문장', title: '경제사업부문장', subtitle: '임원진',
+          accentColor: BRAND.aqua,
+          badge: { text: '재임중', color: '#e3f7ee' },
+          meta: [{ label: '가상 인물' }],
+        },
+        children: [],
+      },
+      {
+        id: 'v2', name: '부문장B',
+        data: {
+          name: '박OO 부문장', title: '신용사업부문장', subtitle: '임원진',
+          accentColor: BRAND.yellow,
+          badge: { text: '재임중', color: '#fdf3e0' },
+          meta: [{ label: '가상 인물' }],
+        },
+        children: [],
+      },
+    ],
+  };
+  const tree = new ApexTree(document.getElementById('tree2'), {
+    width: 700, height: 380,
+    contentKey: 'data',
+    nodeWidth: 190, nodeHeight: 84,
+    direction: 'top',
+  });
+  tree.render(data);
+})();
+
+// ---- 섹션 3: 검색 + Breadcrumb + 툴바 ----
+(function section3() {
+  const data = {
+    id: 'root', name: '수협중앙회', children: [
+      { id: 'econ', name: '경제사업부문', children: [
+        { id: 'econ-1', name: '위판사업팀', children: [
+          { id: 'econ-1-1', name: '동해위판장', children: [] },
+          { id: 'econ-1-2', name: '서해위판장', children: [] },
+        ]},
+        { id: 'econ-2', name: '유통사업팀', children: [
+          { id: 'econ-2-1', name: '수도권유통센터', children: [] },
+        ]},
+        { id: 'econ-3', name: '가공사업팀', children: [] },
+      ]},
+      { id: 'credit', name: '신용사업부문', children: [
+        { id: 'credit-1', name: '여신팀', children: [] },
+        { id: 'credit-2', name: '수신팀', children: [] },
+        { id: 'credit-3', name: '카드사업팀', children: [] },
+      ]},
+      { id: 'edu', name: '지도교육부문', children: [
+        { id: 'edu-1', name: '조합지원팀', children: [] },
+        { id: 'edu-2', name: '어업인교육팀', children: [] },
+      ]},
+    ],
+  };
+  new ApexTree(document.getElementById('tree3'), {
+    width: 700, height: 440,
+    nodeWidth: 110, nodeHeight: 40,
+    direction: 'top',
+    enableToolbar: true,
+    enableSearch: true,
+    enableBreadcrumb: true,
+  }).render(data);
+})();
+
+// ---- 섹션 4: 레이아웃 방향 전환 + 다중 선택 ----
+(function section4() {
+  const data = {
+    id: 'root', name: '수협중앙회', children: [
+      { id: 'a', name: '경제사업부문', children: [
+        { id: 'a1', name: '위판사업팀', children: [] },
+        { id: 'a2', name: '유통사업팀', children: [] },
+      ]},
+      { id: 'b', name: '신용사업부문', children: [
+        { id: 'b1', name: '여신팀', children: [] },
+      ]},
+    ],
+  };
+  const tree = new ApexTree(document.getElementById('tree4'), {
+    width: 700, height: 380,
+    nodeWidth: 110, nodeHeight: 44,
+    direction: 'top',
+    enableSelection: 'multi',
+  });
+  const graph = tree.render(data);
+
+  const statEl = document.getElementById('s4-stat');
+  graph.onSelectionChange((ids) => {
+    statEl.innerHTML = `선택된 노드: <strong>${ids.length}개</strong>`;
+  });
+
+  const buttons = {
+    top: document.getElementById('s4-top'),
+    bottom: document.getElementById('s4-bottom'),
+    left: document.getElementById('s4-left'),
+    right: document.getElementById('s4-right'),
+  };
+  Object.entries(buttons).forEach(([dir, btn]) => {
+    btn.addEventListener('click', () => {
+      graph.changeLayout(dir);
+      Object.values(buttons).forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+})();
+</script>
+</body>
+</html>
