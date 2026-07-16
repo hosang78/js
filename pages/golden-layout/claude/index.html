@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Golden Layout</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/golden-layout@2.6.0/dist/css/goldenlayout-base.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/golden-layout@2.6.0/dist/css/themes/goldenlayout-light-theme.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .gl-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    height: 260px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .gl-panel-content { padding: 12px; font-size: 13px; color: #333; }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Golden Layout 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Golden Layout</strong>은 VS Code나 여러 IDE에서 보던 것처럼, 패널을 행·열·탭으로
+    자유롭게 배치하고 마우스로 드래그해서 재배치할 수 있는 다중 패널 레이아웃 매니저입니다.
+    <ul>
+      <li><code class="inline">row</code>/<code class="inline">column</code>/<code class="inline">stack</code>으로 구성하는 <strong>다중 패널 레이아웃</strong></li>
+      <li>탭이나 패널 제목을 <strong>드래그해서 재배치</strong>(다른 자리로 옮기거나 탭으로 합치기)</li>
+      <li><code class="inline">addComponent()</code>로 하는 <strong>패널 동적 추가</strong></li>
+      <li><code class="inline">saveLayout()</code> + <code class="inline">loadLayout()</code>으로 하는 <strong>레이아웃 저장·복원</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 패널 이름과 내용은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 시스템 화면과 무관합니다. Golden Layout은 npm 패키지 자체에 브라우저용
+      번들이 없어(번들러 사용을 전제로 배포됨), CDN에서 jsDelivr의 자동 번들링 기능
+      (<code class="inline">+esm</code>)으로 불러왔습니다. 그 외 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 행/열/탭으로 구성하는 다중 패널 레이아웃</h2>
+    <div class="desc">
+      왼쪽은 위아래로 쌓인 두 패널(열), 오른쪽은 탭 두 개가 묶인 패널(스택)입니다. 헤더를 드래그해서
+      직접 배치를 바꿔보세요.
+    </div>
+    <div class="gl-wrap" id="gl1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const layout = new GoldenLayout(document.getElementById('gl1'));
+layout.registerComponentFactoryFunction('panel', (container, state) => {
+  container.element.innerHTML = `&lt;div class="gl-panel-content"&gt;${state.text}&lt;/div&gt;`;
+});
+layout.loadLayout({
+  root: {
+    type: 'row',
+    content: [
+      { type: 'column', content: [
+        { type: 'component', componentType: 'panel', title: '위판 현황', componentState: { text: '...' } },
+        { type: 'component', componentType: 'panel', title: '시세 차트', componentState: { text: '...' } },
+      ]},
+      { type: 'stack', content: [
+        { type: 'component', componentType: 'panel', title: '조업 일지', componentState: { text: '...' } },
+        { type: 'component', componentType: 'panel', title: '공지사항', componentState: { text: '...' } },
+      ]},
+    ],
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 드래그로 패널 재배치</h2>
+    <div class="desc">
+      탭이나 패널 제목을 마우스로 눌러 다른 자리로 옮기거나 다른 패널 위에 놓아 탭으로 합쳐보세요.
+      배치가 바뀔 때마다 <code class="inline">stateChanged</code> 이벤트가 발생하는 것을 아래 상태
+      박스에서 확인할 수 있습니다.
+    </div>
+    <div class="gl-wrap" id="gl2"></div>
+    <div class="stat-box" id="s2-stat">아직 배치가 바뀌지 않았습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let changeCount = 0;
+layout.on('stateChanged', () => {
+  changeCount++;
+  statEl.innerHTML = `배치가 <strong>${changeCount}</strong>번 바뀌었습니다.`;
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 패널 동적 추가</h2>
+    <div class="desc">
+      버튼을 누르면 <code class="inline">addComponent()</code>로 새 패널이 레이아웃에 즉시
+      추가됩니다. 추가된 패널도 다른 패널과 마찬가지로 드래그해서 옮길 수 있습니다.
+    </div>
+    <div class="controls">
+      <button id="s3-add">위판장 패널 추가</button>
+    </div>
+    <div class="gl-wrap" id="gl3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let count = 0;
+addBtn.addEventListener('click', () => {
+  count++;
+  layout.addComponent('panel', { text: `추가된 위판장 ${count}` }, `위판장 ${count}`);
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 레이아웃 저장 · 복원</h2>
+    <div class="desc">
+      패널을 자유롭게 드래그해서 배치를 바꾼 뒤 "저장"을 누르면 현재 배치가 JSON으로 저장됩니다.
+      다시 뒤섞은 뒤 "복원"을 누르면 저장했던 배치로 돌아옵니다.
+    </div>
+    <div class="controls">
+      <button id="s4-save">현재 배치 저장</button>
+      <button id="s4-restore">저장한 배치로 복원</button>
+    </div>
+    <div class="gl-wrap" id="gl4"></div>
+    <div class="stat-box" id="s4-stat">아직 저장된 배치가 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>let savedConfig = null;
+saveBtn.addEventListener('click', () => {
+  savedConfig = layout.saveLayout();   // 현재 배치를 JSON으로 직렬화 (ResolvedLayoutConfig)
+});
+restoreBtn.addEventListener('click', () => {
+  if (!savedConfig) return;
+  // saveLayout()의 결과를 loadLayout()에 그대로 넣으면 에러가 난다.
+  // LayoutConfig.fromResolved()로 변환해야 한다.
+  layout.loadLayout(LayoutConfig.fromResolved(savedConfig));
+});</pre>
+    </details>
+  </section>
+
+<script type="module">
+import { GoldenLayout, LayoutConfig } from 'https://cdn.jsdelivr.net/npm/golden-layout@2.6.0/+esm';
+
+function panelFactory(container, state) {
+  container.element.innerHTML = `<div class="gl-panel-content">${state.text}</div>`;
+}
+
+// ---- 섹션 1: 행/열/탭 레이아웃 ----
+(function section1() {
+  const layout = new GoldenLayout(document.getElementById('gl1'));
+  layout.registerComponentFactoryFunction('panel', panelFactory);
+  layout.loadLayout({
+    root: {
+      type: 'row',
+      content: [
+        {
+          type: 'column',
+          content: [
+            { type: 'component', componentType: 'panel', title: '위판 현황', componentState: { text: '오늘 위판량: 4,820kg · 참여 위판장 3곳' } },
+            { type: 'component', componentType: 'panel', title: '시세 차트', componentState: { text: '(가상) 고등어 평균가 4,200원/kg' } },
+          ],
+        },
+        {
+          type: 'stack',
+          content: [
+            { type: 'component', componentType: 'panel', title: '조업 일지', componentState: { text: '가상의 조업 기록 목록이 표시되는 자리입니다.' } },
+            { type: 'component', componentType: 'panel', title: '공지사항', componentState: { text: '가상의 공지사항 목록이 표시되는 자리입니다.' } },
+          ],
+        },
+      ],
+    },
+  });
+})();
+
+// ---- 섹션 2: 드래그로 패널 재배치 ----
+(function section2() {
+  const layout = new GoldenLayout(document.getElementById('gl2'));
+  layout.registerComponentFactoryFunction('panel', panelFactory);
+  layout.loadLayout({
+    root: {
+      type: 'row',
+      content: [
+        { type: 'component', componentType: 'panel', title: 'A위판장', componentState: { text: 'A위판장 패널 (드래그해서 옮겨보세요)' } },
+        { type: 'component', componentType: 'panel', title: 'B위판장', componentState: { text: 'B위판장 패널' } },
+      ],
+    },
+  });
+
+  let changeCount = 0;
+  let ready = false; // 초기 loadLayout()도 stateChanged를 한 번 발생시키므로 걸러낸다
+  const statEl = document.getElementById('s2-stat');
+  layout.on('stateChanged', () => {
+    if (!ready) return;
+    changeCount++;
+    statEl.innerHTML = `배치가 <strong>${changeCount}</strong>번 바뀌었습니다.`;
+  });
+  requestAnimationFrame(() => { ready = true; });
+})();
+
+// ---- 섹션 3: 패널 동적 추가 ----
+(function section3() {
+  const layout = new GoldenLayout(document.getElementById('gl3'));
+  layout.registerComponentFactoryFunction('panel', panelFactory);
+  layout.loadLayout({
+    root: {
+      type: 'row',
+      content: [
+        { type: 'component', componentType: 'panel', title: '기본 패널', componentState: { text: '기본으로 있던 패널입니다.' } },
+      ],
+    },
+  });
+
+  let count = 0;
+  document.getElementById('s3-add').addEventListener('click', () => {
+    count++;
+    layout.addComponent('panel', { text: `추가된 위판장 ${count}` }, `위판장 ${count}`);
+  });
+})();
+
+// ---- 섹션 4: 레이아웃 저장 · 복원 ----
+(function section4() {
+  const layout = new GoldenLayout(document.getElementById('gl4'));
+  layout.registerComponentFactoryFunction('panel', panelFactory);
+  layout.loadLayout({
+    root: {
+      type: 'row',
+      content: [
+        { type: 'component', componentType: 'panel', title: 'A위판장', componentState: { text: 'A위판장 패널' } },
+        { type: 'component', componentType: 'panel', title: 'B위판장', componentState: { text: 'B위판장 패널' } },
+      ],
+    },
+  });
+
+  let savedConfig = null;
+  const statEl = document.getElementById('s4-stat');
+
+  document.getElementById('s4-save').addEventListener('click', () => {
+    savedConfig = layout.saveLayout();
+    statEl.innerHTML = `배치를 저장했습니다. (설정 크기: <strong>${JSON.stringify(savedConfig).length.toLocaleString()}자</strong>)`;
+  });
+  document.getElementById('s4-restore').addEventListener('click', () => {
+    if (!savedConfig) {
+      statEl.textContent = '먼저 배치를 저장해주세요.';
+      return;
+    }
+    // saveLayout()이 돌려주는 값은 "해석 완료(resolved)" 상태의 설정이라
+    // loadLayout()에 그대로 다시 넣으면 내부 size 파서가 에러를 낸다.
+    // LayoutConfig.fromResolved()로 되돌린 뒤 넣어야 한다.
+    layout.loadLayout(LayoutConfig.fromResolved(savedConfig));
+    statEl.innerHTML = '저장했던 배치로 <strong>복원</strong>했습니다.';
+  });
+})();
+</script>
+</body>
+</html>
