@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Dygraphs</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dygraphs@2.2.1/dist/dygraph.min.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap { width: 100%; max-width: 760px; height: 260px; }
+  .chart-wrap.tall { height: 320px; }
+  .legend-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    margin-bottom: 10px;
+    min-height: 20px;
+  }
+  .legend-box .dash { display: inline-block; }
+  .controls { display: flex; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  .controls label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Dygraphs 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Dygraphs</strong>는 2011년부터 이어져 온 순수 JS 시계열 차트 라이브러리로, 수만 개의
+    점도 매끄럽게 그리는 렌더링 성능과 마우스 드래그로 바로 확대되는 인터랙션, 세밀하게 커스터마이즈
+    가능한 범례로 잘 알려져 있습니다.
+    <ul>
+      <li>다중 계열 라인차트 + <code class="inline">legendFormatter</code>로 만드는 커스텀 인터랙티브 범례</li>
+      <li><code class="inline">showRangeSelector</code>로 켜는 <strong>내장 미니맵 확대/축소</strong></li>
+      <li><code class="inline">customBars</code>로 그리는 <strong>변동폭(최저~최고) 음영 밴드</strong></li>
+      <li><code class="inline">setVisibility()</code>로 하는 <strong>시리즈 표시/숨기기 토글</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 시세 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. Dygraphs(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 다중 계열 라인차트 + 커스텀 범례</h2>
+    <div class="desc">
+      3개 위판장의 90일간 일별 시세입니다. 차트 위에서 마우스를 움직이면 <code class="inline">legendFormatter</code>로
+      만든 범례가 그 날짜의 값을 보여주고, 해당 계열의 선은 굵게 강조됩니다.
+    </div>
+    <div class="legend-box" id="legend1">차트 위에 마우스를 올려보세요</div>
+    <div class="chart-wrap" id="chart1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Dygraph(document.getElementById('chart1'), data, {
+  labels: ['날짜', 'A위판장', 'B위판장', 'C위판장'],
+  colors: ['#2a78d6', '#1baf7a', '#eda100'],
+  highlightSeriesOpacity: 0.25,          // 강조되지 않은 선은 흐리게
+  legend: 'always',
+  labelsDiv: document.getElementById('legend1'),
+  legendFormatter: (data) => {
+    if (data.x == null) return '차트 위에 마우스를 올려보세요';
+    return data.xHTML + ' &nbsp; ' + data.series.map(
+      (s) => `${s.dashHTML} ${s.labelHTML}: <strong>${s.yHTML}</strong>`
+    ).join(' &nbsp; ');
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 내장 Range Selector로 확대/축소</h2>
+    <div class="desc">
+      <code class="inline">showRangeSelector: true</code> 하나만 켜면 차트 아래 미니맵이 생깁니다.
+      미니맵의 양 끝 손잡이를 드래그하면 위쪽 메인 차트가 해당 구간으로 확대됩니다.
+    </div>
+    <div class="chart-wrap tall" id="chart2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Dygraph(document.getElementById('chart2'), data, {
+  labels: ['날짜', 'A위판장', 'B위판장', 'C위판장'],
+  colors: ['#2a78d6', '#1baf7a', '#eda100'],
+  showRangeSelector: true,
+  rangeSelectorHeight: 40,
+  rangeSelectorPlotStrokeColor: '#4f7dff',
+  rangeSelectorPlotFillColor: '#dbe4ff',
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Custom Bars — 변동폭 음영 밴드</h2>
+    <div class="desc">
+      각 값을 <code class="inline">[최저, 평균, 최고]</code> 세 숫자로 넘기면, 평균선 주변에 그날의
+      변동폭(최저~최고)을 옅은 음영으로 함께 그려줍니다. 시세가 하루 중 얼마나 출렁였는지 한눈에 보입니다.
+    </div>
+    <div class="chart-wrap" id="chart3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// 각 셀이 숫자 하나가 아니라 [최저, 평균, 최고] 배열
+const data = days.map((date, i) => [date, [low[i], mid[i], high[i]]]);
+
+new Dygraph(document.getElementById('chart3'), data, {
+  labels: ['날짜', '고등어 평균 시세'],
+  customBars: true,                      // [low, mid, high] 형식으로 해석
+  color: '#2a78d6',
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 시리즈 표시/숨기기 토글</h2>
+    <div class="desc">
+      체크박스를 해제하면 <code class="inline">setVisibility()</code>로 해당 위판장의 선을 차트에서
+      숨깁니다. 축 범위는 남아있는 계열에 맞춰 다시 계산됩니다.
+    </div>
+    <div class="controls" id="s4-toggles"></div>
+    <div class="chart-wrap" id="chart4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>checkbox.addEventListener('change', (e) => {
+  g.setVisibility(seriesIndex, e.target.checked);
+});</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/dygraphs@2.2.1/dist/dygraph.min.js"></script>
+<script>
+const COLORS = ['#2a78d6', '#1baf7a', '#eda100'];
+
+function genSeriesData(days, seed) {
+  let s = seed;
+  function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+  const out = [];
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - days);
+  let a = 6200, b = 5400, c = 7100;
+  for (let i = 0; i < days; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    a += (rand() - 0.5) * 200;
+    b += (rand() - 0.5) * 180;
+    c += (rand() - 0.5) * 240;
+    out.push([d, Math.round(a), Math.round(b), Math.round(c)]);
+  }
+  return out;
+}
+
+const seriesData = genSeriesData(90, 55);
+
+// ---- 섹션 1: 다중 계열 + 커스텀 범례 ----
+(function section1() {
+  new Dygraph(document.getElementById('chart1'), seriesData, {
+    labels: ['날짜', 'A위판장', 'B위판장', 'C위판장'],
+    colors: COLORS,
+    highlightSeriesOpacity: 0.25,
+    strokeWidth: 1.5,
+    legend: 'always',
+    labelsDiv: document.getElementById('legend1'),
+    legendFormatter: (data) => {
+      if (data.x == null) return '차트 위에 마우스를 올려보세요';
+      return data.xHTML + '&nbsp;&nbsp;' + data.series.map(
+        (s) => `${s.dashHTML} ${s.labelHTML}: <strong>${s.yHTML}</strong>`
+      ).join('&nbsp;&nbsp;');
+    },
+  });
+})();
+
+// ---- 섹션 2: Range Selector ----
+(function section2() {
+  new Dygraph(document.getElementById('chart2'), seriesData, {
+    labels: ['날짜', 'A위판장', 'B위판장', 'C위판장'],
+    colors: COLORS,
+    strokeWidth: 1.5,
+    showRangeSelector: true,
+    rangeSelectorHeight: 40,
+    rangeSelectorPlotStrokeColor: '#4f7dff',
+    rangeSelectorPlotFillColor: '#dbe4ff',
+  });
+})();
+
+// ---- 섹션 3: Custom Bars 변동폭 밴드 ----
+(function section3() {
+  let s = 314;
+  function rand() { s = (s * 9301 + 49297) % 233280; return s / 233280; }
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - 90);
+  const data = [];
+  let mid = 6500;
+  for (let i = 0; i < 90; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    mid += (rand() - 0.5) * 150;
+    const spread = 150 + rand() * 250;
+    data.push([d, [Math.round(mid - spread), Math.round(mid), Math.round(mid + spread)]]);
+  }
+
+  new Dygraph(document.getElementById('chart3'), data, {
+    labels: ['날짜', '고등어 평균 시세'],
+    customBars: true,
+    color: '#2a78d6',
+    strokeWidth: 1.5,
+  });
+})();
+
+// ---- 섹션 4: 시리즈 표시/숨기기 토글 ----
+(function section4() {
+  const labels = ['A위판장', 'B위판장', 'C위판장'];
+  const g = new Dygraph(document.getElementById('chart4'), seriesData, {
+    labels: ['날짜', ...labels],
+    colors: COLORS,
+    strokeWidth: 1.5,
+  });
+
+  const toggleWrap = document.getElementById('s4-toggles');
+  labels.forEach((label, i) => {
+    const wrapper = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true;
+    checkbox.addEventListener('change', (e) => {
+      g.setVisibility(i, e.target.checked);
+    });
+    const swatch = document.createElement('span');
+    swatch.style.cssText = `display:inline-block;width:10px;height:10px;border-radius:2px;background:${COLORS[i]};`;
+    wrapper.appendChild(checkbox);
+    wrapper.appendChild(swatch);
+    wrapper.appendChild(document.createTextNode(label));
+    toggleWrap.appendChild(wrapper);
+  });
+})();
+</script>
+</body>
+</html>
