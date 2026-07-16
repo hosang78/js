@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>AlaSQL</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .table-wrap { overflow-x: auto; }
+  .table-wrap table {
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 320px;
+  }
+  .table-wrap th, .table-wrap td {
+    border: 1px solid #e4e7ec;
+    padding: 6px 12px;
+    text-align: right;
+  }
+  .table-wrap th:first-child, .table-wrap td:first-child { text-align: left; }
+  .table-wrap th {
+    background: #eef2fb;
+    color: #333;
+    font-weight: 600;
+  }
+  .table-wrap tr:nth-child(even) td { background: #fafbfc; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>AlaSQL 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>AlaSQL</strong>은 자바스크립트 배열이나 객체를 대상으로 진짜 SQL 문을 실행할 수 있게
+    해주는 인메모리 SQL 엔진입니다. 서버나 별도 DB 없이, 브라우저 안에서 <code class="inline">SELECT</code>·
+    <code class="inline">JOIN</code>·<code class="inline">GROUP BY</code>는 물론
+    <code class="inline">CREATE TABLE</code> 같은 DDL 문까지 쓸 수 있습니다.
+    <ul>
+      <li><code class="inline">SELECT ... WHERE ... ORDER BY</code>로 <strong>배열 조회·필터링·정렬</strong></li>
+      <li><code class="inline">GROUP BY</code> + <code class="inline">SUM/AVG/COUNT</code>로 하는 <strong>그룹별 집계</strong></li>
+      <li><code class="inline">JOIN</code>으로 하는 <strong>테이블 병합</strong></li>
+      <li><code class="inline">CREATE TABLE</code> + <code class="inline">INSERT</code> + <code class="inline">UPDATE</code>로 만드는 <strong>실제 인메모리 테이블</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. AlaSQL(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. SELECT + WHERE + ORDER BY</h2>
+    <div class="desc">
+      자바스크립트 배열을 <code class="inline">?</code> 파라미터로 그대로 SQL에 넘겨서, 수량이
+      500건 이상인 기록만 수량 내림차순으로 조회했습니다.
+    </div>
+    <div class="table-wrap" id="out1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const records = [ /* 위판장, 어종, 수량, 단가로 이뤄진 배열 */ ];
+
+const rows = alasql(
+  'SELECT market, species, qty, price FROM ? WHERE qty >= 500 ORDER BY qty DESC',
+  [records]
+);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. GROUP BY + 집계 함수</h2>
+    <div class="desc">
+      위판장별로 묶어서 총 위판량·평균 단가·기록 건수를 SQL의 <code class="inline">GROUP BY</code>로
+      계산했습니다.
+    </div>
+    <div class="table-wrap" id="out2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const rows = alasql(`
+  SELECT market, SUM(qty) AS totalQty, AVG(price) AS avgPrice, COUNT(*) AS n
+  FROM ?
+  GROUP BY market
+`, [records]);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. JOIN</h2>
+    <div class="desc">
+      위판 기록 테이블과 위판장-지역 매핑 테이블을 <code class="inline">market</code> 열 기준으로
+      조인했습니다. 두 배열 모두 파라미터(<code class="inline">?</code>)로 넘길 수 있습니다.
+    </div>
+    <div class="table-wrap" id="out3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const regions = [
+  { market: 'A위판장', region: '동해' },
+  { market: 'B위판장', region: '서해' },
+  { market: 'C위판장', region: '남해' },
+];
+
+const rows = alasql(`
+  SELECT r.market, r.species, r.qty, g.region
+  FROM ? r JOIN ? g ON r.market = g.market
+`, [records, regions]);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. CREATE TABLE + INSERT + UPDATE</h2>
+    <div class="desc">
+      배열을 즉석에서 조회하는 것을 넘어, <code class="inline">CREATE TABLE</code>로 진짜 인메모리
+      테이블을 만들고 <code class="inline">INSERT</code>·<code class="inline">UPDATE</code>까지
+      실행했습니다. 고등어 기록은 재조사로 수량이 100건씩 늘어난 것으로 갱신했습니다.
+    </div>
+    <div class="table-wrap" id="out4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>alasql('CREATE TABLE catch (market STRING, species STRING, qty NUMBER)');
+alasql('INSERT INTO catch VALUES (?,?,?)', ['D위판장', '전어', 400]);
+alasql('INSERT INTO catch SELECT market, species, qty FROM ?', [records]);
+alasql('UPDATE catch SET qty = qty + 100 WHERE species = ?', ['고등어']);
+
+const rows = alasql('SELECT * FROM catch ORDER BY qty DESC');</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/alasql@4.17.3/dist/alasql.min.js"></script>
+<script>
+function renderTable(rows) {
+  if (!rows || !rows.length) return '<p style="font-size:13px;color:#888;">결과 없음</p>';
+  const cols = Object.keys(rows[0]);
+  const thead = `<tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr>`;
+  const tbody = rows.map((row) => `<tr>${cols.map((c) => {
+    const v = row[c];
+    return `<td>${typeof v === 'number' ? v.toLocaleString() : v}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+const records = [
+  { market: 'A위판장', species: '고등어', qty: 1200, price: 4200 },
+  { market: 'A위판장', species: '갈치', qty: 300, price: 8100 },
+  { market: 'A위판장', species: '오징어', qty: 650, price: 6000 },
+  { market: 'B위판장', species: '고등어', qty: 800, price: 4100 },
+  { market: 'B위판장', species: '오징어', qty: 500, price: 6200 },
+  { market: 'B위판장', species: '갈치', qty: 150, price: 8000 },
+  { market: 'C위판장', species: '고등어', qty: 1500, price: 4300 },
+  { market: 'C위판장', species: '갈치', qty: 200, price: 8300 },
+  { market: 'C위판장', species: '오징어', qty: 900, price: 6100 },
+];
+
+// ---- 섹션 1: SELECT + WHERE + ORDER BY ----
+(function section1() {
+  const rows = alasql(
+    'SELECT market, species, qty, price FROM ? WHERE qty >= 500 ORDER BY qty DESC',
+    [records]
+  );
+  document.getElementById('out1').innerHTML = renderTable(rows);
+})();
+
+// ---- 섹션 2: GROUP BY + 집계 함수 ----
+(function section2() {
+  const rows = alasql(
+    'SELECT market, SUM(qty) AS totalQty, ROUND(AVG(price)) AS avgPrice, COUNT(*) AS n FROM ? GROUP BY market',
+    [records]
+  );
+  document.getElementById('out2').innerHTML = renderTable(rows);
+})();
+
+// ---- 섹션 3: JOIN ----
+(function section3() {
+  const regions = [
+    { market: 'A위판장', region: '동해' },
+    { market: 'B위판장', region: '서해' },
+    { market: 'C위판장', region: '남해' },
+  ];
+  const rows = alasql(
+    'SELECT r.market, r.species, r.qty, g.region FROM ? r JOIN ? g ON r.market = g.market',
+    [records, regions]
+  );
+  document.getElementById('out3').innerHTML = renderTable(rows);
+})();
+
+// ---- 섹션 4: CREATE TABLE + INSERT + UPDATE ----
+(function section4() {
+  alasql('DROP TABLE IF EXISTS catch');
+  alasql('CREATE TABLE catch (market STRING, species STRING, qty NUMBER)');
+  alasql('INSERT INTO catch VALUES (?,?,?)', ['D위판장', '전어', 400]);
+  alasql('INSERT INTO catch SELECT market, species, qty FROM ?', [records]);
+  alasql('UPDATE catch SET qty = qty + 100 WHERE species = ?', ['고등어']);
+
+  const rows = alasql('SELECT * FROM catch ORDER BY qty DESC');
+  document.getElementById('out4').innerHTML = renderTable(rows);
+})();
+</script>
+</body>
+</html>
