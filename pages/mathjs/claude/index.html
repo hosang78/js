@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>math.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 260px;
+  }
+  th, td {
+    border: 1px solid #e4e7ec;
+    padding: 6px 12px;
+    text-align: right;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th {
+    background: #eef2fb;
+    color: #333;
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  .note {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 10px;
+  }
+  .legend { display: flex; gap: 16px; font-size: 12.5px; margin-top: 8px; }
+  .legend .swatch { display: inline-block; width: 16px; height: 2px; margin-right: 5px; vertical-align: middle; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>math.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>math.js</strong>는 표현식 파서, 행렬 연산, 단위 변환, 기호 미분까지 아우르는 종합
+    수학 라이브러리입니다. 숫자뿐 아니라 행렬·복소수·단위가 있는 값까지 하나의 일관된 방식으로
+    다룰 수 있습니다.
+    <ul>
+      <li><code class="inline">math.evaluate()</code>로 문자열 수식을 계산하는 <strong>표현식 파서</strong></li>
+      <li><code class="inline">multiply</code>·<code class="inline">det</code>·<code class="inline">inv</code>·<code class="inline">transpose</code> 같은 <strong>행렬 연산</strong></li>
+      <li><code class="inline">math.unit()</code>으로 하는 <strong>단위가 있는 값 변환</strong></li>
+      <li><code class="inline">math.derivative()</code>로 하는 <strong>기호 미분(symbolic differentiation)</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. math.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 표현식 파서</h2>
+    <div class="desc">
+      문자열로 된 수식을 변수 스코프와 함께 계산하거나, 수식으로 직접 함수를 정의해서 호출할 수
+      있습니다.
+    </div>
+    <div class="table-wrap" id="out1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>math.evaluate('qty * price', { qty: 1200, price: 4200 });   // 위판 금액 계산
+math.evaluate('sqrt(16) + 2^3');                              // 12
+
+const f = math.evaluate('f(x) = x^2 + 3x + 2');               // 함수 정의
+f(4);                                                          // 30</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 행렬 연산</h2>
+    <div class="desc">
+      3개 위판장의 [수량, 단가]를 행렬로 표현하고, 열 합계·행렬곱·행렬식·역행렬·전치를 계산했습니다.
+    </div>
+    <div class="table-wrap" id="out2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const A = math.matrix([
+  [1200, 4200],   // A위판장: [수량, 단가]
+  [800, 4100],    // B위판장
+  [1500, 4300],   // C위판장
+]);
+
+math.sum(math.column(A, 0));           // 전체 수량 합계
+math.multiply(M, [1, 1]);              // 행렬 × 벡터
+math.det(M);                           // 행렬식
+math.inv(M);                           // 역행렬
+math.transpose(A);                     // 전치행렬</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 단위 변환</h2>
+    <div class="desc">
+      <code class="inline">math.unit()</code>은 값에 단위를 붙여서, 서로 다른 단위끼리도 자동으로
+      환산해 더하거나 변환할 수 있게 해줍니다.
+    </div>
+    <div class="table-wrap" id="out3"></div>
+    <div class="note">
+      ⚠️ math.js의 기본 <code class="inline">'ton'</code>은 미국 단톤(약 907kg)입니다. 한국에서
+      흔히 쓰는 1,000kg 기준 미터톤을 쓰려면 <code class="inline">'tonne'</code>(또는
+      <code class="inline">'t'</code>)을 써야 합니다.
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>math.unit('1200 kg').to('tonne').toString();     // "1.2 tonne"
+math.add(math.unit('500 kg'), math.unit('0.3 tonne')).toString();   // "800 kg"
+
+math.unit('1200 kg').to('ton').toString();        // "1.32... ton" (미국 단톤! 주의)</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 기호 미분</h2>
+    <div class="desc">
+      3차 함수 <code class="inline">2x³ + 3x² − 12x</code>를 미분해서 도함수 식을 얻고, x=2에서의
+      순간 변화율(기울기)을 계산했습니다. 원함수(파랑)와 도함수(주황)를 함께 그렸습니다.
+    </div>
+    <svg id="deriv-chart" width="500" height="260" style="max-width:100%; background:#fafbfc; border:1px solid #e4e7ec; border-radius:8px;"></svg>
+    <div class="legend">
+      <span><span class="swatch" style="background:#2a78d6;"></span>f(x) = 2x³ + 3x² − 12x</span>
+      <span><span class="swatch" style="background:#eda100;"></span>f'(x) (도함수)</span>
+    </div>
+    <div class="stat-box" id="out4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const expr = '2x^3 + 3x^2 - 12x';
+const derivExpr = math.derivative(expr, 'x').toString();   // "6 * (x ^ 2 + x) - 12"
+
+math.evaluate(derivExpr, { x: 2 });   // x=2에서의 기울기</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjs@15.2.0/lib/browser/math.js"></script>
+<script>
+function renderTable(rows) {
+  const cols = Object.keys(rows[0]);
+  const thead = `<tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr>`;
+  const tbody = rows.map((row) => `<tr>${cols.map((c) => `<td>${row[c]}</td>`).join('')}</tr>`).join('');
+  return `<table><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+// ---- 섹션 1: 표현식 파서 ----
+(function section1() {
+  const amount = math.evaluate('qty * price', { qty: 1200, price: 4200 });
+  const arith = math.evaluate('sqrt(16) + 2^3');
+  const f = math.evaluate('f(x) = x^2 + 3x + 2');
+  const fVal = f(4);
+
+  const rows = [
+    { 수식: "qty * price  (qty=1200, price=4200)", 결과: amount.toLocaleString() },
+    { 수식: "sqrt(16) + 2^3", 결과: arith },
+    { 수식: "f(x) = x^2 + 3x + 2 → f(4)", 결과: fVal },
+  ];
+  document.getElementById('out1').innerHTML = renderTable(rows);
+})();
+
+// ---- 섹션 2: 행렬 연산 ----
+(function section2() {
+  const A = math.matrix([
+    [1200, 4200],
+    [800, 4100],
+    [1500, 4300],
+  ]);
+  const totalQty = math.sum(math.column(A, 0).toArray());
+  const M = math.matrix([[2, 0], [0, 3]]);
+  const Mv = math.multiply(M, [1, 1]).toArray();
+  const det = math.det(M);
+  const inv = math.inv(M).toArray();
+  const AT = math.transpose(A).toArray();
+
+  const rows = [
+    { 연산: 'A = [[1200,4200],[800,4100],[1500,4300]]', 결과: JSON.stringify(A.toArray()) },
+    { 연산: '전체 수량 합계 (열 합)', 결과: totalQty.toLocaleString() },
+    { 연산: 'M × [1,1]  (M = [[2,0],[0,3]])', 결과: JSON.stringify(Mv) },
+    { 연산: 'det(M)', 결과: det },
+    { 연산: 'inv(M)', 결과: JSON.stringify(inv) },
+    { 연산: 'transpose(A)', 결과: JSON.stringify(AT) },
+  ];
+  document.getElementById('out2').innerHTML = renderTable(rows);
+})();
+
+// ---- 섹션 3: 단위 변환 ----
+(function section3() {
+  const kgToTonne = math.unit('1200 kg').to('tonne').toString();
+  const addMixed = math.add(math.unit('500 kg'), math.unit('0.3 tonne')).toString();
+  const tonneToKg = math.unit('2.4 tonne').toNumber('kg');
+  const kgToUsTon = math.unit('1200 kg').to('ton').toNumber('ton').toFixed(3) + ' ton';
+
+  const rows = [
+    { 변환: "1200 kg → tonne", 결과: kgToTonne },
+    { 변환: "500 kg + 0.3 tonne", 결과: addMixed },
+    { 변환: "2.4 tonne → kg(숫자)", 결과: tonneToKg.toLocaleString() },
+    { 변환: "1200 kg → ton(미국 단톤)", 결과: kgToUsTon },
+  ];
+  document.getElementById('out3').innerHTML = renderTable(rows);
+})();
+
+// ---- 섹션 4: 기호 미분 ----
+(function section4() {
+  const expr = '2x^3 + 3x^2 - 12x';
+  const derivNode = math.derivative(expr, 'x');
+  const derivExpr = derivNode.toString();
+  const slopeAt2 = math.evaluate(derivExpr, { x: 2 });
+
+  document.getElementById('out4').innerHTML =
+    `f(x) = <strong>${expr}</strong> &nbsp;→&nbsp; f'(x) = <strong>${derivExpr}</strong>` +
+    ` &nbsp;·&nbsp; f'(2) = <strong>${slopeAt2}</strong> (x=2에서의 기울기)`;
+
+  // SVG 그래프
+  const svg = document.getElementById('deriv-chart');
+  const W = 500, H = 260, PAD = 40;
+  const xMin = -4, xMax = 3;
+  const xs = [];
+  for (let x = xMin; x <= xMax; x += 0.1) xs.push(Number(x.toFixed(2)));
+  const fys = xs.map((x) => math.evaluate(expr, { x }));
+  const dys = xs.map((x) => math.evaluate(derivExpr, { x }));
+  const allY = fys.concat(dys);
+  const yMin = Math.min(...allY), yMax = Math.max(...allY);
+
+  const sx = (x) => PAD + ((x - xMin) / (xMax - xMin)) * (W - PAD * 1.5);
+  const sy = (y) => H - PAD - ((y - yMin) / (yMax - yMin)) * (H - PAD * 1.5);
+
+  function pathFor(ys) {
+    return xs.map((x, i) => `${i === 0 ? 'M' : 'L'} ${sx(x).toFixed(1)} ${sy(ys[i]).toFixed(1)}`).join(' ');
+  }
+
+  let svgContent = '';
+  svgContent += `<line x1="${PAD}" y1="${sy(0)}" x2="${W - PAD * 0.5}" y2="${sy(0)}" stroke="#ccc" />`;
+  svgContent += `<line x1="${sx(0)}" y1="${PAD * 0.3}" x2="${sx(0)}" y2="${H - PAD}" stroke="#ccc" />`;
+  svgContent += `<path d="${pathFor(fys)}" fill="none" stroke="#2a78d6" stroke-width="2" />`;
+  svgContent += `<path d="${pathFor(dys)}" fill="none" stroke="#eda100" stroke-width="2" />`;
+  svgContent += `<circle cx="${sx(2)}" cy="${sy(math.evaluate(expr, { x: 2 }))}" r="4" fill="#e34948" />`;
+  svg.innerHTML = svgContent;
+})();
+</script>
+</body>
+</html>
