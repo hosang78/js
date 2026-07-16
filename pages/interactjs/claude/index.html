@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>interact.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+
+  /* 섹션 1: 드래그 */
+  .drag-area {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 180px;
+    background: #f0f4ff;
+    border: 1px dashed #b8c2d9;
+    border-radius: 8px;
+  }
+  .drag-card {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 90px;
+    height: 60px;
+    background: #2a78d6;
+    color: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+  .drag-card:active { cursor: grabbing; }
+
+  /* 섹션 2: 리사이즈 */
+  .resize-area {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 200px;
+    background: #fafbfc;
+  }
+  .resize-box {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 140px;
+    height: 100px;
+    background: #1baf7a;
+    color: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* 섹션 3: 드롭존 */
+  .dnd-wrap { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .card-tray { display: flex; flex-direction: column; gap: 10px; }
+  .fish-card {
+    position: relative;
+    width: 90px;
+    height: 44px;
+    background: #eda100;
+    color: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+  .fish-card:active { cursor: grabbing; }
+  .dropzone {
+    width: 160px;
+    height: 150px;
+    border: 2px dashed #b8c2d9;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .dropzone.drop-active { background: #dfe8f6; border-color: #4f7dff; color: #205fb0; }
+
+  /* 섹션 4: 스냅 격자 */
+  .snap-area {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 200px;
+    border-radius: 8px;
+    background-color: #fafbfc;
+    background-image:
+      linear-gradient(to right, #e4e7ec 1px, transparent 1px),
+      linear-gradient(to bottom, #e4e7ec 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .snap-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 26px;
+    height: 26px;
+    background: #e34948;
+    border-radius: 6px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .snap-card:active { cursor: grabbing; }
+
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>interact.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>interact.js</strong>는 드래그·리사이즈·드롭·멀티터치 제스처를 다루는 인터랙션
+    라이브러리입니다. jQuery UI의 draggable/resizable/droppable과 비슷한 역할을 하지만, 특정
+    프레임워크에 의존하지 않고 순수 DOM 이벤트로 동작합니다.
+    <ul>
+      <li><code class="inline">.draggable()</code> + <code class="inline">restrictRect</code>로 하는 <strong>영역 제한 드래그</strong></li>
+      <li><code class="inline">.resizable()</code> + <code class="inline">restrictSize</code>로 하는 <strong>최소 크기가 있는 리사이즈</strong></li>
+      <li><code class="inline">.dropzone()</code>으로 만드는 <strong>드래그 앤 드롭</strong></li>
+      <li><code class="inline">modifiers.snap()</code>으로 하는 <strong>격자 스냅 이동</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 카드·구역 이름은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 시설·절차와 무관합니다. interact.js(CDN) 하나만 사용하고 다른 외부
+      라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 영역 제한 드래그</h2>
+    <div class="desc">
+      카드를 자유롭게 드래그할 수 있지만, <code class="inline">restrictRect</code> 제약 때문에
+      점선 영역 밖으로는 나갈 수 없습니다.
+    </div>
+    <div class="drag-area"><div class="drag-card" id="drag1">A위판장</div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>interact('#drag1').draggable({
+  listeners: {
+    move(event) {
+      const t = event.target;
+      const x = (parseFloat(t.getAttribute('data-x')) || 0) + event.dx;
+      const y = (parseFloat(t.getAttribute('data-y')) || 0) + event.dy;
+      t.style.transform = `translate(${x}px, ${y}px)`;
+      t.setAttribute('data-x', x);
+      t.setAttribute('data-y', y);
+    },
+  },
+  modifiers: [
+    interact.modifiers.restrictRect({ restriction: 'parent', endOnly: true }),
+  ],
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 최소 크기가 있는 리사이즈</h2>
+    <div class="desc">
+      상자의 모서리나 변을 드래그하면 크기가 바뀝니다. <code class="inline">restrictSize</code>로
+      너비·높이가 일정 크기 이하로 줄어들지 않게 막았습니다.
+    </div>
+    <div class="resize-area"><div class="resize-box" id="box2">보관창고</div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>interact('#box2').resizable({
+  edges: { left: true, right: true, bottom: true, top: true },
+  listeners: {
+    move(event) {
+      const t = event.target;
+      let x = (parseFloat(t.getAttribute('data-x')) || 0) + event.deltaRect.left;
+      let y = (parseFloat(t.getAttribute('data-y')) || 0) + event.deltaRect.top;
+      t.style.width = event.rect.width + 'px';
+      t.style.height = event.rect.height + 'px';
+      t.style.transform = `translate(${x}px, ${y}px)`;
+      t.setAttribute('data-x', x);
+      t.setAttribute('data-y', y);
+    },
+  },
+  modifiers: [
+    interact.modifiers.restrictSize({ min: { width: 80, height: 60 } }),
+  ],
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 드래그 앤 드롭</h2>
+    <div class="desc">
+      어종 카드를 오른쪽 "선별 완료" 구역으로 드래그해서 놓아보세요. 카드가 구역 위에 겹치면
+      테두리 색이 바뀌고, 놓으면 선별된 것으로 기록됩니다.
+    </div>
+    <div class="dnd-wrap">
+      <div class="card-tray">
+        <div class="fish-card" id="card-a">고등어</div>
+        <div class="fish-card" id="card-b">갈치</div>
+        <div class="fish-card" id="card-c">오징어</div>
+      </div>
+      <div class="dropzone" id="dropzone3">여기로<br>드래그하세요</div>
+    </div>
+    <div class="stat-box" id="s3-stat">선별 완료: 0개</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>interact('.fish-card').draggable({ listeners: { move: /* 위와 동일한 이동 로직 */ } });
+
+interact('#dropzone3').dropzone({
+  accept: '.fish-card',
+  overlap: 0.5,                 // 카드가 50% 이상 겹쳐야 인식
+  ondragenter(event) { event.target.classList.add('drop-active'); },
+  ondragleave(event) { event.target.classList.remove('drop-active'); },
+  ondrop(event) {
+    event.target.classList.remove('drop-active');
+    // event.relatedTarget: 놓여진 카드 엘리먼트
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 격자 스냅 이동</h2>
+    <div class="desc">
+      카드를 드래그하면 30px 격자 선에 자동으로 달라붙습니다. 창고 슬롯처럼 정렬이 필요한 배치에
+      유용합니다.
+    </div>
+    <div class="snap-area"><div class="snap-card" id="drag4"></div></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>interact('#drag4').draggable({
+  modifiers: [
+    interact.modifiers.snap({
+      targets: [interact.snappers.grid({ x: 30, y: 30 })],
+      range: Infinity,
+      relativePoints: [{ x: 0, y: 0 }],   // 커서가 아닌 카드 좌상단 모서리를 격자에 맞춤
+    }),
+  ],
+  listeners: { move: /* 위와 동일한 이동 로직 */ },
+});</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.27/dist/interact.min.js"></script>
+<script>
+function makeMoveListener() {
+  return function move(event) {
+    const target = event.target;
+    const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+    const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+    target.style.transform = `translate(${x}px, ${y}px)`;
+    target.setAttribute('data-x', x);
+    target.setAttribute('data-y', y);
+  };
+}
+
+// ---- 섹션 1: 영역 제한 드래그 ----
+interact('#drag1').draggable({
+  listeners: { move: makeMoveListener() },
+  modifiers: [
+    interact.modifiers.restrictRect({ restriction: 'parent', endOnly: true }),
+  ],
+});
+
+// ---- 섹션 2: 리사이즈 ----
+interact('#box2').resizable({
+  edges: { left: true, right: true, bottom: true, top: true },
+  listeners: {
+    move(event) {
+      const target = event.target;
+      let x = parseFloat(target.getAttribute('data-x')) || 0;
+      let y = parseFloat(target.getAttribute('data-y')) || 0;
+      x += event.deltaRect.left;
+      y += event.deltaRect.top;
+      target.style.width = `${event.rect.width}px`;
+      target.style.height = `${event.rect.height}px`;
+      target.style.transform = `translate(${x}px, ${y}px)`;
+      target.setAttribute('data-x', x);
+      target.setAttribute('data-y', y);
+    },
+  },
+  modifiers: [
+    interact.modifiers.restrictSize({ min: { width: 80, height: 60 } }),
+  ],
+});
+
+// ---- 섹션 3: 드래그 앤 드롭 ----
+(function section3() {
+  let sorted = 0;
+  const statEl = document.getElementById('s3-stat');
+
+  interact('.fish-card').draggable({
+    listeners: {
+      move: makeMoveListener(),
+      end(event) {
+        // 드롭에 실패하면 원위치로 되돌린다
+        if (!event.target.dataset.dropped) {
+          event.target.style.transform = '';
+          event.target.setAttribute('data-x', 0);
+          event.target.setAttribute('data-y', 0);
+        }
+      },
+    },
+  });
+
+  interact('#dropzone3').dropzone({
+    accept: '.fish-card',
+    overlap: 0.5,
+    ondragenter(event) {
+      event.target.classList.add('drop-active');
+    },
+    ondragleave(event) {
+      event.target.classList.remove('drop-active');
+    },
+    ondrop(event) {
+      event.target.classList.remove('drop-active');
+      const card = event.relatedTarget;
+      if (!card.dataset.dropped) {
+        card.dataset.dropped = 'true';
+        card.style.opacity = '0.4';
+        card.style.pointerEvents = 'none';
+        sorted++;
+        statEl.innerHTML = `선별 완료: <strong>${sorted}개</strong>`;
+      }
+    },
+  });
+})();
+
+// ---- 섹션 4: 격자 스냅 이동 ----
+interact('#drag4').draggable({
+  modifiers: [
+    interact.modifiers.snap({
+      targets: [interact.snappers.grid({ x: 30, y: 30 })],
+      range: Infinity,
+      relativePoints: [{ x: 0, y: 0 }],   // 커서가 아니라 카드 좌상단 모서리를 격자에 맞춘다
+    }),
+  ],
+  listeners: { move: makeMoveListener() },
+});
+</script>
+</body>
+</html>
