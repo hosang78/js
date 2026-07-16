@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Muuri</title>
+<script src="https://cdn.jsdelivr.net/npm/muuri@0.9.5/dist/muuri.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.active { background: #205fb0; }
+  button.ghost { background: #eef1f8; color: #333; }
+  button.ghost:hover { background: #dfe4f0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- muuri 그리드 공통 ---- */
+  .muuri-grid {
+    position: relative;
+    background: #fafbfd;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    min-height: 120px;
+  }
+  .muuri-item {
+    position: absolute;
+    display: block;
+    margin: 5px;
+    z-index: 1;
+  }
+  .muuri-item.muuri-item-dragging { z-index: 3; cursor: grabbing; }
+  .muuri-item.muuri-item-releasing { z-index: 2; }
+  .muuri-item.muuri-item-hidden { z-index: 0; }
+  .item-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 12.5px;
+    cursor: grab;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .item-content .name { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+  .item-content .meta { opacity: 0.9; font-size: 11.5px; }
+  .c-blue { background: #4f7dff; }
+  .c-aqua { background: #1baf7a; }
+  .c-yellow { background: #eda100; }
+  .c-green { background: #008300; }
+  .c-violet { background: #4a3aa7; }
+  .c-red { background: #e34948; }
+  .c-magenta { background: #e87ba4; }
+  .c-orange { background: #eb6834; }
+
+  .size-s { width: 110px; height: 80px; }
+  .size-m { width: 150px; height: 100px; }
+  .size-l { width: 190px; height: 120px; }
+</style>
+</head>
+<body>
+
+  <h1>Muuri 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Muuri</strong>는 카드 크기가 제각각이어도 빈틈없이 채워주는 빈패킹(bin-packing) 그리드
+    레이아웃 라이브러리입니다. 드래그로 순서를 바꾸거나, 필터링·정렬하거나, 항목을 동적으로
+    더하고 뺄 때도 부드러운 애니메이션으로 재배치해줍니다.
+    <ul>
+      <li>카드 크기가 달라도 빈틈없이 배치하는 <strong>빈패킹 그리드 + 드래그 정렬</strong></li>
+      <li><code class="inline">filter()</code>로 하는 <strong>조건별 카드 필터링</strong></li>
+      <li><code class="inline">sort()</code>로 하는 <strong>기준별 정렬</strong>(위판량 · 이름)</li>
+      <li><code class="inline">add()</code> / <code class="inline">remove()</code>로 하는 <strong>카드 동적 추가·삭제</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판장 이름과 위판량 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며,
+      실제 수협중앙회의 통계·조직과 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 빈패킹 그리드 + 드래그 정렬</h2>
+    <div class="desc">
+      카드마다 크기가 다르지만 Muuri가 빈 공간 없이 자동으로 채워 배치합니다. 카드를 마우스로 눌러
+      드래그하면 순서가 바뀌고 나머지 카드들이 애니메이션과 함께 다시 정렬됩니다.
+    </div>
+    <div class="muuri-grid" id="grid1" style="height: 400px;"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const grid1 = new Muuri('#grid1', {
+  dragEnabled: true,
+  layout: { fillGaps: true },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 조건별 필터링</h2>
+    <div class="desc">
+      버튼을 눌러 어종별로 카드를 필터링합니다. 조건에 맞지 않는 카드는 숨겨지고, 남은 카드들이
+      빈 공간을 채우며 다시 배치됩니다.
+    </div>
+    <div class="controls">
+      <button class="active" data-filter="all">전체</button>
+      <button data-filter="고등어">고등어</button>
+      <button data-filter="갈치">갈치</button>
+      <button data-filter="오징어">오징어</button>
+      <button data-filter="기타">기타</button>
+    </div>
+    <div class="muuri-grid" id="grid2" style="height: 340px;"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>grid2.filter((item) => {
+  if (type === 'all') return true;
+  return item.getElement().dataset.species === type;
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 기준별 정렬</h2>
+    <div class="desc">
+      위판량이 많은 순, 이름 가나다순으로 정렬해봅니다. 정렬된 순서대로 카드가 애니메이션과 함께
+      이동합니다.
+    </div>
+    <div class="controls">
+      <button data-sort="volume-desc">위판량 많은 순</button>
+      <button data-sort="volume-asc">위판량 적은 순</button>
+      <button data-sort="name">이름순</button>
+    </div>
+    <div class="muuri-grid" id="grid3" style="height: 340px;"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>grid3.sort((a, b) => {
+  const va = Number(a.getElement().dataset.volume);
+  const vb = Number(b.getElement().dataset.volume);
+  return vb - va; // 위판량 많은 순
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 카드 동적 추가 · 삭제</h2>
+    <div class="desc">
+      버튼을 누르면 <code class="inline">add()</code>로 새 카드가 즉시 그리드에 들어오고,
+      <code class="inline">remove()</code>로 마지막 카드가 빠지면서 나머지가 다시 배치됩니다.
+    </div>
+    <div class="controls">
+      <button id="s4-add">위판장 카드 추가</button>
+      <button id="s4-remove" class="ghost">마지막 카드 삭제</button>
+    </div>
+    <div class="muuri-grid" id="grid4" style="height: 340px;"></div>
+    <div class="stat-box" id="s4-stat">카드 6개</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const el = document.createElement('div');
+el.className = 'muuri-item size-m';
+el.innerHTML = '&lt;div class="item-content c-blue"&gt;...&lt;/div&gt;';
+grid4.getElement().appendChild(el);
+grid4.add(el);
+
+const items = grid4.getItems();
+const last = items[items.length - 1];
+grid4.remove([last], { removeElements: true });</pre>
+    </details>
+  </section>
+
+<script>
+  const COLORS = ['c-blue', 'c-aqua', 'c-yellow', 'c-green', 'c-violet', 'c-red', 'c-magenta', 'c-orange'];
+
+  const PORTS = [
+    { name: 'A위판장', region: '부산', species: '고등어', volume: 820, size: 'l' },
+    { name: 'B위판장', region: '포항', species: '갈치', volume: 340, size: 's' },
+    { name: 'C위판장', region: '여수', species: '오징어', volume: 560, size: 'm' },
+    { name: 'D위판장', region: '속초', species: '고등어', volume: 610, size: 'm' },
+    { name: 'E위판장', region: '목포', species: '기타', volume: 210, size: 's' },
+    { name: 'F위판장', region: '통영', species: '갈치', volume: 470, size: 'm' },
+    { name: 'G위판장', region: '완도', species: '오징어', volume: 730, size: 'l' },
+    { name: 'H위판장', region: '군산', species: '기타', volume: 290, size: 's' },
+  ];
+
+  function makeItem(port, colorIdx) {
+    const el = document.createElement('div');
+    el.className = `muuri-item size-${port.size}`;
+    el.dataset.species = port.species;
+    el.dataset.volume = port.volume;
+    el.dataset.name = port.name;
+    el.innerHTML = `<div class="item-content ${COLORS[colorIdx % COLORS.length]}">
+      <div class="name">${port.name}</div>
+      <div class="meta">${port.region} · ${port.species}</div>
+      <div class="meta">${port.volume.toLocaleString()}kg</div>
+    </div>`;
+    return el;
+  }
+
+  // ---- 섹션 1: 빈패킹 그리드 + 드래그 정렬 ----
+  (function section1() {
+    const gridEl = document.getElementById('grid1');
+    PORTS.forEach((port, i) => gridEl.appendChild(makeItem(port, i)));
+    new Muuri('#grid1', {
+      dragEnabled: true,
+      layout: { fillGaps: true },
+    });
+  })();
+
+  // ---- 섹션 2: 필터링 ----
+  (function section2() {
+    const gridEl = document.getElementById('grid2');
+    PORTS.forEach((port, i) => gridEl.appendChild(makeItem(port, i)));
+    const grid = new Muuri('#grid2', {
+      layout: { fillGaps: true },
+    });
+
+    document.querySelectorAll('[data-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-filter]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const type = btn.dataset.filter;
+        grid.filter((item) => {
+          if (type === 'all') return true;
+          return item.getElement().dataset.species === type;
+        });
+      });
+    });
+  })();
+
+  // ---- 섹션 3: 정렬 ----
+  (function section3() {
+    const gridEl = document.getElementById('grid3');
+    PORTS.forEach((port, i) => gridEl.appendChild(makeItem(port, i)));
+    const grid = new Muuri('#grid3', {
+      layout: { fillGaps: true },
+    });
+
+    document.querySelectorAll('[data-sort]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.sort;
+        grid.sort((a, b) => {
+          if (mode === 'name') {
+            return a.getElement().dataset.name.localeCompare(b.getElement().dataset.name, 'ko');
+          }
+          const va = Number(a.getElement().dataset.volume);
+          const vb = Number(b.getElement().dataset.volume);
+          return mode === 'volume-desc' ? vb - va : va - vb;
+        });
+      });
+    });
+  })();
+
+  // ---- 섹션 4: 동적 추가 · 삭제 ----
+  (function section4() {
+    const gridEl = document.getElementById('grid4');
+    const initial = PORTS.slice(0, 6);
+    initial.forEach((port, i) => gridEl.appendChild(makeItem(port, i)));
+    const grid = new Muuri('#grid4', {
+      layout: { fillGaps: true },
+    });
+
+    const statEl = document.getElementById('s4-stat');
+    let seq = initial.length;
+    const extraNames = ['I위판장', 'J위판장', 'K위판장', 'L위판장', 'M위판장'];
+    const sizes = ['s', 'm', 'l'];
+    const species = ['고등어', '갈치', '오징어', '기타'];
+
+    function updateStat() {
+      statEl.innerHTML = `카드 <strong>${grid.getItems().length}</strong>개`;
+    }
+
+    document.getElementById('s4-add').addEventListener('click', () => {
+      const port = {
+        name: extraNames[seq % extraNames.length] + (seq >= extraNames.length ? ` ${seq}` : ''),
+        region: '신규',
+        species: species[seq % species.length],
+        volume: 150 + ((seq * 97) % 700),
+        size: sizes[seq % sizes.length],
+      };
+      const el = makeItem(port, seq);
+      gridEl.appendChild(el);
+      grid.add(el);
+      seq++;
+      updateStat();
+    });
+
+    document.getElementById('s4-remove').addEventListener('click', () => {
+      const items = grid.getItems();
+      if (items.length === 0) return;
+      grid.remove([items[items.length - 1]], { removeElements: true });
+      updateStat();
+    });
+  })();
+</script>
+</body>
+</html>
