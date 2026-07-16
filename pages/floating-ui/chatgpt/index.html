@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Floating UI 종합 기능 샘플</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;--panel:#fff;--ink:#142033;--muted:#65738a;--line:#dbe3ef;
+      --brand:#3659e3;--brand2:#6d4aff;--good:#14845c;--warn:#b36a00;--danger:#c53c48;
+      --shadow:0 16px 45px rgba(25,44,82,.14);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .topbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .topbar-inner{max-width:1450px;margin:auto;padding:14px 22px;display:flex;align-items:center;gap:14px}
+    .logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;font-weight:900;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 9px 22px rgba(54,89,227,.28)}
+    .title-wrap{min-width:0}
+    .title-wrap h1{font-size:20px;margin:0}
+    .title-wrap p{font-size:12px;color:var(--muted);margin:3px 0 0}
+    .top-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+    .btn,.chip{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;padding:9px 12px;font-weight:700}
+    .btn:hover,.chip:hover{border-color:#aab9d0;background:#f8faff}
+    .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+    .btn.danger{color:var(--danger)}
+    .layout{max-width:1450px;margin:0 auto;display:grid;grid-template-columns:235px minmax(0,1fr);gap:20px;padding:22px}
+    .sidebar{position:sticky;top:92px;align-self:start;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:0 8px 24px rgba(25,44,82,.06)}
+    .sidebar a{display:block;padding:10px 12px;border-radius:9px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:700}
+    .sidebar a:hover{background:#eef2ff;color:var(--brand)}
+    main{min-width:0}
+    .hero{background:linear-gradient(135deg,#17244a,#293d85 58%,#6744bd);border-radius:24px;color:#fff;padding:30px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+    .hero:after{content:"";position:absolute;width:350px;height:350px;border:55px solid rgba(255,255,255,.07);border-radius:50%;right:-130px;top:-160px}
+    .hero h2{margin:0 0 10px;font-size:32px}
+    .hero p{margin:0;max-width:820px;line-height:1.65;color:#e6eaff}
+    .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+    .badge{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);font-size:12px;font-weight:800}
+    .section{margin-top:22px}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:11px}
+    .section h2{margin:0;font-size:21px}
+    .section-desc{color:var(--muted);font-size:13px;margin-top:5px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px}
+    .card{grid-column:span 4;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;min-height:180px;box-shadow:0 8px 26px rgba(25,44,82,.055)}
+    .card.wide{grid-column:span 8}.card.full{grid-column:1/-1}.card.half{grid-column:span 6}
+    .card h3{font-size:16px;margin:0 0 7px}
+    .card p{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 15px}
+    .demo-zone{min-height:92px;border:1px dashed #b8c4d8;border-radius:14px;background:linear-gradient(135deg,#fbfcff,#f3f6fb);display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;position:relative;overflow:auto}
+    .demo-zone.tall{height:260px;align-items:flex-start;justify-content:flex-start}
+    .anchor{border:0;border-radius:11px;padding:11px 16px;background:#17244a;color:#fff;font-weight:800;box-shadow:0 8px 18px rgba(23,36,74,.22)}
+    .anchor.alt{background:var(--brand)}.anchor.good{background:var(--good)}
+    .floating{position:absolute;top:0;left:0;width:max-content;max-width:min(320px,calc(100vw - 20px));z-index:1000;background:#172033;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.4;box-shadow:0 12px 35px rgba(8,18,39,.25)}
+    .floating.light{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow)}
+    .floating[data-hidden="true"]{display:none}
+    .arrow{position:absolute;width:10px;height:10px;background:inherit;transform:rotate(45deg)}
+    .popover{padding:16px;width:270px}
+    .popover h4{margin:0 0 5px}.popover p{margin:0 0 12px;color:var(--muted);font-size:12px}
+    .menu{padding:6px;min-width:190px}
+    .menu button{width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:9px 10px;color:var(--ink)}
+    .menu button:hover,.menu button:focus{background:#eef2ff;outline:none;color:var(--brand)}
+    .menu hr{border:0;border-top:1px solid var(--line);margin:5px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .field{display:grid;gap:4px;min-width:120px}
+    .field label{font-size:11px;color:var(--muted);font-weight:800}
+    select,input[type=number],input[type=range],input[type=text]{border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff;color:var(--ink)}
+    .switch{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:700;color:var(--muted)}
+    .playground{height:390px;border-radius:15px;border:1px solid var(--line);background:
+      linear-gradient(#edf1f7 1px,transparent 1px),linear-gradient(90deg,#edf1f7 1px,transparent 1px),#fff;
+      background-size:24px 24px;position:relative;overflow:hidden;margin-top:13px}
+    #dragRef{position:absolute;left:44%;top:44%;touch-action:none;user-select:none}
+    #playFloat{width:220px}
+    .coords{font:12px ui-monospace,SFMono-Regular,Consolas,monospace;color:#d7e2ff;margin-top:6px}
+    .scroll-box{height:220px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#f8faff;padding:420px 24px 80px}
+    .selection-area{line-height:1.9;padding:20px;background:#fff;border:1px solid var(--line);border-radius:12px;color:#39465a}
+    .status{font-size:12px;padding:8px 10px;border-radius:9px;background:#eef2ff;color:#334fb8;font-weight:700}
+    .api-table{width:100%;border-collapse:collapse;font-size:13px}
+    .api-table th,.api-table td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+    .api-table th{color:var(--muted);font-size:11px;text-transform:uppercase}
+    code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#eef2f7;border-radius:5px;padding:2px 5px}
+    .toast-stack{position:fixed;right:18px;bottom:18px;z-index:2000;display:grid;gap:9px}
+    .toast{background:#15223d;color:#fff;border-radius:12px;padding:12px 14px;min-width:240px;box-shadow:var(--shadow);animation:toastIn .18s ease-out}
+    @keyframes toastIn{from{transform:translateY(10px);opacity:0}}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .kbd{font-size:11px;border:1px solid #bac5d6;border-bottom-width:2px;border-radius:5px;padding:1px 5px;background:#fff;color:#42506a}
+    footer{padding:35px 0 55px;color:var(--muted);font-size:12px;text-align:center}
+    @media(max-width:1050px){.layout{grid-template-columns:1fr}.sidebar{display:none}.card{grid-column:span 6}.card.wide{grid-column:1/-1}}
+    @media(max-width:680px){.layout{padding:12px}.topbar-inner{padding:10px 12px}.top-actions{display:none}.hero{padding:22px}.hero h2{font-size:25px}.card,.card.half,.card.wide{grid-column:1/-1}.grid{gap:11px}.playground{height:340px}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">FU</div>
+    <div class="title-wrap">
+      <h1>Floating UI 종합 기능 샘플</h1>
+      <p>Vanilla DOM · 단일 HTML · @floating-ui/dom 1.7.6</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="rtlBtn">RTL 전환</button>
+      <button class="btn" id="closeAllBtn">모두 닫기</button>
+      <button class="btn primary" id="toastBtn">토스트 테스트</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" aria-label="샘플 목차">
+    <a href="#basic">기본 배치·화살표</a>
+    <a href="#interactions">상호작용 컴포넌트</a>
+    <a href="#middleware">미들웨어 실험실</a>
+    <a href="#virtual">가상 요소·커서</a>
+    <a href="#advanced">고급 동작</a>
+    <a href="#reference">API 요약</a>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <h2>떠 있는 UI를 정확하고 안전하게 배치</h2>
+      <p>툴팁, 팝오버, 드롭다운, 컨텍스트 메뉴, 선택 영역 도구막대처럼 기준 요소에 붙어 움직이는 UI를 직접 시험한다. 스크롤·리사이즈·충돌·화면 경계·동적 크기 변화까지 포함한다.</p>
+      <div class="badges">
+        <span class="badge">computePosition</span><span class="badge">autoUpdate</span>
+        <span class="badge">offset</span><span class="badge">flip</span><span class="badge">shift</span>
+        <span class="badge">arrow</span><span class="badge">size</span><span class="badge">hide</span>
+        <span class="badge">inline</span><span class="badge">autoPlacement</span><span class="badge">Virtual Element</span>
+      </div>
+    </section>
+
+    <section class="section" id="basic">
+      <div class="section-head"><div><h2>1. 기본 배치와 화살표</h2><div class="section-desc">12개 placement, offset, flip, shift, arrow 조합</div></div></div>
+      <div class="grid">
+        <article class="card">
+          <h3>호버·포커스 툴팁</h3><p>마우스와 키보드 포커스를 모두 지원하며 화면 가장자리에서 자동 반전한다.</p>
+          <div class="demo-zone">
+            <button class="anchor" id="tipRef" aria-describedby="tipFloat">도움말 보기</button>
+          </div>
+          <div id="tipFloat" class="floating" role="tooltip" data-hidden="true">Hover와 focus 모두 지원<span class="arrow"></span></div>
+        </article>
+
+        <article class="card">
+          <h3>배치 선택</h3><p>placement 값을 바꾸어 기준 요소의 12개 방향을 확인한다.</p>
+          <div class="controls">
+            <div class="field"><label for="placementSelect">PLACEMENT</label>
+              <select id="placementSelect">
+                <option>top</option><option>top-start</option><option>top-end</option>
+                <option>right</option><option>right-start</option><option>right-end</option>
+                <option selected>bottom</option><option>bottom-start</option><option>bottom-end</option>
+                <option>left</option><option>left-start</option><option>left-end</option>
+              </select>
+            </div>
+          </div>
+          <div class="demo-zone" style="margin-top:12px">
+            <button class="anchor alt" id="placementRef">기준 요소</button>
+          </div>
+          <div id="placementFloat" class="floating">bottom<span class="arrow"></span></div>
+        </article>
+
+        <article class="card">
+          <h3>자동 최적 배치</h3><p><code>autoPlacement()</code>가 사용 가능한 공간을 비교해 가장 여유로운 방향을 고른다.</p>
+          <div class="demo-zone">
+            <button class="anchor good" id="autoRef">자동 방향</button>
+          </div>
+          <div id="autoFloat" class="floating light">선택된 방향: <b id="autoSide">-</b></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="interactions">
+      <div class="section-head"><div><h2>2. 실전 상호작용</h2><div class="section-desc">클릭 팝오버, 드롭다운, 외부 클릭, Escape, 키보드 이동</div></div></div>
+      <div class="grid">
+        <article class="card">
+          <h3>클릭 팝오버</h3><p>외부 클릭과 <span class="kbd">Esc</span>로 닫히고 첫 입력 요소로 포커스가 이동한다.</p>
+          <div class="demo-zone"><button class="anchor" id="popRef" aria-expanded="false">프로필 편집</button></div>
+          <div id="popFloat" class="floating light popover" data-hidden="true" role="dialog" aria-label="프로필 편집">
+            <h4>표시 이름</h4><p>간단한 팝오버 폼 예시</p>
+            <input id="nameInput" type="text" value="Floating UI 사용자" style="width:100%">
+            <div class="controls" style="margin-top:10px"><button class="btn primary" id="savePop">저장</button><button class="btn" id="cancelPop">취소</button></div>
+            <span class="arrow"></span>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>키보드 드롭다운</h3><p>위·아래 화살표, Home, End, Escape로 메뉴를 조작한다.</p>
+          <div class="demo-zone"><button class="anchor alt" id="menuRef" aria-haspopup="menu" aria-expanded="false">작업 메뉴 ▾</button></div>
+          <div id="menuFloat" class="floating light menu" role="menu" data-hidden="true">
+            <button role="menuitem">새 문서</button><button role="menuitem">복제</button><button role="menuitem">이름 변경</button>
+            <hr><button role="menuitem" style="color:var(--danger)">삭제</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <h3>크기 동기화 드롭다운</h3><p><code>size()</code>로 기준 버튼의 폭에 맞추고 사용 가능한 최대 높이를 적용한다.</p>
+          <div class="demo-zone"><button class="anchor good" id="sizeRef" style="width:230px">부서 선택 ▾</button></div>
+          <div id="sizeFloat" class="floating light menu" data-hidden="true" style="overflow:auto">
+            <button>ICT전략실</button><button>기획조정실</button><button>회원지원부</button><button>어업양식지원부</button><button>홍보부</button><button>정보보호본부</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="middleware">
+      <div class="section-head"><div><h2>3. 미들웨어 실험실</h2><div class="section-desc">기준 요소를 드래그하고 옵션별 결과 좌표와 middlewareData 확인</div></div></div>
+      <article class="card full">
+        <div class="controls">
+          <div class="field"><label>PLACEMENT</label><select id="pgPlacement"><option>top</option><option>right</option><option selected>bottom-start</option><option>bottom</option><option>bottom-end</option><option>left</option></select></div>
+          <div class="field"><label>OFFSET</label><input id="pgOffset" type="range" min="-10" max="40" value="10"><span id="pgOffsetOut" class="status">10px</span></div>
+          <label class="switch"><input id="pgFlip" type="checkbox" checked> flip</label>
+          <label class="switch"><input id="pgShift" type="checkbox" checked> shift</label>
+          <label class="switch"><input id="pgArrow" type="checkbox" checked> arrow</label>
+          <label class="switch"><input id="pgHide" type="checkbox" checked> hide</label>
+          <label class="switch"><input id="pgCustom" type="checkbox"> custom middleware</label>
+          <button class="btn" id="randomRef">임의 위치</button>
+        </div>
+        <div class="playground" id="playground">
+          <button class="anchor" id="dragRef">드래그</button>
+          <div id="playFloat" class="floating">
+            <b>Floating element</b>
+            <div class="coords" id="pgCoords">계산 중...</div>
+            <span class="arrow" id="pgArrowEl"></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="section" id="virtual">
+      <div class="section-head"><div><h2>4. 가상 기준 요소</h2><div class="section-desc">실제 DOM 요소가 아닌 좌표·선택 영역을 기준으로 배치</div></div></div>
+      <div class="grid">
+        <article class="card half">
+          <h3>우클릭 컨텍스트 메뉴</h3><p>점선 영역에서 우클릭 또는 길게 누르면 포인터 좌표를 Virtual Element로 사용한다.</p>
+          <div class="demo-zone tall" id="contextArea">
+            <span class="status">빈 공간에서 우클릭</span>
+          </div>
+          <div id="contextFloat" class="floating light menu" data-hidden="true">
+            <button>여기에 붙여넣기</button><button>새 폴더</button><button>새로고침</button><hr><button>속성</button>
+          </div>
+        </article>
+
+        <article class="card half">
+          <h3>커서를 따라가는 툴팁</h3><p>마우스 좌표를 가상 기준점으로 갱신하며 <code>computePosition()</code>을 다시 실행한다.</p>
+          <div class="demo-zone tall" id="followArea" style="align-items:center;justify-content:center">
+            <span class="status">마우스를 움직여 보기</span>
+          </div>
+          <div id="followFloat" class="floating" data-hidden="true">x: 0, y: 0</div>
+        </article>
+
+        <article class="card full">
+          <h3>텍스트 선택 도구막대 · inline()</h3><p>아래 문장을 드래그해 선택하면 여러 줄에 걸친 Range의 클라이언트 사각형을 기준으로 도구막대를 배치한다.</p>
+          <div class="selection-area" id="selectionArea">
+            Floating UI는 툴팁과 팝오버처럼 기준 요소 주변에 떠 있는 인터페이스의 위치를 계산한다.
+            긴 문장을 여러 줄에 걸쳐 선택해도 inline 미들웨어를 이용하면 선택된 텍스트의 실제 사각형 집합을 기준으로 자연스럽게 도구막대를 표시할 수 있다.
+          </div>
+          <div id="selectionFloat" class="floating light menu" data-hidden="true" style="display:flex;min-width:auto">
+            <button aria-label="굵게"><b>B</b></button><button aria-label="기울임"><i>I</i></button><button aria-label="복사" id="copySelection">복사</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="advanced">
+      <div class="section-head"><div><h2>5. 고급 동작</h2><div class="section-desc">스크롤 추적, hide, fixed strategy, 동적 리사이즈</div></div></div>
+      <div class="grid">
+        <article class="card half">
+          <h3>스크롤 컨테이너 자동 추적</h3><p><code>autoUpdate()</code>가 조상 스크롤과 요소 크기 변화를 감시한다.</p>
+          <div class="scroll-box" id="scrollBox">
+            <button class="anchor" id="scrollRef">스크롤 속 기준</button>
+          </div>
+          <div id="scrollFloat" class="floating">스크롤해도 따라감<span class="arrow"></span></div>
+        </article>
+
+        <article class="card half">
+          <h3>동적 콘텐츠와 ResizeObserver</h3><p>떠 있는 요소의 내용과 크기가 바뀌어도 자동으로 위치를 다시 계산한다.</p>
+          <div class="demo-zone"><button class="anchor alt" id="resizeRef">동적 팝업</button></div>
+          <div id="resizeFloat" class="floating light popover" data-hidden="true">
+            <b>내용 크기 변경</b><p id="resizeText">짧은 내용</p>
+            <button class="btn" id="growBtn">내용 늘리기</button>
+          </div>
+        </article>
+
+        <article class="card full">
+          <h3>hide() 감지</h3><p>기준 요소가 클리핑 영역 밖으로 사라질 때 <code>referenceHidden</code> 상태를 이용해 떠 있는 요소를 감춘다.</p>
+          <div class="demo-zone" style="height:120px;overflow:auto;display:block;padding:12px" id="hideScroller">
+            <div style="height:140px;padding-top:8px"><button class="anchor good" id="hideRef">기준 요소</button></div>
+            <div style="height:160px;color:var(--muted);font-size:12px">아래로 스크롤하면 기준 요소가 사라진다.</div>
+          </div>
+          <div id="hideFloat" class="floating">referenceHidden: <b id="hideState">false</b></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="reference">
+      <div class="section-head"><div><h2>6. 포함 기능 요약</h2><div class="section-desc">샘플에서 실제로 호출되는 주요 DOM API</div></div></div>
+      <article class="card full">
+        <table class="api-table">
+          <thead><tr><th>API</th><th>역할</th><th>샘플 위치</th></tr></thead>
+          <tbody>
+            <tr><td><code>computePosition()</code></td><td>기준 요소와 floating 요소의 x/y 좌표 계산</td><td>전체</td></tr>
+            <tr><td><code>autoUpdate()</code></td><td>스크롤·리사이즈·레이아웃 이동·요소 크기 변경 자동 추적</td><td>툴팁, 팝오버, 스크롤, 동적 콘텐츠</td></tr>
+            <tr><td><code>offset()</code></td><td>기준 요소와의 간격 조정</td><td>전체 및 실험실</td></tr>
+            <tr><td><code>flip()</code></td><td>공간 부족 시 반대편 또는 대체 방향으로 전환</td><td>툴팁, 팝오버, 실험실</td></tr>
+            <tr><td><code>shift()</code></td><td>화면 경계를 벗어나지 않도록 같은 축에서 이동</td><td>전체</td></tr>
+            <tr><td><code>arrow()</code></td><td>화살표 좌표 계산</td><td>툴팁, 배치 선택, 실험실</td></tr>
+            <tr><td><code>size()</code></td><td>가용 폭·높이에 따라 스타일 적용</td><td>크기 동기화 드롭다운</td></tr>
+            <tr><td><code>hide()</code></td><td>기준 요소가 가려지거나 벗어난 상태 감지</td><td>실험실, hide 감지</td></tr>
+            <tr><td><code>inline()</code></td><td>여러 ClientRect를 가진 인라인·선택 영역 처리</td><td>텍스트 선택 도구막대</td></tr>
+            <tr><td><code>autoPlacement()</code></td><td>가장 넓은 공간을 자동 선택</td><td>자동 최적 배치</td></tr>
+            <tr><td><code>VirtualElement</code></td><td>포인터 좌표나 Range를 가상의 기준 요소로 사용</td><td>컨텍스트 메뉴, 커서 추적, 선택 영역</td></tr>
+            <tr><td>Custom middleware</td><td>좌표 및 사용자 데이터 확장</td><td>미들웨어 실험실</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </section>
+
+    <footer>Floating UI 공식 UMD 빌드를 CDN으로 불러오는 교육용 샘플 · 인터넷 연결 필요</footer>
+  </main>
+</div>
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@floating-ui/core@1.7.5"></script>
+<script src="https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.7.6"></script>
+<script>
+(() => {
+  'use strict';
+  const F = window.FloatingUIDOM;
+  if (!F) {
+    alert('Floating UI를 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근 정책을 확인하세요.');
+    return;
+  }
+  const {computePosition, autoUpdate, offset, flip, shift, arrow, size, hide, inline, autoPlacement} = F;
+  const cleanups = new Set();
+  const $ = (s, root=document) => root.querySelector(s);
+  const $$ = (s, root=document) => [...root.querySelectorAll(s)];
+  const setOpen = (el, open) => el.dataset.hidden = String(!open);
+  const isOpen = el => el.dataset.hidden !== 'true';
+  const addCleanup = fn => { cleanups.add(fn); return () => { fn(); cleanups.delete(fn); }; };
+
+  function applyArrow(floating, arrowEl, placement, middlewareData) {
+    if (!arrowEl || !middlewareData.arrow) return;
+    const {x, y} = middlewareData.arrow;
+    const side = placement.split('-')[0];
+    const staticSide = {top:'bottom', right:'left', bottom:'top', left:'right'}[side];
+    Object.assign(arrowEl.style, {
+      left: x != null ? `${x}px` : '',
+      top: y != null ? `${y}px` : '',
+      right: '',
+      bottom: '',
+      [staticSide]: '-5px'
+    });
+  }
+
+  async function position(reference, floating, options={}, arrowEl=null) {
+    const result = await computePosition(reference, floating, options);
+    Object.assign(floating.style, {left:`${result.x}px`, top:`${result.y}px`});
+    applyArrow(floating, arrowEl, result.placement, result.middlewareData);
+    return result;
+  }
+
+  function mountAuto(reference, floating, update, options) {
+    const stop = autoUpdate(reference, floating, update, options);
+    return addCleanup(stop);
+  }
+
+  function toast(message) {
+    const el = document.createElement('div');
+    el.className = 'toast'; el.textContent = message;
+    $('#toastStack').append(el);
+    setTimeout(() => el.remove(), 2400);
+  }
+
+  // 1) Hover/focus tooltip
+  {
+    const ref=$('#tipRef'), fl=$('#tipFloat'), ar=$('.arrow',fl);
+    let stop=null, hover=false, focus=false, timer=0;
+    const update=()=>position(ref,fl,{placement:'top',middleware:[offset(9),flip(),shift({padding:8}),arrow({element:ar,padding:6})]},ar);
+    const sync=()=>{
+      clearTimeout(timer);
+      if(hover||focus){ setOpen(fl,true); stop ||= mountAuto(ref,fl,update); update(); }
+      else timer=setTimeout(()=>{setOpen(fl,false);stop?.();stop=null;},120);
+    };
+    ref.addEventListener('mouseenter',()=>{hover=true;sync()});
+    ref.addEventListener('mouseleave',()=>{hover=false;sync()});
+    ref.addEventListener('focus',()=>{focus=true;sync()});
+    ref.addEventListener('blur',()=>{focus=false;sync()});
+  }
+
+  // Placement selector
+  {
+    const ref=$('#placementRef'), fl=$('#placementFloat'), ar=$('.arrow',fl), sel=$('#placementSelect');
+    const update=async()=>{const r=await position(ref,fl,{placement:sel.value,middleware:[offset(10),shift({padding:7}),arrow({element:ar,padding:6})]},ar);fl.childNodes[0].nodeValue=r.placement;};
+    mountAuto(ref,fl,update); sel.addEventListener('change',update);
+  }
+
+  // autoPlacement
+  {
+    const ref=$('#autoRef'), fl=$('#autoFloat');
+    const update=async()=>{const r=await position(ref,fl,{middleware:[autoPlacement({padding:10}),shift({padding:8})]});$('#autoSide').textContent=r.placement;};
+    mountAuto(ref,fl,update);
+  }
+
+  // Generic dismissible popover
+  function createClickFloating({ref, fl, middleware, arrowEl, onOpen, onClose}) {
+    let stop=null;
+    const update=()=>position(ref,fl,middleware(),arrowEl);
+    const close=()=>{
+      if(!isOpen(fl)) return;
+      setOpen(fl,false); ref.setAttribute('aria-expanded','false'); stop?.(); stop=null; onClose?.();
+    };
+    const open=()=>{
+      if(isOpen(fl)) return;
+      setOpen(fl,true); ref.setAttribute('aria-expanded','true'); stop=mountAuto(ref,fl,update); update(); onOpen?.();
+    };
+    ref.addEventListener('click',e=>{e.stopPropagation();isOpen(fl)?close():open()});
+    document.addEventListener('pointerdown',e=>{if(isOpen(fl)&&!fl.contains(e.target)&&!ref.contains(e.target))close()});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&isOpen(fl)){close();ref.focus()}});
+    return {open,close,update};
+  }
+
+  // Popover
+  {
+    const ref=$('#popRef'), fl=$('#popFloat'), ar=$('.arrow',fl);
+    const pop=createClickFloating({
+      ref,fl,arrowEl:ar,
+      middleware:()=>({placement:'bottom-start',middleware:[offset(10),flip({fallbackAxisSideDirection:'end'}),shift({padding:10}),arrow({element:ar,padding:12})]}),
+      onOpen:()=>setTimeout(()=>$('#nameInput').focus(),0)
+    });
+    $('#cancelPop').onclick=pop.close;
+    $('#savePop').onclick=()=>{toast('프로필을 저장했습니다.');pop.close();ref.focus()};
+  }
+
+  // Keyboard menu
+  {
+    const ref=$('#menuRef'), fl=$('#menuFloat'), items=$$('[role=menuitem]',fl);
+    const menu=createClickFloating({
+      ref,fl,middleware:()=>({placement:'bottom-start',middleware:[offset(6),flip(),shift({padding:8})]}),
+      onOpen:()=>setTimeout(()=>items[0].focus(),0)
+    });
+    fl.addEventListener('keydown',e=>{
+      const i=items.indexOf(document.activeElement);
+      if(e.key==='ArrowDown'){e.preventDefault();items[(i+1+items.length)%items.length].focus()}
+      if(e.key==='ArrowUp'){e.preventDefault();items[(i-1+items.length)%items.length].focus()}
+      if(e.key==='Home'){e.preventDefault();items[0].focus()}
+      if(e.key==='End'){e.preventDefault();items.at(-1).focus()}
+      if(e.key==='Escape'){menu.close();ref.focus()}
+    });
+    items.forEach(x=>x.onclick=()=>{toast(`${x.textContent} 선택`);menu.close();ref.focus()});
+  }
+
+  // size middleware
+  {
+    const ref=$('#sizeRef'), fl=$('#sizeFloat');
+    createClickFloating({
+      ref,fl,middleware:()=>({
+        placement:'bottom-start',
+        middleware:[
+          offset(6),flip(),shift({padding:8}),
+          size({padding:8,apply({availableHeight,rects,elements}) {
+            Object.assign(elements.floating.style,{
+              width:`${rects.reference.width}px`,
+              maxHeight:`${Math.max(80,availableHeight)}px`
+            });
+          }})
+        ]
+      })
+    });
+    $$('button',fl).forEach(x=>x.onclick=()=>{ref.textContent=x.textContent+' ▾';toast(`${x.textContent} 선택`)});
+  }
+
+  // Playground
+  {
+    const area=$('#playground'), ref=$('#dragRef'), fl=$('#playFloat'), ar=$('#pgArrowEl');
+    const controls=['#pgPlacement','#pgOffset','#pgFlip','#pgShift','#pgArrow','#pgHide','#pgCustom'];
+    const customMiddleware={
+      name:'nudgeAndReport',
+      fn({x,y,placement}){return{x:x+3,y:y+3,data:{message:`${placement} + 3px`}}}
+    };
+    const update=async()=>{
+      const mids=[offset(Number($('#pgOffset').value))];
+      if($('#pgFlip').checked)mids.push(flip({fallbackAxisSideDirection:'start'}));
+      if($('#pgShift').checked)mids.push(shift({padding:8}));
+      if($('#pgArrow').checked)mids.push(arrow({element:ar,padding:8}));
+      if($('#pgHide').checked)mids.push(hide());
+      if($('#pgCustom').checked)mids.push(customMiddleware);
+      const r=await position(ref,fl,{placement:$('#pgPlacement').value,middleware:mids},$('#pgArrow').checked?ar:null);
+      ar.style.display=$('#pgArrow').checked?'block':'none';
+      const hidden=r.middlewareData.hide?.referenceHidden||false;
+      fl.style.visibility=hidden?'hidden':'visible';
+      $('#pgCoords').textContent=`x ${r.x.toFixed(1)} · y ${r.y.toFixed(1)} · ${r.placement}${r.middlewareData.nudgeAndReport?' · '+r.middlewareData.nudgeAndReport.message:''}`;
+    };
+    mountAuto(ref,fl,update);
+    controls.forEach(s=>$(s).addEventListener('input',()=>{$('#pgOffsetOut').textContent=$('#pgOffset').value+'px';update()}));
+    let dragging=false,dx=0,dy=0;
+    ref.addEventListener('pointerdown',e=>{dragging=true;ref.setPointerCapture(e.pointerId);const rr=ref.getBoundingClientRect();dx=e.clientX-rr.left;dy=e.clientY-rr.top});
+    ref.addEventListener('pointermove',e=>{
+      if(!dragging)return;
+      const a=area.getBoundingClientRect();
+      ref.style.left=Math.max(0,Math.min(a.width-ref.offsetWidth,e.clientX-a.left-dx))+'px';
+      ref.style.top=Math.max(0,Math.min(a.height-ref.offsetHeight,e.clientY-a.top-dy))+'px';
+      update();
+    });
+    ref.addEventListener('pointerup',()=>dragging=false);
+    $('#randomRef').onclick=()=>{
+      ref.style.left=Math.random()*(area.clientWidth-ref.offsetWidth)+'px';
+      ref.style.top=Math.random()*(area.clientHeight-ref.offsetHeight)+'px';update();
+    };
+  }
+
+  // Context menu with virtual element
+  {
+    const area=$('#contextArea'), fl=$('#contextFloat');
+    let point={x:0,y:0};
+    const virtual={getBoundingClientRect:()=>({x:point.x,y:point.y,top:point.y,left:point.x,right:point.x,bottom:point.y,width:0,height:0})};
+    const openAt=(x,y)=>{point={x,y};setOpen(fl,true);position(virtual,fl,{placement:'right-start',middleware:[offset(4),flip(),shift({padding:8})]})};
+    area.addEventListener('contextmenu',e=>{e.preventDefault();openAt(e.clientX,e.clientY)});
+    document.addEventListener('pointerdown',e=>{if(isOpen(fl)&&!fl.contains(e.target))setOpen(fl,false)});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(fl,false)});
+    $$('button',fl).forEach(x=>x.onclick=()=>{toast(x.textContent);setOpen(fl,false)});
+  }
+
+  // Cursor follower
+  {
+    const area=$('#followArea'), fl=$('#followFloat');
+    let point={x:0,y:0};
+    const virtual={getBoundingClientRect:()=>({x:point.x,y:point.y,top:point.y,left:point.x,right:point.x,bottom:point.y,width:0,height:0}),contextElement:area};
+    area.addEventListener('pointerenter',()=>setOpen(fl,true));
+    area.addEventListener('pointerleave',()=>setOpen(fl,false));
+    area.addEventListener('pointermove',e=>{point={x:e.clientX,y:e.clientY};fl.textContent=`x: ${Math.round(e.clientX)}, y: ${Math.round(e.clientY)}`;position(virtual,fl,{placement:'right-start',middleware:[offset(12),flip(),shift({padding:8})]})});
+  }
+
+  // Selection range + inline
+  {
+    const area=$('#selectionArea'), fl=$('#selectionFloat');
+    let currentRange=null;
+    const refresh=()=>{
+      const sel=window.getSelection();
+      if(!sel||sel.isCollapsed||!sel.rangeCount||!area.contains(sel.anchorNode)){setOpen(fl,false);currentRange=null;return}
+      currentRange=sel.getRangeAt(0).cloneRange();
+      const virtual={
+        getBoundingClientRect:()=>currentRange.getBoundingClientRect(),
+        getClientRects:()=>currentRange.getClientRects(),
+        contextElement:area
+      };
+      setOpen(fl,true);
+      position(virtual,fl,{placement:'top',middleware:[inline(),offset(7),flip(),shift({padding:8})]});
+    };
+    document.addEventListener('selectionchange',refresh);
+    $('#copySelection').onclick=async()=>{
+      const text=currentRange?.toString()||'';
+      if(text){try{await navigator.clipboard.writeText(text);toast('선택 내용을 복사했습니다.')}catch{toast('브라우저가 클립보드 접근을 차단했습니다.')}}
+    };
+  }
+
+  // Scroll auto update
+  {
+    const ref=$('#scrollRef'),fl=$('#scrollFloat'),ar=$('.arrow',fl);
+    const update=()=>position(ref,fl,{placement:'right',middleware:[offset(8),flip(),shift({padding:8}),arrow({element:ar,padding:6})]},ar);
+    mountAuto(ref,fl,update);
+  }
+
+  // ResizeObserver dynamic content
+  {
+    const ref=$('#resizeRef'),fl=$('#resizeFloat'),text=$('#resizeText');
+    const inst=createClickFloating({ref,fl,middleware:()=>({placement:'bottom',middleware:[offset(8),flip(),shift({padding:8})]})});
+    let long=false;
+    $('#growBtn').onclick=()=>{long=!long;text.textContent=long?'내용이 길어지면서 팝업의 폭과 높이가 달라졌다. autoUpdate의 elementResize가 ResizeObserver를 사용해 위치를 다시 맞춘다.':'짧은 내용';inst.update()};
+  }
+
+  // hide demo
+  {
+    const ref=$('#hideRef'),fl=$('#hideFloat');
+    const update=async()=>{
+      const r=await position(ref,fl,{placement:'right',middleware:[offset(8),shift({padding:6}),hide()]});
+      const hidden=!!r.middlewareData.hide?.referenceHidden;
+      $('#hideState').textContent=String(hidden);
+      fl.style.visibility=hidden?'hidden':'visible';
+    };
+    mountAuto(ref,fl,update);
+  }
+
+  // Global actions
+  $('#toastBtn').onclick=()=>toast('Floating UI 샘플이 정상 동작 중입니다.');
+  $('#closeAllBtn').onclick=()=>{
+    $$('.floating[data-hidden]').forEach(x=>setOpen(x,false));
+    $$('[aria-expanded]').forEach(x=>x.setAttribute('aria-expanded','false'));
+    toast('열린 UI를 모두 닫았습니다.');
+  };
+  $('#rtlBtn').onclick=()=>{
+    const rtl=document.documentElement.dir!=='rtl';
+    document.documentElement.dir=rtl?'rtl':'ltr';
+    $('#rtlBtn').textContent=rtl?'LTR 전환':'RTL 전환';
+    toast(rtl?'RTL 레이아웃 적용':'LTR 레이아웃 적용');
+    window.dispatchEvent(new Event('resize'));
+  };
+
+  window.addEventListener('beforeunload',()=>cleanups.forEach(fn=>fn()));
+})();
+</script>
+</body>
+</html>
