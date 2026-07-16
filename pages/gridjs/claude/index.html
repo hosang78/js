@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Grid.js</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridjs@6.2.0/dist/theme/mermaid.min.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .grid-wrap { max-width: 640px; }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .grade-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 12px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Grid.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Grid.js</strong>는 프레임워크에 종속되지 않는 순수 JS 테이블(데이터그리드) 라이브러리입니다.
+    배열 데이터만 넘기면 정렬·검색·페이지네이션이 자동으로 붙고, 셀 내용을 원하는 대로 커스터마이즈할
+    수 있습니다.
+    <ul>
+      <li><code class="inline">sort</code> + <code class="inline">search</code> + <code class="inline">pagination</code>이 자동으로 붙는 <strong>기본 테이블</strong></li>
+      <li><code class="inline">formatter</code> + <code class="inline">html()</code>로 만드는 <strong>커스텀 셀 렌더링</strong></li>
+      <li><code class="inline">fixedHeader</code>로 만드는 <strong>고정 헤더 스크롤 테이블</strong></li>
+      <li><code class="inline">updateConfig()</code> + <code class="inline">forceRender()</code>로 하는 <strong>동적 데이터 갱신</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계와 무관합니다. Grid.js(CDN) 하나만 사용하고 다른 외부 라이브러리나 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 테이블 (정렬 + 검색 + 페이지네이션)</h2>
+    <div class="desc">
+      배열 데이터와 열 이름만 넘겼습니다. 검색창·정렬 화살표·페이지 이동 버튼이 모두 기본으로
+      제공됩니다.
+    </div>
+    <div class="grid-wrap" id="grid1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new gridjs.Grid({
+  columns: ['위판장', '어종', '수량', '단가'],
+  data: records,             // [['A위판장','고등어',1200,4200], ...]
+  sort: true,
+  search: true,
+  pagination: { limit: 4 },
+}).render(document.getElementById('grid1'));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 커스텀 셀 포맷터</h2>
+    <div class="desc">
+      수량은 천 단위 구분 기호를 넣어 굵게, 수량에 따른 등급은 색이 있는 배지로 직접 렌더링했습니다.
+    </div>
+    <div class="grid-wrap" id="grid2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>{
+  name: '등급',
+  formatter: (cell, row) => {
+    const qty = row.cells[2].data;                 // 같은 행의 '수량' 열 값 참조
+    const grade = qty >= 1000 ? '상' : qty >= 600 ? '중' : '하';
+    return gridjs.html(`&lt;span class="grade-pill" style="background:${color(grade)}"&gt;${grade}&lt;/span&gt;`);
+  },
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 고정 헤더 스크롤 테이블</h2>
+    <div class="desc">
+      <code class="inline">fixedHeader</code>와 <code class="inline">height</code>를 지정하면, 내용이
+      많아도 헤더가 고정된 채로 본문만 스크롤됩니다.
+    </div>
+    <div class="grid-wrap" id="grid3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new gridjs.Grid({
+  columns: ['위판장', '어종', '수량', '단가'],
+  data: manyRecords,
+  fixedHeader: true,
+  height: '220px',
+}).render(document.getElementById('grid3'));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 동적 데이터 갱신</h2>
+    <div class="desc">
+      버튼을 누르면 <code class="inline">updateConfig()</code>로 표시할 데이터셋을 통째로 바꾼
+      뒤 <code class="inline">forceRender()</code>로 다시 그립니다.
+    </div>
+    <div class="controls">
+      <button id="s4-all">전체 보기</button>
+      <button id="s4-filter">고등어만 보기</button>
+    </div>
+    <div class="grid-wrap" id="grid4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const grid = new gridjs.Grid({ columns: [...], data: records }).render(container);
+
+filterBtn.addEventListener('click', () => {
+  const filtered = records.filter((row) => row[1] === '고등어');
+  grid.updateConfig({ data: filtered }).forceRender();
+});</pre>
+    </details>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/gridjs@6.2.0/dist/gridjs.production.min.js"></script>
+<script>
+const koLanguage = {
+  search: { placeholder: '검색어를 입력하세요...' },
+  sort: { sortAsc: '오름차순 정렬', sortDesc: '내림차순 정렬' },
+  pagination: {
+    previous: '이전',
+    next: '다음',
+    showing: '전체',
+    to: '~',
+    of: '/',
+    results: '건',
+  },
+  loading: '불러오는 중...',
+  noRecordsFound: '일치하는 데이터가 없습니다',
+  error: '데이터를 불러오는 중 오류가 발생했습니다',
+};
+
+const records = [
+  ['A위판장', '고등어', 1200, 4200],
+  ['A위판장', '갈치', 300, 8100],
+  ['A위판장', '오징어', 650, 6000],
+  ['B위판장', '고등어', 800, 4100],
+  ['B위판장', '오징어', 500, 6200],
+  ['B위판장', '갈치', 150, 8000],
+  ['C위판장', '고등어', 1500, 4300],
+  ['C위판장', '갈치', 200, 8300],
+  ['C위판장', '오징어', 900, 6100],
+];
+
+// ---- 섹션 1: 기본 테이블 ----
+(function section1() {
+  new gridjs.Grid({
+    columns: ['위판장', '어종', '수량', '단가'],
+    data: records,
+    sort: true,
+    search: true,
+    pagination: { limit: 4 },
+    language: koLanguage,
+  }).render(document.getElementById('grid1'));
+})();
+
+// ---- 섹션 2: 커스텀 셀 포맷터 ----
+(function section2() {
+  const gradeColor = (grade) => grade === '상' ? '#154a8f' : grade === '중' ? '#5c94dd' : '#c9dcf6';
+  new gridjs.Grid({
+    columns: [
+      '위판장', '어종',
+      { name: '수량', formatter: (cell) => gridjs.html(`<b>${cell.toLocaleString()}</b>`) },
+      {
+        name: '등급',
+        formatter: (cell, row) => {
+          const qty = row.cells[2].data;
+          const grade = qty >= 1000 ? '상' : qty >= 600 ? '중' : '하';
+          return gridjs.html(`<span class="grade-pill" style="background:${gradeColor(grade)};">${grade}</span>`);
+        },
+      },
+    ],
+    data: records,
+    language: koLanguage,
+  }).render(document.getElementById('grid2'));
+})();
+
+// ---- 섹션 3: 고정 헤더 스크롤 테이블 ----
+(function section3() {
+  new gridjs.Grid({
+    columns: ['위판장', '어종', '수량', '단가'],
+    data: records,
+    fixedHeader: true,
+    height: '220px',
+    language: koLanguage,
+  }).render(document.getElementById('grid3'));
+})();
+
+// ---- 섹션 4: 동적 데이터 갱신 ----
+(function section4() {
+  const grid = new gridjs.Grid({
+    columns: ['위판장', '어종', '수량', '단가'],
+    data: records,
+    language: koLanguage,
+  }).render(document.getElementById('grid4'));
+
+  document.getElementById('s4-all').addEventListener('click', () => {
+    grid.updateConfig({ data: records }).forceRender();
+  });
+  document.getElementById('s4-filter').addEventListener('click', () => {
+    const filtered = records.filter((row) => row[1] === '고등어');
+    grid.updateConfig({ data: filtered }).forceRender();
+  });
+})();
+</script>
+</body>
+</html>
