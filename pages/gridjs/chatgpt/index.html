@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Grid.js 종합 기능 샘플</title>
+
+  <!-- Grid.js 6.2.0 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridjs@6.2.0/dist/theme/mermaid.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/gridjs@6.2.0/dist/gridjs.umd.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #eef3f8;
+      --text: #172033;
+      --muted: #667085;
+      --line: #d9e2ec;
+      --primary: #1565c0;
+      --primary-2: #0d47a1;
+      --accent: #00a6a6;
+      --danger: #c62828;
+      --warning: #a15c00;
+      --success: #087f5b;
+      --shadow: 0 12px 32px rgba(28, 48, 74, .10);
+      --radius: 16px;
+      --row-pad: 13px;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0c1320;
+      --surface: #131d2c;
+      --surface-2: #182437;
+      --surface-3: #223047;
+      --text: #ecf2fb;
+      --muted: #aab6c7;
+      --line: #31415a;
+      --primary: #68a9ff;
+      --primary-2: #9cc7ff;
+      --accent: #58d5d0;
+      --danger: #ff8c8c;
+      --warning: #ffc46b;
+      --success: #61d6ad;
+      --shadow: 0 16px 40px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(21, 101, 192, .12), transparent 26rem),
+        radial-gradient(circle at 90% 0%, rgba(0, 166, 166, .10), transparent 24rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      width: min(1700px, 100%);
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      padding: 25px 28px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--surface), var(--surface-2));
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 43px);
+      line-height: 1.1;
+      letter-spacing: -.04em;
+    }
+
+    .subtitle {
+      max-width: 900px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 9px;
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 700;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary);
+    }
+
+    .btn.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn.danger {
+      border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+      color: var(--danger);
+    }
+
+    .btn.ghost { background: transparent; }
+    .btn.small { min-height: 32px; padding: 5px 10px; font-size: 12px; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .feature-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 15px 2px 3px;
+      scrollbar-width: thin;
+    }
+
+    .feature-chip {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 20px 0 13px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .tab-btn {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 11px;
+      margin-bottom: 12px;
+    }
+
+    .stat-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: 0 5px 15px rgba(28, 48, 74, .04);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .stat-value {
+      margin-top: 4px;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -.04em;
+    }
+
+    .control-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .control-groups {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+      min-width: 145px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .input, .select {
+      min-height: 39px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      outline: none;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .input:focus, .select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 7px;
+    }
+
+    .grid-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .grid-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+
+    .grid-card-title {
+      font-weight: 900;
+    }
+
+    .grid-help {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grid-host { min-height: 280px; }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .panel {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .panel h2, .panel h3 {
+      margin: 0 0 10px;
+      letter-spacing: -.02em;
+    }
+
+    .log {
+      height: 280px;
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #08111f;
+      color: #c8f7d5;
+      font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    .column-picker {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 7px;
+    }
+
+    .check-item {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      padding: 8px 9px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--surface-2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .code-wrap {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #07101c;
+    }
+
+    pre {
+      margin: 0;
+      overflow: auto;
+      padding: 18px;
+      color: #d6e9ff;
+      font: 12.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+
+    .notice {
+      padding: 12px 14px;
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .demo-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .source-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .source-table th, .source-table td {
+      padding: 9px;
+      border: 1px solid var(--line);
+      text-align: left;
+    }
+
+    .metric-bar {
+      position: relative;
+      min-width: 110px;
+      height: 22px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--surface-3);
+    }
+
+    .metric-bar > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    .metric-bar > b {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+    }
+
+    .person-cell {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 145px;
+    }
+
+    .avatar {
+      width: 31px;
+      height: 31px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .person-name { font-weight: 850; }
+    .person-sub { color: var(--muted); font-size: 11px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .badge.done { background: rgba(8,127,91,.14); color: var(--success); }
+    .badge.progress { background: rgba(21,101,192,.13); color: var(--primary); }
+    .badge.hold { background: rgba(161,92,0,.14); color: var(--warning); }
+    .badge.risk { background: rgba(198,40,40,.13); color: var(--danger); }
+
+    .row-actions {
+      display: flex;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .icon-btn:hover { border-color: var(--primary); }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      background: rgba(3, 9, 18, .62);
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-backdrop.open { display: grid; }
+
+    .modal {
+      width: min(680px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+    }
+
+    .modal-head, .modal-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-foot {
+      justify-content: flex-end;
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .modal-body .field { min-width: 0; }
+    .modal-body .full { grid-column: 1 / -1; }
+
+    .toast-stack {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 200;
+      display: grid;
+      gap: 9px;
+      width: min(360px, calc(100vw - 36px));
+    }
+
+    .toast {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      animation: toastIn .2s ease-out;
+    }
+
+    @keyframes toastIn {
+      from { transform: translateY(8px); opacity: 0; }
+    }
+
+    /* Grid.js theme overrides */
+    .gridjs-container {
+      color: var(--text) !important;
+      font-family: inherit !important;
+    }
+
+    .gridjs-head {
+      padding: 12px 14px 6px !important;
+    }
+
+    .gridjs-search { float: none !important; }
+
+    .gridjs-search-input {
+      width: min(420px, 100%) !important;
+      padding: 10px 12px !important;
+      border-color: var(--line) !important;
+      border-radius: 9px !important;
+      background: var(--surface-2) !important;
+      color: var(--text) !important;
+      box-shadow: none !important;
+    }
+
+    .gridjs-wrapper {
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    table.gridjs-table {
+      width: 100% !important;
+      border-collapse: separate !important;
+      background: var(--surface) !important;
+      color: var(--text) !important;
+    }
+
+    th.gridjs-th {
+      padding: 12px 10px !important;
+      border-color: var(--line) !important;
+      background: var(--surface-2) !important;
+      color: var(--text) !important;
+      font-size: 12px !important;
+      white-space: nowrap;
+    }
+
+    td.gridjs-td {
+      padding: var(--row-pad) 10px !important;
+      border-color: var(--line) !important;
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      font-size: 12.5px !important;
+      vertical-align: middle !important;
+    }
+
+    tr.gridjs-tr:hover td.gridjs-td {
+      background: color-mix(in srgb, var(--primary) 6%, var(--surface)) !important;
+    }
+
+    tr.row-flash td.gridjs-td {
+      animation: rowFlash .7s ease;
+    }
+
+    @keyframes rowFlash {
+      0%, 100% { background: var(--surface) !important; }
+      50% { background: color-mix(in srgb, var(--primary) 20%, var(--surface)) !important; }
+    }
+
+    .gridjs-footer {
+      border: 0 !important;
+      border-top: 1px solid var(--line) !important;
+      background: var(--surface-2) !important;
+      box-shadow: none !important;
+    }
+
+    .gridjs-pagination .gridjs-pages button {
+      border-color: var(--line) !important;
+      background: var(--surface) !important;
+      color: var(--text) !important;
+    }
+
+    .gridjs-pagination .gridjs-pages button.gridjs-currentPage {
+      background: var(--primary) !important;
+      color: #fff !important;
+    }
+
+    .gridjs-summary { color: var(--muted) !important; }
+    .gridjs-loading-bar { background-color: var(--primary) !important; }
+
+    .gridjs-sort {
+      filter: var(--sort-filter, none);
+    }
+
+    html[data-theme="dark"] {
+      --sort-filter: invert(1);
+    }
+
+    body.compact { --row-pad: 7px; }
+    body.comfortable { --row-pad: 17px; }
+
+    .gridjs-resizable {
+      width: 5px !important;
+      right: -2px !important;
+    }
+
+    footer {
+      padding: 22px 4px 8px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+    }
+
+    @media (max-width: 1100px) {
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .control-panel, .split, .demo-layout { grid-template-columns: 1fr; }
+      .toolbar { justify-content: flex-start; }
+      .column-picker { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+    }
+
+    @media (max-width: 700px) {
+      .app { padding: 12px; }
+      .hero { grid-template-columns: 1fr; padding: 20px; }
+      .hero-actions { justify-content: flex-start; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat-card:last-child { grid-column: 1 / -1; }
+      .field { width: 100%; }
+      .control-groups { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+      .column-picker { grid-template-columns: 1fr; }
+      .modal-body { grid-template-columns: 1fr; }
+      .modal-body .full { grid-column: auto; }
+      .grid-card-head { align-items: flex-start; flex-direction: column; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .hero-actions, .feature-strip, .tabs, .control-panel, .split, footer,
+      .grid-card-head .grid-help, .gridjs-search, .row-actions, .select-col {
+        display: none !important;
+      }
+      .app { width: 100%; padding: 0; }
+      .hero, .grid-card { box-shadow: none; border: 0; }
+      .tab-panel { display: none !important; }
+      #tab-main { display: block !important; }
+      .gridjs-wrapper { max-height: none !important; overflow: visible !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Grid.js 6.2.0 · Vanilla JavaScript</div>
+        <h1>Grid.js 종합 기능 실험실</h1>
+        <p class="subtitle">
+          검색, 다중 정렬, 페이지네이션, 열 크기 조절, 고정 헤더, 사용자 지정 셀,
+          행 선택, CRUD, 동적 설정, 비동기 데이터, 서버 데이터, HTML 표 변환,
+          로컬 저장, CSV·JSON 입출력을 한 파일에서 시험할 수 있다.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn" id="themeToggle">🌙 어두운 화면</button>
+        <button class="btn" id="densityToggle">↕ 보통 밀도</button>
+        <button class="btn primary" id="addRowTop">＋ 새 데이터</button>
+      </div>
+    </header>
+
+    <div class="feature-strip" aria-label="포함 기능">
+      <span class="feature-chip">전역 검색</span>
+      <span class="feature-chip">다중 열 정렬</span>
+      <span class="feature-chip">사용자 정렬 비교</span>
+      <span class="feature-chip">페이지네이션</span>
+      <span class="feature-chip">고정 헤더</span>
+      <span class="feature-chip">열 리사이즈</span>
+      <span class="feature-chip">열 숨김</span>
+      <span class="feature-chip">HTML 포매터</span>
+      <span class="feature-chip">셀 속성</span>
+      <span class="feature-chip">행 선택</span>
+      <span class="feature-chip">추가·수정·삭제</span>
+      <span class="feature-chip">비동기 Promise</span>
+      <span class="feature-chip">원격 API</span>
+      <span class="feature-chip">HTML 표 변환</span>
+      <span class="feature-chip">CSV·JSON</span>
+      <span class="feature-chip">로컬 저장</span>
+      <span class="feature-chip">반응형·인쇄</span>
+      <span class="feature-chip">한국어 메시지</span>
+    </div>
+
+    <nav class="tabs" aria-label="샘플 화면">
+      <button class="tab-btn active" data-tab="tab-main">통합 업무 그리드</button>
+      <button class="tab-btn" data-tab="tab-async">비동기·서버 데이터</button>
+      <button class="tab-btn" data-tab="tab-html">HTML 표 변환</button>
+      <button class="tab-btn" data-tab="tab-code">핵심 코드</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-main">
+      <div class="stats">
+        <article class="stat-card">
+          <div class="stat-label">현재 전체 건수</div>
+          <div class="stat-value" id="statTotal">0</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">필터 결과</div>
+          <div class="stat-value" id="statFiltered">0</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">선택 건수</div>
+          <div class="stat-value" id="statSelected">0</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">평균 진행률</div>
+          <div class="stat-value" id="statProgress">0%</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">총 예산</div>
+          <div class="stat-value" id="statBudget">0</div>
+        </article>
+      </div>
+
+      <div class="control-panel">
+        <div class="control-groups">
+          <div class="field">
+            <label for="teamFilter">담당 조직</label>
+            <select class="select" id="teamFilter">
+              <option value="">전체 조직</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="statusFilter">진행 상태</label>
+            <select class="select" id="statusFilter">
+              <option value="">전체 상태</option>
+              <option>완료</option>
+              <option>진행중</option>
+              <option>대기</option>
+              <option>위험</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="minProgress">최소 진행률</label>
+            <select class="select" id="minProgress">
+              <option value="0">제한 없음</option>
+              <option value="25">25% 이상</option>
+              <option value="50">50% 이상</option>
+              <option value="75">75% 이상</option>
+              <option value="100">100%</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pageSize">페이지 크기</label>
+            <select class="select" id="pageSize">
+              <option value="5">5행</option>
+              <option value="10" selected>10행</option>
+              <option value="20">20행</option>
+              <option value="50">50행</option>
+            </select>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button class="btn small" id="fixedHeaderToggle">📌 고정 헤더 ON</button>
+          <button class="btn small" id="columnPanelToggle">열 표시 설정</button>
+          <button class="btn small" id="randomizeBtn">값 무작위 변경</button>
+          <button class="btn small" id="resetFiltersBtn">필터 초기화</button>
+          <button class="btn small" id="saveLocalBtn">브라우저 저장</button>
+          <button class="btn small" id="loadLocalBtn">저장값 복원</button>
+          <button class="btn small" id="importBtn">파일 불러오기</button>
+          <input type="file" id="importFile" accept=".json,.csv" hidden />
+        </div>
+      </div>
+
+      <div class="panel" id="columnPanel" hidden style="margin-bottom:12px">
+        <h3>표시할 열 선택</h3>
+        <div class="column-picker" id="columnPicker"></div>
+      </div>
+
+      <article class="grid-card">
+        <div class="grid-card-head">
+          <div>
+            <div class="grid-card-title">수산·ICT 업무 과제 현황</div>
+            <div class="grid-help">표 내부 검색창 사용 · 헤더 클릭 정렬 · Shift+클릭 다중 정렬 · 헤더 경계 드래그 열 너비 조절</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn small primary" id="addRowBtn">＋ 추가</button>
+            <button class="btn small" id="copySelectedBtn">선택 복사</button>
+            <button class="btn small" id="exportCsvBtn">CSV</button>
+            <button class="btn small" id="exportJsonBtn">JSON</button>
+            <button class="btn small" id="printBtn">인쇄</button>
+            <button class="btn small danger" id="deleteSelectedBtn">선택 삭제</button>
+          </div>
+        </div>
+        <div class="grid-host" id="mainGrid"></div>
+      </article>
+
+      <div class="split">
+        <section class="panel">
+          <h2>Grid.js 구성 제어</h2>
+          <p class="notice">
+            상태·조직·진행률 필터는 외부 업무 필터 예시이며, Grid.js의 전역 검색과 함께 사용할 수 있다.
+            열 표시, 페이지 크기, 고정 헤더 변경은 <code>updateConfig().forceRender()</code> 방식으로 즉시 반영된다.
+          </p>
+          <div class="column-picker" style="margin-top:12px">
+            <label class="check-item"><input type="checkbox" id="toggleSearch" checked /> Grid.js 검색</label>
+            <label class="check-item"><input type="checkbox" id="toggleSort" checked /> 열 정렬</label>
+            <label class="check-item"><input type="checkbox" id="togglePagination" checked /> 페이지네이션</label>
+            <label class="check-item"><input type="checkbox" id="toggleResizable" checked /> 열 리사이즈</label>
+            <label class="check-item"><input type="checkbox" id="toggleAutoWidth" /> 자동 너비</label>
+            <label class="check-item"><input type="checkbox" id="toggleSummary" checked /> 페이지 요약</label>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <h2>이벤트 로그</h2>
+          <div class="log" id="eventLog" aria-live="polite"></div>
+          <button class="btn small" id="clearLogBtn" style="margin-top:9px">로그 지우기</button>
+        </aside>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-async">
+      <div class="demo-layout">
+        <article class="grid-card">
+          <div class="grid-card-head">
+            <div>
+              <div class="grid-card-title">Promise 비동기 데이터</div>
+              <div class="grid-help">data 옵션에 async 함수를 전달하고 지연 로딩·오류 상태 확인</div>
+            </div>
+            <div class="toolbar">
+              <button class="btn small primary" id="reloadAsyncBtn">다시 로드</button>
+              <button class="btn small danger" id="failAsyncBtn">오류 시험</button>
+            </div>
+          </div>
+          <div class="grid-host" id="asyncGrid"></div>
+        </article>
+
+        <article class="grid-card">
+          <div class="grid-card-head">
+            <div>
+              <div class="grid-card-title">원격 서버 API</div>
+              <div class="grid-help">Grid.js server.then 변환 · 외부망 연결 필요</div>
+            </div>
+            <div class="toolbar">
+              <button class="btn small primary" id="loadRemoteBtn">상품 API 불러오기</button>
+              <button class="btn small" id="clearRemoteBtn">초기화</button>
+            </div>
+          </div>
+          <div class="grid-host" id="remoteGrid">
+            <div class="notice" style="margin:16px">버튼을 누르면 DummyJSON 공개 API에서 데이터를 가져온다.</div>
+          </div>
+        </article>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <h2>서버 연동 구성 포인트</h2>
+        <div class="notice">
+          실제 백엔드에서는 Grid.js의 <code>server</code>, 그리고 search·sort·pagination 각각의
+          <code>server.url</code> 함수를 조합해 검색어, 정렬 열, 페이지 오프셋을 API 파라미터로 전달한다.
+          이 파일의 원격 예시는 공개 API 가용성에 따라 실패할 수 있으며, 통합 그리드는 외부 API 없이 동작한다.
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-html">
+      <div class="demo-layout">
+        <section class="panel">
+          <h2>원본 HTML table</h2>
+          <table class="source-table" id="sourceTable">
+            <thead>
+              <tr><th>지역</th><th>품목</th><th>물량(톤)</th><th>등급</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>부산</td><td>고등어</td><td>128</td><td>A</td></tr>
+              <tr><td>제주</td><td>갈치</td><td>74</td><td>A</td></tr>
+              <tr><td>완도</td><td>전복</td><td>43</td><td>특</td></tr>
+              <tr><td>통영</td><td>굴</td><td>96</td><td>A</td></tr>
+              <tr><td>목포</td><td>참조기</td><td>51</td><td>B</td></tr>
+            </tbody>
+          </table>
+        </section>
+        <article class="grid-card">
+          <div class="grid-card-head">
+            <div>
+              <div class="grid-card-title">Grid.js로 변환된 표</div>
+              <div class="grid-help">from 옵션으로 기존 테이블 구조 재사용</div>
+            </div>
+            <button class="btn small primary" id="convertHtmlBtn">변환 실행</button>
+          </div>
+          <div class="grid-host" id="htmlGrid">
+            <div class="notice" style="margin:16px">변환 실행 버튼을 누르면 기존 HTML 표를 Grid.js로 읽는다.</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-code">
+      <div class="panel">
+        <h2>핵심 구성 예시</h2>
+        <div class="code-wrap">
+          <button class="btn small copy-code" data-copy-target="coreCode">코드 복사</button>
+          <pre id="coreCode"><code>const grid = new gridjs.Grid({
+  columns: [
+    { id: "name", name: "담당자", formatter: personFormatter },
+    { id: "status", name: "상태", formatter: statusFormatter },
+    {
+      id: "budget",
+      name: "예산",
+      sort: { compare: (a, b) =&gt; Number(a) - Number(b) },
+      formatter: value =&gt; `${Number(value).toLocaleString("ko-KR")}만원`
+    }
+  ],
+  data: rows,
+  search: true,
+  sort: { multiColumn: true },
+  pagination: { limit: 10, summary: true, buttonsCount: 5 },
+  fixedHeader: true,
+  height: "520px",
+  resizable: true,
+  language: koreanLanguage
+}).render(document.getElementById("grid"));
+
+grid
+  .updateConfig({ data: nextRows, pagination: { limit: 20 } })
+  .forceRender();</code></pre>
+        </div>
+      </div>
+
+      <div class="demo-layout" style="margin-top:14px">
+        <div class="panel">
+          <h2>포함된 Grid.js 고유 기능</h2>
+          <ul>
+            <li>배열·객체 데이터와 열별 data 접근자</li>
+            <li>검색, 다중 정렬, 사용자 비교 함수</li>
+            <li>페이지 크기·요약·이동 버튼 설정</li>
+            <li>열 formatter, attributes, hidden, width, sort</li>
+            <li>fixedHeader, height, autoWidth, resizable</li>
+            <li>한국어 language, style, className</li>
+            <li>비동기 data 함수, server.then 데이터 변환</li>
+            <li>from을 이용한 기존 HTML table 변환</li>
+            <li>updateConfig, forceRender, destroy</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>샘플에서 추가 구현한 기능</h2>
+          <ul>
+            <li>체크박스 행 선택과 선택 행 일괄 작업</li>
+            <li>추가·수정·삭제 모달과 상태 변경</li>
+            <li>열 표시 패널과 외부 복합 필터</li>
+            <li>CSV·JSON 다운로드 및 다시 불러오기</li>
+            <li>클립보드 복사, 인쇄, 다크 모드</li>
+            <li>localStorage 저장·복원과 이벤트 로그</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Grid.js는 MIT 라이선스의 오픈소스 테이블 라이브러리다. 이 샘플은 CDN에서 Grid.js 6.2.0을 불러온다.
+    </footer>
+  </main>
+
+  <div class="modal-backdrop" id="editModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <form class="modal" id="editForm">
+      <div class="modal-head">
+        <strong id="modalTitle">데이터 추가</strong>
+        <button type="button" class="btn small" data-close-modal>닫기</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editId" />
+        <div class="field">
+          <label for="editName">담당자</label>
+          <input class="input" id="editName" required maxlength="20" />
+        </div>
+        <div class="field">
+          <label for="editTeam">담당 조직</label>
+          <select class="select" id="editTeam" required></select>
+        </div>
+        <div class="field full">
+          <label for="editTask">과제명</label>
+          <input class="input" id="editTask" required maxlength="80" />
+        </div>
+        <div class="field">
+          <label for="editStatus">상태</label>
+          <select class="select" id="editStatus" required>
+            <option>진행중</option>
+            <option>완료</option>
+            <option>대기</option>
+            <option>위험</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="editPriority">우선순위</label>
+          <select class="select" id="editPriority" required>
+            <option>상</option>
+            <option>중</option>
+            <option>하</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="editProgress">진행률(0~100)</label>
+          <input class="input" id="editProgress" type="number" min="0" max="100" required />
+        </div>
+        <div class="field">
+          <label for="editBudget">예산(만원)</label>
+          <input class="input" id="editBudget" type="number" min="0" step="100" required />
+        </div>
+        <div class="field">
+          <label for="editDue">완료 예정일</label>
+          <input class="input" id="editDue" type="date" required />
+        </div>
+        <div class="field">
+          <label for="editRisk">위험도(1~5)</label>
+          <input class="input" id="editRisk" type="number" min="1" max="5" required />
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" data-close-modal>취소</button>
+        <button type="submit" class="btn primary">저장</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+      if (!window.gridjs) {
+        document.body.innerHTML = '<div style="padding:30px;font-family:sans-serif">Grid.js를 불러오지 못했습니다. 인터넷 연결 또는 CDN 차단 여부를 확인해 주세요.</div>';
+        return;
+      }
+
+      const { Grid, html: ghtml } = window.gridjs;
+
+      const teams = [
+        "ICT전략실", "회원지원부", "어업양식지원부", "어선안전조업부",
+        "경제기획부", "유통사업부", "정책보험부", "정보보호본부"
+      ];
+      const names = [
+        "김하늘", "이도윤", "박서연", "최민준", "정지우", "강예준", "윤서아", "조현우",
+        "임수빈", "한지호", "오유진", "서준혁", "신채원", "권도현", "황예린", "송민재"
+      ];
+      const taskPrefixes = [
+        "업무자동화", "데이터 품질", "어업인 안전", "위판정보 연계", "디지털 교육",
+        "정보보호 강화", "회원조합 지원", "수산물 유통", "정책보험 개선", "인프라 표준화",
+        "재해복구 체계", "모바일 서비스", "AI 활용", "통합 모니터링", "전자문서 개선"
+      ];
+      const taskSuffixes = [
+        "고도화", "시범 구축", "현황 분석", "프로세스 개선", "기능 개발",
+        "운영 안정화", "표준 수립", "점검 체계화", "대시보드 구축", "사용자 확산"
+      ];
+      const statuses = ["진행중", "완료", "대기", "위험"];
+      const priorities = ["상", "중", "하"];
+
+      const state = {
+        data: [],
+        selected: new Set(),
+        pageSize: 10,
+        fixedHeader: true,
+        search: true,
+        sort: true,
+        pagination: true,
+        resizable: true,
+        autoWidth: false,
+        summary: true,
+        densityIndex: 1,
+        hidden: new Set(),
+        mainGrid: null,
+        asyncGrid: null,
+        remoteGrid: null,
+        htmlGrid: null
+      };
+
+      const columnMeta = [
+        ["id", "ID"],
+        ["name", "담당자"],
+        ["team", "조직"],
+        ["task", "과제명"],
+        ["status", "상태"],
+        ["priority", "우선순위"],
+        ["progress", "진행률"],
+        ["budget", "예산"],
+        ["due", "완료일"],
+        ["risk", "위험도"]
+      ];
+
+      const koreanLanguage = {
+        search: { placeholder: "전체 열에서 검색..." },
+        sort: {
+          sortAsc: "오름차순 정렬",
+          sortDesc: "내림차순 정렬"
+        },
+        pagination: {
+          previous: "이전",
+          next: "다음",
+          navigate: (page, pages) => `${pages}페이지 중 ${page}페이지`,
+          page: page => `${page}페이지`,
+          showing: "표시",
+          of: "/",
+          to: "~",
+          results: () => "건"
+        },
+        loading: "데이터를 불러오는 중...",
+        noRecordsFound: "조건에 맞는 데이터가 없습니다.",
+        error: "데이터를 불러오지 못했습니다."
+      };
+
+      function seededNumber(seed) {
+        const x = Math.sin(seed * 999) * 10000;
+        return x - Math.floor(x);
+      }
+
+      function createSampleData(count = 72) {
+        return Array.from({ length: count }, (_, i) => {
+          const id = 1001 + i;
+          const status = statuses[Math.floor(seededNumber(i + 2) * statuses.length)];
+          let progress = Math.round(seededNumber(i + 5) * 100);
+          if (status === "완료") progress = 100;
+          if (status === "대기") progress = Math.min(progress, 30);
+          const dueMonth = String(7 + (i % 6)).padStart(2, "0");
+          const dueDay = String(3 + ((i * 7) % 25)).padStart(2, "0");
+          return {
+            id,
+            name: names[i % names.length],
+            team: teams[i % teams.length],
+            task: `${taskPrefixes[i % taskPrefixes.length]} ${taskSuffixes[(i * 3) % taskSuffixes.length]}`,
+            status,
+            priority: priorities[(i * 5) % priorities.length],
+            progress,
+            budget: 1200 + Math.round(seededNumber(i + 9) * 28000 / 100) * 100,
+            due: `2026-${dueMonth}-${dueDay}`,
+            risk: 1 + Math.floor(seededNumber(i + 14) * 5)
+          };
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function statusClass(status) {
+        return ({ "완료": "done", "진행중": "progress", "대기": "hold", "위험": "risk" })[status] || "";
+      }
+
+      function logEvent(message, detail = "") {
+        const time = new Intl.DateTimeFormat("ko-KR", {
+          hour: "2-digit", minute: "2-digit", second: "2-digit"
+        }).format(new Date());
+        const line = `[${time}] ${message}${detail ? ` · ${detail}` : ""}`;
+        const log = $("#eventLog");
+        log.textContent = `${line}\n${log.textContent}`.slice(0, 12000);
+      }
+
+      function toast(message) {
+        const el = document.createElement("div");
+        el.className = "toast";
+        el.textContent = message;
+        $("#toastStack").appendChild(el);
+        setTimeout(() => el.remove(), 2800);
+      }
+
+      function formatMoney(value) {
+        return `${Number(value || 0).toLocaleString("ko-KR")}만원`;
+      }
+
+      function formatDate(value) {
+        if (!value) return "-";
+        const [y, m, d] = String(value).split("-");
+        return `${y}.${m}.${d}`;
+      }
+
+      function filteredData() {
+        const team = $("#teamFilter").value;
+        const status = $("#statusFilter").value;
+        const minProgress = Number($("#minProgress").value || 0);
+        return state.data.filter(row =>
+          (!team || row.team === team) &&
+          (!status || row.status === status) &&
+          row.progress >= minProgress
+        );
+      }
+
+      function updateStats() {
+        const rows = filteredData();
+        const average = rows.length
+          ? Math.round(rows.reduce((sum, row) => sum + Number(row.progress), 0) / rows.length)
+          : 0;
+        const budget = rows.reduce((sum, row) => sum + Number(row.budget), 0);
+
+        $("#statTotal").textContent = state.data.length.toLocaleString("ko-KR");
+        $("#statFiltered").textContent = rows.length.toLocaleString("ko-KR");
+        $("#statSelected").textContent = state.selected.size.toLocaleString("ko-KR");
+        $("#statProgress").textContent = `${average}%`;
+        $("#statBudget").textContent = `${Math.round(budget / 10000).toLocaleString("ko-KR")}억원`;
+        $("#deleteSelectedBtn").disabled = state.selected.size === 0;
+        $("#copySelectedBtn").disabled = state.selected.size === 0;
+      }
+
+      function buildColumns() {
+        const hidden = id => state.hidden.has(id);
+
+        return [
+          {
+            id: "select",
+            name: ghtml('<input class="select-col" type="checkbox" id="selectVisible" aria-label="현재 화면 전체 선택">'),
+            width: "48px",
+            sort: false,
+            data: row => row.id,
+            formatter: id => ghtml(
+              `<input class="row-check select-col" type="checkbox" data-id="${id}" aria-label="${id}번 선택" ${state.selected.has(Number(id)) ? "checked" : ""}>`
+            ),
+            attributes: { className: "select-col" }
+          },
+          {
+            id: "id",
+            name: "ID",
+            width: "76px",
+            hidden: hidden("id"),
+            data: row => row.id,
+            attributes: cell => ({ "data-row-id": String(cell), title: `행 ID ${cell}` })
+          },
+          {
+            id: "name",
+            name: "담당자",
+            width: "165px",
+            hidden: hidden("name"),
+            data: row => row.name,
+            formatter: (cell, row) => {
+              const team = row.cells[3]?.data ?? "";
+              return ghtml(
+                `<div class="person-cell">
+                  <span class="avatar">${escapeHtml(String(cell).slice(-2))}</span>
+                  <span><span class="person-name">${escapeHtml(cell)}</span><br><span class="person-sub">${escapeHtml(team)}</span></span>
+                </div>`
+              );
+            }
+          },
+          {
+            id: "team",
+            name: "조직",
+            width: "145px",
+            hidden: hidden("team"),
+            data: row => row.team
+          },
+          {
+            id: "task",
+            name: "과제명",
+            width: "285px",
+            hidden: hidden("task"),
+            data: row => row.task,
+            attributes: cell => ({ title: String(cell) })
+          },
+          {
+            id: "status",
+            name: "상태",
+            width: "98px",
+            hidden: hidden("status"),
+            data: row => row.status,
+            formatter: cell => ghtml(`<span class="badge ${statusClass(cell)}">${escapeHtml(cell)}</span>`)
+          },
+          {
+            id: "priority",
+            name: "우선순위",
+            width: "90px",
+            hidden: hidden("priority"),
+            data: row => row.priority,
+            sort: {
+              compare: (a, b) => ({ "상": 3, "중": 2, "하": 1 }[a] || 0) - ({ "상": 3, "중": 2, "하": 1 }[b] || 0)
+            },
+            formatter: cell => ghtml(`<strong style="color:${cell === "상" ? "var(--danger)" : cell === "중" ? "var(--warning)" : "var(--muted)"}">${escapeHtml(cell)}</strong>`)
+          },
+          {
+            id: "progress",
+            name: "진행률",
+            width: "145px",
+            hidden: hidden("progress"),
+            data: row => row.progress,
+            sort: { compare: (a, b) => Number(a) - Number(b) },
+            formatter: cell => {
+              const value = Math.max(0, Math.min(100, Number(cell)));
+              return ghtml(`<div class="metric-bar" title="${value}%"><span style="width:${value}%"></span><b>${value}%</b></div>`);
+            }
+          },
+          {
+            id: "budget",
+            name: "예산",
+            width: "125px",
+            hidden: hidden("budget"),
+            data: row => row.budget,
+            sort: { compare: (a, b) => Number(a) - Number(b) },
+            formatter: cell => ghtml(`<strong>${Number(cell).toLocaleString("ko-KR")}</strong><span style="color:var(--muted)">만원</span>`)
+          },
+          {
+            id: "due",
+            name: "완료 예정일",
+            width: "120px",
+            hidden: hidden("due"),
+            data: row => row.due,
+            sort: { compare: (a, b) => new Date(a) - new Date(b) },
+            formatter: cell => formatDate(cell)
+          },
+          {
+            id: "risk",
+            name: "위험도",
+            width: "105px",
+            hidden: hidden("risk"),
+            data: row => row.risk,
+            sort: { compare: (a, b) => Number(a) - Number(b) },
+            formatter: cell => {
+              const n = Number(cell);
+              return ghtml(`<span title="위험도 ${n}/5" style="letter-spacing:1px;color:${n >= 4 ? "var(--danger)" : n === 3 ? "var(--warning)" : "var(--success)"}">${"●".repeat(n)}${"○".repeat(5 - n)}</span>`);
+            }
+          },
+          {
+            id: "actions",
+            name: "작업",
+            width: "128px",
+            sort: false,
+            data: row => row.id,
+            formatter: id => ghtml(
+              `<div class="row-actions">
+                <button class="icon-btn edit-row" data-id="${id}">수정</button>
+                <button class="icon-btn clone-row" data-id="${id}">복제</button>
+                <button class="icon-btn delete-row" data-id="${id}">삭제</button>
+              </div>`
+            )
+          }
+        ];
+      }
+
+      function currentGridConfig() {
+        return {
+          columns: buildColumns(),
+          data: filteredData(),
+          search: state.search,
+          sort: state.sort ? { multiColumn: true } : false,
+          pagination: state.pagination ? {
+            limit: state.pageSize,
+            summary: state.summary,
+            buttonsCount: 5,
+            resetPageOnUpdate: true
+          } : false,
+          fixedHeader: state.fixedHeader,
+          height: state.fixedHeader ? "520px" : "auto",
+          resizable: state.resizable,
+          autoWidth: state.autoWidth,
+          language: koreanLanguage,
+          className: {
+            container: "business-grid",
+            table: "business-table"
+          },
+          style: {
+            table: { "min-width": "1320px" }
+          }
+        };
+      }
+
+      function renderMainGrid(first = false) {
+        const host = $("#mainGrid");
+        try {
+          if (first || !state.mainGrid) {
+            host.innerHTML = "";
+            state.mainGrid = new Grid(currentGridConfig()).render(host);
+            logEvent("메인 그리드 생성", `${filteredData().length}건`);
+          } else {
+            state.mainGrid.updateConfig(currentGridConfig()).forceRender();
+            logEvent("그리드 설정 갱신", `${filteredData().length}건`);
+          }
+          updateStats();
+          setTimeout(syncVisibleCheckboxHeader, 80);
+        } catch (error) {
+          console.error(error);
+          host.innerHTML = `<div class="notice" style="margin:16px;color:var(--danger)">Grid.js 로딩에 실패했다. 인터넷 연결과 CDN 접근 여부를 확인해 주세요.</div>`;
+          logEvent("그리드 오류", error.message);
+        }
+      }
+
+      function syncVisibleCheckboxHeader() {
+        const boxes = $$(".row-check", $("#mainGrid"));
+        const header = $("#selectVisible", $("#mainGrid"));
+        if (!header) return;
+        header.checked = boxes.length > 0 && boxes.every(box => box.checked);
+        header.indeterminate = boxes.some(box => box.checked) && !header.checked;
+      }
+
+      function populateSelects() {
+        const options = teams.map(team => `<option>${escapeHtml(team)}</option>`).join("");
+        $("#teamFilter").insertAdjacentHTML("beforeend", options);
+        $("#editTeam").innerHTML = options;
+      }
+
+      function buildColumnPicker() {
+        $("#columnPicker").innerHTML = columnMeta.map(([id, label]) => `
+          <label class="check-item">
+            <input type="checkbox" data-column="${id}" ${state.hidden.has(id) ? "" : "checked"}>
+            ${escapeHtml(label)}
+          </label>
+        `).join("");
+      }
+
+      function openModal(row = null) {
+        $("#editForm").reset();
+        $("#editId").value = row?.id ?? "";
+        $("#modalTitle").textContent = row ? `데이터 수정 · ${row.id}` : "새 데이터 추가";
+        $("#editName").value = row?.name ?? names[Math.floor(Math.random() * names.length)];
+        $("#editTeam").value = row?.team ?? teams[0];
+        $("#editTask").value = row?.task ?? "";
+        $("#editStatus").value = row?.status ?? "진행중";
+        $("#editPriority").value = row?.priority ?? "중";
+        $("#editProgress").value = row?.progress ?? 0;
+        $("#editBudget").value = row?.budget ?? 1000;
+        $("#editDue").value = row?.due ?? "2026-12-31";
+        $("#editRisk").value = row?.risk ?? 2;
+        $("#editModal").classList.add("open");
+        setTimeout(() => $("#editTask").focus(), 50);
+      }
+
+      function closeModal() {
+        $("#editModal").classList.remove("open");
+      }
+
+      function nextId() {
+        return state.data.reduce((max, row) => Math.max(max, Number(row.id)), 1000) + 1;
+      }
+
+      function downloadFile(filename, content, mime) {
+        const blob = new Blob(["\ufeff", content], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function csvEscape(value) {
+        const text = String(value ?? "");
+        return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+      }
+
+      function exportCsv(rows) {
+        const headers = ["id", "name", "team", "task", "status", "priority", "progress", "budget", "due", "risk"];
+        const csv = [
+          headers.join(","),
+          ...rows.map(row => headers.map(key => csvEscape(row[key])).join(","))
+        ].join("\n");
+        downloadFile(`gridjs-data-${Date.now()}.csv`, csv, "text/csv;charset=utf-8");
+      }
+
+      function parseCsv(text) {
+        const rows = [];
+        let row = [], cell = "", quoted = false;
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          const next = text[i + 1];
+          if (char === '"' && quoted && next === '"') {
+            cell += '"'; i++;
+          } else if (char === '"') {
+            quoted = !quoted;
+          } else if (char === "," && !quoted) {
+            row.push(cell); cell = "";
+          } else if ((char === "\n" || char === "\r") && !quoted) {
+            if (char === "\r" && next === "\n") i++;
+            row.push(cell); cell = "";
+            if (row.some(v => v !== "")) rows.push(row);
+            row = [];
+          } else {
+            cell += char;
+          }
+        }
+        row.push(cell);
+        if (row.some(v => v !== "")) rows.push(row);
+        if (rows.length < 2) throw new Error("CSV 데이터가 비어 있습니다.");
+        const headers = rows.shift().map(v => v.trim());
+        return rows.map(values => Object.fromEntries(headers.map((key, i) => [key, values[i] ?? ""])));
+      }
+
+      function normalizeImportedRows(rows) {
+        if (!Array.isArray(rows)) throw new Error("배열 형식의 데이터가 아닙니다.");
+        return rows.map((row, index) => ({
+          id: Number(row.id) || nextId() + index,
+          name: String(row.name || "미지정"),
+          team: teams.includes(row.team) ? row.team : teams[0],
+          task: String(row.task || "불러온 과제"),
+          status: statuses.includes(row.status) ? row.status : "대기",
+          priority: priorities.includes(row.priority) ? row.priority : "중",
+          progress: Math.max(0, Math.min(100, Number(row.progress) || 0)),
+          budget: Math.max(0, Number(row.budget) || 0),
+          due: /^\d{4}-\d{2}-\d{2}$/.test(row.due) ? row.due : "2026-12-31",
+          risk: Math.max(1, Math.min(5, Number(row.risk) || 1))
+        }));
+      }
+
+      function copyRows(rows) {
+        const text = rows.map(row =>
+          [row.id, row.name, row.team, row.task, row.status, `${row.progress}%`, formatMoney(row.budget), row.due].join("\t")
+        ).join("\n");
+        navigator.clipboard.writeText(text)
+          .then(() => toast(`${rows.length}건을 클립보드에 복사했다.`))
+          .catch(() => toast("클립보드 복사 권한이 없어 실패했다."));
+      }
+
+      function getSelectedRows() {
+        return state.data.filter(row => state.selected.has(Number(row.id)));
+      }
+
+      function bindMainEvents() {
+        const host = $("#mainGrid");
+
+        const selectionObserver = new MutationObserver(() => {
+          window.clearTimeout(selectionObserver._timer);
+          selectionObserver._timer = window.setTimeout(syncVisibleCheckboxHeader, 30);
+        });
+        selectionObserver.observe(host, { childList: true, subtree: true });
+
+        host.addEventListener("change", event => {
+          const target = event.target;
+          if (target.matches(".row-check")) {
+            const id = Number(target.dataset.id);
+            target.checked ? state.selected.add(id) : state.selected.delete(id);
+            updateStats();
+            syncVisibleCheckboxHeader();
+            logEvent(target.checked ? "행 선택" : "행 선택 해제", `ID ${id}`);
+          }
+          if (target.matches("#selectVisible")) {
+            $$(".row-check", host).forEach(box => {
+              box.checked = target.checked;
+              const id = Number(box.dataset.id);
+              target.checked ? state.selected.add(id) : state.selected.delete(id);
+            });
+            updateStats();
+            logEvent(target.checked ? "현재 화면 전체 선택" : "현재 화면 선택 해제");
+          }
+        });
+
+        host.addEventListener("click", event => {
+          const button = event.target.closest("button[data-id]");
+          if (button) {
+            const id = Number(button.dataset.id);
+            const row = state.data.find(item => item.id === id);
+            if (!row) return;
+            if (button.classList.contains("edit-row")) {
+              openModal(row);
+              logEvent("수정 창 열기", `ID ${id}`);
+            }
+            if (button.classList.contains("clone-row")) {
+              const copy = { ...row, id: nextId(), task: `${row.task} (복제)`, status: "대기", progress: 0 };
+              state.data.unshift(copy);
+              renderMainGrid();
+              toast(`ID ${copy.id}로 복제했다.`);
+              logEvent("행 복제", `${id} → ${copy.id}`);
+            }
+            if (button.classList.contains("delete-row")) {
+              if (confirm(`${id}번 데이터를 삭제할까요?`)) {
+                state.data = state.data.filter(item => item.id !== id);
+                state.selected.delete(id);
+                renderMainGrid();
+                toast("데이터를 삭제했다.");
+                logEvent("행 삭제", `ID ${id}`);
+              }
+            }
+            return;
+          }
+
+          const rowEl = event.target.closest("tr");
+          const idCell = rowEl?.querySelector("[data-row-id]");
+          if (idCell && !event.target.closest("input,button")) {
+            const id = Number(idCell.dataset.rowId);
+            logEvent("행 클릭", `ID ${id}`);
+            rowEl.classList.add("row-flash");
+            setTimeout(() => rowEl.classList.remove("row-flash"), 750);
+          }
+        });
+      }
+
+      function renderAsyncGrid(shouldFail = false) {
+        const host = $("#asyncGrid");
+        if (state.asyncGrid) {
+          try { state.asyncGrid.destroy(); } catch (_) {}
+        }
+        host.innerHTML = "";
+        state.asyncGrid = new Grid({
+          columns: ["순번", "처리 단계", "소요시간(ms)", "결과"],
+          data: async () => {
+            await new Promise(resolve => setTimeout(resolve, 900));
+            if (shouldFail) throw new Error("의도적으로 발생시킨 비동기 오류");
+            return [
+              [1, "요청 접수", 120, "정상"],
+              [2, "권한 확인", 80, "정상"],
+              [3, "데이터 조회", 460, "정상"],
+              [4, "결과 변환", 95, "정상"],
+              [5, "화면 렌더링", 145, "완료"]
+            ];
+          },
+          search: true,
+          sort: true,
+          pagination: { limit: 3 },
+          language: koreanLanguage
+        }).render(host);
+        logEvent(shouldFail ? "비동기 오류 시험" : "비동기 그리드 로드");
+      }
+
+      function loadRemoteGrid() {
+        const host = $("#remoteGrid");
+        if (state.remoteGrid) {
+          try { state.remoteGrid.destroy(); } catch (_) {}
+        }
+        host.innerHTML = "";
+        state.remoteGrid = new Grid({
+          columns: [
+            { name: "ID", width: "60px" },
+            { name: "상품명", width: "190px" },
+            { name: "분류" },
+            {
+              name: "가격($)",
+              sort: { compare: (a, b) => Number(a) - Number(b) },
+              formatter: cell => `$${Number(cell).toLocaleString("en-US")}`
+            },
+            {
+              name: "평점",
+              sort: { compare: (a, b) => Number(a) - Number(b) },
+              formatter: cell => `★ ${Number(cell).toFixed(1)}`
+            },
+            { name: "재고" }
+          ],
+          server: {
+            url: "https://dummyjson.com/products?limit=100",
+            then: data => data.products.map(item => [
+              item.id, item.title, item.category, item.price, item.rating, item.stock
+            ])
+          },
+          search: true,
+          sort: { multiColumn: true },
+          pagination: { limit: 8 },
+          resizable: true,
+          language: koreanLanguage
+        }).render(host);
+        logEvent("원격 API 요청", "dummyjson.com/products");
+      }
+
+      function convertHtmlTable() {
+        const host = $("#htmlGrid");
+        if (state.htmlGrid) {
+          try { state.htmlGrid.destroy(); } catch (_) {}
+        }
+        host.innerHTML = "";
+        state.htmlGrid = new Grid({
+          from: $("#sourceTable"),
+          search: true,
+          sort: true,
+          pagination: { limit: 3 },
+          resizable: true,
+          language: koreanLanguage
+        }).render(host);
+        logEvent("HTML 표 변환", "sourceTable");
+      }
+
+      function bindControls() {
+        $$(".tab-btn").forEach(button => {
+          button.addEventListener("click", () => {
+            $$(".tab-btn").forEach(btn => btn.classList.toggle("active", btn === button));
+            $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === button.dataset.tab));
+            logEvent("탭 이동", button.textContent.trim());
+          });
+        });
+
+        ["teamFilter", "statusFilter", "minProgress"].forEach(id => {
+          $(`#${id}`).addEventListener("change", () => renderMainGrid());
+        });
+
+        $("#pageSize").addEventListener("change", event => {
+          state.pageSize = Number(event.target.value);
+          renderMainGrid();
+        });
+
+        $("#resetFiltersBtn").addEventListener("click", () => {
+          $("#teamFilter").value = "";
+          $("#statusFilter").value = "";
+          $("#minProgress").value = "0";
+          renderMainGrid();
+          toast("외부 필터를 초기화했다.");
+        });
+
+        $("#fixedHeaderToggle").addEventListener("click", event => {
+          state.fixedHeader = !state.fixedHeader;
+          event.currentTarget.textContent = `📌 고정 헤더 ${state.fixedHeader ? "ON" : "OFF"}`;
+          renderMainGrid();
+        });
+
+        $("#columnPanelToggle").addEventListener("click", () => {
+          $("#columnPanel").hidden = !$("#columnPanel").hidden;
+        });
+
+        $("#columnPicker").addEventListener("change", event => {
+          const box = event.target.closest("[data-column]");
+          if (!box) return;
+          box.checked ? state.hidden.delete(box.dataset.column) : state.hidden.add(box.dataset.column);
+          renderMainGrid();
+        });
+
+        const configToggles = {
+          toggleSearch: "search",
+          toggleSort: "sort",
+          togglePagination: "pagination",
+          toggleResizable: "resizable",
+          toggleAutoWidth: "autoWidth",
+          toggleSummary: "summary"
+        };
+        Object.entries(configToggles).forEach(([id, key]) => {
+          $(`#${id}`).addEventListener("change", event => {
+            state[key] = event.target.checked;
+            renderMainGrid();
+          });
+        });
+
+        $("#randomizeBtn").addEventListener("click", () => {
+          state.data = state.data.map((row, i) => ({
+            ...row,
+            progress: row.status === "완료" ? 100 : Math.round(Math.random() * 100),
+            budget: Math.max(100, row.budget + (Math.floor(Math.random() * 11) - 5) * 100),
+            risk: 1 + Math.floor(Math.random() * 5)
+          }));
+          renderMainGrid();
+          toast("진행률·예산·위험도를 변경했다.");
+        });
+
+        $("#themeToggle").addEventListener("click", event => {
+          const dark = document.documentElement.dataset.theme !== "dark";
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+          event.currentTarget.textContent = dark ? "☀️ 밝은 화면" : "🌙 어두운 화면";
+          localStorage.setItem("gridjs-demo-theme", dark ? "dark" : "light");
+        });
+
+        $("#densityToggle").addEventListener("click", event => {
+          const densities = [
+            ["compact", "↕ 촘촘한 밀도"],
+            ["", "↕ 보통 밀도"],
+            ["comfortable", "↕ 넓은 밀도"]
+          ];
+          state.densityIndex = (state.densityIndex + 1) % densities.length;
+          document.body.classList.remove("compact", "comfortable");
+          const [className, label] = densities[state.densityIndex];
+          if (className) document.body.classList.add(className);
+          event.currentTarget.textContent = label;
+        });
+
+        ["addRowTop", "addRowBtn"].forEach(id => $(`#${id}`).addEventListener("click", () => openModal()));
+
+        $("#editForm").addEventListener("submit", event => {
+          event.preventDefault();
+          const idValue = $("#editId").value;
+          const row = {
+            id: idValue ? Number(idValue) : nextId(),
+            name: $("#editName").value.trim(),
+            team: $("#editTeam").value,
+            task: $("#editTask").value.trim(),
+            status: $("#editStatus").value,
+            priority: $("#editPriority").value,
+            progress: Number($("#editProgress").value),
+            budget: Number($("#editBudget").value),
+            due: $("#editDue").value,
+            risk: Number($("#editRisk").value)
+          };
+
+          if (idValue) {
+            state.data = state.data.map(item => item.id === row.id ? row : item);
+            logEvent("행 수정 완료", `ID ${row.id}`);
+            toast("데이터를 수정했다.");
+          } else {
+            state.data.unshift(row);
+            logEvent("행 추가 완료", `ID ${row.id}`);
+            toast("새 데이터를 추가했다.");
+          }
+          closeModal();
+          renderMainGrid();
+        });
+
+        $$("[data-close-modal]").forEach(button => button.addEventListener("click", closeModal));
+        $("#editModal").addEventListener("click", event => {
+          if (event.target === $("#editModal")) closeModal();
+        });
+
+        $("#deleteSelectedBtn").addEventListener("click", () => {
+          if (!state.selected.size) return;
+          if (!confirm(`선택한 ${state.selected.size}건을 삭제할까요?`)) return;
+          const count = state.selected.size;
+          state.data = state.data.filter(row => !state.selected.has(row.id));
+          state.selected.clear();
+          renderMainGrid();
+          toast(`${count}건을 삭제했다.`);
+          logEvent("선택 행 일괄 삭제", `${count}건`);
+        });
+
+        $("#copySelectedBtn").addEventListener("click", () => copyRows(getSelectedRows()));
+        $("#exportCsvBtn").addEventListener("click", () => {
+          exportCsv(filteredData());
+          logEvent("CSV 내보내기", `${filteredData().length}건`);
+        });
+        $("#exportJsonBtn").addEventListener("click", () => {
+          downloadFile(`gridjs-data-${Date.now()}.json`, JSON.stringify(filteredData(), null, 2), "application/json;charset=utf-8");
+          logEvent("JSON 내보내기", `${filteredData().length}건`);
+        });
+        $("#printBtn").addEventListener("click", () => window.print());
+
+        $("#saveLocalBtn").addEventListener("click", () => {
+          localStorage.setItem("gridjs-demo-data", JSON.stringify(state.data));
+          toast(`${state.data.length}건을 브라우저에 저장했다.`);
+          logEvent("localStorage 저장", `${state.data.length}건`);
+        });
+
+        $("#loadLocalBtn").addEventListener("click", () => {
+          const saved = localStorage.getItem("gridjs-demo-data");
+          if (!saved) return toast("저장된 데이터가 없다.");
+          try {
+            state.data = normalizeImportedRows(JSON.parse(saved));
+            state.selected.clear();
+            renderMainGrid();
+            toast("브라우저 저장값을 복원했다.");
+            logEvent("localStorage 복원", `${state.data.length}건`);
+          } catch (error) {
+            toast("저장값 형식이 올바르지 않다.");
+          }
+        });
+
+        $("#importBtn").addEventListener("click", () => $("#importFile").click());
+        $("#importFile").addEventListener("change", async event => {
+          const file = event.target.files[0];
+          if (!file) return;
+          try {
+            const text = await file.text();
+            const parsed = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : parseCsv(text);
+            state.data = normalizeImportedRows(parsed);
+            state.selected.clear();
+            renderMainGrid();
+            toast(`${state.data.length}건을 불러왔다.`);
+            logEvent("파일 불러오기", `${file.name} · ${state.data.length}건`);
+          } catch (error) {
+            console.error(error);
+            toast(`파일을 읽지 못했다: ${error.message}`);
+          } finally {
+            event.target.value = "";
+          }
+        });
+
+        $("#clearLogBtn").addEventListener("click", () => $("#eventLog").textContent = "");
+
+        $("#reloadAsyncBtn").addEventListener("click", () => renderAsyncGrid(false));
+        $("#failAsyncBtn").addEventListener("click", () => renderAsyncGrid(true));
+        $("#loadRemoteBtn").addEventListener("click", loadRemoteGrid);
+        $("#clearRemoteBtn").addEventListener("click", () => {
+          if (state.remoteGrid) {
+            try { state.remoteGrid.destroy(); } catch (_) {}
+            state.remoteGrid = null;
+          }
+          $("#remoteGrid").innerHTML = '<div class="notice" style="margin:16px">버튼을 누르면 DummyJSON 공개 API에서 데이터를 가져온다.</div>';
+        });
+        $("#convertHtmlBtn").addEventListener("click", convertHtmlTable);
+
+        $$("[data-copy-target]").forEach(button => {
+          button.addEventListener("click", () => {
+            const text = $(`#${button.dataset.copyTarget}`).innerText;
+            navigator.clipboard.writeText(text)
+              .then(() => toast("코드를 복사했다."))
+              .catch(() => toast("코드 복사에 실패했다."));
+          });
+        });
+
+        document.addEventListener("keydown", event => {
+          if (event.key === "Escape") closeModal();
+          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") {
+            event.preventDefault();
+            openModal();
+          }
+        });
+      }
+
+      function init() {
+        state.data = createSampleData();
+        populateSelects();
+        buildColumnPicker();
+        bindControls();
+        renderMainGrid(true);
+        bindMainEvents();
+        renderAsyncGrid(false);
+
+        const storedTheme = localStorage.getItem("gridjs-demo-theme");
+        if (storedTheme === "dark") {
+          document.documentElement.dataset.theme = "dark";
+          $("#themeToggle").textContent = "☀️ 밝은 화면";
+        }
+
+        updateStats();
+        logEvent("샘플 초기화 완료", `Grid.js ${window.gridjs.version || "6.2.0"}`);
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
