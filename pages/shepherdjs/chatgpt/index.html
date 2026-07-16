@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Shepherd.js 종합 기능 샘플</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@latest/dist/css/shepherd.css">
+  <style>
+    :root{
+      --bg:#07111f;--panel:#0d1b2e;--panel2:#12233a;--line:#263a55;
+      --text:#e8f1ff;--muted:#9db0c8;--brand:#55d6be;--brand2:#5aa7ff;
+      --warn:#ffc857;--danger:#ff6b7a;--ok:#72e59b;--shadow:0 16px 50px rgba(0,0,0,.28)
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:linear-gradient(135deg,#06101d,#0a1729 50%,#07111f);color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh;display:grid;grid-template-columns:270px minmax(0,1fr)}
+    aside{position:sticky;top:0;height:100vh;padding:22px 16px;background:rgba(7,17,31,.94);
+      border-right:1px solid var(--line);backdrop-filter:blur(16px);z-index:10}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+    .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));color:#04101b;font-weight:900;font-size:22px}
+    .brand h1{font-size:17px;margin:0}.brand small{color:var(--muted)}
+    nav{display:grid;gap:7px}
+    nav a{color:var(--muted);text-decoration:none;padding:10px 12px;border-radius:10px}
+    nav a:hover{background:var(--panel2);color:#fff}
+    .side-note{position:absolute;bottom:18px;left:16px;right:16px;padding:12px;border:1px solid var(--line);
+      border-radius:12px;color:var(--muted);font-size:12px}
+    main{min-width:0;padding:28px}
+    .hero{border:1px solid var(--line);border-radius:22px;padding:30px;background:
+      radial-gradient(circle at 85% 10%,rgba(85,214,190,.19),transparent 35%),
+      linear-gradient(145deg,rgba(18,35,58,.95),rgba(9,22,38,.95));box-shadow:var(--shadow)}
+    .eyebrow{color:var(--brand);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px}
+    h2{margin:8px 0 10px;font-size:clamp(28px,5vw,48px);line-height:1.05}
+    .hero p{max-width:850px;color:var(--muted);font-size:16px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+    .btn{border:1px solid var(--line);background:var(--panel2);color:#fff;border-radius:11px;padding:10px 14px;font-weight:700}
+    .btn:hover{filter:brightness(1.12)}.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#04101b;border:0}
+    .btn.warn{background:#3a2b0c;border-color:#7c5e19;color:#ffe19a}.btn.danger{background:#361620;border-color:#713040;color:#ffc3ca}
+    .status-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+    .badge{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 9px;color:var(--muted);background:#091727}
+    .badge.ok{color:var(--ok)}.badge.warn{color:var(--warn)}
+    section{scroll-margin-top:18px;margin-top:22px}
+    .section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:11px}
+    .section-head h3{margin:0;font-size:20px}.section-head p{margin:0;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+    .card{grid-column:span 4;border:1px solid var(--line);border-radius:16px;padding:17px;background:rgba(13,27,46,.88);box-shadow:0 8px 28px rgba(0,0,0,.15)}
+    .card.wide{grid-column:span 8}.card.full{grid-column:1/-1}.card.half{grid-column:span 6}
+    .card h4{margin:0 0 8px}.card p{margin:0 0 12px;color:var(--muted);font-size:14px}
+    .demo-target{position:relative;border:1px dashed #486482;border-radius:13px;padding:16px;background:#0a192b;min-height:92px}
+    .demo-target strong{display:block;margin-bottom:4px}.mini{font-size:12px;color:var(--muted)}
+    .pulse-dot{position:absolute;right:14px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--brand);
+      box-shadow:0 0 0 0 rgba(85,214,190,.6);animation:pulse 1.6s infinite}
+    @keyframes pulse{70%{box-shadow:0 0 0 12px rgba(85,214,190,0)}100%{box-shadow:0 0 0 0 rgba(85,214,190,0)}}
+    .form-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .field{flex:1;min-width:150px;background:#071525;border:1px solid var(--line);color:#fff;border-radius:10px;padding:9px 10px}
+    .check{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+    .check input{accent-color:var(--brand)}
+    .event-log{height:250px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#050e19;padding:10px;
+      font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+    .log-line{padding:5px 3px;border-bottom:1px solid rgba(38,58,85,.45);color:#b9cae0}
+    .log-line b{color:var(--brand)}
+    .feature-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .feature{padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:13px;background:#091727}
+    .feature::before{content:"✓";color:var(--ok);font-weight:900;margin-right:7px}
+    .spacer{height:55vh;display:grid;place-items:center;color:#536b88;border:1px dashed #263a55;border-radius:15px}
+    .hidden-box{display:none;margin-top:10px;padding:12px;border:1px solid var(--brand);border-radius:10px;background:#0a2a2a}
+    .hidden-box.show{display:block}
+    footer{padding:35px 0 15px;text-align:center;color:var(--muted);font-size:12px}
+    .tour-highlight{box-shadow:0 0 0 5px rgba(85,214,190,.45),0 0 35px rgba(85,214,190,.38)!important}
+    .extra-glow{box-shadow:0 0 0 4px rgba(90,167,255,.42)!important}
+    .shepherd-element{max-width:min(390px,calc(100vw - 26px));border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+    .shepherd-header{background:#10243a!important}.shepherd-text{color:#23354a}
+    .shepherd-title{color:#e9f4ff!important}.shepherd-cancel-icon{color:#a9bfd8!important}
+    .shepherd-button{border-radius:9px!important;background:#1977d2!important}
+    .shepherd-button-secondary{background:#e9eef5!important;color:#24384f!important}
+    .shepherd-progress{height:4px;background:#dbe5f0;overflow:hidden}
+    .shepherd-progress > div{height:100%;background:linear-gradient(90deg,#20bfa9,#338fe5);transition:width .25s}
+    .custom-tour-theme{border:2px solid #55d6be}
+    .custom-tour-theme .shepherd-header{background:linear-gradient(135deg,#0e756b,#276da5)!important}
+    .step-counter{font-size:11px;color:#a9bfd8;margin-left:auto;margin-right:8px}
+    @media(max-width:900px){
+      .app{grid-template-columns:1fr} aside{position:relative;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+      nav{display:flex;overflow:auto}.side-note{display:none}main{padding:16px}
+      .card,.card.wide,.card.half{grid-column:1/-1}.feature-list{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:520px){.feature-list{grid-template-columns:1fr}.hero{padding:22px}.toolbar .btn{flex:1}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside id="sidebarTarget">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div><h1>Shepherd.js Lab</h1><small>Interactive Tour Showcase</small></div>
+    </div>
+    <nav>
+      <a href="#control">투어 제어</a><a href="#targets">배치·강조</a><a href="#advanced">고급 동작</a>
+      <a href="#events">이벤트·상태</a><a href="#api">API 실험실</a>
+    </nav>
+    <div class="side-note">단일 HTML · CDN 방식<br>브라우저 콘솔 없이 기능 확인 가능</div>
+  </aside>
+
+  <main>
+    <header class="hero" id="heroTarget">
+      <div class="eyebrow">Shepherd.js comprehensive demo</div>
+      <h2>사용자 온보딩 투어<br>종합 기능 샘플</h2>
+      <p>기본 투어, 모달 오버레이, 방향별 툴팁, 키보드 탐색, 조건부 단계, 이벤트 기반 자동 진행,
+        비동기 준비, 동적 단계 관리, 직접 API 제어와 이벤트 로그를 한 화면에서 실험한다.</p>
+      <div class="toolbar">
+        <button class="btn primary" id="startMain">종합 투어 시작</button>
+        <button class="btn" id="startPlacement">배치 투어</button>
+        <button class="btn" id="startNoOverlay">오버레이 없는 투어</button>
+        <button class="btn warn" id="startAuto">자동 진행 투어</button>
+        <button class="btn danger" id="cancelTour">현재 투어 취소</button>
+      </div>
+      <div class="status-row">
+        <span class="badge" id="libStatus">라이브러리 확인 중</span>
+        <span class="badge">← → 키: 이전/다음</span><span class="badge">ESC: 취소</span>
+        <span class="badge" id="activeStatus">활성 투어 없음</span>
+      </div>
+    </header>
+
+    <section id="control">
+      <div class="section-head"><div><h3>1. 투어 옵션</h3><p>실행 전 옵션을 바꾸고 차이를 확인</p></div></div>
+      <div class="grid">
+        <article class="card half">
+          <h4>Tour 설정</h4>
+          <div class="form-row">
+            <label class="check"><input id="optOverlay" type="checkbox" checked> 모달 오버레이</label>
+            <label class="check"><input id="optKeyboard" type="checkbox" checked> 키보드 탐색</label>
+            <label class="check"><input id="optEsc" type="checkbox" checked> ESC 종료</label>
+            <label class="check"><input id="optConfirm" type="checkbox" checked> 취소 확인</label>
+          </div>
+          <div class="form-row" style="margin-top:12px">
+            <select class="field" id="optScroll">
+              <option value="smooth">부드러운 스크롤</option><option value="auto">즉시 스크롤</option>
+            </select>
+            <select class="field" id="optTheme">
+              <option value="custom-tour-theme">커스텀 테마</option><option value="">기본 테마</option>
+            </select>
+          </div>
+        </article>
+        <article class="card half" id="stateCard">
+          <h4>현재 상태</h4>
+          <div class="status-row">
+            <span class="badge" id="tourName">tour: -</span><span class="badge" id="stepName">step: -</span>
+            <span class="badge" id="stepIndex">index: -</span><span class="badge" id="isActive">isActive: false</span>
+          </div>
+          <div class="toolbar">
+            <button class="btn" id="goBack">back()</button><button class="btn" id="goNext">next()</button>
+            <button class="btn" id="hideCurrent">hide()</button><button class="btn" id="showCurrent">show()</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="targets">
+      <div class="section-head"><div><h3>2. 배치·강조 대상</h3><p>attachTo 방향, 화살표, 클릭 허용, 다중 강조</p></div></div>
+      <div class="grid">
+        <article class="card"><div class="demo-target" id="targetTop"><span class="pulse-dot"></span><strong>상단 배치</strong><span class="mini">tooltip: top / top-start / top-end</span></div></article>
+        <article class="card"><div class="demo-target" id="targetRight"><strong>우측 배치</strong><span class="mini">tooltip: right</span></div></article>
+        <article class="card"><div class="demo-target" id="targetBottom"><strong>하단 배치</strong><span class="mini">tooltip: bottom</span></div></article>
+        <article class="card"><div class="demo-target" id="targetLeft"><strong>좌측 배치</strong><span class="mini">tooltip: left</span></div></article>
+        <article class="card" id="multiOne"><div class="demo-target"><strong>기본 강조 대상</strong><span class="mini">attachTo 대상</span></div></article>
+        <article class="card" id="multiTwo"><div class="demo-target"><strong>추가 강조 대상</strong><span class="mini">extraHighlights 대상</span></div></article>
+        <article class="card full">
+          <h4>클릭 가능 여부 테스트</h4>
+          <p>투어 단계에 따라 대상 클릭을 허용하거나 차단하는 <code>canClickTarget</code> 비교</p>
+          <button class="btn primary" id="clickTarget">대상 버튼 · 클릭 수 <span id="clickCount">0</span></button>
+        </article>
+      </div>
+    </section>
+
+    <section id="advanced">
+      <div class="section-head"><div><h3>3. 고급 동작</h3><p>조건부 표시·자동 진행·비동기 준비·동적 DOM</p></div></div>
+      <div class="grid">
+        <article class="card">
+          <h4>showOn 조건부 단계</h4>
+          <p>체크되어 있을 때만 조건부 단계가 표시됨</p>
+          <label class="check"><input id="showConditional" type="checkbox" checked> 조건부 단계 포함</label>
+        </article>
+        <article class="card" id="advanceCard">
+          <h4>advanceOn 자동 진행</h4>
+          <p>해당 단계가 열렸을 때 아래 버튼 클릭으로 다음 단계 이동</p>
+          <button class="btn warn" id="advanceTrigger">이 버튼을 클릭해 진행</button>
+        </article>
+        <article class="card">
+          <h4>beforeShowPromise</h4>
+          <p>비동기 준비가 끝난 뒤 단계 표시</p>
+          <button class="btn" id="asyncDemo">비동기 단계 직접 보기</button>
+          <div class="hidden-box" id="asyncTarget"><strong>비동기 콘텐츠 준비 완료</strong></div>
+        </article>
+        <article class="card">
+          <h4>지연 생성 DOM</h4>
+          <p><code>attachTo.element</code> 함수로 표시 직전 대상을 탐색</p>
+          <button class="btn" id="createLazy">지연 대상 생성/제거</button>
+          <div id="lazyHost"></div>
+        </article>
+        <article class="card wide">
+          <h4>스크롤 대상</h4>
+          <p>아래 긴 공간을 지나 원거리 요소로 자동 스크롤</p>
+          <div class="spacer">스크롤 동작 확인 구간</div>
+          <div class="demo-target" id="farTarget"><strong>원거리 단계 도착</strong><span class="mini">scrollTo + scrollToHandler 예시</span></div>
+        </article>
+        <article class="card">
+          <h4>중앙 모달 단계</h4>
+          <p>attachTo를 생략하면 화면 중앙에 표시</p>
+          <button class="btn" id="centerModal">중앙 단계 열기</button>
+        </article>
+      </div>
+    </section>
+
+    <section id="events">
+      <div class="section-head"><div><h3>4. 이벤트·상태 로그</h3><p>Tour 및 Step 이벤트를 실시간 기록</p></div>
+        <button class="btn" id="clearLog">로그 지우기</button></div>
+      <div class="grid">
+        <article class="card wide"><div class="event-log" id="eventLog"></div></article>
+        <article class="card">
+          <h4>감지 이벤트</h4>
+          <div class="feature-list" style="grid-template-columns:1fr 1fr">
+            <div class="feature">start</div><div class="feature">show</div><div class="feature">hide</div>
+            <div class="feature">complete</div><div class="feature">cancel</div><div class="feature">active</div>
+            <div class="feature">inactive</div><div class="feature">before-show</div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="api">
+      <div class="section-head"><div><h3>5. API 실험실</h3><p>단계 조회·이동·추가·삭제·재시작</p></div></div>
+      <div class="grid">
+        <article class="card full">
+          <div class="toolbar">
+            <button class="btn" id="showById">show('api-step')</button>
+            <button class="btn" id="getById">getById()</button>
+            <button class="btn" id="addDynamic">동적 단계 추가</button>
+            <button class="btn danger" id="removeDynamic">동적 단계 삭제</button>
+            <button class="btn primary" id="restartMain">투어 재구성·시작</button>
+          </div>
+          <div id="dynamicTarget" class="demo-target" style="margin-top:14px"><strong>API 대상</strong><span class="mini">동적 단계가 연결되는 요소</span></div>
+        </article>
+        <article class="card full">
+          <h4>포함 기능</h4>
+          <div class="feature-list">
+            <div class="feature">Tour 생성·시작</div><div class="feature">defaultStepOptions</div>
+            <div class="feature">modal overlay</div><div class="feature">confirmCancel</div>
+            <div class="feature">keyboardNavigation</div><div class="feature">exitOnEsc</div>
+            <div class="feature">attachTo 4방향</div><div class="feature">중앙 모달</div>
+            <div class="feature">화살표 설정</div><div class="feature">cancelIcon</div>
+            <div class="feature">커스텀 버튼</div><div class="feature">버튼 disabled 함수</div>
+            <div class="feature">showOn 조건</div><div class="feature">advanceOn 이벤트</div>
+            <div class="feature">beforeShowPromise</div><div class="feature">lazy element 함수</div>
+            <div class="feature">extraHighlights</div><div class="feature">highlightClass</div>
+            <div class="feature">canClickTarget</div><div class="feature">opening padding/radius</div>
+            <div class="feature">scrollTo</div><div class="feature">scrollToHandler</div>
+            <div class="feature">Step when 이벤트</div><div class="feature">Tour 이벤트</div>
+            <div class="feature">addStep/removeStep</div><div class="feature">getById/getCurrentStep</div>
+            <div class="feature">show/back/next</div><div class="feature">hide/cancel/complete</div>
+            <div class="feature">진행률 표시</div><div class="feature">반응형 UI</div>
+          </div>
+        </article>
+      </div>
+    </section>
+    <footer>Shepherd.js 종합 샘플 · 외부 CDN 연결 필요 · 최신 브라우저 권장</footer>
+  </main>
+</div>
+
+<script type="module">
+  const $ = (s) => document.querySelector(s);
+  const logEl = $('#eventLog');
+  const log = (event, detail='') => {
+    const t = new Date().toLocaleTimeString('ko-KR',{hour12:false});
+    logEl.insertAdjacentHTML('afterbegin', `<div class="log-line"><b>${t} · ${event}</b>${detail ? ' — '+detail : ''}</div>`);
+  };
+  let Shepherd, currentTour = null, lastHiddenStep = null, clickCount = 0, dynamicAdded = false;
+
+  function updateState(tour=currentTour){
+    const step = tour?.getCurrentStep?.();
+    $('#tourName').textContent = `tour: ${tour?.options?.tourName || '-'}`;
+    $('#stepName').textContent = `step: ${step?.id || '-'}`;
+    const idx = step && tour ? tour.steps.indexOf(step) : -1;
+    $('#stepIndex').textContent = `index: ${idx >= 0 ? idx+1+'/'+tour.steps.length : '-'}`;
+    $('#isActive').textContent = `isActive: ${Boolean(tour?.isActive?.())}`;
+    $('#activeStatus').textContent = tour?.isActive?.() ? `활성: ${step?.id || '준비 중'}` : '활성 투어 없음';
+    $('#activeStatus').className = `badge ${tour?.isActive?.() ? 'ok' : ''}`;
+  }
+
+  function decorateStep(tour, step){
+    if(!step?.el) return;
+    const header = step.el.querySelector('.shepherd-header');
+    if(header && !header.querySelector('.step-counter')){
+      const idx = tour.steps.indexOf(step)+1;
+      const counter = document.createElement('span');
+      counter.className='step-counter';
+      counter.textContent=`${idx} / ${tour.steps.length}`;
+      header.insertBefore(counter, header.querySelector('.shepherd-cancel-icon'));
+    }
+    if(!step.el.querySelector('.shepherd-progress')){
+      const progress=document.createElement('div'); progress.className='shepherd-progress';
+      const bar=document.createElement('div');
+      bar.style.width=`${((tour.steps.indexOf(step)+1)/tour.steps.length)*100}%`;
+      progress.appendChild(bar); step.el.prepend(progress);
+    }
+  }
+
+  function wireTour(tour){
+    ['start','complete','cancel','hide'].forEach(ev=>tour.on(ev,()=>{log(`Tour.${ev}`,tour.options.tourName||'');updateState(tour)}));
+    tour.on('show',({step,previous})=>{
+      currentTour=tour; decorateStep(tour,step);
+      log('Tour.show',`${step.id}${previous ? ' ← '+previous.id : ''}`); updateState(tour);
+    });
+    ['active','inactive'].forEach(ev=>Shepherd.on(ev,(data)=>{log(`Shepherd.${ev}`,data?.tour?.options?.tourName||'');updateState(data?.tour)}));
+    return tour;
+  }
+
+  function baseOptions(name, overlay=true){
+    return {
+      tourName:name,
+      useModalOverlay:overlay,
+      keyboardNavigation:$('#optKeyboard').checked,
+      exitOnEsc:$('#optEsc').checked,
+      confirmCancel:$('#optConfirm').checked ? async()=>{
+        log('confirmCancel','사용자 확인 요청');
+        return window.confirm('정말 현재 투어를 종료할까요?');
+      } : false,
+      defaultStepOptions:{
+        classes:$('#optTheme').value,
+        cancelIcon:{enabled:true,label:'투어 닫기',attrs:{'data-demo':'cancel'}},
+        scrollTo:{behavior:$('#optScroll').value,block:'center'},
+        modalOverlayOpeningPadding:8,
+        modalOverlayOpeningRadius:12,
+        arrow:{padding:8}
+      }
+    };
+  }
+
+  function stepEvents(id){
+    return {
+      'before-show':()=>log('Step.before-show',id),
+      show:()=>log('Step.show',id),
+      'before-hide':()=>log('Step.before-hide',id),
+      hide:()=>log('Step.hide',id),
+      destroy:()=>log('Step.destroy',id)
+    };
+  }
+
+  function buildMainTour(){
+    const tour=wireTour(new Shepherd.Tour(baseOptions('comprehensive-main',$('#optOverlay').checked)));
+    const back={text:'이전',secondary:true,label:'이전 단계',action(){return this.back()}};
+    const next={text:'다음',label:'다음 단계',action(){return this.next()}};
+
+    tour.addSteps([
+      {id:'welcome',title:'Shepherd.js 종합 투어',text:()=>`
+        <p>이 투어는 실제 UI 요소를 따라 이동하며 주요 기능을 시연합니다.</p>
+        <small>키보드 ← →, ESC도 사용해 보세요.</small>`,
+       buttons:[{text:'건너뛰기',secondary:true,action(){return this.show('events-step')}},next],when:stepEvents('welcome')},
+
+      {id:'sidebar',title:'attachTo + 오버레이',text:'좌측 탐색 영역을 강조하고 툴팁을 우측에 배치합니다.',
+       attachTo:{element:'#sidebarTarget',on:'right'},highlightClass:'tour-highlight',buttons:[back,next],when:stepEvents('sidebar')},
+
+      {id:'hero',title:'다중 강조',text:'기본 대상 외에 두 카드도 함께 강조합니다.',
+       attachTo:{element:'#heroTarget',on:'bottom'},extraHighlights:['#multiOne','#multiTwo'],
+       modalOverlayOpeningPadding:12,modalOverlayOpeningRadius:{topLeft:24,topRight:24,bottomLeft:8,bottomRight:8},
+       buttons:[back,next],when:{...stepEvents('hero'),show(){ $('#multiTwo').classList.add('extra-glow'); log('when.show','추가 커스텀 효과')},
+       hide(){ $('#multiTwo').classList.remove('extra-glow'); log('when.hide','커스텀 효과 해제')}}},
+
+      {id:'click-blocked',title:'대상 클릭 차단',text:'이 단계에서는 강조된 버튼을 클릭할 수 없습니다.',
+       attachTo:{element:'#clickTarget',on:'top'},canClickTarget:false,buttons:[back,next],when:stepEvents('click-blocked')},
+
+      {id:'conditional',title:'조건부 단계',text:'체크박스가 켜져 있어 이 단계가 표시되었습니다. 꺼져 있으면 자동으로 건너뜁니다.',
+       attachTo:{element:'#showConditional',on:'bottom'},showOn:()=>$('#showConditional').checked,buttons:[back,next],when:stepEvents('conditional')},
+
+      {id:'auto-advance',title:'advanceOn',text:'페이지 안의 노란 버튼을 누르면 다음 단계로 자동 진행합니다.',
+       attachTo:{element:'#advanceCard',on:'top'},advanceOn:{selector:'#advanceTrigger',event:'click'},
+       buttons:[back,{text:'수동 다음',secondary:true,action(){return this.next()}}],when:stepEvents('auto-advance')},
+
+      {id:'async',title:'beforeShowPromise',text:'콘텐츠 준비를 비동기로 기다린 후 대상에 연결했습니다.',
+       beforeShowPromise:()=>new Promise(resolve=>{
+         log('Promise','비동기 콘텐츠 준비 시작');
+         setTimeout(()=>{$('#asyncTarget').classList.add('show');log('Promise','준비 완료');resolve()},650);
+       }),
+       attachTo:{element:()=>$('#asyncTarget'),on:'bottom'},buttons:[back,next],when:stepEvents('async')},
+
+      {id:'lazy',title:'지연 평가 대상',text:'표시 직전 함수로 DOM 요소를 찾아 연결합니다. 대상이 없으면 화면 중앙에 표시됩니다.',
+       attachTo:{element:()=>document.querySelector('#lazyTarget'),on:'bottom'},buttons:[back,next],when:stepEvents('lazy')},
+
+      {id:'far',title:'스크롤 이동',text:'원거리 요소까지 부드럽게 이동했습니다. 사용자 정의 scrollToHandler도 적용 가능합니다.',
+       attachTo:{element:'#farTarget',on:'top'},scrollToHandler(){
+         log('scrollToHandler','원거리 요소로 이동');document.querySelector('#farTarget').scrollIntoView({behavior:'smooth',block:'center'});
+       },buttons:[back,next],when:stepEvents('far')},
+
+      {id:'events-step',title:'이벤트 로그',text:'각 Tour·Step 이벤트가 이 패널에 실시간 기록됩니다.',
+       attachTo:{element:'#eventLog',on:'top'},buttons:[back,next],when:stepEvents('events-step')},
+
+      {id:'api-step',title:'직접 API 제어',text:'getById, show, addStep, removeStep 등 런타임 API를 버튼으로 시험할 수 있습니다.',
+       attachTo:{element:'#dynamicTarget',on:'top'},buttons:[back,{text:'완료',action(){return this.complete()}}],
+       when:stepEvents('api-step')}
+    ]);
+    return tour;
+  }
+
+  function buildPlacementTour(){
+    const tour=wireTour(new Shepherd.Tour(baseOptions('placement-demo',true)));
+    const configs=[
+      ['p-top','#targetTop','top','위쪽 배치'],
+      ['p-right','#targetRight','right','오른쪽 배치'],
+      ['p-bottom','#targetBottom','bottom','아래쪽 배치'],
+      ['p-left','#targetLeft','left','왼쪽 배치']
+    ];
+    configs.forEach(([id,el,on,title],i)=>tour.addStep({
+      id,title,text:`attachTo.on = <code>${on}</code>`,attachTo:{element:el,on},
+      arrow:i===2?false:{padding:12},
+      buttons:[
+        ...(i?[{text:'이전',secondary:true,action(){this.back()}}]:[]),
+        {text:i===configs.length-1?'완료':'다음',action(){i===configs.length-1?this.complete():this.next()}}
+      ],when:stepEvents(id)
+    }));
+    return tour;
+  }
+
+  function buildNoOverlayTour(){
+    const tour=wireTour(new Shepherd.Tour(baseOptions('no-overlay',false)));
+    tour.addStep({id:'plain',title:'오버레이 없음',text:'배경을 가리지 않는 컨텍스트 도움말 방식입니다.',
+      attachTo:{element:'#stateCard',on:'bottom'},buttons:[{text:'완료',action(){this.complete()}}]});
+    return tour;
+  }
+
+  function buildAutoTour(){
+    const tour=wireTour(new Shepherd.Tour({...baseOptions('auto-advance',true),confirmCancel:false}));
+    tour.addStep({id:'auto',title:'자동 진행 대기',text:'노란 “이 버튼을 클릭해 진행” 버튼을 누르세요.',
+      attachTo:{element:'#advanceTrigger',on:'top'},advanceOn:{selector:'#advanceTrigger',event:'click'},
+      buttons:[{text:'취소',secondary:true,action(){this.cancel()}}]});
+    tour.addStep({id:'auto-done',title:'자동 진행 성공',text:'페이지 이벤트로 다음 단계가 열렸습니다.',
+      attachTo:{element:'#advanceCard',on:'bottom'},buttons:[{text:'완료',action(){this.complete()}}]});
+    return tour;
+  }
+
+  function startTour(builder){ if(currentTour?.isActive?.()) currentTour.cancel(); currentTour=builder(); currentTour.start(); }
+  $('#startMain').onclick=()=>startTour(buildMainTour);
+  $('#startPlacement').onclick=()=>startTour(buildPlacementTour);
+  $('#startNoOverlay').onclick=()=>startTour(buildNoOverlayTour);
+  $('#startAuto').onclick=()=>startTour(buildAutoTour);
+  $('#restartMain').onclick=()=>startTour(buildMainTour);
+  $('#cancelTour').onclick=()=>currentTour?.cancel();
+  $('#goBack').onclick=()=>currentTour?.back();
+  $('#goNext').onclick=()=>currentTour?.next();
+  $('#hideCurrent').onclick=()=>{lastHiddenStep=currentTour?.getCurrentStep();currentTour?.hide();updateState()};
+  $('#showCurrent').onclick=()=>{if(lastHiddenStep) currentTour?.show(lastHiddenStep.id); else currentTour?.show()};
+  $('#showById').onclick=()=>currentTour?.show('api-step');
+  $('#getById').onclick=()=>{const s=currentTour?.getById('api-step');log('getById',s?`찾음: ${s.id}`:'없음')};
+  $('#clearLog').onclick=()=>logEl.innerHTML='';
+  $('#clickTarget').onclick=()=>{$('#clickCount').textContent=++clickCount;log('target.click',`count=${clickCount}`)};
+  $('#createLazy').onclick=()=>{
+    const old=$('#lazyTarget');
+    if(old){old.remove();log('DOM','lazyTarget 제거')}
+    else{$('#lazyHost').innerHTML='<div class="hidden-box show" id="lazyTarget"><strong>지연 생성 대상</strong></div>';log('DOM','lazyTarget 생성')}
+  };
+  $('#asyncDemo').onclick=()=>{
+    const tour=wireTour(new Shepherd.Tour(baseOptions('async-only',true)));
+    tour.addStep({id:'async-only-step',title:'비동기 로딩',text:'약 0.65초 뒤 표시된 대상입니다.',
+      beforeShowPromise:()=>new Promise(r=>setTimeout(()=>{$('#asyncTarget').classList.add('show');r()},650)),
+      attachTo:{element:'#asyncTarget',on:'bottom'},buttons:[{text:'완료',action(){this.complete()}}]});
+    currentTour=tour;tour.start();
+  };
+  $('#centerModal').onclick=()=>{
+    const tour=wireTour(new Shepherd.Tour(baseOptions('center-modal',true)));
+    tour.addStep({id:'center',title:'중앙 모달',text:'attachTo 옵션이 없어 화면 중앙에 표시됩니다.',
+      buttons:[{text:'닫기',action(){this.complete()}}]});currentTour=tour;tour.start();
+  };
+  $('#addDynamic').onclick=()=>{
+    if(!currentTour) currentTour=buildMainTour();
+    if(currentTour.getById('dynamic-added')) return log('addStep','이미 존재함');
+    currentTour.addStep({id:'dynamic-added',title:'동적으로 추가된 단계',text:'실행 중 addStep()으로 생성되었습니다.',
+      attachTo:{element:'#dynamicTarget',on:'right'},buttons:[{text:'완료',action(){this.complete()}}]});
+    dynamicAdded=true;log('addStep','dynamic-added 생성');updateState();
+  };
+  $('#removeDynamic').onclick=()=>{
+    if(currentTour?.getById('dynamic-added')){currentTour.removeStep('dynamic-added');dynamicAdded=false;log('removeStep','dynamic-added 삭제');updateState()}
+    else log('removeStep','삭제할 단계 없음');
+  };
+
+  try{
+    const mod=await import('https://cdn.jsdelivr.net/npm/shepherd.js@latest/dist/esm/shepherd.mjs');
+    Shepherd=mod.default || mod.Shepherd || mod;
+    if(!Shepherd?.Tour) throw new Error('Tour 클래스를 찾지 못했습니다.');
+    $('#libStatus').textContent='Shepherd.js 로드 완료';$('#libStatus').className='badge ok';
+    log('library','Shepherd.js ESM 로드 완료');
+    currentTour=buildMainTour(); updateState();
+  }catch(err){
+    $('#libStatus').textContent='라이브러리 로드 실패';$('#libStatus').className='badge warn';
+    log('error',err.message);
+    document.querySelectorAll('button').forEach(b=>{if(!['clearLog','clickTarget','createLazy'].includes(b.id))b.disabled=true});
+    alert('Shepherd.js CDN을 불러오지 못했습니다. 인터넷 연결 또는 보안 정책을 확인하세요.');
+  }
+</script>
+</body>
+</html>
