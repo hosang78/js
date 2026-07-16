@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Split.js</title>
+<script src="https://cdn.jsdelivr.net/npm/split.js@1.6.5/dist/split.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- split.js 데모 공통 ---- */
+  .split-wrap {
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .split-h { display: flex; height: 260px; }
+  .split-v { display: flex; flex-direction: column; height: 260px; }
+  .pane {
+    box-sizing: border-box;
+    overflow: auto;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #333;
+    background: #fafbfd;
+  }
+  .pane h3 { margin: 0 0 6px; font-size: 13.5px; color: #205fb0; }
+  .pane.alt { background: #f4f6fa; }
+  .gutter {
+    background-color: #e4e7ec;
+    background-repeat: no-repeat;
+    background-position: 50%;
+  }
+  .gutter:hover { background-color: #cdd4e0; }
+  .gutter.gutter-horizontal { cursor: col-resize; }
+  .gutter.gutter-vertical { cursor: row-resize; }
+  .row-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #e8eaef; }
+  .row-item:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+
+  <h1>Split.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Split.js</strong>는 화면을 드래그 가능한 여러 영역으로 나눠주는 아주 가벼운(약 2KB) 라이브러리입니다.
+    프레임워크 의존성이 없고, 순수 CSS(flex)와 소량의 JS로 리사이즈 가능한 분할 레이아웃을 만듭니다.
+    <ul>
+      <li>기본 <code class="inline">Split([...])</code> 호출로 만드는 <strong>수평 분할</strong>(좌우)</li>
+      <li><code class="inline">direction: 'vertical'</code>로 만드는 <strong>수직 분할</strong>(상하)</li>
+      <li>수평·수직 분할을 겹쳐 쓰는 <strong>중첩 분할</strong>(IDE 스타일 레이아웃)</li>
+      <li><code class="inline">setSizes()</code> / <code class="inline">getSizes()</code> / <code class="inline">collapse()</code>로 하는 <strong>크기 제어</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 패널 이름과 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      시스템 화면·통계와 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 수평 분할</h2>
+    <div class="desc">
+      가운데 회색 막대(gutter)를 드래그해서 좌우 패널의 너비 비율을 바꿔보세요. <code class="inline">minSize</code>로
+      최소 너비를 지정해 패널이 너무 좁아지지 않게 막습니다.
+    </div>
+    <div class="split-wrap">
+      <div class="split-h" id="split1">
+        <div class="pane" id="split1-a">
+          <h3>위판장 목록</h3>
+          <div class="row-item"><span>A위판장</span><span>부산</span></div>
+          <div class="row-item"><span>B위판장</span><span>포항</span></div>
+          <div class="row-item"><span>C위판장</span><span>여수</span></div>
+          <div class="row-item"><span>D위판장</span><span>속초</span></div>
+        </div>
+        <div class="pane alt" id="split1-b">
+          <h3>상세 정보</h3>
+          <p>왼쪽 목록에서 위판장을 고르면 이 영역에 최근 위판 현황, 참여 조합원 수 같은
+          상세 정보가 표시된다고 가정한 자리입니다. (가상 예시)</p>
+        </div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Split(['#split1-a', '#split1-b'], {
+  sizes: [38, 62],
+  minSize: 120,
+  gutterSize: 8,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 수직 분할</h2>
+    <div class="desc">
+      <code class="inline">direction: 'vertical'</code>을 주면 좌우 대신 위아래로 나뉘고, gutter도
+      상하 드래그(row-resize) 커서로 바뀝니다.
+    </div>
+    <div class="split-wrap">
+      <div class="split-v" id="split2">
+        <div class="pane" id="split2-a">
+          <h3>조업 일지</h3>
+          <div class="row-item"><span>07/14</span><span>고등어 320kg</span></div>
+          <div class="row-item"><span>07/15</span><span>갈치 180kg</span></div>
+          <div class="row-item"><span>07/16</span><span>오징어 240kg</span></div>
+        </div>
+        <div class="pane alt" id="split2-b">
+          <h3>공지사항</h3>
+          <div class="row-item"><span>정기 총회 안내</span><span>D-5</span></div>
+          <div class="row-item"><span>냉동 창고 점검</span><span>D-2</span></div>
+        </div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>Split(['#split2-a', '#split2-b'], {
+  direction: 'vertical',
+  sizes: [55, 45],
+  minSize: 70,
+  gutterSize: 8,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 중첩 분할 — IDE 스타일 레이아웃</h2>
+    <div class="desc">
+      수평 분할 안에 수직 분할을 한 번 더 넣어, 코드 에디터 같은 "사이드바 + 메인/로그" 레이아웃을
+      만들 수 있습니다. 세 영역 모두 독립적으로 드래그해서 크기를 조절해보세요.
+    </div>
+    <div class="split-wrap">
+      <div class="split-h" id="split3-outer">
+        <div class="pane" id="split3-side">
+          <h3>사이드바</h3>
+          <div class="row-item"><span>위판 현황</span></div>
+          <div class="row-item"><span>시세 조회</span></div>
+          <div class="row-item"><span>조합원 명부</span></div>
+        </div>
+        <div id="split3-main-wrap">
+          <div class="split-v" id="split3-inner">
+            <div class="pane alt" id="split3-top">
+              <h3>메인 영역</h3>
+              <p>오늘 위판량: 4,820kg · 평균가 4,200원/kg (가상 예시)</p>
+            </div>
+            <div class="pane" id="split3-bottom">
+              <h3>로그</h3>
+              <div class="row-item"><span>10:02</span><span>위판 등록 완료</span></div>
+              <div class="row-item"><span>10:15</span><span>정산 처리 완료</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>// 바깥쪽: 사이드바 | 메인래퍼 (수평)
+Split(['#split3-side', '#split3-main-wrap'], {
+  sizes: [25, 75],
+  minSize: [80, 240],
+  gutterSize: 8,
+});
+
+// 안쪽: 메인래퍼 내부를 다시 상/하로 (수직)
+Split(['#split3-top', '#split3-bottom'], {
+  direction: 'vertical',
+  sizes: [65, 35],
+  minSize: 50,
+  gutterSize: 8,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. setSizes / getSizes / collapse로 하는 크기 제어</h2>
+    <div class="desc">
+      버튼으로 직접 비율을 지정하거나 왼쪽 패널을 완전히 접을 수 있습니다. 드래그를 멈출 때마다
+      <code class="inline">onDragEnd</code> 콜백으로 현재 비율을 읽어와 아래 상태 박스에 표시합니다.
+    </div>
+    <div class="controls">
+      <button id="s4-5050">50 : 50</button>
+      <button id="s4-2080">20 : 80</button>
+      <button id="s4-collapse">왼쪽 접기</button>
+    </div>
+    <div class="split-wrap">
+      <div class="split-h" id="split4">
+        <div class="pane" id="split4-a">
+          <h3>유통 현황</h3>
+          <p>가상의 유통 물량 데이터가 표시되는 자리입니다.</p>
+        </div>
+        <div class="pane alt" id="split4-b">
+          <h3>정산 현황</h3>
+          <p>가상의 정산 내역이 표시되는 자리입니다.</p>
+        </div>
+      </div>
+    </div>
+    <div class="stat-box" id="s4-stat">현재 비율: 50% / 50%</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const split4 = Split(['#split4-a', '#split4-b'], {
+  sizes: [50, 50],
+  minSize: 0,          // collapse()로 0까지 줄이려면 minSize를 0으로 둔다
+  gutterSize: 8,
+  onDragEnd: (sizes) => updateStat(sizes),
+});
+
+s4_5050.addEventListener('click', () => { split4.setSizes([50, 50]); updateStat(split4.getSizes()); });
+s4_2080.addEventListener('click', () => { split4.setSizes([20, 80]); updateStat(split4.getSizes()); });
+s4_collapse.addEventListener('click', () => { split4.collapse(0); updateStat(split4.getSizes()); });</pre>
+    </details>
+  </section>
+
+<script>
+  // ---- 섹션 1: 수평 분할 ----
+  Split(['#split1-a', '#split1-b'], {
+    sizes: [38, 62],
+    minSize: 120,
+    gutterSize: 8,
+  });
+
+  // ---- 섹션 2: 수직 분할 ----
+  Split(['#split2-a', '#split2-b'], {
+    direction: 'vertical',
+    sizes: [55, 45],
+    minSize: 70,
+    gutterSize: 8,
+  });
+
+  // ---- 섹션 3: 중첩 분할 ----
+  Split(['#split3-side', '#split3-main-wrap'], {
+    sizes: [25, 75],
+    minSize: [80, 240],
+    gutterSize: 8,
+  });
+  Split(['#split3-top', '#split3-bottom'], {
+    direction: 'vertical',
+    sizes: [65, 35],
+    minSize: 50,
+    gutterSize: 8,
+  });
+
+  // ---- 섹션 4: setSizes / getSizes / collapse ----
+  (function section4() {
+    const statEl = document.getElementById('s4-stat');
+    function updateStat(sizes) {
+      statEl.innerHTML = `현재 비율: <strong>${sizes[0].toFixed(1)}%</strong> / <strong>${sizes[1].toFixed(1)}%</strong>`;
+    }
+    const split4 = Split(['#split4-a', '#split4-b'], {
+      sizes: [50, 50],
+      minSize: 0,
+      gutterSize: 8,
+      onDragEnd: (sizes) => updateStat(sizes),
+    });
+    document.getElementById('s4-5050').addEventListener('click', () => {
+      split4.setSizes([50, 50]);
+      updateStat(split4.getSizes());
+    });
+    document.getElementById('s4-2080').addEventListener('click', () => {
+      split4.setSizes([20, 80]);
+      updateStat(split4.getSizes());
+    });
+    document.getElementById('s4-collapse').addEventListener('click', () => {
+      split4.collapse(0);
+      updateStat(split4.getSizes());
+    });
+  })();
+</script>
+</body>
+</html>
