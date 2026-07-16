@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Moveable</title>
+<script src="https://cdn.jsdelivr.net/npm/moveable@0.53.0/dist/moveable.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- moveable 데모 공통 ---- */
+  .stage {
+    position: relative;
+    background: #fafbfd;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .card {
+    position: absolute;
+    box-sizing: border-box;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 12.5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  }
+  .card .name { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+  .card .meta { opacity: 0.9; font-size: 11.5px; }
+  .c-blue { background: #4f7dff; }
+  .c-aqua { background: #1baf7a; }
+  .c-yellow { background: #eda100; }
+  .c-violet { background: #4a3aa7; }
+  .c-guide { background: #cbd3e0; color: #333; }
+</style>
+</head>
+<body>
+
+  <h1>Moveable 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Moveable</strong>은 화면 위의 요소를 드래그·리사이즈·회전·워프 등 다양한 방식으로
+    자유롭게 조작할 수 있게 해주는 라이브러리입니다. 하나의 <code class="inline">Moveable</code>
+    인스턴스가 대상 요소 주위에 조작용 컨트롤(핸들)을 그려주고, 사용자가 그 핸들을 움직이면
+    이벤트로 변화량을 알려줍니다.
+    <ul>
+      <li>모서리 핸들로 하는 <strong>드래그 + 리사이즈</strong></li>
+      <li>모서리 밖 회전 핸들로 하는 <strong>회전(rotatable)</strong></li>
+      <li><code class="inline">target</code>에 배열을 넘겨 여러 요소를 한 번에 다루는 <strong>그룹 이동·회전</strong></li>
+      <li>다른 요소·경계에 자동으로 달라붙는 <strong>스냅 가이드라인(snappable)</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 카드 이름과 배치는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 시스템 화면과 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 드래그 + 리사이즈</h2>
+    <div class="desc">
+      카드 안쪽을 눌러 드래그하면 이동하고, 모서리·변의 핸들을 드래그하면 크기가 바뀝니다.
+      어느 모서리로 리사이즈해도 반대쪽 모서리는 그 자리에 고정됩니다.
+    </div>
+    <div class="stage" id="stage1" style="height: 260px;">
+      <div class="card c-blue" id="card1" style="left: 40px; top: 40px; width: 160px; height: 100px;">
+        <div class="name">A위판장</div>
+        <div class="meta">오늘 위판량 820kg</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const moveable = new Moveable(stage1, {
+  target: card1,
+  draggable: true,
+  resizable: true,
+});
+
+moveable.on('drag', ({ target, left, top }) => {
+  target.style.left = `${left}px`;
+  target.style.top = `${top}px`;
+});
+moveable.on('resize', ({ target, width, height, drag }) => {
+  // drag.left/top: 리사이즈 기준점이 반대쪽에 고정되도록 보정된 좌표
+  target.style.width = `${width}px`;
+  target.style.height = `${height}px`;
+  target.style.left = `${drag.left}px`;
+  target.style.top = `${drag.top}px`;
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 회전</h2>
+    <div class="desc">
+      카드 위쪽에 떨어져 있는 동그란 회전 핸들을 드래그하면 카드가 중심을 기준으로 회전합니다.
+    </div>
+    <div class="stage" id="stage2" style="height: 260px;">
+      <div class="card c-yellow" id="card2" style="left: 180px; top: 90px; width: 150px; height: 90px;">
+        <div class="name">특가 알림</div>
+        <div class="meta">고등어 한정 특가</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const moveable = new Moveable(stage2, {
+  target: card2,
+  rotatable: true,
+});
+
+moveable.on('rotate', ({ target, transform }) => {
+  target.style.transform = transform;
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 그룹 이동 · 회전</h2>
+    <div class="desc">
+      <code class="inline">target</code>에 여러 요소를 배열로 넘기면 하나의 그룹으로 묶여 동시에
+      이동·회전합니다. 카드 하나를 드래그하면 세 카드가 함께 움직입니다.
+    </div>
+    <div class="stage" id="stage3" style="height: 260px;">
+      <div class="card c-aqua" id="g1" style="left: 40px; top: 40px; width: 110px; height: 70px;">
+        <div class="name">B위판장</div>
+      </div>
+      <div class="card c-aqua" id="g2" style="left: 190px; top: 60px; width: 110px; height: 70px;">
+        <div class="name">C위판장</div>
+      </div>
+      <div class="card c-aqua" id="g3" style="left: 115px; top: 150px; width: 110px; height: 70px;">
+        <div class="name">D위판장</div>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const groupMoveable = new Moveable(stage3, {
+  target: [g1, g2, g3],
+  draggable: true,
+  rotatable: true,
+});
+
+groupMoveable.on('dragGroup', ({ events }) => {
+  events.forEach((ev) => {
+    ev.target.style.left = `${ev.left}px`;
+    ev.target.style.top = `${ev.top}px`;
+  });
+});
+groupMoveable.on('rotateGroup', ({ events }) => {
+  events.forEach((ev) => {
+    ev.target.style.transform = ev.transform;
+  });
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 스냅 가이드라인</h2>
+    <div class="desc">
+      회색 카드 두 개는 <code class="inline">elementGuidelines</code>로 등록된 기준 요소입니다.
+      보라색 카드를 회색 카드 가장자리나 스테이지 중앙 가까이로 옮겨보면 자동으로 달라붙고 초록
+      점선 가이드라인이 나타납니다.
+    </div>
+    <div class="stage" id="stage4" style="height: 260px;">
+      <div class="card c-guide" id="ge1" style="left: 30px; top: 30px; width: 90px; height: 60px;">기준 카드</div>
+      <div class="card c-guide" id="ge2" style="left: 470px; top: 160px; width: 90px; height: 60px;">기준 카드</div>
+      <div class="card c-violet" id="snapCard" style="left: 260px; top: 100px; width: 110px; height: 70px;">
+        <div class="name">E위판장</div>
+      </div>
+    </div>
+    <div class="stat-box" id="s4-stat">카드를 드래그해서 스냅을 확인해보세요.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const snapMoveable = new Moveable(stage4, {
+  target: snapCard,
+  draggable: true,
+  snappable: true,
+  elementGuidelines: [ge1, ge2],
+  snapGap: true,
+  snapDirections: { top: true, left: true, bottom: true, right: true, center: true, middle: true },
+  elementSnapDirections: { top: true, left: true, bottom: true, right: true, center: true, middle: true },
+});
+
+snapMoveable.on('drag', ({ target, left, top }) => {
+  target.style.left = `${left}px`;
+  target.style.top = `${top}px`;
+});</pre>
+    </details>
+  </section>
+
+<script>
+  // ---- 섹션 1: 드래그 + 리사이즈 ----
+  (function section1() {
+    const target = document.getElementById('card1');
+    const moveable = new Moveable(document.getElementById('stage1'), {
+      target,
+      draggable: true,
+      resizable: true,
+    });
+    moveable.on('drag', ({ target, left, top }) => {
+      target.style.left = `${left}px`;
+      target.style.top = `${top}px`;
+    });
+    moveable.on('resize', ({ target, width, height, drag }) => {
+      target.style.width = `${width}px`;
+      target.style.height = `${height}px`;
+      target.style.left = `${drag.left}px`;
+      target.style.top = `${drag.top}px`;
+    });
+  })();
+
+  // ---- 섹션 2: 회전 ----
+  (function section2() {
+    const target = document.getElementById('card2');
+    const moveable = new Moveable(document.getElementById('stage2'), {
+      target,
+      rotatable: true,
+    });
+    moveable.on('rotate', ({ target, transform }) => {
+      target.style.transform = transform;
+    });
+  })();
+
+  // ---- 섹션 3: 그룹 이동 · 회전 ----
+  (function section3() {
+    const g1 = document.getElementById('g1');
+    const g2 = document.getElementById('g2');
+    const g3 = document.getElementById('g3');
+    const groupMoveable = new Moveable(document.getElementById('stage3'), {
+      target: [g1, g2, g3],
+      draggable: true,
+      rotatable: true,
+    });
+    groupMoveable.on('dragGroup', ({ events }) => {
+      events.forEach((ev) => {
+        ev.target.style.left = `${ev.left}px`;
+        ev.target.style.top = `${ev.top}px`;
+      });
+    });
+    groupMoveable.on('rotateGroup', ({ events }) => {
+      events.forEach((ev) => {
+        ev.target.style.transform = ev.transform;
+      });
+    });
+  })();
+
+  // ---- 섹션 4: 스냅 가이드라인 ----
+  (function section4() {
+    const target = document.getElementById('snapCard');
+    const ge1 = document.getElementById('ge1');
+    const ge2 = document.getElementById('ge2');
+    const statEl = document.getElementById('s4-stat');
+    const snapMoveable = new Moveable(document.getElementById('stage4'), {
+      target,
+      draggable: true,
+      snappable: true,
+      elementGuidelines: [ge1, ge2],
+      snapGap: true,
+      snapDirections: { top: true, left: true, bottom: true, right: true, center: true, middle: true },
+      elementSnapDirections: { top: true, left: true, bottom: true, right: true, center: true, middle: true },
+    });
+    snapMoveable.on('drag', ({ target, left, top }) => {
+      target.style.left = `${left}px`;
+      target.style.top = `${top}px`;
+    });
+    snapMoveable.on('dragStart', () => {
+      statEl.textContent = '드래그 중... 기준 카드 가장자리에 가까워지면 달라붙습니다.';
+    });
+    snapMoveable.on('dragEnd', () => {
+      statEl.innerHTML = `현재 위치: <strong>${target.style.left}, ${target.style.top}</strong>`;
+    });
+  })();
+</script>
+</body>
+</html>
