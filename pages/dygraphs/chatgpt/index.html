@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dygraphs 기능 종합 샘플</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dygraphs@2.2.1/_site/dist/dygraph.min.css" />
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --soft: #edf2f8;
+      --primary: #2151d1;
+      --primary2: #153da4;
+      --ok: #0f8c59;
+      --warn: #b86d00;
+      --danger: #b42318;
+      --shadow: 0 14px 35px rgba(20, 34, 67, .10);
+      --r: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { min-height: 100vh; }
+    header {
+      padding: 30px 24px 22px;
+      background: linear-gradient(135deg, #10245f 0%, #2151d1 55%, #5d89ff 100%);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    header::after {
+      content: "";
+      position: absolute;
+      width: 460px;
+      height: 460px;
+      border-radius: 999px;
+      right: -150px;
+      top: -230px;
+      background: rgba(255,255,255,.12);
+    }
+    .hero { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; }
+    h1 { margin: 0 0 10px; font-size: clamp(28px, 4vw, 46px); letter-spacing: -0.04em; }
+    .subtitle { margin: 0; max-width: 900px; line-height: 1.65; color: rgba(255,255,255,.84); font-size: 16px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .badge { padding: 7px 11px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; background: rgba(255,255,255,.12); font-size: 13px; }
+    main { max-width: 1280px; margin: 0 auto; padding: 22px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+    .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    @media (max-width: 960px) { .two, .three { grid-template-columns: 1fr; } main { padding: 14px; } header { padding: 24px 16px 18px; } }
+    section, .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+    .section-head { padding: 18px 18px 0; }
+    h2 { margin: 0 0 7px; font-size: 21px; letter-spacing: -.02em; }
+    .desc { margin: 0 0 14px; color: var(--muted); line-height: 1.55; font-size: 14px; }
+    .chart-wrap { padding: 10px 16px 16px; }
+    .chart { width: 100%; height: 360px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+    .chart.small { height: 240px; }
+    .chart.tiny { height: 180px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 16px 16px; }
+    button, select, input[type="number"], input[type="text"] {
+      border: 1px solid #cfd8e5;
+      background: #fff;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 13px;
+      min-height: 38px;
+    }
+    button { cursor: pointer; font-weight: 700; }
+    button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    button.primary:hover { background: var(--primary2); }
+    button.ghost { background: var(--soft); }
+    button.danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+    button:active { transform: translateY(1px); }
+    label.check { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #cfd8e5; border-radius: 10px; background: #fff; font-size: 13px; }
+    .legend-box { padding: 8px 16px 0; color: var(--muted); min-height: 34px; font-size: 13px; }
+    .note { margin: 0 16px 16px; padding: 11px 12px; border-radius: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; color: #475467; font-size: 13px; line-height: 1.55; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 16px; }
+    .kpi { background: #f8fafc; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .kpi b { display: block; font-size: 20px; margin-bottom: 3px; }
+    .kpi span { color: var(--muted); font-size: 12px; }
+    @media (max-width: 760px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    textarea { width: 100%; min-height: 220px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; line-height: 1.5; resize: vertical; }
+    .split { display: grid; grid-template-columns: 420px minmax(0,1fr); gap: 14px; padding: 0 16px 16px; }
+    @media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
+    .event-log { height: 164px; overflow: auto; border: 1px solid var(--line); border-radius: 14px; background: #0b1020; color: #d1e4ff; font-size: 12px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; padding: 10px; line-height: 1.5; }
+    .pill-list { display:flex; flex-wrap:wrap; gap:8px; padding: 0 16px 16px; }
+    .pill { border:1px solid var(--line); background:#f8fafc; border-radius:999px; padding:7px 10px; color:#475467; font-size:12px; }
+    .status { padding: 12px 16px; margin: 14px 0; border-radius: 14px; border: 1px solid #fedf89; background: #fffbeb; color: #92400e; display:none; }
+    .footer { color: var(--muted); font-size: 12px; line-height: 1.6; padding: 18px 2px 30px; }
+    .dygraph-title { font-weight: 800; }
+    .dygraph-legend { background: rgba(255,255,255,.88) !important; padding: 5px 8px !important; border-radius: 8px !important; border: 1px solid rgba(203,213,225,.8) !important; }
+    .annotation-note { border-radius: 8px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; padding: 3px 6px; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <h1>Dygraphs 기능 종합 샘플</h1>
+      <p class="subtitle">시계열 데이터 탐색에 특화된 Dygraphs의 핵심 기능을 한 페이지에 모았다. 드래그 확대, 더블클릭 초기화, Range Selector, Roller 평균, 주석, 콜백, 다중 축, 로그축, 결측치, 에러밴드, 동기화, 실시간 업데이트, CSV 편집을 모두 직접 눌러볼 수 있다.</p>
+      <div class="badges">
+        <span class="badge">Time Series</span>
+        <span class="badge">Range Selector</span>
+        <span class="badge">Annotations</span>
+        <span class="badge">Dual Axis</span>
+        <span class="badge">Custom Bars</span>
+        <span class="badge">Synchronized Zoom</span>
+        <span class="badge">Callbacks</span>
+        <span class="badge">CSV Import</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="loadStatus" class="status">Dygraphs 라이브러리를 불러오지 못했다. 인터넷 연결 또는 CDN 접근 가능 여부를 확인해야 한다.</div>
+
+    <section>
+      <div class="section-head">
+        <h2>1. 메인 시계열: 확대·이동·범위 선택·Roller·주석</h2>
+        <p class="desc">마우스로 구간을 드래그하면 확대되고, 더블클릭하면 초기화된다. Range Selector 하단 미니 차트로 빠르게 기간을 선택할 수 있으며, Roller는 이동평균 기간을 조정한다.</p>
+      </div>
+      <div id="legendMain" class="legend-box"></div>
+      <div class="chart-wrap"><div id="mainChart" class="chart"></div></div>
+      <div class="toolbar">
+        <button class="primary" id="btnResetMain">전체 보기</button>
+        <button id="btnLast90">최근 90일</button>
+        <button id="btnAddAnnotations">주석 표시</button>
+        <button id="btnClearAnnotations">주석 제거</button>
+        <button id="btnToggleTemp">수온 표시/숨김</button>
+        <button id="btnToggleSalinity">염분 표시/숨김</button>
+        <label class="check"><input type="checkbox" id="chkFill" /> 면 채우기</label>
+        <label class="check"><input type="checkbox" id="chkStack" /> 누적 표시</label>
+        <label class="check"><input type="checkbox" id="chkLog" /> 로그축</label>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b id="kpiRows">-</b><span>데이터 행</span></div>
+        <div class="kpi"><b id="kpiWindow">-</b><span>현재 표시 범위</span></div>
+        <div class="kpi"><b id="kpiSelected">-</b><span>선택 포인트</span></div>
+        <div class="kpi"><b id="kpiZooms">0</b><span>줌 이벤트</span></div>
+      </div>
+    </section>
+
+    <div class="two">
+      <section>
+        <div class="section-head">
+          <h2>2. 다중 Y축·배경 음영·이벤트 라인</h2>
+          <p class="desc">수온은 좌측 축, 기압은 우측 축에 배치했다. underlayCallback으로 특정 기간 음영과 기준선을 직접 그린다.</p>
+        </div>
+        <div id="legendAxis" class="legend-box"></div>
+        <div class="chart-wrap"><div id="axisChart" class="chart small"></div></div>
+        <div class="toolbar">
+          <button id="btnAxisWeek">특정 주간 보기</button>
+          <button id="btnAxisReset">전체 보기</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>3. 에러밴드·예측구간 Custom Bars</h2>
+          <p class="desc">customBars 옵션으로 [하한, 중심값, 상한] 형태의 데이터를 표현한다. 관측치 주변의 예측구간이나 신뢰구간 시연에 적합하다.</p>
+        </div>
+        <div id="legendBand" class="legend-box"></div>
+        <div class="chart-wrap"><div id="bandChart" class="chart small"></div></div>
+        <div class="toolbar">
+          <button id="btnBandNarrow">밴드 좁게</button>
+          <button id="btnBandWide">밴드 넓게</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="two">
+      <section>
+        <div class="section-head">
+          <h2>4. 결측치·계단형 그래프·점 표시</h2>
+          <p class="desc">null 값이 들어간 시계열을 연결하거나 끊어 표시할 수 있다. stepPlot, drawPoints를 통해 상태값·등급값 같은 데이터를 표현한다.</p>
+        </div>
+        <div id="legendMissing" class="legend-box"></div>
+        <div class="chart-wrap"><div id="missingChart" class="chart small"></div></div>
+        <div class="toolbar">
+          <label class="check"><input type="checkbox" id="chkConnect" /> 결측 구간 연결</label>
+          <label class="check"><input type="checkbox" id="chkStep" checked /> 계단형</label>
+          <label class="check"><input type="checkbox" id="chkPoints" checked /> 점 표시</label>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>5. 실시간 데이터 추가·업데이트</h2>
+          <p class="desc">setInterval로 새 포인트를 추가하고 updateOptions({file: data})로 차트를 갱신한다. 운영 모니터링 화면의 기본 구조와 비슷하다.</p>
+        </div>
+        <div id="legendLive" class="legend-box"></div>
+        <div class="chart-wrap"><div id="liveChart" class="chart small"></div></div>
+        <div class="toolbar">
+          <button class="primary" id="btnLiveStart">시작</button>
+          <button id="btnLiveStop">정지</button>
+          <button id="btnLiveAdd">1건 추가</button>
+          <button id="btnLiveReset">초기화</button>
+        </div>
+      </section>
+    </div>
+
+    <section>
+      <div class="section-head">
+        <h2>6. 동기화 차트: 하나를 확대하면 같이 움직임</h2>
+        <p class="desc">extras/synchronizer.js를 사용해 여러 Dygraph 인스턴스의 줌, 선택, 범위를 연결한다. 위 차트나 아래 차트 중 하나를 드래그해 확인한다.</p>
+      </div>
+      <div class="two" style="padding: 0 16px 16px;">
+        <div><div id="sync1" class="chart tiny"></div></div>
+        <div><div id="sync2" class="chart tiny"></div></div>
+      </div>
+      <div class="toolbar">
+        <button id="btnSyncOn" class="primary">동기화 켜기</button>
+        <button id="btnSyncOff">동기화 끄기</button>
+        <button id="btnSyncReset">전체 보기</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>7. CSV 직접 편집·불러오기</h2>
+        <p class="desc">Dygraphs는 CSV 문자열도 바로 입력받을 수 있다. 아래 CSV를 수정한 뒤 다시 그리기를 눌러보면 된다.</p>
+      </div>
+      <div class="split">
+        <div>
+          <textarea id="csvInput"></textarea>
+          <div class="toolbar" style="padding: 10px 0 0;">
+            <button class="primary" id="btnDrawCsv">CSV 다시 그리기</button>
+            <button id="btnLoadCsvSample">샘플 복원</button>
+            <button id="btnExportCsv">메인 데이터 CSV 다운로드</button>
+          </div>
+        </div>
+        <div>
+          <div id="csvChart" class="chart"></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>8. 콜백·이벤트 로그</h2>
+        <p class="desc">highlightCallback, pointClickCallback, zoomCallback, annotationClickHandler 등에서 발생한 이벤트를 실시간으로 기록한다.</p>
+      </div>
+      <div class="pill-list">
+        <span class="pill">highlightCallback</span>
+        <span class="pill">unhighlightCallback</span>
+        <span class="pill">pointClickCallback</span>
+        <span class="pill">zoomCallback</span>
+        <span class="pill">drawCallback</span>
+        <span class="pill">annotationClickHandler</span>
+        <span class="pill">underlayCallback</span>
+      </div>
+      <div class="chart-wrap"><div id="eventLog" class="event-log"></div></div>
+      <div class="toolbar"><button id="btnClearLog">로그 지우기</button></div>
+    </section>
+
+    <p class="footer">사용 팁: PC에서는 드래그로 확대, 더블클릭으로 초기화, Shift+드래그로 이동을 시도해볼 수 있다. 모바일에서는 브라우저·기기별 터치 이벤트 처리 방식이 달라 일부 세밀한 조작이 제한될 수 있다. CDN 방식이므로 오프라인 또는 폐쇄망에서는 dygraph.min.js, dygraph.min.css, extras/synchronizer.js를 내부 경로로 바꿔야 한다.</p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/dygraphs@2.2.1/_site/dist/dygraph.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dygraphs@2.2.1/_site/dist/extras/synchronizer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      const $ = (id) => document.getElementById(id);
+      const fmtDate = (d) => {
+        const date = d instanceof Date ? d : new Date(d);
+        return date.toISOString().slice(0, 10);
+      };
+      const fmtNum = (v, digits = 1) => Number.isFinite(v) ? v.toFixed(digits) : '-';
+      const eventLog = $('eventLog');
+      let mainGraph, axisGraph, bandGraph, missingGraph, liveGraph, csvGraph, syncGraph1, syncGraph2, syncHandle;
+      let mainData = [], bandData = [], missingData = [], liveData = [], syncData1 = [], syncData2 = [];
+      let zoomCount = 0;
+      let liveTimer = null;
+      let tempVisible = true;
+      let salinityVisible = true;
+
+      function log(msg) {
+        if (!eventLog) return;
+        const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        eventLog.insertAdjacentHTML('afterbegin', `<div>[${time}] ${escapeHtml(msg)}</div>`);
+      }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+      function makeDate(base, offsetDays) {
+        const d = new Date(base);
+        d.setDate(d.getDate() + offsetDays);
+        return d;
+      }
+      function generateMainData() {
+        const base = new Date('2026-01-01T00:00:00');
+        const rows = [];
+        for (let i = 0; i < 240; i++) {
+          const d = makeDate(base, i);
+          const season = Math.sin(i / 16);
+          const shorter = Math.sin(i / 5);
+          const temp = 14 + season * 6 + shorter * 1.2 + (i % 17 === 0 ? 2.2 : 0);
+          const salinity = 31 + Math.cos(i / 21) * 1.4 + Math.sin(i / 9) * .4;
+          const catchIndex = 72 + Math.sin(i / 11) * 18 + Math.cos(i / 33) * 10 + (i > 130 && i < 170 ? 12 : 0);
+          const pressure = 1008 + Math.cos(i / 13) * 7 + Math.sin(i / 29) * 4;
+          rows.push([d, round(temp), round(salinity), round(catchIndex), round(pressure)]);
+        }
+        return rows;
+      }
+      function round(v) { return Math.round(v * 100) / 100; }
+
+      function generateBandData(multiplier) {
+        const base = new Date('2026-01-01T00:00:00');
+        const rows = [];
+        for (let i = 0; i < 160; i++) {
+          const d = makeDate(base, i);
+          const center = 60 + Math.sin(i / 9) * 11 + Math.cos(i / 23) * 8;
+          const width = multiplier * (5 + Math.abs(Math.sin(i / 14)) * 4);
+          rows.push([d, [round(center - width), round(center), round(center + width)]]);
+        }
+        return rows;
+      }
+      function generateMissingData() {
+        const base = new Date('2026-03-01T00:00:00');
+        const rows = [];
+        for (let i = 0; i < 95; i++) {
+          const d = makeDate(base, i);
+          let state = 2 + Math.round(Math.sin(i / 8) * 2 + Math.cos(i / 14));
+          if (i >= 28 && i <= 35) state = null;
+          if (i >= 62 && i <= 67) state = null;
+          const score = i % 13 === 0 ? null : round(50 + Math.sin(i / 7) * 18 + Math.cos(i / 19) * 8);
+          rows.push([d, state, score]);
+        }
+        return rows;
+      }
+      function generateLiveData() {
+        const base = new Date();
+        const rows = [];
+        for (let i = 59; i >= 0; i--) {
+          const d = new Date(base.getTime() - i * 1000);
+          const value = 50 + Math.sin((60 - i) / 4) * 8 + Math.random() * 6;
+          const cpu = 35 + Math.cos((60 - i) / 5) * 12 + Math.random() * 8;
+          rows.push([d, round(value), round(cpu)]);
+        }
+        return rows;
+      }
+      function generateSyncData() {
+        const base = new Date('2026-01-01T00:00:00');
+        const a = [], b = [];
+        for (let i = 0; i < 220; i++) {
+          const d = makeDate(base, i);
+          a.push([d, round(30 + Math.sin(i / 8) * 10 + Math.cos(i / 17) * 5)]);
+          b.push([d, round(80 + Math.cos(i / 10) * 14 + Math.sin(i / 27) * 11)]);
+        }
+        return [a, b];
+      }
+      function makeCsvSample() {
+        const base = new Date('2026-04-01T00:00:00');
+        const lines = ['Date,방문자,처리건수,오류율'];
+        for (let i = 0; i < 45; i++) {
+          const d = makeDate(base, i);
+          const visitors = Math.round(1200 + Math.sin(i / 5) * 260 + i * 9);
+          const jobs = Math.round(850 + Math.cos(i / 6) * 140 + i * 7);
+          const err = Math.max(0.3, 3 + Math.sin(i / 8) * 1.3 - i * .025).toFixed(2);
+          lines.push(`${fmtDate(d)},${visitors},${jobs},${err}`);
+        }
+        return lines.join('\n');
+      }
+      function csvFromData(rows) {
+        const lines = ['Date,수온,염분,어획지수,기압'];
+        rows.forEach(r => lines.push(`${fmtDate(r[0])},${r[1]},${r[2]},${r[3]},${r[4]}`));
+        return lines.join('\n');
+      }
+      function downloadText(filename, text) {
+        const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+      }
+      function shadePeriod(ctx, area, g, from, to, color) {
+        const x1 = g.toDomXCoord(from.getTime());
+        const x2 = g.toDomXCoord(to.getTime());
+        const left = Math.max(area.x, Math.min(x1, x2));
+        const right = Math.min(area.x + area.w, Math.max(x1, x2));
+        if (right <= area.x || left >= area.x + area.w) return;
+        ctx.fillStyle = color;
+        ctx.fillRect(left, area.y, right - left, area.h);
+      }
+      function verticalLine(ctx, area, g, date, label) {
+        const x = g.toDomXCoord(date.getTime());
+        if (x < area.x || x > area.x + area.w) return;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(180, 35, 24, .72)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, area.y);
+        ctx.lineTo(x, area.y + area.h);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(180, 35, 24, .9)';
+        ctx.font = '12px system-ui';
+        ctx.fillText(label, x + 6, area.y + 16);
+        ctx.restore();
+      }
+
+      function init() {
+        if (!window.Dygraph) {
+          $('loadStatus').style.display = 'block';
+          return;
+        }
+        mainData = generateMainData();
+        bandData = generateBandData(1);
+        missingData = generateMissingData();
+        liveData = generateLiveData();
+        const syncPair = generateSyncData();
+        syncData1 = syncPair[0];
+        syncData2 = syncPair[1];
+
+        $('kpiRows').textContent = mainData.length.toLocaleString('ko-KR');
+        $('csvInput').value = makeCsvSample();
+
+        createMainGraph();
+        createAxisGraph();
+        createBandGraph();
+        createMissingGraph();
+        createLiveGraph();
+        createSyncGraphs();
+        createCsvGraph();
+        bindEvents();
+        log('초기화 완료: Dygraphs 기능 샘플이 준비됐다.');
+      }
+
+      function createMainGraph() {
+        mainGraph = new Dygraph($('mainChart'), mainData, {
+          title: '수산 업무 지표 예시 - 다중 시계열',
+          labels: ['일자', '수온', '염분', '어획지수', '기압'],
+          ylabel: '수온 / 염분 / 지수',
+          y2label: '기압(hPa)',
+          series: {
+            '기압': { axis: 'y2' }
+          },
+          axes: {
+            x: {
+              axisLabelFormatter: (d) => fmtDate(d),
+              valueFormatter: (d) => fmtDate(d)
+            },
+            y: { valueFormatter: (v) => fmtNum(v, 2) },
+            y2: { valueFormatter: (v) => fmtNum(v, 1) + ' hPa' }
+          },
+          legend: 'always',
+          labelsDiv: $('legendMain'),
+          labelsSeparateLines: true,
+          showRangeSelector: true,
+          rangeSelectorHeight: 44,
+          showRoller: true,
+          rollPeriod: 7,
+          animatedZooms: true,
+          drawPoints: true,
+          pointSize: 2.2,
+          highlightCircleSize: 5,
+          highlightSeriesOpts: { strokeWidth: 3, strokeBorderWidth: 1, highlightCircleSize: 7 },
+          retainDateWindow: false,
+          drawCallback: function (g, isInitial) {
+            updateWindowKpi(g);
+            if (!isInitial) log('drawCallback: 메인 차트 다시 그림');
+          },
+          highlightCallback: function (e, x, points) {
+            const label = points.map(p => `${p.name}=${fmtNum(p.yval, 2)}`).join(', ');
+            $('kpiSelected').textContent = fmtDate(x);
+            log(`highlightCallback: ${fmtDate(x)} / ${label}`);
+          },
+          unhighlightCallback: function () { log('unhighlightCallback: 포인트 선택 해제'); },
+          pointClickCallback: function (e, point) {
+            log(`pointClickCallback: ${point.name} / row=${point.idx} / y=${fmtNum(point.yval, 2)}`);
+          },
+          zoomCallback: function (minDate, maxDate) {
+            zoomCount += 1;
+            $('kpiZooms').textContent = zoomCount;
+            log(`zoomCallback: ${fmtDate(minDate)} ~ ${fmtDate(maxDate)}`);
+          },
+          annotationClickHandler: function (ann) { log(`annotationClickHandler: ${ann.shortText} - ${ann.text}`); },
+          annotationMouseOverHandler: function (ann) { log(`annotationMouseOverHandler: ${ann.shortText}`); }
+        });
+        updateWindowKpi(mainGraph);
+      }
+
+      function updateWindowKpi(g) {
+        if (!g) return;
+        const w = g.xAxisRange();
+        $('kpiWindow').textContent = `${fmtDate(w[0])} ~ ${fmtDate(w[1])}`;
+      }
+
+      function createAxisGraph() {
+        const stormStart = new Date('2026-05-08T00:00:00');
+        const stormEnd = new Date('2026-05-23T00:00:00');
+        const eventDate = new Date('2026-05-16T00:00:00');
+        axisGraph = new Dygraph($('axisChart'), mainData, {
+          title: '좌측 수온 / 우측 기압 + 위험기간 음영',
+          labels: ['일자', '수온', '염분', '어획지수', '기압'],
+          visibility: [true, false, false, true],
+          ylabel: '수온(℃)',
+          y2label: '기압(hPa)',
+          series: { '기압': { axis: 'y2' } },
+          legend: 'always',
+          labelsDiv: $('legendAxis'),
+          labelsSeparateLines: true,
+          animatedZooms: true,
+          axes: {
+            x: { axisLabelFormatter: d => fmtDate(d), valueFormatter: d => fmtDate(d) },
+            y: { valueFormatter: v => fmtNum(v, 1) + '℃' },
+            y2: { valueFormatter: v => fmtNum(v, 1) + ' hPa' }
+          },
+          underlayCallback: function (ctx, area, g) {
+            shadePeriod(ctx, area, g, stormStart, stormEnd, 'rgba(251, 191, 36, .18)');
+            verticalLine(ctx, area, g, eventDate, '점검일');
+          }
+        });
+      }
+
+      function createBandGraph() {
+        bandGraph = new Dygraph($('bandChart'), bandData, {
+          title: '예측구간 표시 - customBars',
+          labels: ['일자', '예측지수'],
+          customBars: true,
+          ylabel: '지수',
+          legend: 'always',
+          labelsDiv: $('legendBand'),
+          labelsSeparateLines: true,
+          showRangeSelector: true,
+          rangeSelectorHeight: 34,
+          animatedZooms: true,
+          axes: { x: { axisLabelFormatter: d => fmtDate(d), valueFormatter: d => fmtDate(d) } }
+        });
+      }
+
+      function createMissingGraph() {
+        missingGraph = new Dygraph($('missingChart'), missingData, {
+          title: '결측치·상태값 표시',
+          labels: ['일자', '상태등급', '품질점수'],
+          ylabel: '등급 / 점수',
+          legend: 'always',
+          labelsDiv: $('legendMissing'),
+          labelsSeparateLines: true,
+          stepPlot: true,
+          drawPoints: true,
+          pointSize: 3.5,
+          strokeWidth: 2,
+          connectSeparatedPoints: false,
+          axes: { x: { axisLabelFormatter: d => fmtDate(d), valueFormatter: d => fmtDate(d) } }
+        });
+      }
+
+      function createLiveGraph() {
+        liveGraph = new Dygraph($('liveChart'), liveData, {
+          title: '실시간 모니터링 예시',
+          labels: ['시간', '처리량', 'CPU'],
+          ylabel: '값',
+          legend: 'always',
+          labelsDiv: $('legendLive'),
+          labelsSeparateLines: true,
+          drawPoints: true,
+          pointSize: 2,
+          animatedZooms: false,
+          axes: {
+            x: {
+              valueFormatter: d => new Date(d).toLocaleTimeString('ko-KR', { hour12: false }),
+              axisLabelFormatter: d => new Date(d).toLocaleTimeString('ko-KR', { hour12: false })
+            }
+          }
+        });
+      }
+
+      function createSyncGraphs() {
+        syncGraph1 = new Dygraph($('sync1'), syncData1, {
+          title: '동기화 A - 수온성 지표',
+          labels: ['일자', 'A'],
+          legend: 'follow',
+          animatedZooms: true,
+          showRangeSelector: true,
+          rangeSelectorHeight: 30,
+          axes: { x: { axisLabelFormatter: d => fmtDate(d), valueFormatter: d => fmtDate(d) } }
+        });
+        syncGraph2 = new Dygraph($('sync2'), syncData2, {
+          title: '동기화 B - 수요성 지표',
+          labels: ['일자', 'B'],
+          legend: 'follow',
+          animatedZooms: true,
+          showRangeSelector: true,
+          rangeSelectorHeight: 30,
+          axes: { x: { axisLabelFormatter: d => fmtDate(d), valueFormatter: d => fmtDate(d) } }
+        });
+        enableSync();
+      }
+
+      function createCsvGraph() {
+        csvGraph = new Dygraph($('csvChart'), $('csvInput').value, {
+          title: 'CSV 편집 결과',
+          ylabel: '값',
+          legend: 'always',
+          labelsSeparateLines: true,
+          showRangeSelector: true,
+          rangeSelectorHeight: 36,
+          animatedZooms: true
+        });
+      }
+
+      function enableSync() {
+        if (syncHandle && syncHandle.detach) syncHandle.detach();
+        if (window.Dygraph && typeof Dygraph.synchronize === 'function') {
+          syncHandle = Dygraph.synchronize([syncGraph1, syncGraph2], { zoom: true, selection: true, range: false });
+          log('동기화 켜짐: zoom + selection 연결');
+        } else {
+          log('동기화 스크립트를 불러오지 못해 Dygraph.synchronize를 사용할 수 없음');
+        }
+      }
+      function disableSync() {
+        if (syncHandle && syncHandle.detach) {
+          syncHandle.detach();
+          syncHandle = null;
+          log('동기화 꺼짐');
+        }
+      }
+
+      function bindEvents() {
+        $('btnResetMain').addEventListener('click', () => mainGraph.resetZoom());
+        $('btnLast90').addEventListener('click', () => {
+          const end = mainData[mainData.length - 1][0].getTime();
+          const start = mainData[mainData.length - 90][0].getTime();
+          mainGraph.updateOptions({ dateWindow: [start, end] });
+        });
+        $('btnAddAnnotations').addEventListener('click', () => {
+          const anns = [
+            { series: '수온', x: mainData[38][0], shortText: 'A', text: '수온 급등 관측', cssClass: 'annotation-note' },
+            { series: '어획지수', x: mainData[126][0], shortText: 'B', text: '어획지수 상승 구간', attachAtBottom: true, width: 45 },
+            { series: '기압', x: mainData[160][0], shortText: 'C', text: '기압 변동성 확대', cssClass: 'annotation-note' }
+          ];
+          mainGraph.setAnnotations(anns);
+          log('주석 3건 표시');
+        });
+        $('btnClearAnnotations').addEventListener('click', () => { mainGraph.setAnnotations([]); log('주석 제거'); });
+        $('btnToggleTemp').addEventListener('click', () => { tempVisible = !tempVisible; mainGraph.setVisibility(0, tempVisible); });
+        $('btnToggleSalinity').addEventListener('click', () => { salinityVisible = !salinityVisible; mainGraph.setVisibility(1, salinityVisible); });
+        $('chkFill').addEventListener('change', e => mainGraph.updateOptions({ fillGraph: e.target.checked }));
+        $('chkStack').addEventListener('change', e => mainGraph.updateOptions({ stackedGraph: e.target.checked }));
+        $('chkLog').addEventListener('change', e => mainGraph.updateOptions({ logscale: e.target.checked }));
+
+        $('btnAxisWeek').addEventListener('click', () => axisGraph.updateOptions({ dateWindow: [new Date('2026-05-01').getTime(), new Date('2026-06-05').getTime()] }));
+        $('btnAxisReset').addEventListener('click', () => axisGraph.resetZoom());
+        $('btnBandNarrow').addEventListener('click', () => { bandData = generateBandData(.55); bandGraph.updateOptions({ file: bandData }); log('예측구간 좁게 적용'); });
+        $('btnBandWide').addEventListener('click', () => { bandData = generateBandData(1.7); bandGraph.updateOptions({ file: bandData }); log('예측구간 넓게 적용'); });
+
+        $('chkConnect').addEventListener('change', e => missingGraph.updateOptions({ connectSeparatedPoints: e.target.checked }));
+        $('chkStep').addEventListener('change', e => missingGraph.updateOptions({ stepPlot: e.target.checked }));
+        $('chkPoints').addEventListener('change', e => missingGraph.updateOptions({ drawPoints: e.target.checked }));
+
+        $('btnLiveStart').addEventListener('click', startLive);
+        $('btnLiveStop').addEventListener('click', stopLive);
+        $('btnLiveAdd').addEventListener('click', addLivePoint);
+        $('btnLiveReset').addEventListener('click', () => { stopLive(); liveData = generateLiveData(); liveGraph.updateOptions({ file: liveData }); log('실시간 데이터 초기화'); });
+
+        $('btnSyncOn').addEventListener('click', enableSync);
+        $('btnSyncOff').addEventListener('click', disableSync);
+        $('btnSyncReset').addEventListener('click', () => { syncGraph1.resetZoom(); syncGraph2.resetZoom(); });
+
+        $('btnDrawCsv').addEventListener('click', () => {
+          try {
+            csvGraph.updateOptions({ file: $('csvInput').value });
+            log('CSV 차트 다시 그림');
+          } catch (err) {
+            log('CSV 오류: ' + err.message);
+          }
+        });
+        $('btnLoadCsvSample').addEventListener('click', () => { $('csvInput').value = makeCsvSample(); csvGraph.updateOptions({ file: $('csvInput').value }); });
+        $('btnExportCsv').addEventListener('click', () => downloadText('dygraphs_main_data.csv', csvFromData(mainData)));
+        $('btnClearLog').addEventListener('click', () => { eventLog.innerHTML = ''; });
+      }
+
+      function addLivePoint() {
+        const last = liveData[liveData.length - 1];
+        const nextTime = new Date(last[0].getTime() + 1000);
+        const idx = liveData.length;
+        const nextValue = 50 + Math.sin(idx / 4) * 8 + Math.random() * 6;
+        const cpu = 35 + Math.cos(idx / 5) * 12 + Math.random() * 8;
+        liveData.push([nextTime, round(nextValue), round(cpu)]);
+        if (liveData.length > 90) liveData.shift();
+        liveGraph.updateOptions({ file: liveData });
+        log(`실시간 포인트 추가: ${nextTime.toLocaleTimeString('ko-KR', { hour12: false })}`);
+      }
+      function startLive() {
+        if (liveTimer) return;
+        liveTimer = setInterval(addLivePoint, 1000);
+        log('실시간 업데이트 시작');
+      }
+      function stopLive() {
+        if (!liveTimer) return;
+        clearInterval(liveTimer);
+        liveTimer = null;
+        log('실시간 업데이트 정지');
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
