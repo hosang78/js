@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Flatpickr 종합 기능 샘플</title>
+
+  <!-- Flatpickr 4.6.13 -->
+  <link id="flatpickr-theme" rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/monthSelect/style.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/confirmDate/confirmDate.css">
+
+  <style>
+    :root{
+      --bg:#f4f7fb; --panel:#fff; --panel2:#f8fafc; --text:#162033; --muted:#64748b;
+      --line:#dce4ee; --brand:#2563eb; --brand2:#7c3aed; --good:#059669; --bad:#dc2626;
+      --warn:#d97706; --shadow:0 10px 28px rgba(15,23,42,.08); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:
+      radial-gradient(circle at 0 0,rgba(37,99,235,.08),transparent 32rem),
+      radial-gradient(circle at 100% 0,rgba(124,58,237,.07),transparent 28rem),
+      var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:1500px;margin:auto;padding:20px}
+    .hero{padding:28px;border-radius:24px;color:white;background:
+      linear-gradient(135deg,#0f172a,#1d4ed8 60%,#7c3aed);box-shadow:var(--shadow);position:relative;overflow:hidden}
+    .hero:after{content:"";position:absolute;width:340px;height:340px;border:1px solid rgba(255,255,255,.18);
+      border-radius:50%;right:-120px;top:-170px;box-shadow:0 0 0 42px rgba(255,255,255,.04),0 0 0 84px rgba(255,255,255,.03)}
+    .hero h1{margin:0 0 8px;font-size:clamp(28px,4vw,46px);letter-spacing:-.04em}
+    .hero p{margin:0;max-width:860px;color:#dbeafe;line-height:1.7}
+    .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;position:relative;z-index:1}
+    .badge{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.18);font-size:13px}
+    .toolbar{position:sticky;top:0;z-index:50;margin:14px 0;padding:10px;background:rgba(244,247,251,.88);
+      backdrop-filter:blur(14px);border:1px solid rgba(220,228,238,.9);border-radius:16px;display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:9px 12px;border-radius:11px;font-weight:700}
+    .btn:hover{transform:translateY(-1px);border-color:#93b4ee}
+    .btn.primary{background:var(--brand);color:white;border-color:var(--brand)}
+    .btn.danger{color:var(--bad)}
+    .status{margin-left:auto;align-self:center;font-size:13px;color:var(--muted)}
+    .toc{display:flex;gap:8px;overflow:auto;padding:4px 0 10px;scrollbar-width:thin}
+    .toc a{white-space:nowrap;text-decoration:none;color:var(--brand);background:#eff6ff;border:1px solid #bfdbfe;padding:7px 10px;border-radius:999px;font-size:13px;font-weight:700}
+    .section{margin-top:22px}
+    .section-head{display:flex;justify-content:space-between;gap:12px;align-items:end;margin-bottom:10px}
+    .section h2{margin:0;font-size:23px;letter-spacing:-.025em}
+    .section-desc{color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{grid-column:span 4;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow);min-width:0}
+    .card.w6{grid-column:span 6}.card.w8{grid-column:span 8}.card.w12{grid-column:span 12}
+    .card h3{margin:0 0 5px;font-size:17px}
+    .card p{margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.55}
+    label{display:block;font-size:12px;color:var(--muted);font-weight:800;margin:10px 0 6px}
+    .input, select, textarea{width:100%;border:1px solid var(--line);border-radius:11px;background:var(--panel2);color:var(--text);padding:11px 12px;outline:none}
+    .input:focus,select:focus,textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+    .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+    .mini{font-size:12px;padding:7px 9px;border-radius:9px}
+    .result{margin-top:10px;padding:10px;border-radius:10px;background:#f1f5f9;color:#334155;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word;min-height:40px}
+    .inline-host{min-height:310px;display:flex;justify-content:center;overflow:auto}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .checkrow{display:flex;gap:12px;flex-wrap:wrap;padding:8px 0}
+    .checkrow label{margin:0;display:flex;align-items:center;gap:6px;color:var(--text);font-weight:650}
+    .checkrow input{accent-color:var(--brand)}
+    .log-shell{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:12px}
+    #eventLog{height:300px;overflow:auto;background:#0f172a;color:#cbd5e1;padding:12px;border-radius:13px;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .log-item{border-bottom:1px solid #243047;padding:4px 0}.log-time{color:#60a5fa}.log-event{color:#fbbf24}
+    pre{margin:0;overflow:auto;padding:12px;background:#0f172a;color:#dbeafe;border-radius:12px;font-size:12px;line-height:1.5}
+    .notice{padding:12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5}
+    .error{display:none;margin:12px 0;padding:14px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+    dialog{width:min(650px,calc(100vw - 30px));border:0;border-radius:18px;padding:0;box-shadow:0 30px 80px rgba(15,23,42,.35);background:var(--panel);color:var(--text)}
+    dialog::backdrop{background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
+    .dialog-head,.dialog-body{padding:18px}.dialog-head{border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .footer{margin:24px 0 10px;color:var(--muted);text-align:center;font-size:12px}
+    .flatpickr-calendar.inline{box-shadow:none;border:1px solid var(--line)}
+    .weekend-day{background:rgba(239,68,68,.08)!important;color:#dc2626!important}
+    .special-day{background:#7c3aed!important;color:white!important;border-radius:50%!important}
+    .busy-day{position:relative}.busy-day:after{content:"";position:absolute;width:5px;height:5px;background:#f59e0b;border-radius:50%;bottom:3px;left:50%;transform:translateX(-50%)}
+    .flatpickr-day.selected .busy-day:after{background:white}
+    @media(max-width:1000px){.card,.card.w6,.card.w8{grid-column:span 6}.log-shell{grid-template-columns:1fr}}
+    @media(max-width:680px){.app{padding:10px}.hero{padding:22px 18px}.card,.card.w6,.card.w8,.card.w12{grid-column:span 12}.split{grid-template-columns:1fr}.status{width:100%;margin-left:0}.toolbar{top:4px}}
+    @media(prefers-color-scheme:dark){
+      :root{--bg:#0b1220;--panel:#111b2d;--panel2:#0d1728;--text:#e5edf8;--muted:#9aabc2;--line:#25344a;--shadow:0 12px 28px rgba(0,0,0,.22)}
+      .toolbar{background:rgba(11,18,32,.88)}.toc a{background:#132647;border-color:#244b80}.result{background:#0d1728;color:#cbd5e1}.notice{background:#2a1d0f;border-color:#6b451f;color:#fed7aa}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <h1>Flatpickr 종합 기능 실험실</h1>
+    <p>날짜·시간 선택, 범위·다중 선택, 제한 규칙, 한국어 현지화, 플러그인, 인라인 달력, 이벤트 훅과 인스턴스 API를 직접 조작하는 단일 페이지 샘플입니다.</p>
+    <div class="badges">
+      <span class="badge">Flatpickr 4.6.13</span><span class="badge">한국어 locale</span>
+      <span class="badge">Range · Multiple · Time</span><span class="badge">Plugins</span>
+      <span class="badge">Events & Instance API</span><span class="badge">Responsive</span>
+    </div>
+  </header>
+
+  <div id="loadError" class="error"><b>Flatpickr 로딩 실패</b><br>인터넷 연결 또는 CDN 접근 정책을 확인하세요. 이 HTML은 jsDelivr에서 Flatpickr 파일을 불러옵니다.</div>
+
+  <div class="toolbar">
+    <button class="btn primary" id="openAll">모든 달력 열기</button>
+    <button class="btn" id="closeAll">모두 닫기</button>
+    <button class="btn" id="setTodayAll">기본형에 오늘 설정</button>
+    <button class="btn danger" id="clearAll">전체 값 초기화</button>
+    <button class="btn" id="themeBtn">테마 변경</button>
+    <button class="btn" id="helpBtn">사용 안내</button>
+    <span class="status" id="globalStatus">초기화 중…</span>
+  </div>
+
+  <nav class="toc">
+    <a href="#basic">기본</a><a href="#modes">선택 모드</a><a href="#rules">제한 규칙</a>
+    <a href="#display">표시·배치</a><a href="#plugins">플러그인</a><a href="#api">API·이벤트</a>
+    <a href="#lab">설정 실험실</a>
+  </nav>
+
+  <section class="section" id="basic">
+    <div class="section-head"><div><h2>1. 기본 날짜·시간</h2><div class="section-desc">가장 자주 사용하는 설정 조합</div></div></div>
+    <div class="grid">
+      <article class="card">
+        <h3>기본 날짜 선택</h3><p>옵션 없는 기본 달력과 한국어 설정</p>
+        <input class="input" id="basicDate" placeholder="날짜 선택">
+        <div class="result" id="basicDateResult">선택값 대기</div>
+      </article>
+
+      <article class="card">
+        <h3>날짜 + 시간</h3><p>24시간제, 5분 단위, 기본 시각 포함</p>
+        <input class="input" id="dateTime" placeholder="날짜와 시간 선택">
+        <div class="result" id="dateTimeResult">선택값 대기</div>
+      </article>
+
+      <article class="card">
+        <h3>시간만 선택</h3><p>달력 없이 시간만 표시, 초 단위 활성화</p>
+        <input class="input" id="timeOnly" placeholder="시간 선택">
+        <div class="result" id="timeOnlyResult">선택값 대기</div>
+      </article>
+
+      <article class="card">
+        <h3>사용자 친화적 표시값</h3><p>실제 저장값과 화면 표시값을 분리하는 altInput</p>
+        <input class="input" id="altFormat" placeholder="표시 날짜 선택">
+        <div class="result" id="altFormatResult">저장값 / 표시값</div>
+      </article>
+
+      <article class="card">
+        <h3>직접 입력 허용</h3><p>키보드로 YYYY-MM-DD 입력 후 Enter 또는 포커스 이동</p>
+        <input class="input" id="allowInput" placeholder="직접 입력 가능">
+        <div class="result" id="allowInputResult">선택값 대기</div>
+      </article>
+
+      <article class="card">
+        <h3>기본 날짜·최소·최대</h3><p>오늘 기준 -7일에서 +30일까지만 선택</p>
+        <input class="input" id="boundedDate" placeholder="제한 날짜 선택">
+        <div class="result" id="boundedDateResult">선택 가능 범위 계산 중</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="modes">
+    <div class="section-head"><div><h2>2. 선택 모드</h2><div class="section-desc">단일, 범위, 다중, 주 단위 활용</div></div></div>
+    <div class="grid">
+      <article class="card">
+        <h3>날짜 범위</h3><p>체크인·체크아웃처럼 시작일과 종료일 선택</p>
+        <input class="input" id="rangeDate" placeholder="시작일 ~ 종료일">
+        <div class="result" id="rangeDateResult">기간과 일수 표시</div>
+      </article>
+
+      <article class="card">
+        <h3>다중 날짜</h3><p>여러 날짜를 개별 선택하고 쉼표로 구분</p>
+        <input class="input" id="multipleDate" placeholder="복수 날짜 선택">
+        <div class="result" id="multipleDateResult">선택 개수 표시</div>
+      </article>
+
+      <article class="card">
+        <h3>주차 선택</h3><p>weekSelect 플러그인으로 선택한 날짜의 주 전체 강조</p>
+        <input class="input" id="weekPicker" placeholder="주 선택">
+        <div class="result" id="weekPickerResult">연도·주차 표시</div>
+      </article>
+
+      <article class="card w6">
+        <h3>연결된 시작일·종료일</h3><p>rangePlugin으로 두 입력창을 하나의 범위 선택기로 연결</p>
+        <div class="row">
+          <input class="input" id="rangeStart" placeholder="시작일">
+          <input class="input" id="rangeEnd" placeholder="종료일">
+        </div>
+        <div class="result" id="linkedRangeResult">두 필드가 연동됩니다.</div>
+      </article>
+
+      <article class="card w6">
+        <h3>기간 계산 예제</h3><p>선택 범위의 숙박일수와 평일·주말 수 계산</p>
+        <input class="input" id="stayRange" placeholder="숙박 기간 선택">
+        <div class="result" id="stayRangeResult">기간을 선택하세요.</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="rules">
+    <div class="section-head"><div><h2>3. 선택 제한·검증</h2><div class="section-desc">업무일, 휴무일, 특정 날짜 규칙</div></div></div>
+    <div class="grid">
+      <article class="card">
+        <h3>주말 비활성화</h3><p>disable 함수로 토요일·일요일 선택 차단</p>
+        <input class="input" id="weekdayOnly" placeholder="평일만 선택">
+        <div class="result" id="weekdayOnlyResult">평일만 선택 가능</div>
+      </article>
+
+      <article class="card">
+        <h3>특정 휴무일 비활성화</h3><p>날짜 배열과 날짜 범위를 함께 차단</p>
+        <input class="input" id="holidayDisabled" placeholder="예약 가능일 선택">
+        <div class="result" id="holidayDisabledResult">휴무일 정보 표시</div>
+      </article>
+
+      <article class="card">
+        <h3>허용 날짜만 선택</h3><p>enable 옵션으로 지정된 후보일만 활성화</p>
+        <input class="input" id="enabledOnly" placeholder="활성 날짜 중 선택">
+        <div class="result" id="enabledOnlyResult">지정 후보일만 선택 가능</div>
+      </article>
+
+      <article class="card">
+        <h3>오늘 이전 차단</h3><p>minDate: "today"로 과거 날짜 방지</p>
+        <input class="input" id="futureOnly" placeholder="오늘 이후 선택">
+        <div class="result" id="futureOnlyResult">오늘 이후만 선택 가능</div>
+      </article>
+
+      <article class="card">
+        <h3>업무시간 제한</h3><p>09:00~18:00, 30분 단위 시간 선택</p>
+        <input class="input" id="businessHours" placeholder="업무 일시 선택">
+        <div class="result" id="businessHoursResult">업무시간 내 선택</div>
+      </article>
+
+      <article class="card">
+        <h3>동적 최소일 연동</h3><p>출발일 선택 시 도착일의 최소 날짜 자동 변경</p>
+        <div class="row">
+          <input class="input" id="departDate" placeholder="출발일">
+          <input class="input" id="arrivalDate" placeholder="도착일">
+        </div>
+        <div class="result" id="dynamicMinResult">출발일을 먼저 선택하세요.</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="display">
+    <div class="section-head"><div><h2>4. 표시·배치·스타일</h2><div class="section-desc">인라인, 다중 월, 정적 배치, 날짜별 장식</div></div></div>
+    <div class="grid">
+      <article class="card w6">
+        <h3>인라인 달력</h3><p>입력창 클릭 없이 항상 달력을 노출</p>
+        <input id="inlineDate" type="hidden">
+        <div class="inline-host" id="inlineHost"></div>
+        <div class="result" id="inlineDateResult">날짜를 선택하세요.</div>
+      </article>
+
+      <article class="card w6">
+        <h3>2개월 동시 표시</h3><p>showMonths: 2로 연속 월을 한 번에 표시</p>
+        <input class="input" id="twoMonths" placeholder="두 달 범위 선택">
+        <div class="result" id="twoMonthsResult">넓은 화면에서 2개월 표시</div>
+      </article>
+
+      <article class="card">
+        <h3>정적 배치</h3><p>static 옵션으로 달력을 입력 래퍼 내부에 배치</p>
+        <input class="input" id="staticPicker" placeholder="정적 달력">
+        <div class="result" id="staticPickerResult">레이아웃 안정성 확인</div>
+      </article>
+
+      <article class="card">
+        <h3>월 선택 방식</h3><p>monthSelectorType: static, 연도 입력 비활성화</p>
+        <input class="input" id="staticMonthHeader" placeholder="날짜 선택">
+        <div class="result" id="staticMonthHeaderResult">고정형 월 헤더</div>
+      </article>
+
+      <article class="card">
+        <h3>날짜 셀 꾸미기</h3><p>onDayCreate로 주말·특별일·일정 점 표시</p>
+        <input class="input" id="decoratedDays" placeholder="꾸며진 날짜 선택">
+        <div class="result" id="decoratedDaysResult">보라색=특별일, 점=일정</div>
+      </article>
+
+      <article class="card w12">
+        <h3>달력 위치 지정</h3><p>position 옵션을 바꾸며 팝업 배치를 비교</p>
+        <div class="row">
+          <select id="positionSelect">
+            <option value="auto">auto</option><option value="above">above</option>
+            <option value="below">below</option><option value="auto left">auto left</option>
+            <option value="auto center">auto center</option><option value="auto right">auto right</option>
+          </select>
+          <input class="input" id="positionPicker" placeholder="위치 테스트">
+          <button class="btn" id="applyPosition">적용 후 열기</button>
+        </div>
+        <div class="result" id="positionResult">현재 위치: auto</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="plugins">
+    <div class="section-head"><div><h2>5. 내장 플러그인</h2><div class="section-desc">월 선택, 확인 버튼, 스크롤, 주 선택</div></div></div>
+    <div class="grid">
+      <article class="card">
+        <h3>월 선택 플러그인</h3><p>monthSelectPlugin으로 연·월만 선택</p>
+        <input class="input" id="monthPicker" placeholder="월 선택">
+        <div class="result" id="monthPickerResult">선택 연월 표시</div>
+      </article>
+
+      <article class="card">
+        <h3>확인 버튼 플러그인</h3><p>시간 선택 후 확인 버튼으로 닫기</p>
+        <input class="input" id="confirmTime" placeholder="시간 선택 후 확인">
+        <div class="result" id="confirmTimeResult">선택값 대기</div>
+      </article>
+
+      <article class="card">
+        <h3>스크롤 플러그인</h3><p>월·연도·시간 영역에서 마우스 휠 조작</p>
+        <input class="input" id="scrollPicker" placeholder="휠로 값 변경">
+        <div class="result" id="scrollPickerResult">달력을 열고 휠을 사용하세요.</div>
+      </article>
+
+      <article class="card w12">
+        <div class="notice">
+          <b>모바일 참고:</b> Flatpickr는 단순 설정일 때 모바일의 기본 날짜 입력 UI를 사용할 수 있습니다.
+          이 샘플은 기능 비교를 위해 대부분 <code>disableMobile: true</code>를 사용하여 Flatpickr UI를 강제로 표시합니다.
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="api">
+    <div class="section-head"><div><h2>6. 인스턴스 API·이벤트 훅</h2><div class="section-desc">setDate, clear, jumpToDate, set, redraw, destroy 및 이벤트 확인</div></div></div>
+    <div class="grid">
+      <article class="card w6">
+        <h3>API 제어 대상</h3><p>아래 버튼으로 Flatpickr 인스턴스를 직접 제어</p>
+        <input class="input" id="apiPicker" placeholder="API 제어 달력">
+        <div class="actions">
+          <button class="btn mini" data-api="open">open()</button>
+          <button class="btn mini" data-api="today">setDate(today)</button>
+          <button class="btn mini" data-api="next7">+7일</button>
+          <button class="btn mini" data-api="jump">jumpToDate()</button>
+          <button class="btn mini" data-api="clear">clear()</button>
+          <button class="btn mini" data-api="toggleTime">시간 토글</button>
+          <button class="btn mini" data-api="redraw">redraw()</button>
+          <button class="btn mini danger" data-api="destroy">destroy()</button>
+          <button class="btn mini primary" data-api="rebuild">재생성</button>
+        </div>
+        <div class="result" id="apiResult">인스턴스 준비 중</div>
+      </article>
+
+      <article class="card w6">
+        <h3>실시간 이벤트 로그</h3><p>onReady · onOpen · onClose · onChange · onMonthChange · onYearChange · onValueUpdate</p>
+        <div class="log-shell">
+          <div id="eventLog"></div>
+          <div>
+            <button class="btn" id="clearLog" style="width:100%">로그 지우기</button>
+            <label>로그 필터</label>
+            <select id="logFilter">
+              <option value="all">전체</option><option value="onChange">onChange</option>
+              <option value="onOpen">onOpen / onClose</option><option value="navigation">월·연도 이동</option>
+            </select>
+            <div class="result" id="eventStats">이벤트 0건</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card w12">
+        <h3>현재 인스턴스 상태</h3><p>선택 날짜, 현재 연·월, 설정값 일부를 JSON으로 출력</p>
+        <pre id="instanceState">{}</pre>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="lab">
+    <div class="section-head"><div><h2>7. 설정 실험실</h2><div class="section-desc">옵션을 조합하여 즉시 새 달력을 생성</div></div></div>
+    <div class="grid">
+      <article class="card w6">
+        <h3>옵션 조합</h3>
+        <div class="split">
+          <div><label>선택 모드</label><select id="labMode"><option>single</option><option>range</option><option>multiple</option></select></div>
+          <div><label>날짜 형식</label><select id="labFormat"><option value="Y-m-d">Y-m-d</option><option value="Y.m.d">Y.m.d</option><option value="d/m/Y">d/m/Y</option><option value="F j, Y">F j, Y</option></select></div>
+          <div><label>최소 날짜</label><select id="labMin"><option value="">없음</option><option value="today">오늘</option><option value="+7">오늘 +7일</option></select></div>
+          <div><label>표시 월 수</label><select id="labMonths"><option value="1">1개월</option><option value="2">2개월</option><option value="3">3개월</option></select></div>
+        </div>
+        <div class="checkrow">
+          <label><input type="checkbox" id="labTime"> 시간</label>
+          <label><input type="checkbox" id="labSeconds"> 초</label>
+          <label><input type="checkbox" id="labWeekNumbers"> 주차</label>
+          <label><input type="checkbox" id="labAlt"> altInput</label>
+          <label><input type="checkbox" id="labInline"> 인라인</label>
+          <label><input type="checkbox" id="labNoCalendar"> 달력 숨김</label>
+        </div>
+        <button class="btn primary" id="buildLab">설정 적용</button>
+      </article>
+
+      <article class="card w6">
+        <h3>생성 결과</h3>
+        <div id="labHost"><input class="input" id="labPicker" placeholder="옵션을 적용해 보세요"></div>
+        <div class="result" id="labResult">선택값 대기</div>
+        <label>적용 설정</label>
+        <pre id="labConfig">{}</pre>
+      </article>
+
+      <article class="card w12">
+        <h3>주요 포맷 토큰</h3>
+        <p>Y=4자리 연도 · m=월 숫자 · d=일 · H=24시간 · h=12시간 · i=분 · S=초 · K=AM/PM · l=요일 · F=월 이름 · W=주차</p>
+      </article>
+    </div>
+  </section>
+
+  <div class="footer">Flatpickr 종합 샘플 · CDN 연결 필요 · 브라우저 개발자 도구 없이도 이벤트와 상태를 화면에서 확인 가능</div>
+</div>
+
+<dialog id="helpDialog">
+  <div class="dialog-head"><b>샘플 사용 안내</b><button class="btn mini" id="closeHelp">닫기</button></div>
+  <div class="dialog-body">
+    <ol>
+      <li>각 입력창을 눌러 선택 동작을 비교합니다.</li>
+      <li>API·이벤트 섹션에서 버튼을 눌러 인스턴스 메서드와 훅을 확인합니다.</li>
+      <li>설정 실험실에서 옵션 조합 후 새 인스턴스를 즉시 생성합니다.</li>
+      <li>테마 변경 버튼은 Flatpickr의 내장 테마 CSS를 순환합니다.</li>
+    </ol>
+    <div class="notice">사내망 등에서 CDN이 차단되면 Flatpickr 파일을 로컬로 내려받아 HTML의 CSS·JS 경로를 변경해야 합니다.</div>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ko.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/rangePlugin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/weekSelect/weekSelect.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/monthSelect/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/confirmDate/confirmDate.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/scrollPlugin.js"></script>
+
+<script>
+(() => {
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const instances = [];
+  const eventRecords = [];
+  let apiFP = null, labFP = null, positionFP = null;
+
+  const pad = n => String(n).padStart(2,"0");
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  const out = (id, text) => { const el=$(id); if(el) el.textContent=text; };
+  const register = fp => { if(fp) instances.push(fp); return fp; };
+  const formatDates = ds => ds.map(d => ymd(d)).join(", ");
+  const daysBetween = (a,b) => Math.round((b-a)/86400000);
+
+  function log(event, payload=""){
+    const now = new Date();
+    eventRecords.unshift({event,payload,time:`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`});
+    renderLog();
+  }
+  function renderLog(){
+    const filter = $("#logFilter")?.value || "all";
+    const ok = r => filter==="all" || r.event===filter ||
+      (filter==="onOpen" && ["onOpen","onClose"].includes(r.event)) ||
+      (filter==="navigation" && ["onMonthChange","onYearChange"].includes(r.event));
+    $("#eventLog").innerHTML = eventRecords.filter(ok).map(r =>
+      `<div class="log-item"><span class="log-time">${r.time}</span> <span class="log-event">${r.event}</span> ${escapeHtml(r.payload)}</div>`
+    ).join("") || '<span style="color:#64748b">이벤트 대기 중</span>';
+    out("#eventStats", `전체 ${eventRecords.length}건 / 표시 ${eventRecords.filter(ok).length}건`);
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c])); }
+  function common(extra={}){ return Object.assign({locale:"ko", disableMobile:true},extra); }
+
+  function init(){
+    if(typeof flatpickr !== "function"){
+      $("#loadError").style.display="block"; out("#globalStatus","라이브러리 로딩 실패"); return;
+    }
+
+    const today = new Date();
+    const holiday1=addDays(today,5), holiday2=addDays(today,10), holidayRangeStart=addDays(today,15), holidayRangeEnd=addDays(today,17);
+    const enabled=[2,4,7,9,12].map(n=>addDays(today,n));
+
+    register(flatpickr("#basicDate", common({
+      dateFormat:"Y-m-d", defaultDate:today,
+      onChange:(ds,str)=>out("#basicDateResult",`Date 객체: ${ds[0]?.toLocaleString("ko-KR")}\n문자열: ${str}`)
+    })));
+
+    register(flatpickr("#dateTime", common({
+      enableTime:true,time_24hr:true,minuteIncrement:5,dateFormat:"Y-m-d H:i",
+      defaultDate:addDays(today,1),defaultHour:14,defaultMinute:30,
+      onChange:(ds,str)=>out("#dateTimeResult",`선택: ${str}\nISO: ${ds[0]?.toISOString()}`)
+    })));
+
+    register(flatpickr("#timeOnly", common({
+      enableTime:true,noCalendar:true,enableSeconds:true,time_24hr:true,dateFormat:"H:i:S",
+      defaultDate:"09:30:00",hourIncrement:1,minuteIncrement:10,
+      onChange:(ds,str)=>out("#timeOnlyResult",`시간: ${str}`)
+    })));
+
+    register(flatpickr("#altFormat", common({
+      altInput:true,altFormat:"Y년 m월 d일 (D)",dateFormat:"Y-m-d",
+      onChange:(ds,str,fp)=>out("#altFormatResult",`저장값: ${str}\n표시값: ${fp.altInput?.value || ""}`)
+    })));
+
+    register(flatpickr("#allowInput", common({
+      allowInput:true,dateFormat:"Y-m-d",
+      onClose:(ds,str)=>out("#allowInputResult",`확정값: ${str || "없음"}`)
+    })));
+
+    register(flatpickr("#boundedDate", common({
+      defaultDate:today,minDate:addDays(today,-7),maxDate:addDays(today,30),
+      onReady:()=>out("#boundedDateResult",`${ymd(addDays(today,-7))} ~ ${ymd(addDays(today,30))}`),
+      onChange:(ds,str)=>out("#boundedDateResult",`선택: ${str}\n허용: ${ymd(addDays(today,-7))} ~ ${ymd(addDays(today,30))}`)
+    })));
+
+    register(flatpickr("#rangeDate", common({
+      mode:"range",dateFormat:"Y-m-d",showMonths:window.innerWidth>700?2:1,
+      onChange:(ds,str)=>out("#rangeDateResult",ds.length===2?`기간: ${str}\n차이: ${daysBetween(ds[0],ds[1])}일`:`시작일: ${str}`)
+    })));
+
+    register(flatpickr("#multipleDate", common({
+      mode:"multiple",conjunction:", ",dateFormat:"Y-m-d",
+      onChange:(ds,str)=>out("#multipleDateResult",`선택 ${ds.length}개\n${str}`)
+    })));
+
+    if(typeof weekSelect === "function"){
+      register(flatpickr("#weekPicker", common({
+        plugins:[new weekSelect({})],dateFormat:"Y-m-d",
+        onChange:(ds,str,fp)=>out("#weekPickerResult",`기준일: ${str}\n주차: ${fp.currentYear}년 ${fp.config.getWeek(ds[0])}주`)
+      })));
+    }
+
+    if(typeof rangePlugin === "function"){
+      register(flatpickr("#rangeStart", common({
+        mode:"range",plugins:[new rangePlugin({input:"#rangeEnd"})],
+        onChange:(ds)=>out("#linkedRangeResult",ds.length===2?`시작 ${ymd(ds[0])}\n종료 ${ymd(ds[1])}\n기간 ${daysBetween(ds[0],ds[1])}일`:"종료일을 선택하세요.")
+      })));
+    }
+
+    register(flatpickr("#stayRange", common({
+      mode:"range",dateFormat:"Y-m-d",minDate:"today",
+      onChange:(ds)=>{
+        if(ds.length!==2) return out("#stayRangeResult","종료일을 선택하세요.");
+        let weekdays=0,weekends=0;
+        for(let d=new Date(ds[0]);d<ds[1];d=addDays(d,1)) [0,6].includes(d.getDay())?weekends++:weekdays++;
+        out("#stayRangeResult",`숙박 ${daysBetween(ds[0],ds[1])}박\n평일 ${weekdays}박 · 주말 ${weekends}박`);
+      }
+    })));
+
+    register(flatpickr("#weekdayOnly", common({
+      disable:[d=>d.getDay()===0||d.getDay()===6],
+      onChange:(ds,str)=>out("#weekdayOnlyResult",`선택한 평일: ${str}`)
+    })));
+
+    register(flatpickr("#holidayDisabled", common({
+      minDate:"today",
+      disable:[ymd(holiday1),ymd(holiday2),{from:ymd(holidayRangeStart),to:ymd(holidayRangeEnd)}],
+      onReady:()=>out("#holidayDisabledResult",`차단: ${ymd(holiday1)}, ${ymd(holiday2)}\n범위: ${ymd(holidayRangeStart)} ~ ${ymd(holidayRangeEnd)}`),
+      onChange:(ds,str)=>out("#holidayDisabledResult",`예약일: ${str}`)
+    })));
+
+    register(flatpickr("#enabledOnly", common({
+      enable:enabled.map(ymd),defaultDate:enabled[0],
+      onReady:()=>out("#enabledOnlyResult",`후보일: ${enabled.map(ymd).join(", ")}`),
+      onChange:(ds,str)=>out("#enabledOnlyResult",`선택: ${str}\n후보 ${enabled.length}개 중 선택`)
+    })));
+
+    register(flatpickr("#futureOnly", common({
+      minDate:"today",onChange:(ds,str)=>out("#futureOnlyResult",`선택: ${str}`)
+    })));
+
+    register(flatpickr("#businessHours", common({
+      enableTime:true,minTime:"09:00",maxTime:"18:00",minuteIncrement:30,time_24hr:true,
+      dateFormat:"Y-m-d H:i",disable:[d=>d.getDay()===0||d.getDay()===6],
+      onChange:(ds,str)=>out("#businessHoursResult",`업무 예약: ${str}`)
+    })));
+
+    let arrivalFP;
+    register(flatpickr("#departDate", common({
+      minDate:"today",
+      onChange:(ds,str)=>{
+        if(!ds[0]) return;
+        const min=addDays(ds[0],1); arrivalFP.set("minDate",min); arrivalFP.setDate(min,true);
+        out("#dynamicMinResult",`출발: ${str}\n도착 최소: ${ymd(min)}`);
+      }
+    })));
+    arrivalFP=register(flatpickr("#arrivalDate", common({
+      minDate:addDays(today,1),
+      onChange:(ds,str)=>{ const dep=$("#departDate").value; out("#dynamicMinResult",`출발: ${dep||"미선택"}\n도착: ${str}`); }
+    })));
+
+    register(flatpickr("#inlineDate", common({
+      inline:true,appendTo:$("#inlineHost"),defaultDate:today,
+      onChange:(ds,str)=>out("#inlineDateResult",`선택: ${str}\n요일: ${ds[0]?.toLocaleDateString("ko-KR",{weekday:"long"})}`)
+    })));
+
+    register(flatpickr("#twoMonths", common({
+      mode:"range",showMonths:2,dateFormat:"Y-m-d",
+      onChange:(ds,str)=>out("#twoMonthsResult",`선택: ${str}`)
+    })));
+
+    register(flatpickr("#staticPicker", common({
+      static:true,onChange:(ds,str)=>out("#staticPickerResult",`선택: ${str}`)
+    })));
+
+    register(flatpickr("#staticMonthHeader", common({
+      monthSelectorType:"static",allowInput:false,
+      onChange:(ds,str)=>out("#staticMonthHeaderResult",`선택: ${str}`)
+    })));
+
+    const special=ymd(addDays(today,3)), busySet=new Set([1,6,8,13].map(n=>ymd(addDays(today,n))));
+    register(flatpickr("#decoratedDays", common({
+      onDayCreate:(_,__,___,dayElem)=>{
+        const d=dayElem.dateObj, key=ymd(d);
+        if(d.getDay()===0||d.getDay()===6) dayElem.classList.add("weekend-day");
+        if(key===special){dayElem.classList.add("special-day");dayElem.title="특별 행사일";}
+        if(busySet.has(key)){dayElem.classList.add("busy-day");dayElem.title=(dayElem.title?dayElem.title+" / ":"")+"일정 있음";}
+      },
+      onChange:(ds,str)=>out("#decoratedDaysResult",`선택: ${str}\n특별일: ${special}`)
+    })));
+
+    positionFP=register(flatpickr("#positionPicker",common({
+      position:"auto",onChange:(ds,str)=>out("#positionResult",`현재 위치: ${$("#positionSelect").value}\n선택: ${str}`)
+    })));
+
+    if(typeof monthSelectPlugin === "function"){
+      register(flatpickr("#monthPicker", common({
+        plugins:[new monthSelectPlugin({shorthand:true,dateFormat:"Y-m",altFormat:"Y년 F"})],
+        altInput:true,
+        onChange:(ds,str)=>out("#monthPickerResult",`저장값: ${str}\n연도: ${ds[0]?.getFullYear()} · 월: ${(ds[0]?.getMonth()||0)+1}`)
+      })));
+    }
+
+    if(typeof confirmDatePlugin === "function"){
+      register(flatpickr("#confirmTime", common({
+        enableTime:true,noCalendar:true,time_24hr:true,dateFormat:"H:i",
+        plugins:[new confirmDatePlugin({confirmText:"확인",showAlways:true,theme:"light"})],
+        onChange:(ds,str)=>out("#confirmTimeResult",`선택: ${str}`)
+      })));
+    }
+
+    if(typeof scrollPlugin === "function"){
+      register(flatpickr("#scrollPicker", common({
+        enableTime:true,time_24hr:true,plugins:[new scrollPlugin()],
+        dateFormat:"Y-m-d H:i",onChange:(ds,str)=>out("#scrollPickerResult",`선택: ${str}`)
+      })));
+    }
+
+    buildApiPicker();
+    buildLab();
+
+    $("#applyPosition").onclick=()=>{positionFP.set("position",$("#positionSelect").value);positionFP.open();out("#positionResult",`현재 위치: ${$("#positionSelect").value}`)};
+    $("#buildLab").onclick=buildLab;
+    $("#logFilter").onchange=renderLog;
+    $("#clearLog").onclick=()=>{eventRecords.length=0;renderLog();};
+
+    $$("#api .actions [data-api]").forEach(b=>b.onclick=()=>runApi(b.dataset.api));
+    setupGlobalButtons();
+    setInterval(updateInstanceState,1000);
+    out("#globalStatus",`초기화 완료 · 인스턴스 ${instances.length}개`);
+    renderLog();
+  }
+
+  function buildApiPicker(){
+    if(apiFP) try{apiFP.destroy()}catch(e){}
+    apiFP=flatpickr("#apiPicker",common({
+      dateFormat:"Y-m-d",defaultDate:new Date(),
+      onReady:(ds,str)=>log("onReady",str),
+      onOpen:()=>log("onOpen"),
+      onClose:()=>log("onClose"),
+      onChange:(ds,str)=>{log("onChange",str);out("#apiResult",`선택: ${str}`)},
+      onMonthChange:(_,__,fp)=>log("onMonthChange",`${fp.currentYear}-${fp.currentMonth+1}`),
+      onYearChange:(_,__,fp)=>log("onYearChange",String(fp.currentYear)),
+      onValueUpdate:(ds,str)=>log("onValueUpdate",str)
+    }));
+    out("#apiResult","인스턴스 생성 완료");
+  }
+
+  function runApi(action){
+    if(action==="rebuild") return buildApiPicker();
+    if(!apiFP || !apiFP.element || !apiFP.calendarContainer) return out("#apiResult","인스턴스가 제거됨 · 재생성 버튼을 누르세요.");
+    const selected=apiFP.selectedDates[0]||new Date();
+    const actions={
+      open:()=>apiFP.open(),
+      today:()=>apiFP.setDate(new Date(),true),
+      next7:()=>apiFP.setDate(addDays(selected,7),true),
+      jump:()=>{apiFP.jumpToDate(addDays(new Date(),60),true);apiFP.open()},
+      clear:()=>apiFP.clear(),
+      toggleTime:()=>{apiFP.set("enableTime",!apiFP.config.enableTime);apiFP.set("dateFormat",apiFP.config.enableTime?"Y-m-d H:i":"Y-m-d");apiFP.redraw()},
+      redraw:()=>apiFP.redraw(),
+      destroy:()=>{apiFP.destroy();out("#apiResult","destroy() 실행 · 입력은 일반 텍스트 필드로 복귀")}
+    };
+    try{actions[action]?.();log("API",action)}catch(e){out("#apiResult",`오류: ${e.message}`)}
+  }
+
+  function updateInstanceState(){
+    if(!apiFP || !apiFP.config) return;
+    const state={
+      selectedDates:apiFP.selectedDates?.map(d=>d.toISOString()),
+      currentYear:apiFP.currentYear,currentMonth:apiFP.currentMonth+1,
+      isOpen:apiFP.isOpen,
+      config:{mode:apiFP.config.mode,dateFormat:apiFP.config.dateFormat,enableTime:apiFP.config.enableTime,minDate:apiFP.config.minDate||null,maxDate:apiFP.config.maxDate||null}
+    };
+    out("#instanceState",JSON.stringify(state,null,2));
+  }
+
+  function buildLab(){
+    if(typeof flatpickr!=="function") return;
+    if(labFP) try{labFP.destroy()}catch(e){}
+    const minChoice=$("#labMin").value;
+    const minDate=minChoice==="+7"?addDays(new Date(),7):minChoice||undefined;
+    const cfg=common({
+      mode:$("#labMode").value,dateFormat:$("#labFormat").value,
+      enableTime:$("#labTime").checked,enableSeconds:$("#labSeconds").checked,
+      weekNumbers:$("#labWeekNumbers").checked,altInput:$("#labAlt").checked,
+      altFormat:"Y년 m월 d일 H:i",inline:$("#labInline").checked,
+      noCalendar:$("#labNoCalendar").checked,showMonths:Number($("#labMonths").value),
+      minDate,
+      onChange:(ds,str)=>out("#labResult",`선택 ${ds.length}개\n${str}`)
+    });
+    if(cfg.noCalendar){cfg.enableTime=true;cfg.showMonths=1;cfg.dateFormat=cfg.enableSeconds?"H:i:S":"H:i";}
+    labFP=flatpickr("#labPicker",cfg);
+    const printable={...cfg,locale:"ko",minDate:minDate instanceof Date?ymd(minDate):minDate};
+    delete printable.onChange;
+    out("#labConfig",JSON.stringify(printable,null,2));
+  }
+
+  function setupGlobalButtons(){
+    $("#openAll").onclick=()=>instances.filter(fp=>!fp.config.inline).slice(0,6).forEach((fp,i)=>setTimeout(()=>fp.open(),i*80));
+    $("#closeAll").onclick=()=>instances.forEach(fp=>fp.close());
+    $("#setTodayAll").onclick=()=>instances[0]?.setDate(new Date(),true);
+    $("#clearAll").onclick=()=>{instances.forEach(fp=>{try{fp.clear()}catch(e){}});if(apiFP)apiFP.clear();if(labFP)labFP.clear();log("GLOBAL","clearAll")};
+    const themes=["","airbnb","dark","material_blue","material_green","material_orange","material_red","confetti"];
+    let ti=0;
+    $("#themeBtn").onclick=()=>{
+      ti=(ti+1)%themes.length;
+      const name=themes[ti], href=name
+        ?`https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/${name}.css`
+        :"https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css";
+      $("#flatpickr-theme").href=href;$("#themeBtn").textContent=`테마: ${name||"기본"}`;
+    };
+    $("#helpBtn").onclick=()=>$("#helpDialog").showModal();
+    $("#closeHelp").onclick=()=>$("#helpDialog").close();
+  }
+
+  window.addEventListener("error",e=>{
+    if(String(e.filename||"").includes("flatpickr")){$("#loadError").style.display="block";out("#globalStatus","일부 플러그인 로딩 실패")}
+  });
+  document.addEventListener("DOMContentLoaded",init);
+})();
+</script>
+</body>
+</html>
