@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tom Select 종합 기능 샘플</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.6.1/dist/css/tom-select.bootstrap5.min.css">
+<style>
+:root{
+  --bg:#f4f7fb;--panel:#fff;--line:#dbe3ef;--text:#172033;--muted:#667085;
+  --primary:#2563eb;--primary2:#1d4ed8;--soft:#eff6ff;--ok:#047857;--warn:#b45309;
+  --shadow:0 10px 28px rgba(21,35,66,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif}
+button,input,select{font:inherit}
+header{background:linear-gradient(135deg,#111827,#1d4ed8);color:#fff;padding:34px 22px}
+.hero{max-width:1440px;margin:auto;display:flex;gap:24px;align-items:flex-end;justify-content:space-between}
+h1{margin:0 0 8px;font-size:clamp(26px,4vw,42px)}
+.hero p{margin:0;color:#dbeafe;line-height:1.65}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
+.badge{padding:6px 10px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:rgba(255,255,255,.1);font-size:12px}
+.status{min-width:220px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.12);font-size:13px}
+main{max-width:1440px;margin:22px auto;padding:0 18px 50px}
+.toolbar{position:sticky;top:0;z-index:20;background:rgba(244,247,251,.94);backdrop-filter:blur(10px);padding:12px 0;display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid #cbd5e1;background:#fff;color:#24324a;border-radius:9px;padding:9px 13px;cursor:pointer;font-weight:650}
+.btn:hover{border-color:#93c5fd;background:#eff6ff}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:white}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);min-width:0}
+.card.wide{grid-column:span 2}
+.card.full{grid-column:1/-1}
+.card h2{font-size:18px;margin:0 0 6px}
+.desc{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 15px}
+label{display:block;font-weight:700;font-size:13px;margin-bottom:7px}
+.field{margin-bottom:13px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+.output,pre{background:#0f172a;color:#dbeafe;border-radius:10px;padding:12px;min-height:45px;overflow:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+.event-log{height:230px}
+.statrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat strong{display:block;font-size:20px;color:#1d4ed8}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.custom-option{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#dbeafe;color:#1e40af;font-weight:800}
+.meta{font-size:11px;color:#64748b}
+.group-title{font-weight:800;color:#1e3a8a}
+.note{border-left:4px solid #60a5fa;background:#eff6ff;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5}
+mark{background:#fde68a}
+body.dark{--bg:#0f172a;--panel:#111c2f;--line:#2b3a55;--text:#e5edf8;--muted:#9aa9bd;--soft:#172554;--shadow:none}
+body.dark .card,body.dark .btn{background:#111c2f;color:#e5edf8}
+body.dark .toolbar{background:rgba(15,23,42,.94)}
+body.dark .stat{background:#152238}
+body.dark .note{background:#172554}
+body.dark .ts-control,body.dark .ts-dropdown{background:#111827;color:#e5e7eb;border-color:#475569}
+body.dark .ts-dropdown .active{background:#1e3a8a;color:white}
+@media(max-width:1050px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card.wide{grid-column:span 2}}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.card.wide,.card.full{grid-column:auto}.hero{display:block}.status{margin-top:18px}.two,.statrow{grid-template-columns:1fr}.toolbar{position:static}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hero">
+    <div>
+      <h1>Tom Select 종합 기능 실험실</h1>
+      <p>검색형 select, 다중 선택, 태그 생성, 옵션 그룹, 사용자 렌더링, 비동기 검색, 플러그인, 이벤트와 API 제어를 한 페이지에 구성</p>
+      <div class="badges">
+        <span class="badge">단일 HTML</span><span class="badge">Tom Select 2.6.1</span>
+        <span class="badge">반응형</span><span class="badge">키보드 탐색</span><span class="badge">실시간 이벤트 로그</span>
+      </div>
+    </div>
+    <div class="status" id="loadStatus">라이브러리 확인 중…</div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <button class="btn primary" onclick="openAll()">드롭다운 순차 열기</button>
+    <button class="btn" onclick="clearAll()">전체 선택 초기화</button>
+    <button class="btn" onclick="toggleAll()">전체 활성/비활성</button>
+    <button class="btn" onclick="document.body.classList.toggle('dark')">다크 모드</button>
+    <button class="btn" onclick="downloadValues()">현재 값 JSON 저장</button>
+  </div>
+
+  <section class="grid">
+    <article class="card">
+      <h2>1. 기본 단일 선택</h2>
+      <p class="desc">검색, 정렬, placeholder, 빈 옵션 허용</p>
+      <label for="basic">담당자</label>
+      <select id="basic" placeholder="담당자를 검색하세요">
+        <option value="">미지정</option>
+        <option value="kim">김하늘</option><option value="lee">이도윤</option>
+        <option value="park">박서준</option><option value="choi">최유진</option>
+      </select>
+      <div class="output" id="basicOut">선택값: 없음</div>
+    </article>
+
+    <article class="card">
+      <h2>2. 다중 선택 + 제거 버튼</h2>
+      <p class="desc">remove_button, clear_button, 최대 선택 개수</p>
+      <label for="skills">기술 스택(최대 5개)</label>
+      <select id="skills" multiple placeholder="기술을 선택하세요">
+        <option>JavaScript</option><option>TypeScript</option><option>Python</option>
+        <option>Node.js</option><option>SQLite</option><option>Docker</option>
+        <option>HTML</option><option>CSS</option><option>REST API</option>
+      </select>
+      <div class="output" id="skillsOut">[]</div>
+    </article>
+
+    <article class="card">
+      <h2>3. 태그 직접 생성</h2>
+      <p class="desc">create, createOnBlur, persist, 구분자 입력</p>
+      <label for="tags">태그</label>
+      <input id="tags" value="업무자동화,데이터" placeholder="입력 후 Enter 또는 쉼표">
+      <div class="note">새 태그를 입력한 뒤 Enter·쉼표·포커스 이동으로 생성</div>
+    </article>
+
+    <article class="card">
+      <h2>4. 옵션 그룹</h2>
+      <p class="desc">optgroupField, lockOptgroupOrder, 그룹별 분류</p>
+      <label for="grouped">업무 도구</label>
+      <select id="grouped" multiple placeholder="도구 검색">
+        <optgroup label="개발">
+          <option value="vscode">VS Code</option><option value="git">Git</option><option value="postman">Postman</option>
+        </optgroup>
+        <optgroup label="협업">
+          <option value="notion">Notion</option><option value="slack">Slack</option><option value="jira">Jira</option>
+        </optgroup>
+        <optgroup label="데이터">
+          <option value="excel">Excel</option><option value="powerbi">Power BI</option><option value="tableau">Tableau</option>
+        </optgroup>
+      </select>
+    </article>
+
+    <article class="card wide">
+      <h2>5. 사용자 정의 렌더링</h2>
+      <p class="desc">render.option, render.item, 사용자 데이터 필드, XSS 방지를 위한 escape 사용</p>
+      <label for="people">프로젝트 참여자</label>
+      <select id="people" multiple placeholder="이름·부서·직무로 검색"></select>
+      <div class="output" id="peopleOut">선택된 참여자 없음</div>
+    </article>
+
+    <article class="card">
+      <h2>6. 비동기 원격검색 모의</h2>
+      <p class="desc">load, loadThrottle, loadingClass, shouldLoad</p>
+      <label for="remote">도시 검색</label>
+      <select id="remote" placeholder="2글자 이상 입력"></select>
+      <div class="small">서버 없이 동작하도록 500ms 지연 후 로컬 데이터 반환</div>
+    </article>
+
+    <article class="card">
+      <h2>7. 종속 선택</h2>
+      <p class="desc">상위 선택값에 따라 하위 옵션을 API로 교체</p>
+      <div class="two">
+        <div><label for="category">분류</label><select id="category"><option value="">선택</option><option value="dev">개발</option><option value="data">데이터</option><option value="infra">인프라</option></select></div>
+        <div><label for="course">과정</label><select id="course" placeholder="분류를 먼저 선택"></select></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <h2>8. 비활성 옵션·읽기 상태</h2>
+      <p class="desc">옵션 단위 disabled, 컨트롤 lock/unlock</p>
+      <label for="disabledOptions">승인 단계</label>
+      <select id="disabledOptions">
+        <option value="draft">초안</option><option value="review">검토 중</option>
+        <option value="approved" disabled>승인 완료(권한 필요)</option>
+      </select>
+      <div class="actions"><button class="btn" id="lockBtn">잠금</button><button class="btn" id="unlockBtn">잠금 해제</button></div>
+    </article>
+
+    <article class="card">
+      <h2>9. 중복 생성 검증</h2>
+      <p class="desc">createFilter로 길이·중복·형식 제한</p>
+      <label for="emails">이메일 수신자</label>
+      <input id="emails" placeholder="name@example.com">
+      <div class="output" id="emailMsg">유효한 이메일만 추가 가능</div>
+    </article>
+
+    <article class="card">
+      <h2>10. 검색 가중치</h2>
+      <p class="desc">searchField의 weight와 conjunction 설정</p>
+      <label for="products">상품 검색</label>
+      <select id="products" placeholder="상품명 또는 코드"></select>
+      <div class="small">상품명 가중치 2, 코드 가중치 1</div>
+    </article>
+
+    <article class="card">
+      <h2>11. 최대 표시·선택 제한</h2>
+      <p class="desc">maxOptions, maxItems, hideSelected, closeAfterSelect</p>
+      <label for="limited">상위 후보 3개 선택</label>
+      <select id="limited" multiple placeholder="검색 결과 최대 6개">
+        <option>서울</option><option>부산</option><option>인천</option><option>대구</option>
+        <option>대전</option><option>광주</option><option>울산</option><option>세종</option>
+        <option>수원</option><option>제주</option>
+      </select>
+    </article>
+
+    <article class="card wide">
+      <h2>12. API 제어 패널</h2>
+      <p class="desc">addOption, addItem, removeItem, setValue, clear, clearOptions, refreshOptions, focus, open, destroy</p>
+      <label for="apiDemo">API 대상 컨트롤</label>
+      <select id="apiDemo" multiple placeholder="API로 제어">
+        <option value="a">Alpha</option><option value="b">Beta</option><option value="c">Gamma</option>
+      </select>
+      <div class="actions">
+        <button class="btn" data-api="add">옵션 Delta 추가</button>
+        <button class="btn" data-api="select">Delta 선택</button>
+        <button class="btn" data-api="set">Alpha+Beta 설정</button>
+        <button class="btn" data-api="remove">Beta 제거</button>
+        <button class="btn" data-api="clear">선택 초기화</button>
+        <button class="btn" data-api="clearOptions">미선택 옵션 삭제</button>
+        <button class="btn" data-api="open">열기</button>
+        <button class="btn" data-api="focus">포커스</button>
+        <button class="btn" data-api="sync">원본과 동기화</button>
+      </div>
+      <div class="output" id="apiOut">API 실행 결과가 표시됩니다.</div>
+    </article>
+
+    <article class="card">
+      <h2>13. 원본 select 변경 감지</h2>
+      <p class="desc">change_listener 플러그인으로 외부 변경 동기화</p>
+      <label for="changeListener">상태</label>
+      <select id="changeListener"><option value="ready">준비</option><option value="running">진행</option><option value="done">완료</option></select>
+      <div class="actions"><button class="btn" id="nativeChange">원본 값을 ‘완료’로 변경</button></div>
+    </article>
+
+    <article class="card">
+      <h2>14. 입력 복원·백스페이스 보호</h2>
+      <p class="desc">restore_on_backspace, no_backspace_delete, caret_position</p>
+      <label for="safeTags">안전 태그 편집</label>
+      <input id="safeTags" value="중요,긴급,검토">
+      <div class="small">선택 항목을 제거하면 텍스트가 입력창으로 복원되며, 빈 입력창의 Backspace 삭제는 차단</div>
+    </article>
+
+    <article class="card">
+      <h2>15. 체크박스 다중 선택</h2>
+      <p class="desc">checkbox_options, dropdown_input, remove_button</p>
+      <label for="checkboxes">알림 채널</label>
+      <select id="checkboxes" multiple>
+        <option value="mail">이메일</option><option value="sms">문자</option>
+        <option value="push">앱 푸시</option><option value="chat">메신저</option>
+      </select>
+    </article>
+
+    <article class="card full">
+      <h2>16. 이벤트 모니터</h2>
+      <p class="desc">initialize, change, item_add, item_remove, option_add, dropdown_open, dropdown_close, focus, blur, type, load 등</p>
+      <div class="statrow">
+        <div class="stat"><span class="small">이벤트 수</span><strong id="eventCount">0</strong></div>
+        <div class="stat"><span class="small">초기화 컨트롤</span><strong id="controlCount">0</strong></div>
+        <div class="stat"><span class="small">현재 선택 합계</span><strong id="selectedCount">0</strong></div>
+        <div class="stat"><span class="small">마지막 이벤트</span><strong id="lastEvent" style="font-size:14px">-</strong></div>
+      </div>
+      <div class="actions"><button class="btn" onclick="eventLog.length=0;renderLog()">로그 지우기</button></div>
+      <pre class="event-log" id="eventLog">초기화 중…</pre>
+    </article>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.6.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+const controls = {};
+const eventLog = [];
+let allDisabled = false;
+const $ = s => document.querySelector(s);
+
+function logEvent(id, event, value=''){
+  eventLog.unshift({time:new Date().toLocaleTimeString(), id, event, value});
+  if(eventLog.length>120) eventLog.pop();
+  renderLog();
+}
+function renderLog(){
+  $('#eventCount').textContent=eventLog.length;
+  $('#lastEvent').textContent=eventLog[0]?.event || '-';
+  $('#eventLog').textContent=eventLog.length
+    ? eventLog.map(x=>`[${x.time}] ${x.id} · ${x.event}${x.value!==''?' · '+JSON.stringify(x.value):''}`).join('\n')
+    : '로그 없음';
+  updateStats();
+}
+function commonEvents(id){
+  return {
+    onInitialize(){logEvent(id,'initialize')},
+    onChange(v){logEvent(id,'change',v);updateStats()},
+    onItemAdd(v){logEvent(id,'item_add',v)},
+    onItemRemove(v){logEvent(id,'item_remove',v)},
+    onOptionAdd(v){logEvent(id,'option_add',v)},
+    onDropdownOpen(){logEvent(id,'dropdown_open')},
+    onDropdownClose(){logEvent(id,'dropdown_close')},
+    onFocus(){logEvent(id,'focus')},
+    onBlur(){logEvent(id,'blur')},
+    onType(v){if(v) logEvent(id,'type',v)}
+  };
+}
+function add(id, settings={}){
+  const merged={...settings,...commonEvents(id)};
+  // 동일 콜백이 필요한 데모는 아래에서 별도 래핑
+  controls[id]=new TomSelect('#'+id,merged);
+  return controls[id];
+}
+function updateStats(){
+  $('#controlCount').textContent=Object.keys(controls).length;
+  $('#selectedCount').textContent=Object.values(controls).reduce((n,c)=>n+(Array.isArray(c.items)?c.items.length:0),0);
+}
+function init(){
+  if(typeof TomSelect==='undefined'){
+    $('#loadStatus').innerHTML='❌ Tom Select 로드 실패<br><small>인터넷 연결 또는 CDN 접근을 확인하세요.</small>'; return;
+  }
+  $('#loadStatus').innerHTML='✅ Tom Select 로드 완료<br><small>v2.6.1 complete bundle</small>';
+
+  controls.basic=new TomSelect('#basic',{
+    allowEmptyOption:true,create:false,sortField:{field:'text',direction:'asc'},
+    ...commonEvents('basic'),
+    onChange(v){commonEvents('basic').onChange(v);$('#basicOut').textContent='선택값: '+(v||'없음')}
+  });
+
+  controls.skills=new TomSelect('#skills',{
+    plugins:{remove_button:{title:'제거'},clear_button:{title:'전체 지우기'}},
+    maxItems:5,hideSelected:true,...commonEvents('skills'),
+    onChange(v){commonEvents('skills').onChange(v);$('#skillsOut').textContent=JSON.stringify(v,null,2)}
+  });
+
+  add('tags',{plugins:['remove_button'],create:true,createOnBlur:true,persist:false,delimiter:',',maxItems:null});
+  add('grouped',{plugins:['remove_button','dropdown_input'],lockOptgroupOrder:true});
+
+  const people=[
+    {id:'p1',name:'김하늘',dept:'ICT전략실',role:'개발',initial:'김'},
+    {id:'p2',name:'이도윤',dept:'기획조정실',role:'기획',initial:'이'},
+    {id:'p3',name:'박서준',dept:'정보보호본부',role:'보안',initial:'박'},
+    {id:'p4',name:'최유진',dept:'자금운용본부',role:'분석',initial:'최'},
+    {id:'p5',name:'정민준',dept:'홍보부',role:'콘텐츠',initial:'정'}
+  ];
+  controls.people=new TomSelect('#people',{
+    options:people,valueField:'id',labelField:'name',searchField:['name','dept','role'],
+    plugins:['remove_button'],maxItems:4,
+    render:{
+      option:(d,e)=>`<div class="custom-option"><span class="avatar">${e(d.initial)}</span><span><b>${e(d.name)}</b><div class="meta">${e(d.dept)} · ${e(d.role)}</div></span></div>`,
+      item:(d,e)=>`<div title="${e(d.dept)}">${e(d.name)} <span class="meta">· ${e(d.role)}</span></div>`,
+      no_results:(d,e)=>`<div class="no-results">“${e(d.input)}” 검색 결과 없음</div>`
+    },
+    ...commonEvents('people'),
+    onChange(v){commonEvents('people').onChange(v);$('#peopleOut').textContent=v.length?people.filter(p=>v.includes(p.id)).map(p=>`${p.name} / ${p.dept}`).join('\n'):'선택된 참여자 없음'}
+  });
+
+  const cities=['서울','부산','인천','대구','대전','광주','울산','세종','제주','수원','성남','고양','용인','청주','전주','포항','창원','춘천','강릉'];
+  controls.remote=new TomSelect('#remote',{
+    valueField:'value',labelField:'text',searchField:'text',loadThrottle:350,
+    shouldLoad:q=>q.length>=2,
+    load(query,callback){
+      logEvent('remote','load',query);
+      setTimeout(()=>callback(cities.filter(x=>x.includes(query)).map(x=>({value:x,text:x+'시'}))),500);
+    },
+    render:{loading:()=>'<div class="spinner">검색 중…</div>',not_loading:()=>'<div>2글자 이상 입력하세요.</div>'},
+    ...commonEvents('remote')
+  });
+
+  const courseMap={
+    dev:[['js','JavaScript 실무'],['api','REST API 설계'],['test','테스트 자동화']],
+    data:[['sql','SQL 분석'],['viz','데이터 시각화'],['quality','데이터 품질관리']],
+    infra:[['linux','Linux 운영'],['network','네트워크 기초'],['backup','백업·복구']]
+  };
+  controls.course=add('course',{valueField:'value',labelField:'text',searchField:'text'});
+  controls.course.disable();
+  controls.category=new TomSelect('#category',{
+    ...commonEvents('category'),
+    onChange(v){
+      commonEvents('category').onChange(v);
+      controls.course.clear(); controls.course.clearOptions();
+      if(!v){controls.course.disable();return}
+      controls.course.addOptions((courseMap[v]||[]).map(([value,text])=>({value,text})));
+      controls.course.enable(); controls.course.refreshOptions(false);
+    }
+  });
+
+  controls.disabledOptions=add('disabledOptions',{});
+  $('#lockBtn').onclick=()=>controls.disabledOptions.lock();
+  $('#unlockBtn').onclick=()=>controls.disabledOptions.unlock();
+
+  controls.emails=new TomSelect('#emails',{
+    plugins:['remove_button'],create:true,persist:false,
+    createFilter(input){
+      const ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+      $('#emailMsg').textContent=ok?'유효한 형식입니다. Enter로 추가하세요.':'유효한 이메일 형식이 아닙니다.';
+      return ok;
+    },
+    ...commonEvents('emails')
+  });
+
+  const products=[
+    {value:'P-100',name:'업무용 노트북',code:'P-100'},
+    {value:'P-210',name:'27인치 모니터',code:'P-210'},
+    {value:'S-310',name:'보안 소프트웨어',code:'S-310'},
+    {value:'N-410',name:'네트워크 스위치',code:'N-410'}
+  ];
+  controls.products=new TomSelect('#products',{
+    options:products,valueField:'value',labelField:'name',
+    searchField:[{field:'name',weight:2},{field:'code',weight:1}],
+    searchConjunction:'and',
+    render:{option:(d,e)=>`<div><b>${e(d.name)}</b><div class="meta">${e(d.code)}</div></div>`},
+    ...commonEvents('products')
+  });
+
+  add('limited',{plugins:['remove_button'],maxItems:3,maxOptions:6,hideSelected:true,closeAfterSelect:false});
+  controls.apiDemo=add('apiDemo',{plugins:['remove_button']});
+
+  add('changeListener',{plugins:['change_listener']});
+  $('#nativeChange').onclick=()=>{
+    const el=$('#changeListener');el.value='done';el.dispatchEvent(new Event('change',{bubbles:true}));
+  };
+
+  add('safeTags',{plugins:['remove_button','restore_on_backspace','no_backspace_delete','caret_position'],create:true,delimiter:','});
+  add('checkboxes',{plugins:['checkbox_options','dropdown_input','remove_button'],hideSelected:false,closeAfterSelect:false});
+
+  document.querySelectorAll('[data-api]').forEach(b=>b.onclick=()=>runApi(b.dataset.api));
+  renderLog();
+}
+function runApi(action){
+  const c=controls.apiDemo;
+  try{
+    if(action==='add'){c.addOption({value:'d',text:'Delta'},true);c.refreshOptions(false)}
+    if(action==='select'){if(!c.options.d)c.addOption({value:'d',text:'Delta'},true);c.addItem('d')}
+    if(action==='set')c.setValue(['a','b']);
+    if(action==='remove')c.removeItem('b');
+    if(action==='clear')c.clear();
+    if(action==='clearOptions')c.clearOptions(x=>c.items.includes(x.value));
+    if(action==='open')c.open();
+    if(action==='focus')c.focus();
+    if(action==='sync')c.sync();
+    $('#apiOut').textContent=`${action} 실행 완료\nitems = ${JSON.stringify(c.items)}\noptions = ${Object.keys(c.options).join(', ')}`;
+    logEvent('apiDemo','api:'+action,c.items);
+  }catch(e){$('#apiOut').textContent='오류: '+e.message}
+}
+function clearAll(){Object.values(controls).forEach(c=>{try{c.clear(true)}catch(e){}});updateStats()}
+function toggleAll(){
+  allDisabled=!allDisabled;
+  Object.values(controls).forEach(c=>{try{allDisabled?c.disable():c.enable()}catch(e){}});
+  $('#loadStatus').innerHTML=allDisabled?'⏸️ 전체 비활성 상태':'✅ 전체 활성 상태';
+}
+async function openAll(){
+  for(const c of Object.values(controls)){
+    try{c.focus();c.open();await new Promise(r=>setTimeout(r,180));c.close()}catch(e){}
+  }
+}
+function downloadValues(){
+  const data={savedAt:new Date().toISOString(),values:{}};
+  Object.entries(controls).forEach(([id,c])=>data.values[id]=c.getValue());
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tom-select-values.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
