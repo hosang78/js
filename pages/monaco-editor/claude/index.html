@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Monaco Editor</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .editor-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.active { background: #1baf7a; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  #loading {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Monaco Editor 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Monaco Editor</strong>는 VS Code(비주얼 스튜디오 코드)에 실제로 쓰이는 것과 동일한
+    편집기 엔진을 웹페이지에 그대로 가져다 쓸 수 있게 만든 라이브러리입니다.
+    <ul>
+      <li>문법 강조, 괄호 자동 매칭, 여러 줄 편집 등 VS Code 수준의 편집 기능을 그대로 제공</li>
+      <li><code>monaco.editor.createDiffEditor()</code>로 두 텍스트를 나란히 비교하는 diff 뷰 지원</li>
+      <li><code>registerCompletionItemProvider()</code>로 원하는 언어에 커스텀 자동완성(IntelliSense) 추가 가능</li>
+      <li>TypeScript/JavaScript는 타입 추론 기반 자동완성까지 기본 내장</li>
+    </ul>
+    <div class="disclaimer">
+      ※ Monaco Editor는 번들 크기가 커서(min/vs 폴더만 약 16MB) 이 페이지 안에 직접 담지 않고, CDN
+      (jsDelivr, 버전 고정 <code>0.55.1</code>)에서 AMD 로더(<code>loader.js</code>) 방식으로 필요한
+      부분만 그때그때 불러옵니다. README에 "AMD 방식은 향후 제거 예정"이라는 안내가 있지만, 번들러 없이
+      &lt;script&gt; 태그만으로 붙이는 방법은 현재로선 이 방식뿐이라 그대로 사용했습니다. 아래 예시에 쓰인
+      물품·가격·거래처 등은 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의 통계·자료가 아닙니다.
+      다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <div id="loading">Monaco Editor 로딩 중...</div>
+
+  <div id="content" style="display:none;">
+
+  <section class="block">
+    <h2>1. 기본 에디터 + 언어 모드 전환</h2>
+    <div class="desc">VS Code와 동일한 문법 강조·자동 들여쓰기가 적용된 기본 에디터입니다. 버튼을 누르면 같은 내용을 다른 언어 문법으로 다시 강조합니다.</div>
+    <div class="controls">
+      <button class="lang-btn active" data-lang="javascript">JavaScript</button>
+      <button class="lang-btn" data-lang="json">JSON</button>
+      <button class="lang-btn" data-lang="sql">SQL</button>
+    </div>
+    <div class="editor-wrap" id="editor1" style="height:180px;"></div>
+    <div class="controls"><button id="readBtn1">현재 코드 가져오기</button></div>
+    <pre class="output" id="output1">아직 읽지 않음</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const editor = monaco.editor.create(document.getElementById('editor1'), {
+  value: "// 가상 위판 기록\nconst records = [{ species: '고등어', weight: 320 }];",
+  language: 'javascript',
+  automaticLayout: true,
+});
+
+// 언어 모드만 나중에 바꾸기 (내용은 그대로)
+monaco.editor.setModelLanguage(editor.getModel(), 'json');
+
+// 현재 내용 읽기
+const code = editor.getValue();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 테마 전환</h2>
+    <div class="desc"><code>monaco.editor.setTheme()</code>는 페이지 안의 <strong>모든</strong> Monaco 에디터 테마를 한 번에 바꿉니다(에디터별 설정이 아님). 아래 버튼으로 확인해보세요 — 이 섹션뿐 아니라 다른 섹션의 에디터들도 함께 바뀝니다.</div>
+    <div class="controls">
+      <button class="ghost" id="themeLight">Light</button>
+      <button class="ghost" id="themeDark">vs-dark</button>
+      <button class="ghost" id="themeHC">고대비(hc-black)</button>
+    </div>
+    <div class="editor-wrap" id="editor2" style="height:140px;"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// 전역으로 적용됨 (특정 에디터 인스턴스가 아님)
+monaco.editor.setTheme('vs-dark');   // 어둡게
+monaco.editor.setTheme('hc-black');  // 고대비
+monaco.editor.setTheme('vs');        // 기본(밝게)</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Diff 에디터 (두 내용 비교)</h2>
+    <div class="desc">위판 시세표가 수정되기 전/후를 나란히 비교합니다. 변경된 줄은 자동으로 색이 칠해지고, <code>getLineChanges()</code>로 몇 줄이 바뀌었는지 코드에서도 읽어올 수 있습니다.</div>
+    <div class="editor-wrap" id="editor3" style="height:220px;"></div>
+    <div class="controls"><button id="diffBtn3">변경된 줄 수 확인</button></div>
+    <div class="result-box" id="diffResult3">아직 확인 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const diffEditor = monaco.editor.createDiffEditor(container);
+const original = monaco.editor.createModel('가격: 4200\n품목: 고등어', 'text/plain');
+const modified = monaco.editor.createModel('가격: 4500\n품목: 고등어\n비고: 인상', 'text/plain');
+diffEditor.setModel({ original, modified });
+
+const changes = diffEditor.getLineChanges();
+console.log(changes.length); // 바뀐 구간 개수</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 커스텀 자동완성(IntelliSense) 제공자</h2>
+    <div class="desc">아래 에디터에서 <code>suhyup.</code>까지 입력해보세요(마침표 입력 시 자동으로, 또는 <code>Ctrl/Cmd+Space</code>로) — 직접 등록한 가상 API 자동완성 목록이 뜹니다. VS Code의 자동완성창과 동일한 UI가 그대로 동작합니다.</div>
+    <div class="editor-wrap" id="editor4" style="height:140px;"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">monaco.languages.registerCompletionItemProvider('javascript', {
+  triggerCharacters: ['.'],
+  provideCompletionItems(model, position) {
+    return {
+      suggestions: [
+        {
+          label: 'catchReport',
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: 'catchReport()',
+          detail: '가상 어획 보고 조회',
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+        },
+        {
+          label: 'auctionPrice',
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: 'auctionPrice(species)',
+          detail: '가상 위판 시세 조회',
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+        },
+      ],
+    };
+  },
+});</pre>
+    </details>
+  </section>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
+  <script>
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs' } });
+
+    require(['vs/editor/editor.main'], function () {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+
+      // ---------- 1. 기본 에디터 + 언어 모드 전환 ----------
+      const SAMPLES = {
+        javascript: "// 가상 위판 기록\nconst records = [\n  { species: '고등어', weight: 320 },\n  { species: '갈치', weight: 180 },\n];",
+        json: '{\n  "market": "부산공동어시장(가상)",\n  "species": "고등어",\n  "weight": 320\n}',
+        sql: "-- 위판장별 합계(가상)\nSELECT market, SUM(weight) AS total\nFROM records\nGROUP BY market\nORDER BY total DESC;",
+      };
+      const editor1 = monaco.editor.create(document.getElementById('editor1'), {
+        value: SAMPLES.javascript,
+        language: 'javascript',
+        automaticLayout: true,
+      });
+      document.querySelectorAll('.lang-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.lang-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          const lang = btn.dataset.lang;
+          editor1.setValue(SAMPLES[lang]);
+          monaco.editor.setModelLanguage(editor1.getModel(), lang);
+        });
+      });
+      document.getElementById('readBtn1').addEventListener('click', () => {
+        document.getElementById('output1').textContent = editor1.getValue();
+      });
+
+      // ---------- 2. 테마 전환 ----------
+      const editor2 = monaco.editor.create(document.getElementById('editor2'), {
+        value: "// 테마를 바꿔보세요 (모든 에디터에 함께 적용됩니다)\nfunction greet(name) {\n  return `안녕하세요, ${name}님`;\n}",
+        language: 'javascript',
+        automaticLayout: true,
+      });
+      document.getElementById('themeLight').addEventListener('click', () => monaco.editor.setTheme('vs'));
+      document.getElementById('themeDark').addEventListener('click', () => monaco.editor.setTheme('vs-dark'));
+      document.getElementById('themeHC').addEventListener('click', () => monaco.editor.setTheme('hc-black'));
+
+      // ---------- 3. Diff 에디터 ----------
+      const diffEditor = monaco.editor.createDiffEditor(document.getElementById('editor3'), {
+        automaticLayout: true,
+      });
+      const originalModel = monaco.editor.createModel('가격: 4200\n품목: 고등어\n위판장: 부산공동어시장(가상)', 'text/plain');
+      const modifiedModel = monaco.editor.createModel('가격: 4500\n품목: 고등어\n위판장: 부산공동어시장(가상)\n비고: 시세 인상', 'text/plain');
+      diffEditor.setModel({ original: originalModel, modified: modifiedModel });
+      document.getElementById('diffBtn3').addEventListener('click', () => {
+        const changes = diffEditor.getLineChanges() || [];
+        document.getElementById('diffResult3').textContent = `변경된 구간: ${changes.length}개`;
+      });
+
+      // ---------- 4. 커스텀 자동완성 제공자 ----------
+      monaco.languages.registerCompletionItemProvider('javascript', {
+        triggerCharacters: ['.'],
+        provideCompletionItems(model, position) {
+          return {
+            suggestions: [
+              {
+                label: 'catchReport',
+                kind: monaco.languages.CompletionItemKind.Function,
+                insertText: 'catchReport()',
+                detail: '가상 어획 보고 조회',
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+              },
+              {
+                label: 'auctionPrice',
+                kind: monaco.languages.CompletionItemKind.Function,
+                insertText: 'auctionPrice(species)',
+                detail: '가상 위판 시세 조회',
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+              },
+              {
+                label: 'memberList',
+                kind: monaco.languages.CompletionItemKind.Function,
+                insertText: 'memberList()',
+                detail: '가상 조합원 명단 조회',
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+              },
+            ],
+          };
+        },
+      });
+      monaco.editor.create(document.getElementById('editor4'), {
+        value: "// suhyup. 까지 입력해보세요\nsuhyup",
+        language: 'javascript',
+        automaticLayout: true,
+      });
+    });
+  </script>
+</body>
+</html>
