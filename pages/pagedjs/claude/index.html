@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Paged.js</title>
+<script src="https://cdn.jsdelivr.net/npm/pagedjs@0.4.3/dist/paged.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .note {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 10px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+
+  .paged-viewport {
+    margin-top: 12px;
+    padding: 16px;
+    background: #e4e7ec;
+    border-radius: 8px;
+    overflow-x: auto;
+    display: none;
+  }
+  .paged-viewport.show { display: block; }
+  .paged-viewport .pagedjs_pages {
+    display: flex;
+    flex-direction: row;
+    gap: 14px;
+  }
+
+  .source-content { display: none; }
+</style>
+</head>
+<body>
+
+  <h1>Paged.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Paged.js</strong>는 일반 HTML/CSS 문서를 브라우저 위에서 <strong>인쇄용 페이지 단위</strong>로
+    잘라 보여주는 페이지네이션 엔진(polyfill)입니다. CSS Paged Media / GCPM 스펙(<code class="inline">@page</code>,
+    각주, 실행 헤더 등)을 표준 브라우저가 지원하지 않는 부분까지 미리 구현해서, PDF 인쇄물 레이아웃을
+    브라우저에서 바로 미리보기할 수 있게 해줍니다.
+    <ul>
+      <li><code class="inline">@page { size; margin; }</code>로 정의하는 <strong>여러 페이지 인쇄물 레이아웃</strong></li>
+      <li><code class="inline">counter(page)</code> · <code class="inline">string-set</code>으로 넣는
+        <strong>페이지 번호와 실행 헤더</strong></li>
+      <li><code class="inline">float: footnote</code>로 자동 배치되는 <strong>각주</strong></li>
+      <li><code class="inline">@page :first</code>로 지정하는 <strong>표지 페이지 스타일</strong> +
+        강제 페이지 나눔</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 안내문·보고서 내용은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계·공지·절차와 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.<br />
+      ※ Paged.js는 각 미리보기의 페이지 스타일을 문서 전체에 전역으로 주입하기 때문에(인스턴스별로
+      구분되지 않음), 두 미리보기를 동시에 열어두면 나중 스타일이 먼저 만든 미리보기에도 새어 들어갈
+      수 있습니다. 그래서 이 데모는 <strong>버튼을 누르면 다른 섹션의 미리보기를 자동으로 정리</strong>하고
+      항상 하나만 유지합니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 여러 페이지 인쇄물 레이아웃</h2>
+    <div class="desc">
+      <code class="inline">@page</code> 규칙으로 페이지 크기(<code class="inline">size</code>)와
+      여백(<code class="inline">margin</code>)을 정하면, 내용이 길어질 때 <strong>자동으로 다음 페이지로
+      넘어갑니다</strong>. <code class="inline">Paged.Previewer().preview()</code>가 지정한 요소 안에
+      실제 페이지 박스들을 그려 넣습니다.
+    </div>
+    <button id="s1-run">미리보기 생성</button>
+    <div class="stat-box" id="s1-stat" style="display:none;"></div>
+    <div class="paged-viewport" id="s1-viewport"></div>
+    <div class="source-content" id="s1-source">
+      <h2>위판 안내문</h2>
+      <p>이 문서는 Paged.js 페이지네이션 데모를 위한 가상의 안내문입니다. 오늘 위판은 오전 6시부터
+      시작됩니다. 참여를 원하는 조합원은 사전 등록이 필요하며, 등록은 각 위판장 사무실에서 접수합니다.
+      신분증과 조합원증을 반드시 지참해야 하며, 등록 마감은 위판 시작 30분 전입니다.</p>
+      <p>위판 순서는 등록 순서대로 배정되며, 순서 배정표는 위판장 게시판에 게시됩니다. 순서를 놓친
+      조합원은 해당 회차 종료 후 남은 물량에 한해 참여할 수 있습니다. 기상 악화 등으로 위판이 지연되거나
+      취소될 수 있으니 당일 공지를 꼭 확인해 주시기 바랍니다.</p>
+      <p>낙찰가는 실시간으로 집계되며, 품목별 평균가는 위판 종료 직후 게시판에 공개됩니다. 정산은
+      익일 오전에 각 위판장을 통해 이루어지며, 계좌 이체를 원하는 경우 사전에 계좌 정보를 등록해야
+      합니다. 현금 정산을 원하는 조합원은 정산 창구에서 신분 확인 후 수령할 수 있습니다.</p>
+      <p>위판장 내에서는 안전을 위해 지정된 통로로만 이동해 주시기 바라며, 개인 운반 장비를 반입할
+      경우 사전 신고가 필요합니다. 미신고 장비는 반입이 제한될 수 있습니다. 그 밖의 문의 사항은 각
+      위판장 사무실 또는 본소 운영팀으로 연락해 주시기 바랍니다.</p>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const css = `
+  @page {
+    size: 4in 5.6in;
+    margin: 0.35in;
+  }
+  body { font-size: 10px; font-family: sans-serif; line-height: 1.5; }
+`;
+const previewer = new Paged.Previewer();
+const flow = await previewer.preview(
+  sourceEl.cloneNode(true),   // 원본 DOM 조각
+  [{ 'inline': css }],        // 문자열 CSS를 객체로 바로 전달 가능 (네트워크 요청 없음)
+  viewportEl                  // 페이지들을 그려 넣을 컨테이너
+);
+console.log(flow.total);      // 생성된 페이지 수</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 페이지 번호 + 실행 헤더</h2>
+    <div class="desc">
+      각 <code class="inline">h2</code> 제목을 <code class="inline">string-set</code>으로 저장해두면,
+      같은 값을 <code class="inline">@top-center { content: string(...); }</code>로 페이지 상단에
+      반복 출력할 수 있습니다. 페이지 번호는 <code class="inline">counter(page)</code>로 하단에 자동
+      표시됩니다.
+    </div>
+    <button id="s2-run">미리보기 생성</button>
+    <div class="stat-box" id="s2-stat" style="display:none;"></div>
+    <div class="paged-viewport" id="s2-viewport"></div>
+    <div class="source-content" id="s2-source">
+      <h2>수수료 및 정산 안내</h2>
+      <p>위판 수수료는 거래 금액의 3%로 책정되며, 정산 시 자동으로 차감되어 별도로 납부할 필요가
+      없습니다. 조합원 등급에 따라 일부 할인이 적용될 수 있으며, 등급별 할인율은 매년 초 총회에서
+      결정됩니다. 수수료 관련 이의가 있는 경우 정산 익일까지 정산팀에 접수해야 합니다.</p>
+      <p>정산 대금은 익일 오전 각 위판장을 통해 지급되며, 계좌 이체 신청자는 신청일로부터 2영업일
+      이내에 입금됩니다. 정산 명세서는 위판장 키오스크 또는 온라인 조합원 페이지에서 확인할 수
+      있습니다. 명세서 오류 발견 시 즉시 정산팀으로 문의해 주시기 바랍니다.</p>
+      <h2>휴무 및 특별 공지</h2>
+      <p>매월 둘째·넷째 주 월요일은 정기 휴무일이며, 명절 전후로는 별도 공지된 일정에 따라 운영됩니다.
+      휴무일 위판 일정은 최소 3일 전에 게시판과 문자 알림으로 공지됩니다.</p>
+      <p>본 안내문의 내용은 사정에 따라 변경될 수 있으며, 변경 사항은 각 위판장 게시판을 통해
+      공지됩니다. 이상으로 수수료 및 정산 안내를 마칩니다.</p>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const css = `
+  @page {
+    size: 4in 5.6in;
+    margin: 0.45in 0.35in 0.55in;
+    @bottom-center { content: counter(page); font-size: 9px; }
+    @top-center { content: string(doctitle); font-size: 8px; color: #888; }
+  }
+  h2 { string-set: doctitle content(); }   /* 이 제목이 나올 때마다 값을 갱신 */
+`;</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 각주 (float: footnote)</h2>
+    <div class="desc">
+      본문 안의 <code class="inline">&lt;span&gt;</code>에 <code class="inline">float: footnote</code>를
+      주면, 해당 텍스트가 페이지 하단 각주 영역으로 자동으로 옮겨지고 번호가 매겨집니다. 각주가 있는
+      페이지가 바뀌면 각주도 그 페이지를 따라갑니다.
+    </div>
+    <button id="s3-run">미리보기 생성</button>
+    <div class="stat-box" id="s3-stat" style="display:none;"></div>
+    <div class="paged-viewport" id="s3-viewport"></div>
+    <div class="source-content" id="s3-source">
+      <p>어획물 위판 참여 조합원은 매년 정기 총회<span class="fn">정기 총회는 매년 2월 마지막 주에
+      개최되며, 참석은 조합원 본인 또는 위임장을 지참한 대리인만 가능합니다.</span>에 참석하여 그
+      해의 위판 운영 방침에 대한 의결권을 행사할 수 있습니다. 총회에서는 수수료율, 휴무일 지정,
+      시설 투자 계획 등 주요 안건이 다뤄집니다.</p>
+      <p>신규 조합원 가입은 상시 접수하며, 가입 심사는 조합원 자격 요건 확인 후 이루어집니다.
+      가입비 및 출자금<span class="fn">출자금은 탈퇴 시 정관에 정한 절차에 따라 환급받을 수
+      있습니다.</span>은 가입 신청 시 본소 회원관리팀에 안내받을 수 있습니다. 심사는 통상 2주
+      이내에 완료됩니다.</p>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>&lt;p&gt;정기 총회&lt;span class="fn"&gt;총회는 매년 2월에 개최됩니다.&lt;/span&gt;에 참석...&lt;/p&gt;
+
+const css = `
+  .fn { float: footnote; }
+  ::footnote-marker { content: counter(footnote) ") "; font-weight: bold; }
+  ::footnote-call   { content: counter(footnote); vertical-align: super; font-size: 7px; }
+`;</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 표지 페이지 스타일 + 강제 페이지 나눔</h2>
+    <div class="desc">
+      <code class="inline">@page :first</code>는 <strong>첫 페이지에만</strong> 다른 배경·스타일을
+      적용할 때 씁니다 (표지 디자인 등). 특정 위치에서 무조건 다음 페이지로 넘기고 싶을 때는
+      <code class="inline">break-before: page</code>를 씁니다.
+    </div>
+    <button id="s4-run">미리보기 생성</button>
+    <div class="stat-box" id="s4-stat" style="display:none;"></div>
+    <div class="paged-viewport" id="s4-viewport"></div>
+    <div class="note">
+      ⚠ <strong>주의:</strong> <code class="inline">break-before: page</code>는 실제 테스트 결과
+      <strong>요소의 인라인 <code class="inline">style</code> 속성으로 줘서는 적용되지 않았고</strong>,
+      스타일시트 안에서 <strong>클래스 선택자</strong>(예: <code class="inline">.newpage { break-before: page; }</code>)로
+      지정해야 정상적으로 페이지가 나뉘었습니다. Paged.js가 페이지 나눔 지점을 계산할 때 CSS 파서가
+      해석한 스타일시트 규칙만 보고, 엘리먼트의 인라인 스타일은 참고하지 않기 때문으로 보입니다.
+    </div>
+    <div class="source-content" id="s4-source">
+      <p>수협중앙회 가상 위판 실적 보고서 표지입니다. 이 보고서는 Paged.js 데모를 위해 작성된 가상의
+      문서이며, 실제 통계가 아닙니다.</p>
+      <p class="newpage">본문 페이지입니다. 표지와 달리 배경색 없이 일반 페이지 스타일이 적용됩니다.
+      <code class="inline">@page :first</code>는 오직 첫 페이지에만 적용되고, 두 번째 페이지부터는
+      기본 <code class="inline">@page</code> 스타일로 돌아옵니다.</p>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>&lt;p&gt;표지 문단...&lt;/p&gt;
+&lt;p class="newpage"&gt;본문 페이지...&lt;/p&gt;   &lt;!-- 클래스로 강제 나눔 지정 --&gt;
+
+const css = `
+  @page { size: 4in 5.6in; margin: 0.35in; }
+  @page :first { background: #4f7dff; color: #fff; }
+  .newpage { break-before: page; }   /* 인라인 style로는 동작하지 않음 */
+`;</code></pre>
+    </details>
+  </section>
+
+<script>
+  // Paged.js는 Previewer마다 <style> 태그를 document.head에 전역으로 추가하고,
+  // @page :first 같은 규칙을 pagedjs_first_page 같은 전역 클래스로 변환한다.
+  // 이 클래스는 인스턴스별로 구분되지 않으므로, 여러 Previewer를 같은 문서에
+  // 동시에 띄워두면 나중에 생성한 미리보기의 페이지 스타일이 먼저 만든
+  // 미리보기에도 그대로 새어 들어간다 (실제로 재현되는 라이브러리 동작).
+  // 그래서 이 데모는 새 미리보기를 만들기 전에 이전에 주입된 <style>과
+  // 다른 섹션의 렌더 결과를 정리해서, 항상 하나의 미리보기 스타일만
+  // 문서에 남도록 한다.
+  let injectedStyleEls = [];
+  let allViewports = [];
+
+  function resetOtherPreviews(exceptViewport) {
+    injectedStyleEls.forEach((el) => el.remove());
+    injectedStyleEls = [];
+    allViewports.forEach(({ viewport, stat }) => {
+      if (viewport === exceptViewport) return;
+      viewport.innerHTML = '';
+      viewport.classList.remove('show');
+      stat.style.display = 'none';
+    });
+  }
+
+  async function runPreview({ btnId, statId, viewportId, sourceId, css, note }) {
+    const btn = document.getElementById(btnId);
+    const stat = document.getElementById(statId);
+    const viewport = document.getElementById(viewportId);
+    const source = document.getElementById(sourceId);
+    allViewports.push({ viewport, stat });
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      resetOtherPreviews(viewport);
+      stat.style.display = 'block';
+      stat.textContent = '페이지 생성 중...';
+      viewport.innerHTML = '';
+      viewport.classList.add('show');
+      try {
+        const headStylesBefore = document.head.querySelectorAll('style').length;
+        const previewer = new Paged.Previewer();
+        const flow = await previewer.preview(source.cloneNode(true), [{ inline: css }], viewport);
+        const headStyles = Array.from(document.head.querySelectorAll('style'));
+        injectedStyleEls = headStyles.slice(headStylesBefore);
+        stat.innerHTML = '<strong>' + flow.total + '페이지</strong>가 생성되었습니다.' + (note || '');
+      } catch (e) {
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  runPreview({
+    btnId: 's1-run', statId: 's1-stat', viewportId: 's1-viewport', sourceId: 's1-source',
+    css: `
+      @page { size: 4in 5.6in; margin: 0.35in; }
+      body { font-size: 10px; font-family: sans-serif; line-height: 1.5; }
+    `,
+  });
+
+  runPreview({
+    btnId: 's2-run', statId: 's2-stat', viewportId: 's2-viewport', sourceId: 's2-source',
+    css: `
+      @page {
+        size: 4in 5.6in;
+        margin: 0.45in 0.35in 0.55in;
+        @bottom-center { content: counter(page); font-size: 9px; }
+        @top-center { content: string(doctitle); font-size: 8px; color: #888; }
+      }
+      h2 { string-set: doctitle content(); font-size: 12px; margin: 0 0 6px; }
+      body { font-size: 9.5px; font-family: sans-serif; line-height: 1.5; }
+      p { margin: 0 0 8px; }
+    `,
+    note: ' 페이지 상단에 최근 제목이, 하단에 페이지 번호가 자동으로 표시됩니다.',
+  });
+
+  runPreview({
+    btnId: 's3-run', statId: 's3-stat', viewportId: 's3-viewport', sourceId: 's3-source',
+    css: `
+      @page { size: 4in 5.6in; margin: 0.35in; }
+      body { font-size: 10px; font-family: sans-serif; line-height: 1.6; }
+      p { margin: 0 0 10px; }
+      .fn { float: footnote; }
+      ::footnote-marker { content: counter(footnote) ") "; font-weight: bold; }
+      ::footnote-call { content: counter(footnote); vertical-align: super; font-size: 7px; }
+    `,
+    note: ' 본문의 각주 표시가 해당 페이지 하단으로 자동 이동했습니다.',
+  });
+
+  runPreview({
+    btnId: 's4-run', statId: 's4-stat', viewportId: 's4-viewport', sourceId: 's4-source',
+    css: `
+      @page { size: 4in 5.6in; margin: 0.35in; }
+      @page :first { background: #4f7dff; color: #fff; }
+      .newpage { break-before: page; }
+      body { font-size: 10px; font-family: sans-serif; line-height: 1.6; }
+    `,
+    note: ' 첫 페이지만 파란 배경(표지)이고, 이후 페이지는 기본 스타일입니다.',
+  });
+</script>
+</body>
+</html>
