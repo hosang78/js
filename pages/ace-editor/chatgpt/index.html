@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ace Editor 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #11182b;
+      --panel2: #172036;
+      --line: #2a3550;
+      --text: #e7ecf7;
+      --muted: #9aa7bd;
+      --accent: #69a7ff;
+      --good: #4fd1a1;
+      --warn: #ffca6a;
+      --bad: #ff6b7a;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+    button, select, input { font: inherit; }
+    button, select, input[type="number"], input[type="text"] {
+      border: 1px solid var(--line);
+      background: #0f1728;
+      color: var(--text);
+      border-radius: 8px;
+      min-height: 34px;
+    }
+    button { padding: 7px 11px; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: #2767c7; border-color: #4388ef; }
+    button.danger { background: #6d2632; border-color: #a74455; }
+    button.active { outline: 2px solid var(--accent); }
+    select, input[type="number"], input[type="text"] { padding: 6px 8px; width: 100%; }
+    input[type="checkbox"] { accent-color: var(--accent); }
+    .app { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; }
+    header {
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      padding: 12px 18px; border-bottom: 1px solid var(--line);
+      background: linear-gradient(120deg, #121a31, #0e1527);
+    }
+    header h1 { margin: 0; font-size: 19px; }
+    header p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .badge { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 11px; color: var(--muted); }
+    .toolbar {
+      display: flex; gap: 7px; align-items: center; flex-wrap: wrap;
+      padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel);
+    }
+    .toolbar .sep { width: 1px; height: 25px; background: var(--line); margin: 0 2px; }
+    .toolbar button { font-size: 12px; }
+    .main {
+      min-height: 0; display: grid; grid-template-columns: 290px 1fr;
+    }
+    aside {
+      min-height: 0; overflow: auto; padding: 10px;
+      border-right: 1px solid var(--line); background: var(--panel);
+    }
+    details { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; background: #10182a; }
+    summary { padding: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }
+    .group { padding: 0 10px 10px; display: grid; gap: 8px; }
+    .field { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 8px; font-size: 12px; }
+    .field.full { grid-template-columns: 1fr; }
+    .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .checks label { font-size: 12px; display: flex; gap: 6px; align-items: center; }
+    .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .workspace { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto 1fr; }
+    .tabs {
+      display: flex; align-items: center; min-height: 38px; overflow-x: auto;
+      border-bottom: 1px solid var(--line); background: #0e1526;
+    }
+    .tab {
+      display: flex; gap: 8px; align-items: center; padding: 9px 13px;
+      border-right: 1px solid var(--line); color: var(--muted); font-size: 12px; cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active { background: var(--panel2); color: var(--text); box-shadow: inset 0 -2px var(--accent); }
+    .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: transparent; }
+    .tab.dirty .dot { background: var(--warn); }
+    .stage { min-height: 0; display: grid; grid-template-columns: minmax(300px, 1fr) minmax(280px, 42%); }
+    .stage.single { grid-template-columns: 1fr; }
+    .editor-wrap { min-height: 0; position: relative; }
+    #editor, #secondaryEditor { position: absolute; inset: 0; }
+    .right-pane { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto 1fr; border-left: 1px solid var(--line); }
+    .right-tabs { display: flex; background: #10182a; border-bottom: 1px solid var(--line); }
+    .right-tabs button { border: 0; border-radius: 0; background: transparent; color: var(--muted); min-height: 36px; }
+    .right-tabs button.active { color: var(--text); box-shadow: inset 0 -2px var(--accent); outline: 0; }
+    .right-content { min-height: 0; position: relative; background: #fff; }
+    .pane { position: absolute; inset: 0; display: none; }
+    .pane.active { display: block; }
+    #preview { width: 100%; height: 100%; border: 0; background: white; }
+    #log {
+      margin: 0; padding: 12px; height: 100%; overflow: auto;
+      color: #bcd1f7; background: #09101c; font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+    .drop-overlay {
+      position: absolute; inset: 16px; display: none; place-items: center;
+      border: 2px dashed var(--accent); border-radius: 14px; background: rgba(20,40,75,.9);
+      z-index: 20; pointer-events: none; font-weight: 700;
+    }
+    .drop-overlay.show { display: grid; }
+    footer {
+      min-height: 28px; display: flex; gap: 16px; align-items: center; padding: 4px 12px;
+      background: #09101d; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted);
+      overflow-x: auto; white-space: nowrap;
+    }
+    .status-good { color: var(--good); }
+    .status-warn { color: var(--warn); }
+    .hidden { display: none !important; }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .app { min-height: 100vh; height: auto; grid-template-rows: auto auto auto auto; }
+      .main { grid-template-columns: 1fr; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 340px; }
+      .workspace { height: 760px; }
+      .stage { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .right-pane { border-left: 0; border-top: 1px solid var(--line); }
+      header { align-items: flex-start; flex-direction: column; }
+      .badges { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Ace Editor 종합 기능 실험실</h1>
+      <p>언어·테마·자동완성·멀티커서·검색·접기·마커·세션·미리보기·파일 입출력 종합 샘플</p>
+    </div>
+    <div class="badges">
+      <span class="badge">Ace 1.44.0</span>
+      <span class="badge">단일 HTML</span>
+      <span class="badge">반응형</span>
+      <span class="badge">브라우저 저장</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="primary" id="runBtn">▶ 실행 / 미리보기</button>
+    <button id="newTabBtn">＋ 새 탭</button>
+    <button id="openBtn">파일 열기</button>
+    <button id="saveBtn">다운로드</button>
+    <button id="saveLocalBtn">브라우저 저장</button>
+    <button id="restoreBtn">저장본 복원</button>
+    <span class="sep"></span>
+    <button id="undoBtn">실행 취소</button>
+    <button id="redoBtn">다시 실행</button>
+    <button id="findBtn">찾기</button>
+    <button id="replaceBtn">바꾸기</button>
+    <button id="gotoBtn">줄 이동</button>
+    <span class="sep"></span>
+    <button id="formatBtn">코드 정리</button>
+    <button id="foldBtn">전체 접기</button>
+    <button id="unfoldBtn">전체 펼치기</button>
+    <button id="splitBtn">우측 패널 숨김</button>
+    <input id="fileInput" type="file" class="hidden" accept=".js,.ts,.html,.css,.json,.md,.py,.java,.xml,.txt,.sql,.sh,.yaml,.yml" />
+  </div>
+
+  <div class="main">
+    <aside>
+      <details open>
+        <summary>편집기 기본 설정</summary>
+        <div class="group">
+          <div class="field"><label for="modeSelect">언어 모드</label><select id="modeSelect"></select></div>
+          <div class="field"><label for="themeSelect">테마</label><select id="themeSelect"></select></div>
+          <div class="field"><label for="fontSize">글꼴 크기</label><input id="fontSize" type="number" min="10" max="32" value="15"></div>
+          <div class="field"><label for="tabSize">탭 크기</label><input id="tabSize" type="number" min="1" max="8" value="2"></div>
+          <div class="field"><label for="keyboardSelect">키 바인딩</label>
+            <select id="keyboardSelect">
+              <option value="">기본</option><option value="vim">Vim</option><option value="emacs">Emacs</option><option value="sublime">Sublime</option><option value="vscode">VS Code</option>
+            </select>
+          </div>
+          <div class="checks">
+            <label><input id="softTabs" type="checkbox" checked> 소프트 탭</label>
+            <label><input id="wrap" type="checkbox"> 자동 줄바꿈</label>
+            <label><input id="readOnly" type="checkbox"> 읽기 전용</label>
+            <label><input id="printMargin" type="checkbox" checked> 인쇄 여백</label>
+            <label><input id="gutter" type="checkbox" checked> 거터 표시</label>
+            <label><input id="lineNumbers" type="checkbox" checked> 줄 번호</label>
+            <label><input id="indentGuides" type="checkbox" checked> 들여쓰기선</label>
+            <label><input id="invisibles" type="checkbox"> 공백 문자</label>
+            <label><input id="activeLine" type="checkbox" checked> 현재 줄</label>
+            <label><input id="selectedWord" type="checkbox" checked> 선택어 강조</label>
+            <label><input id="behaviours" type="checkbox" checked> 괄호 자동완성</label>
+            <label><input id="scrollPastEnd" type="checkbox"> 끝 아래 스크롤</label>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>자동완성·코드 지원</summary>
+        <div class="group">
+          <div class="checks">
+            <label><input id="basicAutocomplete" type="checkbox" checked> 기본 자동완성</label>
+            <label><input id="liveAutocomplete" type="checkbox" checked> 실시간 자동완성</label>
+            <label><input id="snippets" type="checkbox" checked> 스니펫</label>
+            <label><input id="enableLinking" type="checkbox" checked> URL 감지</label>
+          </div>
+          <button id="autocompleteBtn">자동완성 창 열기 (Ctrl+Space)</button>
+          <button id="snippetBtn">사용자 스니펫 삽입</button>
+          <button id="commentBtn">주석 토글</button>
+          <button id="transposeBtn">선택 행 위·아래 이동</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>표시·분석 데모</summary>
+        <div class="group">
+          <div class="mini-grid">
+            <button id="markerBtn">선택 마커</button>
+            <button id="clearMarkerBtn">마커 제거</button>
+            <button id="annotationBtn">오류 표시</button>
+            <button id="clearAnnotationBtn">오류 제거</button>
+            <button id="breakpointBtn">중단점 토글</button>
+            <button id="highlightBtn">단어 강조</button>
+          </div>
+          <button id="multiCursorBtn">일치 단어에 멀티커서</button>
+          <button id="rectSelectBtn">사각 선택 안내</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>선택·변환</summary>
+        <div class="group">
+          <div class="mini-grid">
+            <button id="upperBtn">대문자</button>
+            <button id="lowerBtn">소문자</button>
+            <button id="sortBtn">행 정렬</button>
+            <button id="duplicateBtn">행 복제</button>
+            <button id="trimBtn">끝 공백 제거</button>
+            <button id="selectAllBtn">전체 선택</button>
+          </div>
+          <div class="field full"><input id="insertText" type="text" value="// 사용자 텍스트 삽입" /></div>
+          <button id="insertBtn">커서 위치에 텍스트 삽입</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>샘플 문서</summary>
+        <div class="group">
+          <button data-sample="javascript">JavaScript 앱</button>
+          <button data-sample="html">HTML 미리보기</button>
+          <button data-sample="json">JSON 데이터</button>
+          <button data-sample="python">Python 코드</button>
+          <button data-sample="markdown">Markdown 문서</button>
+          <button data-sample="sql">SQL 쿼리</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>정보</summary>
+        <div class="group" style="font-size:12px;color:var(--muted);line-height:1.65">
+          <div>• Ctrl/Cmd + F: 찾기</div>
+          <div>• Ctrl/Cmd + H: 바꾸기</div>
+          <div>• Ctrl/Cmd + L: 줄 이동</div>
+          <div>• Ctrl/Cmd + Space: 자동완성</div>
+          <div>• Alt + 클릭: 멀티커서</div>
+          <div>• Alt + 드래그: 사각 선택</div>
+          <div>• 파일을 편집기 위로 끌어 놓아 열기</div>
+        </div>
+      </details>
+    </aside>
+
+    <section class="workspace">
+      <div class="tabs" id="tabs"></div>
+      <div class="stage" id="stage">
+        <div class="editor-wrap" id="editorWrap">
+          <div id="editor"></div>
+          <div class="drop-overlay" id="dropOverlay">파일을 놓으면 새 탭으로 엽니다</div>
+        </div>
+        <div class="right-pane" id="rightPane">
+          <div class="right-tabs">
+            <button class="active" data-pane="previewPane">미리보기</button>
+            <button data-pane="secondaryPane">보조 편집기</button>
+            <button data-pane="logPane">이벤트 로그</button>
+          </div>
+          <div class="right-content">
+            <div class="pane active" id="previewPane"><iframe id="preview" sandbox="allow-scripts allow-forms allow-modals"></iframe></div>
+            <div class="pane" id="secondaryPane"><div id="secondaryEditor"></div></div>
+            <div class="pane" id="logPane"><pre id="log"></pre></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span id="statusMode">모드: javascript</span>
+    <span id="statusCursor">행 1, 열 1</span>
+    <span id="statusSelection">선택 0자</span>
+    <span id="statusLines">1줄</span>
+    <span id="statusChars">0자</span>
+    <span id="statusTab">공백: 2</span>
+    <span id="statusSaved" class="status-good">준비</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ace-builds@1.44.0/src-min-noconflict/ace.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ace-builds@1.44.0/src-min-noconflict/ext-language_tools.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ace-builds@1.44.0/src-min-noconflict/ext-beautify.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ace-builds@1.44.0/src-min-noconflict/ext-modelist.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ace-builds@1.44.0/src-min-noconflict/ext-themelist.js"></script>
+<script>
+(() => {
+  "use strict";
+  const CDN = "https://cdn.jsdelivr.net/npm/ace-builds@1.44.0/src-min-noconflict";
+  ace.config.set("basePath", CDN);
+  ace.config.set("modePath", CDN);
+  ace.config.set("themePath", CDN);
+  ace.config.set("workerPath", CDN);
+
+  const $ = id => document.getElementById(id);
+  const editor = ace.edit("editor");
+  const secondary = ace.edit("secondaryEditor");
+  const Range = ace.require("ace/range").Range;
+  const languageTools = ace.require("ace/ext/language_tools");
+  const modelist = ace.require("ace/ext/modelist");
+  const themelist = ace.require("ace/ext/themelist");
+  const beautify = ace.require("ace/ext/beautify");
+
+  const samples = {
+    javascript: `// Ace Editor JavaScript 종합 샘플
+class TaskManager {
+  constructor(name = "Ace Lab") {
+    this.name = name;
+    this.tasks = [
+      { id: 1, title: "자동완성 시험", done: true },
+      { id: 2, title: "중단점과 오류 마커 시험", done: false },
+      { id: 3, title: "멀티커서로 title 일괄 수정", done: false }
+    ];
+  }
+
+  add(title) {
+    const task = { id: Date.now(), title, done: false };
+    this.tasks.push(task);
+    return task;
+  }
+
+  summary() {
+    const completed = this.tasks.filter(task => task.done).length;
+    return \`\${this.name}: \${completed}/\${this.tasks.length} 완료\`;
+  }
+}
+
+const manager = new TaskManager();
+manager.add("새 작업");
+console.log(manager.summary());
+
+// TODO: Ctrl+Space를 눌러 사용자 자동완성 확인
+// sh 또는 su를 입력해 보세요.
+`,
+    html: `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: system-ui; margin: 0; padding: 32px; background: #eef4ff; color: #182238; }
+  .card { max-width: 620px; margin: auto; padding: 28px; border-radius: 18px; background: white; box-shadow: 0 15px 50px #95a8c944; }
+  button { padding: 10px 16px; border: 0; border-radius: 9px; background: #2767c7; color: white; cursor: pointer; }
+  #count { font-size: 42px; font-weight: 800; color: #2767c7; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Ace 실시간 HTML 미리보기</h1>
+    <p>편집 후 상단의 실행 버튼을 누르세요.</p>
+    <div id="count">0</div>
+    <button onclick="count.textContent=Number(count.textContent)+1">증가</button>
+  </div>
+</body>
+</html>`,
+    json: `{
+  "project": "Ace Editor Lab",
+  "version": "1.0.0",
+  "features": [
+    "syntax-highlighting",
+    "autocomplete",
+    "multi-cursor",
+    "code-folding",
+    "search-and-replace",
+    "annotations",
+    "sessions"
+  ],
+  "settings": {
+    "theme": "tomorrow_night",
+    "fontSize": 15,
+    "tabSize": 2,
+    "useSoftTabs": true
+  },
+  "active": true
+}`,
+    python: `from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class Task:
+    title: str
+    done: bool = False
+
+def completion_rate(tasks: List[Task]) -> float:
+    """작업 완료율을 백분율로 반환."""
+    if not tasks:
+        return 0.0
+    return sum(task.done for task in tasks) / len(tasks) * 100
+
+tasks = [
+    Task("문법 강조 확인", True),
+    Task("자동 들여쓰기 확인"),
+    Task("코드 접기 확인"),
+]
+
+print(f"완료율: {completion_rate(tasks):.1f}%")
+`,
+    markdown: `# Ace Editor 기능 메모
+
+## 확인할 기능
+
+- [x] 문법 강조
+- [x] 자동완성
+- [ ] 멀티커서
+- [ ] 코드 접기
+- [ ] 검색과 바꾸기
+
+> Ace는 브라우저에서 동작하는 고성능 코드 편집기입니다.
+
+\`\`\`javascript
+const editor = ace.edit("editor");
+editor.session.setMode("ace/mode/javascript");
+\`\`\`
+
+| 기능 | 단축키 |
+|---|---|
+| 찾기 | Ctrl/Cmd + F |
+| 바꾸기 | Ctrl/Cmd + H |
+| 자동완성 | Ctrl/Cmd + Space |
+`,
+    sql: `-- 부서별 완료 작업 집계
+WITH task_summary AS (
+  SELECT
+    department,
+    COUNT(*) AS total_count,
+    SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) AS done_count
+  FROM tasks
+  WHERE created_at >= DATE('now', '-30 day')
+  GROUP BY department
+)
+SELECT
+  department,
+  total_count,
+  done_count,
+  ROUND(done_count * 100.0 / NULLIF(total_count, 0), 1) AS completion_rate
+FROM task_summary
+ORDER BY completion_rate DESC, department;
+`
+  };
+
+  const modeMap = {
+    javascript: "js", html: "html", json: "json", python: "py", markdown: "md", sql: "sql",
+    css: "css", typescript: "ts", java: "java", xml: "xml", text: "txt", sh: "sh", yaml: "yml"
+  };
+
+  const docs = [];
+  let activeId = null;
+  let markerId = null;
+  let highlightMarkerId = null;
+  let rightVisible = true;
+  let logCount = 0;
+
+  function log(message) {
+    const now = new Date().toLocaleTimeString("ko-KR", { hour12: false });
+    $("log").textContent += `[${now}] ${message}\n`;
+    $("log").scrollTop = $("log").scrollHeight;
+    logCount++;
+    if (logCount > 300) {
+      $("log").textContent = $("log").textContent.split("\n").slice(-220).join("\n");
+      logCount = 220;
+    }
+  }
+
+  function newDoc(name, mode, content) {
+    const session = ace.createEditSession(content || "", `ace/mode/${mode || "text"}`);
+    session.setUseWorker(true);
+    session.setTabSize(2);
+    session.setUseSoftTabs(true);
+    const doc = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), name, mode, session, dirty: false };
+    session.on("change", () => {
+      doc.dirty = true;
+      renderTabs();
+      updateStatus();
+    });
+    docs.push(doc);
+    activateDoc(doc.id);
+    log(`문서 생성: ${name} (${mode})`);
+  }
+
+  function activateDoc(id) {
+    const doc = docs.find(d => d.id === id);
+    if (!doc) return;
+    activeId = id;
+    editor.setSession(doc.session);
+    $("modeSelect").value = doc.mode;
+    renderTabs();
+    updateStatus();
+    log(`탭 전환: ${doc.name}`);
+  }
+
+  function closeDoc(id, event) {
+    event.stopPropagation();
+    const index = docs.findIndex(d => d.id === id);
+    if (index < 0) return;
+    if (docs.length === 1) {
+      docs[0].session.setValue("");
+      docs[0].dirty = false;
+      renderTabs();
+      return;
+    }
+    const wasActive = activeId === id;
+    docs.splice(index, 1);
+    if (wasActive) activateDoc(docs[Math.max(0, index - 1)].id);
+    else renderTabs();
+  }
+
+  function renderTabs() {
+    $("tabs").innerHTML = "";
+    docs.forEach(doc => {
+      const tab = document.createElement("div");
+      tab.className = `tab ${doc.id === activeId ? "active" : ""} ${doc.dirty ? "dirty" : ""}`;
+      tab.innerHTML = `<span class="dot"></span><span>${escapeHtml(doc.name)}</span><span title="닫기">×</span>`;
+      tab.onclick = () => activateDoc(doc.id);
+      tab.lastElementChild.onclick = e => closeDoc(doc.id, e);
+      $("tabs").appendChild(tab);
+    });
+  }
+
+  function currentDoc() { return docs.find(d => d.id === activeId); }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function initSelects() {
+    const commonModes = ["javascript","typescript","html","css","json","python","java","markdown","sql","xml","yaml","sh","text","c_cpp","csharp","php","ruby","golang","rust","kotlin","swift","lua"];
+    const modes = modelist.modes.filter(m => commonModes.includes(m.name));
+    $("modeSelect").innerHTML = modes.map(m => `<option value="${m.name}">${m.caption}</option>`).join("");
+    const preferredThemes = ["tomorrow_night","monokai","dracula","github_dark","github","chrome","solarized_dark","solarized_light","textmate","twilight","nord_dark","one_dark"];
+    const themes = themelist.themes.filter(t => preferredThemes.includes(t.name));
+    $("themeSelect").innerHTML = themes.map(t => `<option value="${t.name}">${t.caption}</option>`).join("");
+    $("themeSelect").value = "tomorrow_night";
+  }
+
+  function configureEditor(ed) {
+    ed.setTheme("ace/theme/tomorrow_night");
+    ed.setOptions({
+      fontSize: "15px",
+      showPrintMargin: true,
+      printMarginColumn: 100,
+      highlightActiveLine: true,
+      highlightSelectedWord: true,
+      showFoldWidgets: true,
+      fadeFoldWidgets: false,
+      showLineNumbers: true,
+      showGutter: true,
+      displayIndentGuides: true,
+      enableBasicAutocompletion: true,
+      enableLiveAutocompletion: true,
+      enableSnippets: true,
+      enableLinking: true,
+      behavioursEnabled: true,
+      wrapBehavioursEnabled: true,
+      scrollPastEnd: 0,
+      animatedScroll: true,
+      cursorStyle: "ace",
+      mergeUndoDeltas: "always",
+      useSoftTabs: true,
+      tabSize: 2
+    });
+  }
+
+  configureEditor(editor);
+  configureEditor(secondary);
+  secondary.setReadOnly(true);
+  secondary.setValue("// 보조 편집기\n// 우측 탭에서 현재 문서의 복사본 또는 결과를 확인할 수 있습니다.", -1);
+
+  languageTools.addCompleter({
+    identifierRegexps: [/[a-zA-Z_0-9가-힣]/],
+    getCompletions(ed, session, pos, prefix, callback) {
+      const items = [
+        { caption: "showNotification", value: "showNotification('작업이 완료되었습니다.');", meta: "Ace Lab 함수", score: 1100 },
+        { caption: "수협업무자동화", value: "const automationPlan = { target: '반복업무', priority: 'high' };", meta: "사용자 정의", score: 1050 },
+        { caption: "fetchJSON", value: "fetch(url).then(r => r.json()).then(data => console.log(data));", meta: "스니펫", score: 1000 }
+      ];
+      callback(null, items);
+    }
+  });
+
+  editor.commands.addCommand({
+    name: "runPreview",
+    bindKey: { win: "Ctrl-Enter", mac: "Command-Enter" },
+    exec: runPreview
+  });
+  editor.commands.addCommand({
+    name: "saveDownload",
+    bindKey: { win: "Ctrl-S", mac: "Command-S" },
+    exec: downloadCurrent
+  });
+  editor.commands.addCommand({
+    name: "duplicateLineCustom",
+    bindKey: { win: "Ctrl-D", mac: "Command-D" },
+    exec: duplicateLines
+  });
+
+  function updateStatus() {
+    const doc = currentDoc();
+    if (!doc) return;
+    const pos = editor.getCursorPosition();
+    const range = editor.getSelectionRange();
+    const selected = editor.session.getTextRange(range).length;
+    const value = editor.getValue();
+    $("statusMode").textContent = `모드: ${doc.mode}`;
+    $("statusCursor").textContent = `행 ${pos.row + 1}, 열 ${pos.column + 1}`;
+    $("statusSelection").textContent = `선택 ${selected.toLocaleString()}자`;
+    $("statusLines").textContent = `${editor.session.getLength().toLocaleString()}줄`;
+    $("statusChars").textContent = `${value.length.toLocaleString()}자`;
+    $("statusTab").textContent = `${editor.session.getUseSoftTabs() ? "공백" : "탭"}: ${editor.session.getTabSize()}`;
+  }
+
+  editor.selection.on("changeCursor", updateStatus);
+  editor.selection.on("changeSelection", updateStatus);
+  editor.session.on("changeMode", updateStatus);
+  editor.on("focus", () => log("편집기 포커스"));
+  editor.on("blur", () => log("편집기 포커스 해제"));
+  editor.on("paste", e => log(`붙여넣기: ${String(e.text || "").length}자`));
+  editor.on("copy", () => log("선택 내용 복사"));
+
+  function runPreview() {
+    const doc = currentDoc();
+    const code = editor.getValue();
+    if (doc.mode === "html") {
+      $("preview").srcdoc = code;
+      showPane("previewPane");
+      log("HTML 미리보기 실행");
+    } else if (doc.mode === "javascript") {
+      const safe = code.replace(/<\/script/gi, "<\\/script");
+      $("preview").srcdoc = `<!doctype html><meta charset="utf-8"><style>body{font-family:system-ui;padding:20px;background:#f6f8fc}pre{white-space:pre-wrap;background:#111827;color:#dbeafe;padding:16px;border-radius:10px}</style><h2>JavaScript 실행 결과</h2><pre id="out">실행 중...</pre><script>const out=document.getElementById('out');console.log=(...a)=>out.textContent=a.map(v=>typeof v==='object'?JSON.stringify(v,null,2):String(v)).join(' ');console.error=(...a)=>out.textContent='ERROR: '+a.join(' ');try{${safe}\nif(out.textContent==='실행 중...')out.textContent='실행 완료 (console.log 출력 없음)'}catch(e){out.textContent=e.stack}<\/script>`;
+      showPane("previewPane");
+      log("JavaScript 샌드박스 실행");
+    } else if (doc.mode === "json") {
+      try {
+        const parsed = JSON.parse(code);
+        $("preview").srcdoc = `<style>body{font-family:system-ui;padding:24px}pre{background:#101827;color:#dbeafe;padding:20px;border-radius:12px;white-space:pre-wrap}</style><h2>유효한 JSON</h2><pre>${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+        editor.session.clearAnnotations();
+        log("JSON 유효성 검사 성공");
+      } catch (e) {
+        const match = /position (\d+)/.exec(e.message);
+        const idx = match ? Number(match[1]) : 0;
+        const before = code.slice(0, idx);
+        const row = before.split("\n").length - 1;
+        const column = before.length - before.lastIndexOf("\n") - 1;
+        editor.session.setAnnotations([{ row, column, text: e.message, type: "error" }]);
+        $("preview").srcdoc = `<style>body{font-family:system-ui;padding:24px;color:#8c1d2c}</style><h2>JSON 오류</h2><pre>${escapeHtml(e.message)}</pre>`;
+        log(`JSON 유효성 검사 실패: ${e.message}`);
+      }
+      showPane("previewPane");
+    } else if (doc.mode === "markdown") {
+      const simple = code
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>")
+        .replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>")
+        .replace(/^- (.*)$/gm,"<li>$1</li>").replace(/\n/g,"<br>");
+      $("preview").srcdoc = `<style>body{font-family:system-ui;line-height:1.7;padding:28px;max-width:850px;margin:auto}code{background:#edf1f7;padding:2px 5px;border-radius:4px}</style>${simple}`;
+      showPane("previewPane");
+      log("간이 Markdown 미리보기 실행");
+    } else {
+      secondary.setValue(code, -1);
+      secondary.session.setMode(`ace/mode/${doc.mode}`);
+      showPane("secondaryPane");
+      log("보조 편집기에 현재 코드 복사");
+    }
+  }
+
+  function showPane(id) {
+    document.querySelectorAll(".pane").forEach(p => p.classList.toggle("active", p.id === id));
+    document.querySelectorAll(".right-tabs button").forEach(b => b.classList.toggle("active", b.dataset.pane === id));
+    setTimeout(() => secondary.resize(), 10);
+  }
+
+  function downloadCurrent() {
+    const doc = currentDoc();
+    const ext = modeMap[doc.mode] || doc.mode || "txt";
+    const filename = doc.name.includes(".") ? doc.name : `${doc.name}.${ext}`;
+    const blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    doc.dirty = false;
+    renderTabs();
+    $("statusSaved").textContent = `다운로드: ${filename}`;
+    log(`파일 다운로드: ${filename}`);
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const mode = modelist.getModeForPath(file.name).name;
+      newDoc(file.name, mode, String(reader.result));
+      log(`파일 열기 완료: ${file.name}`);
+    };
+    reader.onerror = () => log(`파일 읽기 실패: ${file.name}`);
+    reader.readAsText(file, "UTF-8");
+  }
+
+  function duplicateLines() {
+    const range = editor.getSelectionRange();
+    const first = range.start.row, last = range.end.row;
+    const text = editor.session.getLines(first, last).join("\n") + "\n";
+    editor.session.insert({ row: last + 1, column: 0 }, text);
+    editor.selection.setSelectionRange(new Range(first + (last-first+1), 0, last + (last-first+1), editor.session.getLine(last + (last-first+1)).length));
+  }
+
+  function selectedOrCurrentRange() {
+    const r = editor.getSelectionRange();
+    return r.isEmpty() ? new Range(r.start.row, 0, r.start.row, editor.session.getLine(r.start.row).length) : r;
+  }
+
+  $("runBtn").onclick = runPreview;
+  $("newTabBtn").onclick = () => newDoc(`untitled-${docs.length + 1}.js`, "javascript", "// 새 문서\n");
+  $("openBtn").onclick = () => $("fileInput").click();
+  $("fileInput").onchange = e => loadFile(e.target.files[0]);
+  $("saveBtn").onclick = downloadCurrent;
+  $("undoBtn").onclick = () => editor.undo();
+  $("redoBtn").onclick = () => editor.redo();
+  $("findBtn").onclick = () => editor.execCommand("find");
+  $("replaceBtn").onclick = () => editor.execCommand("replace");
+  $("gotoBtn").onclick = () => editor.execCommand("gotoline");
+  $("formatBtn").onclick = () => {
+    const doc = currentDoc();
+    if (doc.mode === "json") {
+      try { editor.setValue(JSON.stringify(JSON.parse(editor.getValue()), null, editor.session.getTabSize()), -1); }
+      catch (e) { alert("JSON 문법을 먼저 확인하세요.\n" + e.message); }
+    } else {
+      beautify.beautify(editor.session);
+    }
+    log("코드 정리 실행");
+  };
+  $("foldBtn").onclick = () => { editor.session.foldAll(); log("전체 코드 접기"); };
+  $("unfoldBtn").onclick = () => { editor.session.unfold(); log("전체 코드 펼치기"); };
+  $("splitBtn").onclick = () => {
+    rightVisible = !rightVisible;
+    $("rightPane").classList.toggle("hidden", !rightVisible);
+    $("stage").classList.toggle("single", !rightVisible);
+    $("splitBtn").textContent = rightVisible ? "우측 패널 숨김" : "우측 패널 표시";
+    setTimeout(() => editor.resize(), 10);
+  };
+
+  $("modeSelect").onchange = e => {
+    const doc = currentDoc();
+    doc.mode = e.target.value;
+    doc.session.setMode(`ace/mode/${doc.mode}`);
+    updateStatus(); renderTabs(); log(`언어 모드 변경: ${doc.mode}`);
+  };
+  $("themeSelect").onchange = e => {
+    editor.setTheme(`ace/theme/${e.target.value}`);
+    secondary.setTheme(`ace/theme/${e.target.value}`);
+    log(`테마 변경: ${e.target.value}`);
+  };
+  $("fontSize").oninput = e => { editor.setFontSize(`${e.target.value}px`); secondary.setFontSize(`${e.target.value}px`); };
+  $("tabSize").oninput = e => { editor.session.setTabSize(Number(e.target.value)); updateStatus(); };
+  $("keyboardSelect").onchange = e => {
+    const name = e.target.value;
+    editor.setKeyboardHandler(name ? `ace/keyboard/${name}` : null);
+    log(`키 바인딩 변경: ${name || "기본"}`);
+  };
+
+  const boolBindings = {
+    softTabs: v => editor.session.setUseSoftTabs(v),
+    wrap: v => editor.session.setUseWrapMode(v),
+    readOnly: v => editor.setReadOnly(v),
+    printMargin: v => editor.setShowPrintMargin(v),
+    gutter: v => editor.renderer.setShowGutter(v),
+    lineNumbers: v => editor.setOption("showLineNumbers", v),
+    indentGuides: v => editor.setDisplayIndentGuides(v),
+    invisibles: v => editor.setShowInvisibles(v),
+    activeLine: v => editor.setHighlightActiveLine(v),
+    selectedWord: v => editor.setHighlightSelectedWord(v),
+    behaviours: v => editor.setBehavioursEnabled(v),
+    basicAutocomplete: v => editor.setOption("enableBasicAutocompletion", v),
+    liveAutocomplete: v => editor.setOption("enableLiveAutocompletion", v),
+    snippets: v => editor.setOption("enableSnippets", v),
+    enableLinking: v => editor.setOption("enableLinking", v),
+    scrollPastEnd: v => editor.setOption("scrollPastEnd", v ? 0.5 : 0)
+  };
+  Object.entries(boolBindings).forEach(([id, fn]) => $(id).onchange = e => { fn(e.target.checked); updateStatus(); });
+
+  $("autocompleteBtn").onclick = () => editor.execCommand("startAutocomplete");
+  $("snippetBtn").onclick = () => {
+    const snippet = `function ${"${1:name}"}(${"${2:args}"}) {\n  ${"${3:// body}"}\n}`;
+    ace.require("ace/snippets").snippetManager.insertSnippet(editor, snippet);
+    log("사용자 스니펫 삽입");
+  };
+  $("commentBtn").onclick = () => editor.toggleCommentLines();
+  $("transposeBtn").onclick = () => editor.moveLinesDown();
+
+  $("markerBtn").onclick = () => {
+    if (markerId !== null) editor.session.removeMarker(markerId);
+    const r = selectedOrCurrentRange();
+    markerId = editor.session.addMarker(r, "ace_selection", "text", false);
+    log(`마커 추가: ${r.start.row + 1}행`);
+  };
+  $("clearMarkerBtn").onclick = () => {
+    if (markerId !== null) editor.session.removeMarker(markerId);
+    if (highlightMarkerId !== null) editor.session.removeMarker(highlightMarkerId);
+    markerId = highlightMarkerId = null;
+    log("사용자 마커 제거");
+  };
+  $("annotationBtn").onclick = () => {
+    const p = editor.getCursorPosition();
+    editor.session.setAnnotations([
+      { row: p.row, column: p.column, text: "예시 오류: 이 위치를 확인하세요.", type: "error" },
+      { row: Math.min(p.row + 1, editor.session.getLength() - 1), column: 0, text: "예시 경고: 개선 가능한 코드입니다.", type: "warning" },
+      { row: Math.min(p.row + 2, editor.session.getLength() - 1), column: 0, text: "예시 정보 메시지입니다.", type: "info" }
+    ]);
+    log("오류·경고·정보 Annotation 추가");
+  };
+  $("clearAnnotationBtn").onclick = () => { editor.session.clearAnnotations(); log("Annotation 제거"); };
+  $("breakpointBtn").onclick = () => {
+    const row = editor.getCursorPosition().row;
+    const bps = editor.session.getBreakpoints();
+    if (bps[row]) editor.session.clearBreakpoint(row); else editor.session.setBreakpoint(row);
+    log(`중단점 토글: ${row + 1}행`);
+  };
+  $("highlightBtn").onclick = () => {
+    const word = editor.session.getWordRange(editor.getCursorPosition().row, editor.getCursorPosition().column);
+    if (highlightMarkerId !== null) editor.session.removeMarker(highlightMarkerId);
+    highlightMarkerId = editor.session.addMarker(word, "ace_bracket", "text", false);
+    editor.selection.setSelectionRange(word);
+    log("현재 단어 강조");
+  };
+  $("multiCursorBtn").onclick = () => {
+    if (editor.getSelectionRange().isEmpty()) {
+      const p = editor.getCursorPosition();
+      editor.selection.setSelectionRange(editor.session.getWordRange(p.row, p.column));
+    }
+    editor.execCommand("selectMoreAfter");
+    log("다음 일치 항목에 멀티커서 추가");
+  };
+  $("rectSelectBtn").onclick = () => alert("사각 선택:\nWindows/Linux: Alt 키를 누른 채 마우스로 드래그\nmacOS: Option 키를 누른 채 드래그");
+
+  $("upperBtn").onclick = () => editor.modifyNumber ? editor.execCommand("touppercase") : editor.session.replace(selectedOrCurrentRange(), editor.session.getTextRange(selectedOrCurrentRange()).toUpperCase());
+  $("lowerBtn").onclick = () => editor.execCommand("tolowercase");
+  $("sortBtn").onclick = () => {
+    const r = selectedOrCurrentRange();
+    const lines = editor.session.getTextRange(r).split("\n").sort((a,b) => a.localeCompare(b, "ko"));
+    editor.session.replace(r, lines.join("\n"));
+  };
+  $("duplicateBtn").onclick = duplicateLines;
+  $("trimBtn").onclick = () => {
+    const value = editor.getValue().split("\n").map(s => s.replace(/\s+$/g, "")).join("\n");
+    editor.setValue(value, -1);
+    log("행 끝 공백 제거");
+  };
+  $("selectAllBtn").onclick = () => editor.selectAll();
+  $("insertBtn").onclick = () => editor.insert($("insertText").value);
+
+  document.querySelectorAll("[data-sample]").forEach(btn => btn.onclick = () => {
+    const type = btn.dataset.sample;
+    const ext = modeMap[type] || type;
+    newDoc(`sample.${ext}`, type, samples[type]);
+  });
+
+  document.querySelectorAll(".right-tabs button").forEach(btn => btn.onclick = () => showPane(btn.dataset.pane));
+
+  $("saveLocalBtn").onclick = () => {
+    const data = docs.map(d => ({ name:d.name, mode:d.mode, value:d.session.getValue() }));
+    localStorage.setItem("ace-lab-docs", JSON.stringify(data));
+    localStorage.setItem("ace-lab-active", String(docs.findIndex(d => d.id === activeId)));
+    docs.forEach(d => d.dirty = false);
+    renderTabs();
+    $("statusSaved").textContent = `브라우저 저장 완료 (${data.length}개)`;
+    log(`localStorage 저장: ${data.length}개 문서`);
+  };
+  $("restoreBtn").onclick = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem("ace-lab-docs") || "[]");
+      if (!data.length) return alert("저장된 문서가 없습니다.");
+      docs.splice(0, docs.length);
+      data.forEach(d => {
+        const session = ace.createEditSession(d.value, `ace/mode/${d.mode}`);
+        session.setTabSize(2); session.setUseSoftTabs(true);
+        const doc = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()), name:d.name, mode:d.mode, session, dirty:false };
+        session.on("change", () => { doc.dirty = true; renderTabs(); updateStatus(); });
+        docs.push(doc);
+      });
+      const index = Math.max(0, Number(localStorage.getItem("ace-lab-active") || 0));
+      activateDoc((docs[index] || docs[0]).id);
+      log(`localStorage 복원: ${docs.length}개 문서`);
+    } catch (e) { alert("저장본 복원에 실패했습니다.\n" + e.message); }
+  };
+
+  const editorWrap = $("editorWrap");
+  ["dragenter","dragover"].forEach(type => editorWrap.addEventListener(type, e => {
+    e.preventDefault(); $("dropOverlay").classList.add("show");
+  }));
+  ["dragleave","drop"].forEach(type => editorWrap.addEventListener(type, e => {
+    e.preventDefault(); $("dropOverlay").classList.remove("show");
+  }));
+  editorWrap.addEventListener("drop", e => {
+    [...e.dataTransfer.files].forEach(loadFile);
+  });
+
+  window.addEventListener("resize", () => { editor.resize(); secondary.resize(); });
+
+  initSelects();
+  newDoc("app.js", "javascript", samples.javascript);
+  runPreview();
+  log("Ace Editor 종합 기능 실험실 초기화 완료");
+})();
+</script>
+</body>
+</html>
