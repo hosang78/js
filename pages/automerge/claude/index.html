@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Automerge</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .col h3 {
+    font-size: 13px;
+    margin: 0 0 6px;
+    color: #4f7dff;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.sync { background: #1baf7a; }
+  button.sync:hover { background: #159163; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  .result-box.matched { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    max-height: 220px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Automerge 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Automerge</strong>는 Yjs와 같은 목적(여러 사람이 동시에 편집해도 자동으로 합쳐지는
+    CRDT)을 갖지만, API 스타일이 전혀 다릅니다. 공유 객체를 직접 변형하는 대신, 일반 JS 객체처럼
+    다루면서 수정할 때마다 <strong>새로운 불변(immutable) 스냅샷</strong>을 돌려받는
+    함수형 방식입니다.
+    <ul>
+      <li><code>Automerge.from(data)</code>로 문서 생성, <code>Automerge.change(doc, fn)</code>으로 수정 — 항상 새 객체를 반환</li>
+      <li><code>Automerge.clone(doc)</code>으로 독립된 사본을 만들어 각자 수정 후 <code>Automerge.merge()</code>로 자동 병합</li>
+      <li><code>Automerge.getHistory(doc)</code>로 지금까지의 모든 변경을 시간순 스냅샷으로 조회</li>
+      <li><code>Automerge.save(doc)</code> / <code>Automerge.load(bytes)</code>로 문서 전체를 바이너리로 저장·복원</li>
+    </ul>
+    <div class="disclaimer">
+      ※ Automerge 코어는 Rust로 작성되어 WebAssembly(WASM)로 컴파일됩니다. 공식 문서는 브라우저에서
+      쓰려면 번들러가 필요하다고 안내하지만, 이 패키지는 WASM을 base64 문자열로 아예 JS 안에 내장한
+      <code>fullfat_base64</code> 진입점을 함께 제공해서 번들러 없이 <code>&lt;script type="module"&gt;</code>만으로도
+      바로 동작하는 것을 실제로 확인했습니다. 이 페이지의 위판 데이터는 모두 <strong>가상의 예시</strong>이며
+      실제 수협중앙회의 자료가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 문서 생성 + 불변 함수형 수정</h2>
+    <div class="desc">버튼을 누르면 <code>change()</code>가 항상 <strong>새 객체</strong>를 반환하는 것을 확인할 수 있습니다(기존 문서는 그대로 유지됨).</div>
+    <div class="controls"><button id="addItemBtn1">위판 물품 추가</button></div>
+    <pre class="output" id="output1"></pre>
+    <div class="result-box" id="refCheck1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">let doc = Automerge.from({ items: [{ species: '고등어', price: 4200 }] });
+
+const before = doc;
+doc = Automerge.change(doc, (d) => {
+  d.items.push({ species: '갈치', price: 3100 });
+});
+doc !== before; // true — 새 객체가 반환됨 (기존 doc은 변하지 않음)</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. clone → 독립 수정 → merge로 자동 병합</h2>
+    <div class="desc">문서 A, B는 <code>clone()</code>으로 나뉜 독립 사본입니다. 각자 다른 필드를 수정한 뒤 "동기화" 버튼을 눌러 자동으로 합쳐지는 것을 확인하세요.</div>
+    <div class="two-col">
+      <div class="col">
+        <h3>문서 A</h3>
+        <pre class="output" id="outputA"></pre>
+        <div class="controls"><button class="ghost" id="editABtn">A에서 notice 수정</button></div>
+      </div>
+      <div class="col">
+        <h3>문서 B</h3>
+        <pre class="output" id="outputB"></pre>
+        <div class="controls"><button class="ghost" id="editBBtn">B에서 marker 필드 추가</button></div>
+      </div>
+    </div>
+    <div class="controls"><button class="sync" id="syncBtn">두 문서 동기화</button></div>
+    <div class="result-box" id="syncResult">아직 동기화 안 함 — 두 문서가 다른 상태입니다</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">let docA = Automerge.from({ notice: '위판 시세: 고등어 4200원' });
+let docB = Automerge.clone(docA);
+
+docA = Automerge.change(docA, (d) => { d.notice += ' (인상)'; });
+docB = Automerge.change(docB, (d) => { d.marker = '[속보]'; });
+
+docA = Automerge.merge(docA, docB);
+docB = Automerge.merge(docB, docA);
+// 이제 docA, docB 모두 { notice: '... (인상)', marker: '[속보]' }</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 변경 이력(History) 조회</h2>
+    <div class="desc"><code>getHistory()</code>는 지금까지의 모든 변경을 각 시점의 문서 스냅샷과 함께 시간순으로 돌려줍니다.</div>
+    <div class="controls"><button id="historyBtn3">1번 문서의 변경 이력 보기</button></div>
+    <pre class="output" id="output3">아직 조회 안 함</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const history = Automerge.getHistory(doc);
+history.forEach((h, i) => {
+  console.log(`변경 ${i}:`, h.snapshot); // 그 시점의 문서 전체 스냅샷
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. save() / load() — 바이너리 직렬화 라운드트립</h2>
+    <div class="desc">문서 전체를 바이너리로 저장했다가 다시 불러와도 완전히 동일한 내용임을 확인합니다.</div>
+    <div class="controls"><button id="saveLoadBtn4">저장 후 다시 불러오기</button></div>
+    <div class="result-box" id="output4">아직 시도 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const bytes = Automerge.save(doc);   // Uint8Array
+const restored = Automerge.load(bytes);
+JSON.stringify(restored) === JSON.stringify(doc); // true</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    import * as Automerge from 'https://cdn.jsdelivr.net/npm/@automerge/automerge@3.3.2/dist/mjs/entrypoints/fullfat_base64.js';
+
+    // ---------- 1. 문서 생성 + 불변 함수형 수정 ----------
+    let doc1 = Automerge.from({
+      notice: '금일 위판 공지(가상)',
+      items: [{ species: '고등어', price: 4200 }],
+    });
+    const output1 = document.getElementById('output1');
+    const refCheck1 = document.getElementById('refCheck1');
+    function renderDoc1() {
+      output1.textContent = JSON.stringify(doc1, null, 2);
+    }
+    renderDoc1();
+    const EXTRA_ITEMS = [
+      { species: '갈치', price: 3100 },
+      { species: '전복', price: 15000 },
+      { species: '멸치', price: 900 },
+    ];
+    let itemIdx1 = 0;
+    document.getElementById('addItemBtn1').addEventListener('click', () => {
+      const before = doc1;
+      doc1 = Automerge.change(doc1, (d) => {
+        d.items.push(EXTRA_ITEMS[itemIdx1 % EXTRA_ITEMS.length]);
+      });
+      itemIdx1++;
+      renderDoc1();
+      refCheck1.textContent = `change() 후 새 객체 반환 여부: ${doc1 !== before} (기존 문서는 그대로 유지됨)`;
+    });
+
+    // ---------- 2. clone → 독립 수정 → merge ----------
+    let docA = Automerge.from({ notice: '금일 위판 시세: 고등어 4200원(가상)' });
+    let docB = Automerge.clone(docA);
+    const outputA = document.getElementById('outputA');
+    const outputB = document.getElementById('outputB');
+    const syncResult = document.getElementById('syncResult');
+    function renderAB() {
+      outputA.textContent = JSON.stringify(docA, null, 2);
+      outputB.textContent = JSON.stringify(docB, null, 2);
+    }
+    renderAB();
+    document.getElementById('editABtn').addEventListener('click', (e) => {
+      docA = Automerge.change(docA, (d) => { d.notice = d.notice + ' (인상)'; });
+      renderAB();
+      e.target.disabled = true;
+    });
+    document.getElementById('editBBtn').addEventListener('click', (e) => {
+      docB = Automerge.change(docB, (d) => { d.marker = '[속보]'; });
+      renderAB();
+      e.target.disabled = true;
+    });
+    document.getElementById('syncBtn').addEventListener('click', () => {
+      docA = Automerge.merge(docA, docB);
+      docB = Automerge.merge(docB, docA);
+      renderAB();
+      const matched = JSON.stringify(docA) === JSON.stringify(docB);
+      syncResult.textContent = matched
+        ? `동기화 완료 — 두 문서가 동일해짐: ${JSON.stringify(docA)}`
+        : '동기화했지만 내용이 다릅니다 (예상치 못한 상태)';
+      syncResult.classList.toggle('matched', matched);
+    });
+
+    // ---------- 3. 변경 이력 조회 ----------
+    document.getElementById('historyBtn3').addEventListener('click', () => {
+      const history = Automerge.getHistory(doc1);
+      document.getElementById('output3').textContent = history
+        .map((h, i) => `[변경 ${i}] ${JSON.stringify(h.snapshot)}`)
+        .join('\n\n');
+    });
+
+    // ---------- 4. save()/load() 라운드트립 ----------
+    document.getElementById('saveLoadBtn4').addEventListener('click', () => {
+      const bytes = Automerge.save(doc1);
+      const restored = Automerge.load(bytes);
+      const matches = JSON.stringify(restored) === JSON.stringify(doc1);
+      document.getElementById('output4').textContent =
+        `저장된 바이너리 크기: ${bytes.byteLength} bytes · 복원 후 내용 일치: ${matches}`;
+    });
+  </script>
+</body>
+</html>
