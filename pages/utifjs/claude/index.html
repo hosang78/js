@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>UTIF.js</title>
+<script src="https://cdn.jsdelivr.net/npm/pako@1.0.11/dist/pako_inflate.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  canvas.preview {
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    display: block;
+    margin-top: 8px;
+    max-width: 100%;
+  }
+  .compare {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .compare figure {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .stat-box.show { display: block; }
+  .stat-box.error { background: #fff0f0; border-color: #ffc9c9; color: #a01818; }
+  .stat-box strong { color: #205fb0; }
+  a.download-link {
+    display: inline-block;
+    padding: 7px 13px;
+    border-radius: 8px;
+    background: #2fa86a;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  a.download-link:hover { background: #268a58; }
+  img.tif-inline {
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    display: block;
+    margin-top: 8px;
+    width: 200px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>UTIF.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>UTIF.js</strong>는 브라우저가 기본적으로 표시하지 못하는 <strong>TIFF</strong> 이미지를
+    디코딩해서 캔버스에 그리거나, 반대로 인코딩해서 TIFF 파일을 만드는 라이브러리입니다. 스캐너·팩스·문서
+    보관용으로 아직도 TIFF가 많이 쓰입니다.
+    <ul>
+      <li><code class="inline">UTIF.decode</code> + <code class="inline">toRGBA8</code>로 하는
+        <strong>여러 압축 방식(LZW·PackBits)의 TIFF 디코딩</strong></li>
+      <li><strong>멀티페이지 TIFF</strong> 페이지 넘겨보기</li>
+      <li><code class="inline">UTIF.encodeImage</code>로 하는 <strong>TIFF 인코딩 + 다운로드</strong></li>
+      <li><code class="inline">UTIF.replaceIMG()</code>로 <code class="inline">&lt;img&gt;</code>에
+        <strong>TIFF 직접 표시</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 TIFF 샘플 파일은 실제 <strong>libtiff</strong> 도구로 만든 진짜 TIFF 파일이며, 내용은 이
+      페이지를 위한 <strong>가상의 위판 문서</strong> 이미지입니다. 다른 외부 라이브러리나 API는 사용하지
+      않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 압축 방식별 TIFF 디코딩 (LZW / PackBits)</h2>
+    <div class="desc">
+      TIFF는 압축 방식이 여러 가지입니다. 같은 이미지를 <strong>LZW</strong>와
+      <strong>PackBits</strong>로 각각 압축한 파일을 디코딩해서 파일 크기를 비교합니다.
+    </div>
+    <button id="s1-run">두 파일 디코딩해서 비교</button>
+    <div class="stat-box" id="s1-stat"></div>
+    <div class="compare" id="s1-compare" style="display:none;">
+      <figure><canvas class="preview" id="s1-canvas-lzw" width="200" height="133"></canvas>LZW 압축</figure>
+      <figure><canvas class="preview" id="s1-canvas-pb" width="200" height="133"></canvas>PackBits 압축</figure>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const buf = await fetch('sample.tif').then(r => r.arrayBuffer());
+const ifds = UTIF.decode(buf);       // 파일 안의 이미지(페이지) 목록
+UTIF.decodeImage(buf, ifds[0]);      // 첫 번째 이미지의 픽셀 데이터를 디코딩
+const rgba = UTIF.toRGBA8(ifds[0]);  // Uint8Array, canvas putImageData에 바로 사용 가능
+
+const imgData = new ImageData(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height);
+ctx.putImageData(imgData, 0, 0);</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 멀티페이지 TIFF 넘겨보기</h2>
+    <div class="desc">
+      TIFF 한 파일 안에 <strong>여러 페이지</strong>가 들어있을 수 있습니다.
+      <code class="inline">UTIF.decode()</code>가 반환하는 배열의 길이가 곧 페이지 수입니다.
+    </div>
+    <button id="s2-run">멀티페이지 TIFF 열기</button>
+    <div class="stat-box" id="s2-stat"></div>
+    <div id="s2-viewer" style="display:none;">
+      <canvas class="preview" id="s2-canvas" width="300" height="200"></canvas>
+      <div style="margin-top:8px;">
+        <button id="s2-prev">◀ 이전 페이지</button>
+        <span id="s2-page-label"></span>
+        <button id="s2-next">다음 페이지 ▶</button>
+      </div>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const ifds = UTIF.decode(buf);
+console.log(ifds.length); // 페이지 수
+
+UTIF.decodeImage(buf, ifds[pageIndex]);
+const rgba = UTIF.toRGBA8(ifds[pageIndex]); // 원하는 페이지만 디코딩</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. TIFF 인코딩 + 다운로드</h2>
+    <div class="desc">
+      캔버스에 그린 이미지를 <code class="inline">UTIF.encodeImage(rgba, width, height)</code>로 TIFF
+      바이너리로 인코딩합니다.
+    </div>
+    <canvas class="preview" id="s3-source-canvas" width="200" height="133"></canvas>
+    <button id="s3-run">이 이미지를 TIFF로 인코딩</button>
+    <div class="stat-box" id="s3-stat"></div>
+    <div id="s3-download"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+const tiffBuf = UTIF.encodeImage(imgData.data.buffer, canvas.width, canvas.height);
+const blob = new Blob([tiffBuf], { type: 'image/tiff' });
+// <a href="URL.createObjectURL(blob)" download="output.tif">다운로드</a></code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. &lt;img&gt;에 TIFF 직접 표시 (replaceIMG)</h2>
+    <div class="desc">
+      브라우저는 원래 <code class="inline">&lt;img src="파일.tif"&gt;</code>를 표시하지 못합니다(깨진
+      이미지 아이콘만 나옴). <code class="inline">UTIF.replaceIMG()</code>를 한 번 호출하면 페이지 안의
+      모든 TIFF <code class="inline">&lt;img&gt;</code> 태그를 찾아서 PNG로 변환해 자동으로 표시해줍니다.
+    </div>
+    <button id="s4-run">이 페이지의 TIFF 이미지 표시하기</button>
+    <div class="stat-box" id="s4-stat"></div>
+    <img class="tif-inline" id="s4-img" src="./sample-lzw.tif" alt="TIFF 이미지 (변환 전에는 안 보임)" />
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>&lt;img src="photo.tif" /&gt;
+
+&lt;script&gt;
+  UTIF.replaceIMG(); // 페이지 안의 .tif 이미지를 모두 찾아서 표시 가능한 형태로 바꿔줌
+&lt;/script&gt;</code></pre>
+    </details>
+  </section>
+
+<script>
+  function fmtBytes(n) { return (n / 1024).toFixed(1) + ' KB'; }
+
+  function renderRGBAtoCanvas(canvas, ifd) {
+    canvas.width = ifd.width;
+    canvas.height = ifd.height;
+    const ctx = canvas.getContext('2d');
+    const rgba = UTIF.toRGBA8(ifd);
+    const imgData = new ImageData(new Uint8ClampedArray(rgba), ifd.width, ifd.height);
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // ---- 섹션 1: 압축 방식 비교 ----
+  (function section1() {
+    const btn = document.getElementById('s1-run');
+    const stat = document.getElementById('s1-stat');
+    const compare = document.getElementById('s1-compare');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      try {
+        const [lzwBuf, pbBuf] = await Promise.all([
+          fetch('./sample-lzw.tif').then((r) => r.arrayBuffer()),
+          fetch('./sample-packbits.tif').then((r) => r.arrayBuffer()),
+        ]);
+        const ifdsLzw = UTIF.decode(lzwBuf);
+        UTIF.decodeImage(lzwBuf, ifdsLzw[0]);
+        renderRGBAtoCanvas(document.getElementById('s1-canvas-lzw'), ifdsLzw[0]);
+
+        const ifdsPb = UTIF.decode(pbBuf);
+        UTIF.decodeImage(pbBuf, ifdsPb[0]);
+        renderRGBAtoCanvas(document.getElementById('s1-canvas-pb'), ifdsPb[0]);
+
+        stat.classList.add('show');
+        stat.innerHTML =
+          '같은 300×200 이미지: LZW <strong>' + fmtBytes(lzwBuf.byteLength) + '</strong> vs PackBits <strong>' +
+          fmtBytes(pbBuf.byteLength) + '</strong> (무압축이면 약 176.0 KB)';
+        compare.style.display = 'flex';
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 2: 멀티페이지 ----
+  (function section2() {
+    const btn = document.getElementById('s2-run');
+    const stat = document.getElementById('s2-stat');
+    const viewer = document.getElementById('s2-viewer');
+    const canvas = document.getElementById('s2-canvas');
+    const prevBtn = document.getElementById('s2-prev');
+    const nextBtn = document.getElementById('s2-next');
+    const pageLabel = document.getElementById('s2-page-label');
+
+    let buf = null;
+    let ifds = null;
+    let pageIndex = 0;
+
+    function showPage() {
+      const ifd = ifds[pageIndex];
+      if (!ifd.data) UTIF.decodeImage(buf, ifd);
+      renderRGBAtoCanvas(canvas, ifd);
+      pageLabel.textContent = (pageIndex + 1) + ' / ' + ifds.length + ' 페이지';
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      try {
+        buf = await fetch('./sample-multipage.tif').then((r) => r.arrayBuffer());
+        ifds = UTIF.decode(buf);
+        pageIndex = 0;
+        stat.classList.add('show');
+        stat.innerHTML = '총 <strong>' + ifds.length + '페이지</strong>를 찾았습니다.';
+        viewer.style.display = 'block';
+        showPage();
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (!ifds) return;
+      pageIndex = (pageIndex - 1 + ifds.length) % ifds.length;
+      showPage();
+    });
+    nextBtn.addEventListener('click', () => {
+      if (!ifds) return;
+      pageIndex = (pageIndex + 1) % ifds.length;
+      showPage();
+    });
+  })();
+
+  // ---- 섹션 3: 인코딩 ----
+  (function section3() {
+    const sourceCanvas = document.getElementById('s3-source-canvas');
+    const ctx = sourceCanvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 200, 133);
+    grad.addColorStop(0, '#4f7dff');
+    grad.addColorStop(1, '#2fa86a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 200, 133);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('가상 위판 문서', 10, 70);
+
+    const btn = document.getElementById('s3-run');
+    const stat = document.getElementById('s3-stat');
+    const downloadWrap = document.getElementById('s3-download');
+
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      try {
+        const imgData = ctx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+        const tiffBuf = UTIF.encodeImage(imgData.data.buffer, sourceCanvas.width, sourceCanvas.height);
+        stat.classList.add('show');
+        stat.innerHTML = '인코딩된 TIFF 크기: <strong>' + fmtBytes(tiffBuf.byteLength) + '</strong>';
+
+        const blob = new Blob([tiffBuf], { type: 'image/tiff' });
+        const url = URL.createObjectURL(blob);
+        downloadWrap.innerHTML = '';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '위판문서.tif';
+        a.className = 'download-link';
+        a.textContent = 'TIFF 다운로드';
+        downloadWrap.appendChild(a);
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 4: replaceIMG ----
+  (function section4() {
+    const btn = document.getElementById('s4-run');
+    const stat = document.getElementById('s4-stat');
+    const img = document.getElementById('s4-img');
+
+    btn.addEventListener('click', () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '변환 중... (XMLHttpRequest로 파일을 다시 받아 비동기로 디코딩합니다)';
+      try {
+        UTIF.replaceIMG();
+        const waitForConversion = setInterval(() => {
+          if (img.src.startsWith('data:')) {
+            clearInterval(waitForConversion);
+            stat.innerHTML = '변환 완료: <code class="inline">&lt;img&gt;</code>의 src가 PNG data URI로 바뀌어서 이제 화면에 보입니다.';
+            btn.disabled = false;
+          }
+        }, 100);
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
