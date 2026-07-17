@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>MicroModal</title>
+<script src="https://cdn.jsdelivr.net/npm/micromodal@0.7.0/dist/micromodal.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #eef1f8; color: #333; }
+  button.ghost:hover { background: #dfe4f0; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- MicroModal 공식 예제 기반 스타일 ---- */
+  .modal { display: none; }
+  .modal.is-open { display: block; }
+  .modal__overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal__container {
+    background: #fff;
+    border-radius: 10px;
+    max-width: 440px;
+    width: calc(100% - 32px);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+  }
+  .modal__title { margin: 0; font-size: 16px; font-weight: 700; }
+  .modal__close {
+    background: transparent;
+    border: 0;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #888;
+    padding: 4px;
+    margin: 0;
+  }
+  .modal__close:hover { background: transparent; color: #333; }
+  .modal__content { padding: 16px 20px; font-size: 13.5px; color: #444; }
+  .modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid #eee;
+  }
+  .modal__footer button { margin: 0; }
+  .mock-form-row { margin-bottom: 10px; }
+  .mock-form-row label { display: block; font-size: 12.5px; color: #555; margin-bottom: 4px; }
+  .mock-form-row input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border: 1px solid #d5d9e0;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  /* MicroModal의 awaitOpenAnimation/awaitCloseAnimation 옵션이 실제로 기다리는 CSS 애니메이션.
+     이 애니메이션을 정의하지 않고 옵션만 켜면 애니메이션이 끝났다는 신호가 오지 않아
+     모달이 영원히 안 닫히는 상태가 될 수 있다 (실측으로 확인한 내용, 아래 3번 섹션 참고). */
+  @keyframes mmfadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mmfadeOut { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes mmslideIn { from { transform: translateY(-24px); } to { transform: translateY(0); } }
+  @keyframes mmslideOut { from { transform: translateY(0); } to { transform: translateY(-24px); } }
+  .modal--anim .modal__overlay { animation: mmfadeIn 0.2s ease-out; }
+  .modal--anim.is-open .modal__overlay { animation: mmfadeIn 0.2s ease-out; }
+  .modal--anim[aria-hidden="true"] .modal__overlay { animation: mmfadeOut 0.2s ease-in; }
+  .modal--anim .modal__container { animation: mmslideIn 0.2s ease-out; }
+  .modal--anim[aria-hidden="true"] .modal__container { animation: mmslideOut 0.2s ease-in; }
+</style>
+</head>
+<body>
+
+  <h1>MicroModal 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>MicroModal</strong>은 의존성 없이 동작하는 아주 가벼운(약 2KB) 모달(팝업) 라이브러리입니다.
+    HTML 속성만으로 모달을 열고 닫을 수 있고, 포커스 트랩·ESC 닫기 같은 접근성 기능이 기본으로
+    들어있습니다.
+    <ul>
+      <li><code class="inline">data-micromodal-trigger</code>로 여는 <strong>기본 모달</strong></li>
+      <li>Tab 키가 모달 밖으로 나가지 않는 <strong>포커스 트랩 + ESC/배경 클릭 닫기</strong></li>
+      <li><code class="inline">onShow</code>/<code class="inline">onClose</code> 콜백과 CSS 애니메이션을 기다리는 <strong>열기·닫기 연출</strong></li>
+      <li><code class="inline">MicroModal.show()</code> / <code class="inline">close()</code> / <code class="inline">closeAll()</code>로 하는 <strong>프로그래밍 방식 제어</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판장·정산 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 시스템 화면과 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 모달</h2>
+    <div class="desc">
+      버튼에 <code class="inline">data-micromodal-trigger</code> 속성만 넣으면 <code class="inline">MicroModal.init()</code>이
+      자동으로 클릭 이벤트를 연결합니다. 배경을 클릭하거나 우측 상단 ×, ESC 키로 닫을 수 있습니다.
+    </div>
+    <button data-micromodal-trigger="modal-basic">A위판장 상세 정보 보기</button>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>&lt;button data-micromodal-trigger="modal-basic"&gt;상세 정보 보기&lt;/button&gt;
+
+&lt;div class="modal" id="modal-basic" aria-hidden="true"&gt;
+  &lt;div class="modal__overlay" tabindex="-1" data-micromodal-close&gt;
+    &lt;div class="modal__container" role="dialog" aria-modal="true"&gt;
+      ...
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+MicroModal.init();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 포커스 트랩 + ESC / 배경 클릭 닫기</h2>
+    <div class="desc">
+      모달을 열고 Tab을 계속 눌러보면 포커스가 모달 안의 입력창·버튼 사이에서만 순환하고 뒤쪽
+      페이지로 빠져나가지 않습니다. 스크린리더 사용자를 포함해 키보드만으로도 안전하게 모달을
+      사용할 수 있게 해주는 기본 접근성 기능입니다.
+    </div>
+    <button data-micromodal-trigger="modal-form">정산 요청 폼 열기</button>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>MicroModal.init({
+  disableScroll: true,   // 모달이 열려 있는 동안 배경 스크롤 방지
+});
+// 포커스 트랩·ESC 닫기는 별도 설정 없이 기본으로 동작한다</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. onShow / onClose 콜백 + 열기·닫기 애니메이션</h2>
+    <div class="desc">
+      모달이 열리고 닫힐 때마다 콜백이 실행되어 아래 상태 박스를 갱신합니다.
+      <code class="inline">awaitCloseAnimation: true</code>를 켜면 CSS 애니메이션이 끝나는
+      <code class="inline">animationend</code> 이벤트를 기다렸다가 모달을 실제로 숨기는데,
+      <strong>애니메이션을 정의해두지 않은 채 이 옵션만 켜면 그 이벤트가 영영 오지 않아 모달이
+      화면에 계속 남아있게 됩니다</strong> — 실제로 겪어본 함정이라 아래 코드에 CSS 애니메이션을
+      꼭 같이 넣어뒀습니다.
+    </div>
+    <button id="s3-open">알림 모달 열기</button>
+    <div class="stat-box" id="s3-stat">아직 모달을 연 적이 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>MicroModal.show('modal-anim', {
+  awaitOpenAnimation: true,
+  awaitCloseAnimation: true,
+  onShow: () => { stat.textContent = '모달이 열렸습니다.'; },
+  onClose: () => { stat.textContent = '모달이 닫혔습니다.'; },
+});
+
+/* 이 애니메이션이 없으면 awaitCloseAnimation:true일 때 모달이 안 닫힌다 */
+.modal--anim.is-open .modal__overlay { animation: mmfadeIn .2s ease-out; }
+.modal--anim[aria-hidden="true"] .modal__overlay { animation: mmfadeOut .2s ease-in; }</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 프로그래밍 방식 제어</h2>
+    <div class="desc">
+      버튼 클릭이 아니라 코드에서 직접 <code class="inline">MicroModal.show()</code> /
+      <code class="inline">close()</code>를 호출해서 두 개의 모달을 순서대로 열고,
+      <code class="inline">closeAll()</code>로 한 번에 모두 닫아봅니다.
+    </div>
+    <div class="controls">
+      <button id="s4-open-a">모달 A 열기</button>
+      <button class="s4-close-all ghost">모두 닫기</button>
+    </div>
+    <div class="stat-box" id="s4-stat">아직 열린 모달이 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>document.getElementById('s4-open-a').addEventListener('click', () => {
+  MicroModal.show('modal-a');
+});
+// 모달 A가 열려 있는 동안은 오버레이가 화면 전체를 덮어 뒤쪽 페이지를 클릭할 수 없으므로,
+// "B 열기" 버튼은 모달 A의 푸터 안에 넣어야 실제로 누를 수 있다.
+document.getElementById('s4-open-b').addEventListener('click', () => {
+  MicroModal.close('modal-a');
+  MicroModal.show('modal-b');
+});
+document.getElementById('s4-close-all').addEventListener('click', () => {
+  MicroModal.closeAll();
+});</pre>
+    </details>
+  </section>
+
+  <!-- ---- 섹션 1 모달 ---- -->
+  <div class="modal" id="modal-basic" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+      <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-basic-title">
+        <header class="modal__header">
+          <h2 class="modal__title" id="modal-basic-title">A위판장 상세 정보</h2>
+          <button class="modal__close" aria-label="닫기" data-micromodal-close>&times;</button>
+        </header>
+        <main class="modal__content">
+          <p>지역: 부산 · 오늘 위판량: 820kg · 주요 어종: 고등어</p>
+          <p>담당자: 김OO · 연락처: 010-1234-5678 (가상 예시)</p>
+        </main>
+        <footer class="modal__footer">
+          <button class="ghost" data-micromodal-close>닫기</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- 섹션 2 모달 ---- -->
+  <div class="modal" id="modal-form" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+      <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-form-title">
+        <header class="modal__header">
+          <h2 class="modal__title" id="modal-form-title">정산 요청</h2>
+          <button class="modal__close" aria-label="닫기" data-micromodal-close>&times;</button>
+        </header>
+        <main class="modal__content">
+          <div class="mock-form-row">
+            <label>위판장 이름</label>
+            <input type="text" placeholder="예: B위판장" />
+          </div>
+          <div class="mock-form-row">
+            <label>정산 금액</label>
+            <input type="text" placeholder="예: 1,200,000원" />
+          </div>
+          <p style="font-size:12px; color:#888;">Tab 키를 눌러 위 입력창 → 아래 버튼 사이를 이동해보세요. 포커스가 모달 밖으로 나가지 않습니다.</p>
+        </main>
+        <footer class="modal__footer">
+          <button class="ghost" data-micromodal-close>취소</button>
+          <button data-micromodal-close>요청 보내기</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- 섹션 3 모달 (애니메이션 적용) ---- -->
+  <div class="modal modal--anim" id="modal-anim" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+      <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-anim-title">
+        <header class="modal__header">
+          <h2 class="modal__title" id="modal-anim-title">알림</h2>
+          <button class="modal__close" aria-label="닫기" data-micromodal-close>&times;</button>
+        </header>
+        <main class="modal__content">
+          <p>이 모달은 열고 닫을 때 부드럽게 페이드 + 슬라이드 애니메이션이 재생됩니다.</p>
+        </main>
+        <footer class="modal__footer">
+          <button class="ghost" data-micromodal-close>확인</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---- 섹션 4 모달 A/B ---- -->
+  <div class="modal" id="modal-a" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+      <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-a-title">
+        <header class="modal__header">
+          <h2 class="modal__title" id="modal-a-title">모달 A</h2>
+          <button class="modal__close" aria-label="닫기" data-micromodal-close>&times;</button>
+        </header>
+        <main class="modal__content"><p>MicroModal.show('modal-a')로 코드에서 직접 열었습니다.</p></main>
+        <footer class="modal__footer">
+          <button class="ghost" data-micromodal-close>닫기</button>
+          <button id="s4-open-b">닫고 모달 B 열기</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="modal-b" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+      <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-b-title">
+        <header class="modal__header">
+          <h2 class="modal__title" id="modal-b-title">모달 B</h2>
+          <button class="modal__close" aria-label="닫기" data-micromodal-close>&times;</button>
+        </header>
+        <main class="modal__content"><p>모달 A가 닫히고 이어서 열린 모달 B입니다.</p></main>
+        <footer class="modal__footer">
+          <button class="ghost" data-micromodal-close>닫기</button>
+          <button class="s4-close-all">모두 닫기</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ---- 섹션 1, 2: data-micromodal-trigger 자동 초기화 ----
+  MicroModal.init({
+    disableScroll: true,
+    awaitCloseAnimation: false,
+  });
+
+  // ---- 섹션 3: onShow/onClose 콜백 + 애니메이션 ----
+  (function section3() {
+    const stat = document.getElementById('s3-stat');
+    document.getElementById('s3-open').addEventListener('click', () => {
+      MicroModal.show('modal-anim', {
+        awaitOpenAnimation: true,
+        awaitCloseAnimation: true,
+        onShow: () => { stat.textContent = '모달이 열렸습니다.'; },
+        onClose: () => { stat.textContent = '모달이 닫혔습니다.'; },
+      });
+    });
+  })();
+
+  // ---- 섹션 4: 프로그래밍 방식 제어 ----
+  (function section4() {
+    const stat = document.getElementById('s4-stat');
+    document.getElementById('s4-open-a').addEventListener('click', () => {
+      MicroModal.show('modal-a', {
+        onShow: () => { stat.innerHTML = '현재 열린 모달: <strong>A</strong>'; },
+        onClose: () => { if (!document.getElementById('modal-b').classList.contains('is-open')) stat.textContent = '아직 열린 모달이 없습니다.'; },
+      });
+    });
+    document.getElementById('s4-open-b').addEventListener('click', () => {
+      MicroModal.close('modal-a');
+      MicroModal.show('modal-b', {
+        onShow: () => { stat.innerHTML = '현재 열린 모달: <strong>B</strong>'; },
+        onClose: () => { stat.textContent = '아직 열린 모달이 없습니다.'; },
+      });
+    });
+    document.querySelectorAll('.s4-close-all').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        MicroModal.closeAll();
+        stat.textContent = '아직 열린 모달이 없습니다.';
+      });
+    });
+  })();
+</script>
+</body>
+</html>
