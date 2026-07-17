@@ -1,93 +1,550 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<title>데모 보기</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunr.js 종합 기능 실습실</title>
+<script src="https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js"></script>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #f5f6f8; }
-  #tab-bar {
-    display: none;
-    gap: 4px;
-    padding: 8px 12px 0;
-    background: #eef0f3;
-    border-bottom: 1px solid #ddd;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
-    box-sizing: border-box;
-  }
-  #tab-bar button {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    background: #f5f6f8;
-    color: #555;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  #tab-bar button.active { background: #fff; color: #205fb0; font-weight: 600; }
-  #frame-wrap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
-  #frame-wrap.with-tabs { top: 41px; }
-  iframe { width: 100%; height: 100%; border: none; display: block; }
+:root{
+  --bg:#f3f6fb;--panel:#fff;--text:#172033;--muted:#667085;--line:#dfe5ee;
+  --brand:#3157d5;--brand2:#16348f;--ok:#087a55;--warn:#a15c00;--danger:#b42318;
+  --chip:#edf2ff;--shadow:0 8px 28px rgba(24,39,75,.08)
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+header{background:linear-gradient(135deg,#152a76,#3b67e8);color:white;padding:24px 28px}
+header h1{margin:0 0 6px;font-size:clamp(23px,4vw,36px)}
+header p{margin:0;opacity:.9;line-height:1.55}
+.topbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.badge{padding:6px 10px;border:1px solid rgba(255,255,255,.35);border-radius:999px;font-size:12px;background:rgba(255,255,255,.1)}
+main{max-width:1500px;margin:0 auto;padding:18px}
+.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.panel h2,.panel h3{margin:0}
+.side{padding:16px;position:sticky;top:10px;align-self:start;max-height:calc(100vh - 20px);overflow:auto}
+.section{padding:15px 0;border-bottom:1px solid var(--line)}
+.section:last-child{border-bottom:0}
+.label{font-size:12px;font-weight:800;color:#344054;margin:0 0 7px;display:block}
+.input,.select,.textarea{width:100%;border:1px solid #cfd7e6;border-radius:10px;padding:10px 11px;background:white;color:var(--text)}
+.textarea{min-height:90px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+.input:focus,.select:focus,.textarea:focus{outline:3px solid rgba(49,87,213,.13);border-color:var(--brand)}
+.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}
+.row.wrap{flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:9px 12px;font-weight:750;background:#e9edf5;color:#26324b}
+.btn:hover{filter:brightness(.97)}
+.btn.primary{background:var(--brand);color:white}
+.btn.ok{background:#e8f7f1;color:var(--ok)}
+.btn.warn{background:#fff3df;color:var(--warn)}
+.btn.danger{background:#feeceb;color:var(--danger)}
+.btn.small{font-size:12px;padding:7px 9px}
+.check{display:flex;gap:7px;align-items:center;font-size:13px;margin:6px 0}
+.help{font-size:12px;color:var(--muted);line-height:1.55}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid #cbd6f6;background:var(--chip);color:#2947a6;padding:6px 8px;border-radius:999px;font-size:11px}
+.content{display:grid;gap:16px}
+.search-panel{padding:16px}
+.search-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.searchbox{font-size:17px;padding:13px 14px}
+.status{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:11px;color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 0}
+.tab{border:1px solid var(--line);background:white;border-radius:999px;padding:7px 10px;font-size:12px}
+.tab.active{background:#172b74;color:white;border-color:#172b74}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+.results,.inspector{padding:16px;min-height:430px}
+.result-card{border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:10px}
+.result-head{display:flex;justify-content:space-between;gap:10px}
+.result-title{font-weight:850;font-size:17px}
+.score{font-size:11px;color:#2947a6;background:var(--chip);padding:4px 7px;border-radius:999px;white-space:nowrap}
+.meta{color:var(--muted);font-size:12px;margin:5px 0 8px}
+.snippet{font-size:13px;line-height:1.65;color:#344054}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.tag{font-size:10px;background:#f2f4f7;padding:4px 6px;border-radius:6px}
+mark{background:#ffe58f;border-radius:3px;padding:0 1px}
+.empty{padding:60px 20px;text-align:center;color:var(--muted)}
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.metric{border:1px solid var(--line);border-radius:10px;padding:10px}
+.metric b{display:block;font-size:19px}.metric span{font-size:11px;color:var(--muted)}
+.code{background:#101828;color:#d7e0f5;padding:12px;border-radius:10px;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word;max-height:260px;overflow:auto}
+.notice{border-left:4px solid var(--brand);background:#f0f4ff;padding:11px 12px;border-radius:8px;font-size:12px;line-height:1.55}
+.notice.warn{border-color:#e89a1c;background:#fff7e8}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#f8fafc;position:sticky;top:0}
+.doc-editor{padding:16px}
+.doc-list{max-height:260px;overflow:auto}
+.doc-item{display:grid;grid-template-columns:1fr auto;gap:8px;border-bottom:1px solid var(--line);padding:8px 0}
+footer{max-width:1500px;margin:10px auto 30px;padding:0 18px;color:var(--muted);font-size:12px}
+kbd{border:1px solid #cbd5e1;border-bottom-width:2px;border-radius:5px;background:white;padding:1px 5px}
+@media(max-width:1050px){.grid{grid-template-columns:1fr}.side{position:static;max-height:none}.workspace{grid-template-columns:1fr}}
+@media(max-width:600px){main{padding:10px}header{padding:20px 16px}.search-line{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<div id="tab-bar"></div>
-<div id="frame-wrap"><iframe id="content-frame"></iframe></div>
+<header>
+  <h1>Lunr.js 종합 기능 실습실</h1>
+  <p>브라우저 내 JSON 문서를 색인하고 다양한 검색 문법, 랭킹, 파이프라인, 직렬화 및 재색인을 직접 시험하는 단일 페이지 데모</p>
+  <div class="topbar">
+    <span class="badge">Lunr.js 2.3.9</span><span class="badge">클라이언트 전체 텍스트 검색</span>
+    <span class="badge">BM25 기반 점수</span><span class="badge">인덱스 불변 구조</span>
+  </div>
+</header>
+
+<main>
+<div class="grid">
+<aside class="panel side">
+  <h2>검색 설정</h2>
+
+  <div class="section">
+    <label class="label">검색 모드</label>
+    <select id="mode" class="select">
+      <option value="syntax">검색 문자열 문법</option>
+      <option value="programmatic">프로그래밍 방식 Query API</option>
+      <option value="korean">한국어 부분 문자열 보조 검색</option>
+    </select>
+    <p class="help">한국어 모드는 Lunr 결과와 단순 부분 문자열 결과를 병합하는 데모다. 기본 Lunr는 영어 처리에 최적화되어 있다.</p>
+  </div>
+
+  <div class="section">
+    <label class="label">필드 선택</label>
+    <label class="check"><input type="checkbox" class="fieldCheck" value="title" checked> 제목</label>
+    <label class="check"><input type="checkbox" class="fieldCheck" value="summary" checked> 요약</label>
+    <label class="check"><input type="checkbox" class="fieldCheck" value="body" checked> 본문</label>
+    <label class="check"><input type="checkbox" class="fieldCheck" value="tags" checked> 태그</label>
+  </div>
+
+  <div class="section">
+    <label class="label">Query API 옵션</label>
+    <div class="row">
+      <select id="presence" class="select">
+        <option value="optional">선택 OPTIONAL</option>
+        <option value="required">필수 REQUIRED</option>
+        <option value="prohibited">제외 PROHIBITED</option>
+      </select>
+      <input id="queryBoost" class="input" type="number" value="1" min="0" step="0.5" title="검색 시 부스트">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <select id="wildcard" class="select">
+        <option value="none">와일드카드 없음</option>
+        <option value="trailing">뒤쪽 *</option>
+        <option value="leading">앞쪽 *</option>
+        <option value="both">양쪽 *</option>
+      </select>
+      <input id="editDistance" class="input" type="number" value="0" min="0" max="3" title="편집 거리">
+    </div>
+  </div>
+
+  <div class="section">
+    <label class="label">인덱스 구성</label>
+    <label class="check"><input type="checkbox" id="useStemmer" checked> 영문 stemming 사용</label>
+    <label class="check"><input type="checkbox" id="useStopWord" checked> 영문 stop word 제거</label>
+    <label class="check"><input type="checkbox" id="useSynonym" checked> 동의어 파이프라인 사용</label>
+    <label class="check"><input type="checkbox" id="storePositions" checked> 위치 메타데이터 저장</label>
+    <div class="row" style="margin-top:8px">
+      <button class="btn primary" id="rebuildBtn">인덱스 재빌드</button>
+      <button class="btn" id="resetBtn">초기화</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <label class="label">예제 검색</label>
+    <div class="quick" id="quickQueries">
+      <button class="chip" data-q="search">기본 검색</button>
+      <button class="chip" data-q="title:search">필드 검색</button>
+      <button class="chip" data-q="+search +index">AND 필수</button>
+      <button class="chip" data-q="search -server">제외</button>
+      <button class="chip" data-q="search^10 browser">검색어 부스트</button>
+      <button class="chip" data-q="brows*">뒤 와일드카드</button>
+      <button class="chip" data-q="*ware">앞 와일드카드</button>
+      <button class="chip" data-q="serch~1">퍼지 검색</button>
+      <button class="chip" data-q="tags:offline">태그 한정</button>
+      <button class="chip" data-q="검색">한국어</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <label class="label">직렬화 / 데이터</label>
+    <div class="row wrap">
+      <button class="btn small" id="serializeBtn">인덱스 JSON</button>
+      <button class="btn small" id="loadSerializedBtn">즉시 복원</button>
+      <button class="btn small" id="exportDocsBtn">문서 내보내기</button>
+      <label class="btn small" for="importDocs">문서 가져오기</label>
+      <input id="importDocs" type="file" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</aside>
+
+<section class="content">
+  <div class="panel search-panel">
+    <div class="search-line">
+      <input id="query" class="input searchbox" value="search" placeholder="검색어 또는 Lunr 문법 입력">
+      <button id="searchBtn" class="btn primary">검색 실행</button>
+    </div>
+    <div class="status">
+      <span id="statusText">준비 중</span>
+      <span><kbd>Enter</kbd> 검색 · <kbd>Ctrl</kbd>+<kbd>K</kbd> 입력창 이동 · <kbd>Esc</kbd> 지우기</span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-view="results">검색 결과</button>
+      <button class="tab" data-view="documents">문서 관리</button>
+      <button class="tab" data-view="benchmark">성능 시험</button>
+      <button class="tab" data-view="guide">문법 가이드</button>
+    </div>
+  </div>
+
+  <div id="resultsView" class="workspace view">
+    <div class="panel results">
+      <div class="row" style="justify-content:space-between">
+        <h2>검색 결과</h2>
+        <select id="sort" class="select" style="width:auto">
+          <option value="score">점수순</option>
+          <option value="title">제목순</option>
+          <option value="date">최신순</option>
+        </select>
+      </div>
+      <div id="results"></div>
+    </div>
+    <aside class="panel inspector">
+      <h3>검색 분석</h3>
+      <div class="metric-grid">
+        <div class="metric"><b id="resultCount">0</b><span>검색 결과</span></div>
+        <div class="metric"><b id="elapsed">0 ms</b><span>검색 시간</span></div>
+        <div class="metric"><b id="docCount">0</b><span>색인 문서</span></div>
+        <div class="metric"><b id="indexSize">0 KB</b><span>직렬화 크기</span></div>
+      </div>
+      <label class="label">실행된 쿼리</label>
+      <div id="executedQuery" class="code">-</div>
+      <label class="label" style="margin-top:12px">MatchData / 위치 메타데이터</label>
+      <div id="matchData" class="code">결과를 선택하면 표시됩니다.</div>
+      <div class="notice warn" style="margin-top:12px">
+        선행 와일드카드(<code>*term</code>)는 큰 인덱스에서 성능 비용이 크다. 와일드카드가 포함된 검색어에는 stemming이 적용되지 않는다.
+      </div>
+    </aside>
+  </div>
+
+  <div id="documentsView" class="panel doc-editor view" hidden>
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><h2>문서 추가·수정·삭제</h2><p class="help">Lunr 2.x 인덱스는 불변이므로 데이터 변경 후 자동으로 전체 재빌드한다.</p></div>
+      <button class="btn primary" id="newDocBtn">새 문서</button>
+    </div>
+    <div class="workspace" style="margin-top:12px">
+      <div class="doc-list" id="docList"></div>
+      <div>
+        <input id="docId" class="input" placeholder="ID">
+        <input id="docTitle" class="input" placeholder="제목" style="margin-top:7px">
+        <input id="docCategory" class="input" placeholder="분류" style="margin-top:7px">
+        <input id="docTags" class="input" placeholder="태그: 쉼표 구분" style="margin-top:7px">
+        <input id="docDate" class="input" type="date" style="margin-top:7px">
+        <textarea id="docSummary" class="textarea" placeholder="요약" style="margin-top:7px"></textarea>
+        <textarea id="docBody" class="textarea" placeholder="본문"></textarea>
+        <label class="label">문서 부스트</label>
+        <input id="docBoost" class="input" type="number" min="0" step="0.5" value="1">
+        <div class="row" style="margin-top:8px">
+          <button class="btn primary" id="saveDocBtn">저장</button>
+          <button class="btn danger" id="deleteDocBtn">삭제</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="benchmarkView" class="panel doc-editor view" hidden>
+    <h2>성능 시험</h2>
+    <p class="help">현재 문서를 복제해 가상 문서 집합을 만든 뒤 인덱스 생성 시간과 반복 검색 시간을 측정한다. 브라우저 성능에 따라 결과가 달라진다.</p>
+    <div class="row wrap">
+      <label>문서 수 <input id="benchDocs" class="input" type="number" min="10" max="20000" value="1000" style="width:130px"></label>
+      <label>검색 반복 <input id="benchRuns" class="input" type="number" min="1" max="1000" value="100" style="width:130px"></label>
+      <button id="runBenchBtn" class="btn primary">벤치마크 실행</button>
+    </div>
+    <div id="benchOutput" class="code" style="margin-top:12px">아직 실행하지 않았습니다.</div>
+  </div>
+
+  <div id="guideView" class="panel doc-editor view" hidden>
+    <h2>검색 문법 및 기능 지도</h2>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>기능</th><th>예시</th><th>설명</th></tr></thead>
+        <tbody>
+          <tr><td>기본 OR 검색</td><td><code>search browser</code></td><td>기본적으로 하나 이상의 용어가 일치하면 결과 후보가 된다.</td></tr>
+          <tr><td>필수 용어</td><td><code>+search +index</code></td><td>두 용어가 모두 포함된 문서만 검색.</td></tr>
+          <tr><td>제외 용어</td><td><code>search -server</code></td><td>server가 포함된 결과 제외.</td></tr>
+          <tr><td>필드 제한</td><td><code>title:search</code></td><td>지정 필드만 검색.</td></tr>
+          <tr><td>검색 시 부스트</td><td><code>search^10 browser</code></td><td>search 일치 점수의 중요도 증가.</td></tr>
+          <tr><td>와일드카드</td><td><code>brows*</code>, <code>*ware</code>, <code>b*er</code></td><td>앞·뒤·중간 문자 패턴 검색.</td></tr>
+          <tr><td>퍼지 검색</td><td><code>serch~1</code></td><td>편집 거리 1 이내의 유사 단어 검색.</td></tr>
+          <tr><td>필드 부스트</td><td><code>this.field('title',{boost:10})</code></td><td>제목 일치가 본문 일치보다 높은 점수를 받도록 설정.</td></tr>
+          <tr><td>문서 부스트</td><td><code>this.add(doc,{boost:3})</code></td><td>특정 문서 전체의 랭킹 가중치 증가.</td></tr>
+          <tr><td>Query API</td><td><code>query.term(...)</code></td><td>presence, wildcard, editDistance, boost, fields를 객체 옵션으로 제어.</td></tr>
+          <tr><td>메타데이터</td><td><code>metadataWhitelist</code></td><td>position을 저장해 하이라이트·문맥 표시 등에 활용.</td></tr>
+          <tr><td>직렬화</td><td><code>JSON.stringify(idx)</code></td><td>미리 만든 인덱스를 저장하고 <code>lunr.Index.load</code>로 복원.</td></tr>
+          <tr><td>파이프라인</td><td>trimmer → stopWordFilter → stemmer</td><td>토큰 전처리 과정을 제거·추가·사용자 정의 가능.</td></tr>
+          <tr><td>불변 인덱스</td><td>변경 시 rebuild</td><td>2.x에서는 생성된 인덱스에 문서를 직접 추가·수정·삭제할 수 없음.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+</div>
+</main>
+<footer>
+  이 파일은 Lunr.js를 CDN에서 불러온다. 완전한 폐쇄망 사용 시 <code>lunr.min.js</code>를 내려받아 HTML과 같은 폴더에 두고 script src를 로컬 경로로 변경해야 한다.
+</footer>
+
 <script>
-(async function () {
-  // 소스별 하위 폴더 규칙: pages/<slug>/<source>/index.html
-  // 이 파일은 모든 라이브러리 페이지가 공유하는 범용 탭 껍데기라 슬러그를 몰라도 됨(상대경로만 사용).
-  const sources = [
-    { key: 'claude', label: 'Claude' },
-    { key: 'chatgpt', label: 'ChatGPT' },
-  ];
+(() => {
+'use strict';
 
-  const available = [];
-  for (const s of sources) {
-    try {
-      const res = await fetch('./' + s.key + '/index.html', { method: 'HEAD' });
-      if (res.ok) available.push(s);
-    } catch (e) {
-      // 무시하고 다음 소스 확인
-    }
-  }
+const baseDocs = [
+{id:'1',title:'Building a Browser Search Index',category:'Guide',tags:'search,index,browser,offline',date:'2026-06-01',summary:'Build a fast client-side full-text search index with Lunr.js.',body:'Lunr creates an inverted index in the browser. It supports field boosts, document boosts, stemming, stop words and ranked search results.',boost:3},
+{id:'2',title:'Wildcard and Fuzzy Search',category:'Feature',tags:'wildcard,fuzzy,typo,query',date:'2026-06-03',summary:'Use wildcards and edit distance to find partial or misspelled terms.',body:'A wildcard can appear at the beginning, middle or end of a search term. Fuzzy matching uses edit distance, such as search~1.',boost:2},
+{id:'3',title:'Programmatic Query API',category:'API',tags:'query,api,presence,boost',date:'2026-06-05',summary:'Construct advanced queries without manually writing search syntax.',body:'The Query API supports required, optional and prohibited clauses, field scoping, term boosts, wildcards and edit distance.',boost:2},
+{id:'4',title:'Index Serialization for Static Sites',category:'Deployment',tags:'serialization,json,static,offline',date:'2026-06-07',summary:'Pre-build and serialize an index for faster loading on static sites.',body:'Use JSON.stringify on an index and lunr.Index.load to restore it. This is useful for large or mostly static document collections.',boost:2.5},
+{id:'5',title:'Text Processing Pipeline',category:'Concept',tags:'pipeline,token,stemmer,stopword',date:'2026-06-10',summary:'Understand tokenization, trimming, stop word filtering and stemming.',body:'Documents are split into tokens and processed through an indexing pipeline. The search pipeline processes query tokens.',boost:1},
+{id:'6',title:'Field and Document Boosting',category:'Ranking',tags:'ranking,boost,bm25,score',date:'2026-06-12',summary:'Control ranking with field-level and document-level boosts.',body:'A title field can receive a larger boost than body text. Important documents can also receive an add-time boost.',boost:4},
+{id:'7',title:'Match Metadata and Highlighting',category:'UI',tags:'metadata,position,highlight,snippet',date:'2026-06-14',summary:'Store token positions to highlight matching text in result snippets.',body:'Whitelist position metadata when building the index. Search results expose matchData containing terms, fields and positions.',boost:1.5},
+{id:'8',title:'Server Search versus Client Search',category:'Architecture',tags:'server,client,browser,network',date:'2026-06-17',summary:'Compare browser-side search with server-side search architectures.',body:'Client-side search avoids network latency and remains usable offline, but large changing datasets may be better handled by a server search engine.',boost:1},
+{id:'9',title:'수협 업무자료 브라우저 검색',category:'한국어',tags:'수협,업무,검색,내부망',date:'2026-06-20',summary:'내부망의 JSON 업무자료를 브라우저에서 검색하는 예시.',body:'서버 검색 서비스 없이 HTML과 JavaScript만으로 문서 제목, 요약, 본문, 태그를 검색하고 결과를 점수순으로 표시한다.',boost:3},
+{id:'10',title:'어업·양식 현장 AI 자료 색인',category:'한국어',tags:'어업,양식,AI,색인',date:'2026-06-22',summary:'어업 및 양식 현장 인공지능 사례를 색인하는 샘플.',body:'센서, 영상 분석, 질병 예측, 자동 급이 관련 자료를 분류하고 브라우저 검색으로 빠르게 찾는다.',boost:2},
+{id:'11',title:'Immutable Index Rebuild Strategy',category:'Architecture',tags:'immutable,rebuild,update,delete',date:'2026-06-24',summary:'Handle document changes by rebuilding an immutable Lunr 2.x index.',body:'Once built, a Lunr 2.x index cannot be mutated. Keep the source documents and rebuild after adding, updating or deleting data.',boost:1},
+{id:'12',title:'Custom Synonym Pipeline Example',category:'Customisation',tags:'synonym,pipeline,custom,plugin',date:'2026-06-26',summary:'Expand selected terms using a custom registered pipeline function.',body:'This demo maps js to javascript, web to browser, ai to artificial intelligence and find to search during indexing and querying.',boost:1}
+];
 
-  const tabBar = document.getElementById('tab-bar');
-  const frame = document.getElementById('content-frame');
-  const frameWrap = document.getElementById('frame-wrap');
+let docs = JSON.parse(localStorage.getItem('lunrDemoDocs') || 'null') || baseDocs;
+let idx = null;
+let serializedCache = null;
+let lastResults = [];
+let selectedDocId = null;
 
-  if (available.length === 0) {
-    document.body.innerHTML = '<p style="font-family:sans-serif; padding:20px; color:#a15c00;">데모 파일을 찾을 수 없습니다 (claude/index.html 또는 chatgpt/index.html 필요).</p>';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bytes = s => new Blob([s]).size;
+const download = (name,text,type='application/json') => {
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href);
+};
+
+function synonymExpander(token){
+  const map={js:'javascript',web:'browser',ai:'artificial intelligence',find:'search',색인:'검색'};
+  const key=token.toString().toLowerCase();
+  if(!map[key]) return token;
+  return [token, new lunr.Token(map[key], token.metadata)];
+}
+if(window.lunr){
+  lunr.Pipeline.registerFunction(synonymExpander,'synonymExpander');
+}
+
+function buildIndex(show=true){
+  if(!window.lunr){
+    $('statusText').textContent='Lunr.js 로드 실패: 인터넷 연결 또는 CDN 접근을 확인하세요.';
+    $('results').innerHTML='<div class="empty">라이브러리를 불러오지 못했습니다.<br>폐쇄망에서는 lunr.min.js를 로컬로 배치하세요.</div>';
     return;
   }
+  const t=performance.now();
+  const useStem=$('useStemmer').checked;
+  const useStop=$('useStopWord').checked;
+  const useSyn=$('useSynonym').checked;
+  const positions=$('storePositions').checked;
+  idx=lunr(function(){
+    this.ref('id');
+    this.field('title',{boost:12});
+    this.field('summary',{boost:5});
+    this.field('body',{boost:1});
+    this.field('tags',{boost:8});
+    if(positions) this.metadataWhitelist=['position'];
+    if(!useStem){this.pipeline.remove(lunr.stemmer);this.searchPipeline.remove(lunr.stemmer);}
+    if(!useStop){this.pipeline.remove(lunr.stopWordFilter);this.searchPipeline.remove(lunr.stopWordFilter);}
+    if(useSyn){this.pipeline.add(synonymExpander);this.searchPipeline.add(synonymExpander);}
+    docs.forEach(d=>this.add({...d,tags:Array.isArray(d.tags)?d.tags.join(' '):d.tags},{boost:Number(d.boost)||1}));
+  });
+  serializedCache=JSON.stringify(idx);
+  $('docCount').textContent=docs.length.toLocaleString();
+  $('indexSize').textContent=(bytes(serializedCache)/1024).toFixed(1)+' KB';
+  $('statusText').textContent=`인덱스 생성 완료 · ${(performance.now()-t).toFixed(2)} ms`;
+  localStorage.setItem('lunrDemoDocs',JSON.stringify(docs));
+  renderDocList();
+  if(show) runSearch();
+}
 
-  try {
-    const metaRes = await fetch('./meta.json');
-    if (metaRes.ok) {
-      const meta = await metaRes.json();
-      if (meta.name) document.title = meta.name;
+function selectedFields(){
+  return [...document.querySelectorAll('.fieldCheck:checked')].map(x=>x.value);
+}
+function runSearch(){
+  if(!idx) return;
+  const q=$('query').value.trim();
+  const mode=$('mode').value;
+  const t=performance.now();
+  let res=[];
+  let executed=q || '(전체 문서)';
+  try{
+    if(!q){
+      res=docs.map(d=>({ref:d.id,score:0,matchData:{metadata:{}}}));
+    }else if(mode==='programmatic'){
+      const fields=selectedFields();
+      const presenceMap={
+        optional:lunr.Query.presence.OPTIONAL,
+        required:lunr.Query.presence.REQUIRED,
+        prohibited:lunr.Query.presence.PROHIBITED
+      };
+      const wcMap={
+        none:lunr.Query.wildcard.NONE,
+        trailing:lunr.Query.wildcard.TRAILING,
+        leading:lunr.Query.wildcard.LEADING,
+        both:lunr.Query.wildcard.LEADING|lunr.Query.wildcard.TRAILING
+      };
+      const opts={
+        fields,
+        presence:presenceMap[$('presence').value],
+        boost:Number($('queryBoost').value)||1,
+        wildcard:wcMap[$('wildcard').value],
+        editDistance:Number($('editDistance').value)||0
+      };
+      const terms=q.split(/\s+/).filter(Boolean);
+      res=idx.query(query=>terms.forEach(term=>query.term(term,opts)));
+      executed=JSON.stringify({terms,options:opts},null,2);
+    }else{
+      res=idx.search(q);
+      if(mode==='korean'){
+        const needle=q.toLowerCase();
+        const existing=new Set(res.map(r=>r.ref));
+        docs.forEach(d=>{
+          const hay=[d.title,d.summary,d.body,d.tags].join(' ').toLowerCase();
+          if(hay.includes(needle) && !existing.has(d.id)){
+            res.push({ref:d.id,score:0.001,matchData:{metadata:{'부분문자열 보조검색':{body:{}}}}});
+          }
+        });
+      }
     }
-  } catch (e) {
-    // 제목 갱신 실패는 무시
+    lastResults=res;
+    $('elapsed').textContent=(performance.now()-t).toFixed(2)+' ms';
+    $('resultCount').textContent=res.length;
+    $('executedQuery').textContent=executed;
+    $('statusText').textContent=`검색 완료 · ${res.length}건`;
+    renderResults();
+  }catch(e){
+    lastResults=[];
+    $('resultCount').textContent='0';
+    $('elapsed').textContent=(performance.now()-t).toFixed(2)+' ms';
+    $('executedQuery').textContent=executed;
+    $('results').innerHTML=`<div class="empty"><b>쿼리 오류</b><br>${esc(e.message)}</div>`;
+    $('statusText').textContent='검색 문법 오류';
   }
+}
 
-  if (available.length > 1) {
-    tabBar.style.display = 'flex';
-    frameWrap.classList.add('with-tabs');
-    available.forEach((s, i) => {
-      const btn = document.createElement('button');
-      btn.textContent = s.label;
-      if (i === 0) btn.classList.add('active');
-      btn.addEventListener('click', () => {
-        frame.src = './' + s.key + '/index.html';
-        tabBar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-      tabBar.appendChild(btn);
-    });
-  }
+function matchedTerms(result){
+  return Object.keys(result?.matchData?.metadata||{}).filter(x=>x!=='부분문자열 보조검색');
+}
+function highlight(text,terms){
+  let s=esc(text);
+  terms.sort((a,b)=>b.length-a.length).forEach(term=>{
+    if(!term || term.includes('*')) return;
+    try{s=s.replace(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,'gi'),'<mark>$1</mark>')}catch{}
+  });
+  return s;
+}
+function renderResults(){
+  let rows=lastResults.map(r=>({r,d:docs.find(d=>String(d.id)===String(r.ref))})).filter(x=>x.d);
+  const sort=$('sort').value;
+  if(sort==='title') rows.sort((a,b)=>a.d.title.localeCompare(b.d.title));
+  if(sort==='date') rows.sort((a,b)=>String(b.d.date).localeCompare(String(a.d.date)));
+  if(sort==='score') rows.sort((a,b)=>b.r.score-a.r.score);
+  if(!rows.length){$('results').innerHTML='<div class="empty">일치하는 문서가 없습니다.</div>';return}
+  $('results').innerHTML=rows.map(({r,d})=>{
+    const terms=matchedTerms(r);
+    return `<article class="result-card" data-ref="${esc(d.id)}">
+      <div class="result-head"><div class="result-title">${highlight(d.title,terms)}</div><span class="score">score ${Number(r.score).toFixed(4)}</span></div>
+      <div class="meta">${esc(d.category)} · ${esc(d.date)} · 문서 boost ${esc(d.boost)}</div>
+      <div class="snippet">${highlight(d.summary||d.body.slice(0,180),terms)}</div>
+      <div class="tags">${String(d.tags).split(',').map(t=>`<span class="tag">${highlight(t.trim(),terms)}</span>`).join('')}</div>
+    </article>`;
+  }).join('');
+  document.querySelectorAll('.result-card').forEach(el=>el.addEventListener('click',()=>{
+    const r=lastResults.find(x=>String(x.ref)===el.dataset.ref);
+    $('matchData').textContent=JSON.stringify(r?.matchData?.metadata||{},null,2);
+  }));
+}
 
-  frame.src = './' + available[0].key + '/index.html';
+function renderDocList(){
+  $('docList').innerHTML=docs.map(d=>`<div class="doc-item"><div><b>${esc(d.title)}</b><div class="help">${esc(d.id)} · ${esc(d.category)}</div></div><button class="btn small editDoc" data-id="${esc(d.id)}">편집</button></div>`).join('');
+  document.querySelectorAll('.editDoc').forEach(b=>b.onclick=()=>loadDoc(b.dataset.id));
+}
+function loadDoc(id){
+  const d=docs.find(x=>String(x.id)===String(id)); if(!d)return;
+  selectedDocId=d.id;
+  $('docId').value=d.id;$('docTitle').value=d.title;$('docCategory').value=d.category;
+  $('docTags').value=d.tags;$('docDate').value=d.date;$('docSummary').value=d.summary;
+  $('docBody').value=d.body;$('docBoost').value=d.boost;
+}
+function clearDoc(){
+  selectedDocId=null;
+  ['docId','docTitle','docCategory','docTags','docDate','docSummary','docBody'].forEach(id=>$(id).value='');
+  $('docBoost').value='1';$('docId').value='doc-'+Date.now();
+}
+function saveDoc(){
+  const d={id:$('docId').value.trim(),title:$('docTitle').value.trim(),category:$('docCategory').value.trim(),
+    tags:$('docTags').value.trim(),date:$('docDate').value,summary:$('docSummary').value.trim(),
+    body:$('docBody').value.trim(),boost:Number($('docBoost').value)||1};
+  if(!d.id||!d.title){alert('ID와 제목은 필수입니다.');return}
+  const duplicate=docs.find(x=>String(x.id)===String(d.id)&&String(x.id)!==String(selectedDocId));
+  if(duplicate){alert('동일한 ID가 이미 있습니다.');return}
+  const i=docs.findIndex(x=>String(x.id)===String(selectedDocId));
+  if(i>=0) docs[i]=d; else docs.push(d);
+  selectedDocId=d.id; buildIndex(false); renderDocList(); alert('저장 후 인덱스를 재빌드했습니다.');
+}
+function deleteDoc(){
+  if(selectedDocId==null) return;
+  docs=docs.filter(x=>String(x.id)!==String(selectedDocId));
+  clearDoc();buildIndex(false);renderDocList();
+}
+
+async function benchmark(){
+  if(!window.lunr)return;
+  const n=Math.max(10,Math.min(20000,Number($('benchDocs').value)||1000));
+  const runs=Math.max(1,Math.min(1000,Number($('benchRuns').value)||100));
+  $('benchOutput').textContent='실행 중...';
+  await new Promise(r=>setTimeout(r,30));
+  const generated=Array.from({length:n},(_,i)=>({...docs[i%docs.length],id:'bench-'+i,title:docs[i%docs.length].title+' '+i}));
+  const t1=performance.now();
+  const testIdx=lunr(function(){this.ref('id');this.field('title',{boost:10});this.field('summary',{boost:3});this.field('body');this.field('tags',{boost:5});generated.forEach(d=>this.add(d));});
+  const buildMs=performance.now()-t1;
+  const t2=performance.now();let totalResults=0;
+  for(let i=0;i<runs;i++) totalResults+=testIdx.search(i%2?'search':'browser').length;
+  const searchMs=performance.now()-t2;
+  const ser=JSON.stringify(testIdx);
+  $('benchOutput').textContent=JSON.stringify({
+    documents:n,build_ms:+buildMs.toFixed(2),serialized_kb:+(bytes(ser)/1024).toFixed(1),
+    search_runs:runs,total_search_ms:+searchMs.toFixed(2),average_search_ms:+(searchMs/runs).toFixed(4),
+    accumulated_results:totalResults
+  },null,2);
+}
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.hidden=true);
+  $(name+'View').hidden=false;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===name));
+}
+
+$('searchBtn').onclick=runSearch;
+$('query').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch()});
+$('sort').onchange=renderResults;
+$('rebuildBtn').onclick=()=>buildIndex();
+$('resetBtn').onclick=()=>{docs=JSON.parse(JSON.stringify(baseDocs));localStorage.removeItem('lunrDemoDocs');buildIndex();};
+$('quickQueries').onclick=e=>{const b=e.target.closest('[data-q]');if(b){$('query').value=b.dataset.q;runSearch()}};
+$('serializeBtn').onclick=()=>{if(serializedCache)download('lunr-index.json',serializedCache)};
+$('loadSerializedBtn').onclick=()=>{try{idx=lunr.Index.load(JSON.parse(serializedCache));$('statusText').textContent='직렬화된 인덱스를 메모리에서 복원했습니다.';runSearch()}catch(e){alert(e.message)}};
+$('exportDocsBtn').onclick=()=>download('lunr-documents.json',JSON.stringify(docs,null,2));
+$('importDocs').onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());if(!Array.isArray(data))throw Error('JSON 배열이 아닙니다.');docs=data;buildIndex();}catch(err){alert('가져오기 실패: '+err.message)}};
+$('newDocBtn').onclick=clearDoc;$('saveDocBtn').onclick=saveDoc;$('deleteDocBtn').onclick=deleteDoc;
+$('runBenchBtn').onclick=benchmark;
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('query').focus();$('query').select()}
+  if(e.key==='Escape'&&document.activeElement===$('query')){$('query').value='';runSearch()}
+});
+['useStemmer','useStopWord','useSynonym','storePositions'].forEach(id=>$(id).onchange=()=>buildIndex(false));
+
+buildIndex(false);
+runSearch();
 })();
 </script>
 </body>
