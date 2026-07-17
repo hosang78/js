@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monaco Editor 종합 기능 샘플</title>
+  <style>
+    :root{--bg:#0b1020;--panel:#11182b;--panel2:#172039;--line:#273452;--text:#e8eefc;--muted:#9eabc6;--accent:#5aa8ff;--accent2:#7ee787;--danger:#ff7b72;--shadow:0 12px 35px rgba(0,0,0,.28)}
+    *{box-sizing:border-box} html,body{height:100%;margin:0} body{font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+    button,select,input{font:inherit} button,select,input[type="number"]{border:1px solid var(--line);background:#10182c;color:var(--text);border-radius:7px}
+    button{padding:7px 10px;cursor:pointer} button:hover{border-color:#5075b0;background:#182541} button.active{background:#17466f;border-color:#4da3ff} button.danger:hover{border-color:var(--danger)}
+    .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%}
+    header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:linear-gradient(90deg,#10172b,#162447);border-bottom:1px solid var(--line)}
+    header h1{font-size:16px;margin:0;white-space:nowrap} header .badge{font-size:11px;padding:3px 7px;border-radius:999px;background:#18375c;color:#9dcbff}
+    header .spacer{flex:1} header .hint{font-size:12px;color:var(--muted)}
+    .toolbar{display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap}
+    .toolbar .group{display:flex;gap:5px;align-items:center;padding-right:8px;margin-right:2px;border-right:1px solid var(--line)} .toolbar .group:last-child{border-right:0}
+    .toolbar label{font-size:12px;color:var(--muted)} .toolbar select,.toolbar input{height:32px;padding:0 7px}
+    .workspace{display:grid;grid-template-columns:245px 1fr 300px;min-height:0}
+    aside{background:var(--panel);min-height:0;overflow:auto} .left{border-right:1px solid var(--line)} .right{border-left:1px solid var(--line)}
+    .section{border-bottom:1px solid var(--line)} .section h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#b9c7e4;margin:0;padding:11px 12px;background:#0e1629;position:sticky;top:0;z-index:2}
+    .file-list{padding:6px}.file{display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;cursor:pointer;font-size:13px}.file:hover{background:#18233c}.file.active{background:#183b61}.file .dot{width:8px;height:8px;border-radius:50%;background:#6e7681}.file.modified .dot{background:#f2cc60}.file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .feature-list{padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.75}.feature-list b{color:var(--text)}
+    .center{display:grid;grid-template-rows:auto 1fr auto;min-width:0;min-height:0;background:#1e1e1e}
+    .tabs{display:flex;min-height:38px;background:#111827;border-bottom:1px solid var(--line);overflow-x:auto}.tab{display:flex;align-items:center;gap:7px;padding:0 12px;border-right:1px solid var(--line);font-size:12px;color:#aebbd4;cursor:pointer}.tab.active{background:#1e1e1e;color:white;border-top:2px solid var(--accent)}.tab .close{opacity:.5}.tab .close:hover{opacity:1;color:#fff}.tab .mod{color:#f2cc60}
+    #editorHost,#diffHost{width:100%;height:100%;min-height:0} #diffHost{display:none}
+    .bottom-panel{height:150px;border-top:1px solid var(--line);background:#0d1322;display:grid;grid-template-rows:auto 1fr}.bottom-panel.collapsed{height:33px}.bottom-panel.collapsed .console{display:none}
+    .panel-head{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;background:#111a2c}.panel-head .spacer{flex:1}.console{padding:8px 10px;overflow:auto;font:12px/1.5 Consolas,monospace;color:#c9d5ec;white-space:pre-wrap}.log-info{color:#9dcbff}.log-ok{color:#7ee787}.log-error{color:#ff7b72}
+    .inspector{padding:10px}.card{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:9px;box-shadow:var(--shadow)}.card h3{font-size:12px;margin:0 0 8px;color:#b9c7e4}.kv{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12px}.kv span:nth-child(odd){color:var(--muted)}.chips{display:flex;flex-wrap:wrap;gap:5px}.chip{font-size:11px;padding:4px 6px;border-radius:5px;background:#10182b;border:1px solid var(--line)}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}.actions button{font-size:12px}.full{grid-column:1/-1}
+    footer{height:24px;display:flex;align-items:center;gap:16px;padding:0 10px;background:#1165a3;color:white;font-size:11px} footer .spacer{flex:1}
+    .mobile-warning{display:none;padding:8px;background:#5c4100;color:#fff2c7;font-size:12px}
+    @media(max-width:900px){.workspace{grid-template-columns:1fr}.left,.right{display:none}.mobile-warning{display:block}.toolbar{padding:6px}.hint{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="mobile-warning">Monaco Editor 공식 안내상 모바일 브라우저는 지원 대상이 아닙니다. 데스크톱 브라우저에서 실행하는 것을 권장합니다.</div>
+  <header>
+    <h1>Monaco Editor 종합 기능 샘플</h1><span class="badge">v0.55.1</span><span class="badge">Single HTML</span>
+    <div class="spacer"></div><span class="hint">Ctrl+Shift+P 명령 팔레트 · F1 도움말 · Alt+Click 다중 커서</span>
+  </header>
+  <div class="toolbar">
+    <div class="group">
+      <button id="btnNew">새 파일</button><button id="btnOpen">파일 열기</button><button id="btnSave">다운로드</button><input id="fileInput" type="file" hidden multiple />
+    </div>
+    <div class="group"><button id="btnUndo">↶</button><button id="btnRedo">↷</button><button id="btnFind">찾기</button><button id="btnCommand">명령</button><button id="btnFormat">포맷</button></div>
+    <div class="group"><button id="btnDiff">Diff</button><button id="btnMarkers">오류 생성</button><button id="btnDecorate">강조 표시</button><button id="btnRun">실행</button></div>
+    <div class="group"><label>언어</label><select id="languageSelect"></select><label>테마</label><select id="themeSelect"><option value="vs-dark">Dark</option><option value="vs">Light</option><option value="hc-black">고대비</option><option value="oceanic">Oceanic Custom</option></select></div>
+    <div class="group"><label>글자</label><input id="fontSize" type="number" min="10" max="32" value="14" style="width:58px"><button id="btnWrap">줄바꿈</button><button id="btnMinimap" class="active">미니맵</button><button id="btnReadOnly">읽기 전용</button></div>
+  </div>
+  <div class="workspace">
+    <aside class="left">
+      <div class="section"><h2>Explorer / Models</h2><div id="fileList" class="file-list"></div></div>
+      <div class="section"><h2>포함 기능</h2><div class="feature-list">
+        <b>편집</b> IntelliSense, Snippet, 다중 커서, 접기, 괄호 색상, 자동 들여쓰기, Undo/Redo<br>
+        <b>탐색</b> 검색·치환, Go to Line/Symbol, Command Palette, 미니맵, Sticky Scroll<br>
+        <b>분석</b> Hover, Marker 진단, Code Lens, Inlay Hint, JSON Schema, TS 타입 검사<br>
+        <b>확장</b> 사용자 Action, 키바인딩, Decoration, Monarch 언어, Custom Theme<br>
+        <b>모델</b> 다중 파일 URI, 탭 전환, Diff Editor, 상태 저장, 파일 Import/Export
+      </div></div>
+    </aside>
+    <main class="center">
+      <div id="tabs" class="tabs"></div>
+      <div style="position:relative;min-height:0"><div id="editorHost"></div><div id="diffHost"></div></div>
+      <div id="bottomPanel" class="bottom-panel"><div class="panel-head"><b>OUTPUT / CONSOLE</b><span id="problemCount">문제 0</span><div class="spacer"></div><button id="btnClearConsole">지우기</button><button id="btnTogglePanel">패널 접기</button></div><div id="console" class="console"></div></div>
+    </main>
+    <aside class="right">
+      <div class="section"><h2>Editor Inspector</h2><div class="inspector">
+        <div class="card"><h3>현재 상태</h3><div class="kv"><span>파일</span><b id="statFile">-</b><span>언어</span><b id="statLanguage">-</b><span>위치</span><b id="statPosition">Ln 1, Col 1</b><span>선택</span><b id="statSelection">0</b><span>문자 수</span><b id="statChars">0</b><span>줄 수</span><b id="statLines">0</b></div></div>
+        <div class="card"><h3>빠른 기능 실행</h3><div class="actions">
+          <button id="actSuggest">자동완성</button><button id="actHover">Hover</button><button id="actGotoLine">줄 이동</button><button id="actSymbols">기호 이동</button><button id="actRename">이름 변경</button><button id="actPeek">정의 보기</button><button id="actFold">전체 접기</button><button id="actUnfold">전체 펼치기</button><button id="actComment">주석 전환</button><button id="actDuplicate">줄 복제</button><button id="actTrim" class="full">후행 공백 제거</button>
+        </div></div>
+        <div class="card"><h3>활성 옵션</h3><div id="optionChips" class="chips"></div></div>
+        <div class="card"><h3>단축키</h3><div class="feature-list" style="padding:0">Ctrl+Space 자동완성<br>Ctrl+F 찾기 · Ctrl+H 바꾸기<br>Ctrl+G 줄 이동 · F2 이름 변경<br>Shift+Alt+↓ 줄 복제<br>Ctrl+/ 주석 전환<br>Ctrl+K Ctrl+0 전체 접기</div></div>
+      </div></div>
+    </aside>
+  </div>
+  <footer><span id="footerBranch">main*</span><span id="footerProblems">✓ 0  ⚠ 0</span><div class="spacer"></div><span id="footerEncoding">UTF-8</span><span id="footerEol">LF</span><span id="footerSpaces">Spaces: 2</span><span id="footerLang">plaintext</span></footer>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
+<script>
+const CDN='https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/';
+require.config({paths:{vs:CDN+'vs'}});
+window.MonacoEnvironment={getWorkerUrl:function(){const code=`self.MonacoEnvironment={baseUrl:'${CDN}'};importScripts('${CDN}vs/base/worker/workerMain.js');`;return URL.createObjectURL(new Blob([code],{type:'text/javascript'}));}};
+require(['vs/editor/editor.main'], function(monaco){
+  const $=id=>document.getElementById(id), log=(msg,type='info')=>{const d=document.createElement('div');d.className='log-'+type;d.textContent='['+new Date().toLocaleTimeString()+'] '+msg;$('console').appendChild(d);$('console').scrollTop=$('console').scrollHeight};
+  monaco.editor.defineTheme('oceanic',{base:'vs-dark',inherit:true,rules:[{token:'comment',foreground:'65737E',fontStyle:'italic'},{token:'keyword',foreground:'C594C5'},{token:'string',foreground:'99C794'},{token:'number',foreground:'F99157'}],colors:{'editor.background':'#16212A','editorLineNumber.foreground':'#4F5B66','editorCursor.foreground':'#FAC863','editor.selectionBackground':'#343D4655'}});
+  monaco.languages.register({id:'demoLang'});
+  monaco.languages.setMonarchTokensProvider('demoLang',{keywords:['task','when','then','emit','let','true','false'],tokenizer:{root:[[/#[^\n]*/,'comment'],[/"([^"\\]|\\.)*$/,'string.invalid'],[/"/,{token:'string.quote',bracket:'@open',next:'@string'}],[/[a-zA-Z_]\w*/,{cases:{'@keywords':'keyword','@default':'identifier'}}],[/\d+(\.\d+)?/,'number'],[/[{}()\[\]]/,'@brackets'],[/=>|==|=|\+|-|\*|\//,'operator']] ,string:[[/[^\\"]+/,'string'],[/\\./,'string.escape'],[/"/,{token:'string.quote',bracket:'@close',next:'@pop'}]]}});
+  monaco.languages.setLanguageConfiguration('demoLang',{comments:{lineComment:'#'},brackets:[['{','}'],['[',']'],['(',')']],autoClosingPairs:[{open:'{',close:'}'},{open:'[',close:']'},{open:'(',close:')'},{open:'"',close:'"'}],surroundingPairs:[{open:'"',close:'"'},{open:'(',close:')'}]});
+  monaco.languages.registerCompletionItemProvider('demoLang',{provideCompletionItems:()=>({suggestions:[{label:'task-template',kind:monaco.languages.CompletionItemKind.Snippet,insertText:'task ${1:name} {\n  when ${2:condition}\n  then emit "${3:message}"\n}',insertTextRules:monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,documentation:'DemoLang 작업 템플릿'},{label:'emit',kind:monaco.languages.CompletionItemKind.Keyword,insertText:'emit "${1:message}"',insertTextRules:4}]})});
+  monaco.languages.registerHoverProvider('demoLang',{provideHover:(m,p)=>({range:new monaco.Range(p.lineNumber,1,p.lineNumber,m.getLineMaxColumn(p.lineNumber)),contents:[{value:'**DemoLang** 사용자 정의 언어'},{value:'Monarch tokenizer와 Hover Provider가 동작 중입니다.'}]})});
+  monaco.languages.registerCodeLensProvider('javascript',{provideCodeLenses:model=>({lenses:model.findMatches('function ',false,false,false,null,true).map(x=>({range:x.range,id:'demo',command:{id:'demo.runFunction',title:'▶ 함수 실행'}})),dispose(){}}),resolveCodeLens:(_,l)=>l});
+  monaco.editor.registerCommand('demo.runFunction',()=>log('CodeLens 명령이 실행되었습니다.','ok'));
+  monaco.languages.registerInlayHintsProvider('javascript',{provideInlayHints:(model,range)=>({hints:model.findMatches('const ',false,false,false,null,true).slice(0,8).map(x=>({kind:monaco.languages.InlayHintKind.Type,position:{lineNumber:x.range.startLineNumber,column:model.getLineMaxColumn(x.range.startLineNumber)},label:'  // inferred',paddingLeft:true})),dispose(){}})});
+  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({validate:true,allowComments:false,schemas:[{uri:'https://example.local/schema/app.json',fileMatch:['*/config.json'],schema:{type:'object',required:['name','version','features'],properties:{name:{type:'string'},version:{type:'string',pattern:'^\\d+\\.\\d+\\.\\d+$'},features:{type:'array',items:{enum:['editor','diff','completion','validation']}},port:{type:'integer',minimum:1,maximum:65535}},additionalProperties:false}}]});
+  monaco.languages.typescript.typescriptDefaults.setCompilerOptions({target:monaco.languages.typescript.ScriptTarget.ES2020,allowNonTsExtensions:true,strict:true,noEmit:true});
+  monaco.languages.typescript.typescriptDefaults.addExtraLib('declare interface DemoAPI { notify(message: string): void; version: string; }\ndeclare const demoAPI: DemoAPI;','file:///types/demo-api.d.ts');
+  const samples={
+    'app.js':{lang:'javascript',value:`// Ctrl+Space로 자동완성, 함수 위 CodeLens 확인\nconst users = [\n  { id: 1, name: '바다' },\n  { id: 2, name: '해솔' }\n];\n\nfunction greet(user) {\n  return \`안녕하세요, \${user.name}!\`;\n}\n\nfor (const user of users) {\n  console.log(greet(user));\n}\n\n// 등록된 외부 타입 선언\ndemoAPI.notify('Monaco Editor 준비 완료');`},
+    'config.json':{lang:'json',value:`{\n  "name": "monaco-demo",\n  "version": "1.0.0",\n  "features": ["editor", "diff", "completion"],\n  "port": 4001\n}`},
+    'styles.css':{lang:'css',value:`:root {\n  --accent: #5aa8ff;\n}\n\n.editor-card {\n  display: grid;\n  gap: 12px;\n  border: 1px solid color-mix(in srgb, var(--accent), white 20%);\n}`},
+    'page.html':{lang:'html',value:`<!doctype html>\n<html lang="ko">\n<head><meta charset="utf-8"><title>Demo</title></head>\n<body>\n  <main class="editor-card">\n    <h1>Monaco Editor</h1>\n    <button type="button">실행</button>\n  </main>\n</body>\n</html>`},
+    'workflow.demo':{lang:'demoLang',value:`# 사용자 정의 Monarch 언어\ntask publish {\n  let channel = "web"\n  when true\n  then emit "배포 완료"\n}`},
+    'README.md':{lang:'markdown',value:`# Monaco Editor 기능 실험실\n\n- 다중 모델 및 URI\n- Diff Editor\n- IntelliSense / Hover / Marker\n- JSON Schema 검증\n- 사용자 정의 언어 및 테마\n\n> 편집 내용은 localStorage에 자동 저장됩니다.`}
+  };
+  const state={models:new Map(),tabs:[],active:null,diff:false,wrap:false,minimap:true,readonly:false,decorations:[],saved:new Map()};
+  Object.entries(samples).forEach(([name,s])=>createModel(name,s.lang,localStorage.getItem('monaco:'+name)??s.value,false));
+  function createModel(name,lang,value,activate=true){let final=name,i=1;while(state.models.has(final)) final=name.replace(/(\.[^.]+)?$/,`-${i++}$1`);const uri=monaco.Uri.parse('file:///workspace/'+final);const model=monaco.editor.createModel(value,lang,uri);state.models.set(final,model);state.tabs.push(final);state.saved.set(final,value);model.onDidChangeContent(()=>{localStorage.setItem('monaco:'+final,model.getValue());renderFiles();renderTabs();updateStats();});if(activate)activateFile(final);return model}
+  const editor=monaco.editor.create($('editorHost'),{model:null,theme:'vs-dark',automaticLayout:true,fontSize:14,fontLigatures:true,minimap:{enabled:true},wordWrap:'off',formatOnPaste:true,formatOnType:true,smoothScrolling:true,cursorSmoothCaretAnimation:'on',bracketPairColorization:{enabled:true,independentColorPoolPerBracketType:true},guides:{bracketPairs:true,indentation:true},stickyScroll:{enabled:true},inlineSuggest:{enabled:true},inlayHints:{enabled:'on'},codeLens:true,renderWhitespace:'selection',renderControlCharacters:true,linkedEditing:true,lightbulb:{enabled:'on'},padding:{top:10,bottom:10}});
+  const diff=monaco.editor.createDiffEditor($('diffHost'),{theme:'vs-dark',automaticLayout:true,renderSideBySide:true,originalEditable:false,enableSplitViewResizing:true,renderIndicators:true});
+  editor.addAction({id:'demo.insertTimestamp',label:'Demo: 현재 시각 삽입',keybindings:[monaco.KeyMod.CtrlCmd|monaco.KeyMod.Shift|monaco.KeyCode.KeyT],contextMenuGroupId:'navigation',run:ed=>ed.executeEdits('timestamp',[{range:ed.getSelection(),text:new Date().toISOString(),forceMoveMarkers:true}])});
+  editor.addAction({id:'demo.uppercaseSelection',label:'Demo: 선택 영역 대문자',contextMenuGroupId:'1_modification',run:ed=>{const s=ed.getSelection();ed.executeEdits('upper',[{range:s,text:ed.getModel().getValueInRange(s).toUpperCase()}])}});
+  editor.onDidChangeCursorPosition(updateStats); editor.onDidChangeCursorSelection(updateStats); editor.onDidChangeModel(()=>{updateStats();updateMarkers()});
+  monaco.editor.onDidChangeMarkers(updateMarkers);
+  function activateFile(name){if(!state.models.has(name))return;state.active=name;editor.setModel(state.models.get(name));if(state.diff)toggleDiff(false);$('languageSelect').value=state.models.get(name).getLanguageId();renderFiles();renderTabs();updateStats();editor.focus()}
+  function renderFiles(){$('fileList').innerHTML='';state.tabs.forEach(n=>{const d=document.createElement('div');const modified=state.models.get(n).getValue()!==state.saved.get(n);d.className='file '+(n===state.active?'active ':'')+(modified?'modified':'');d.innerHTML=`<span class="dot"></span><span>${n}</span>`;d.onclick=()=>activateFile(n);$('fileList').appendChild(d)})}
+  function renderTabs(){$('tabs').innerHTML='';state.tabs.forEach(n=>{const d=document.createElement('div');d.className='tab '+(n===state.active?'active':'');const modified=state.models.get(n).getValue()!==state.saved.get(n);d.innerHTML=`<span>${n}</span>${modified?'<span class="mod">●</span>':''}<span class="close">×</span>`;d.onclick=e=>{if(e.target.classList.contains('close'))closeFile(n);else activateFile(n)};$('tabs').appendChild(d)})}
+  function closeFile(name){if(state.tabs.length===1){log('마지막 파일은 닫을 수 없습니다.','error');return}const idx=state.tabs.indexOf(name);state.tabs.splice(idx,1);state.models.get(name).dispose();state.models.delete(name);if(state.active===name)activateFile(state.tabs[Math.max(0,idx-1)]);renderFiles();renderTabs()}
+  function updateStats(){const m=editor.getModel();if(!m)return;const p=editor.getPosition()||{lineNumber:1,column:1},s=editor.getSelection();$('statFile').textContent=state.active;$('statLanguage').textContent=m.getLanguageId();$('statPosition').textContent=`Ln ${p.lineNumber}, Col ${p.column}`;$('statSelection').textContent=s?m.getValueInRange(s).length:0;$('statChars').textContent=m.getValueLength();$('statLines').textContent=m.getLineCount();$('footerLang').textContent=m.getLanguageId();$('footerSpaces').textContent='Spaces: '+m.getOptions().tabSize;renderOptions()}
+  function updateMarkers(){const all=monaco.editor.getModelMarkers({});const errs=all.filter(x=>x.severity===monaco.MarkerSeverity.Error).length,warns=all.filter(x=>x.severity===monaco.MarkerSeverity.Warning).length;$('problemCount').textContent='문제 '+all.length;$('footerProblems').textContent=`✕ ${errs}  ⚠ ${warns}`}
+  function renderOptions(){const arr=[`미니맵 ${state.minimap?'ON':'OFF'}`,`줄바꿈 ${state.wrap?'ON':'OFF'}`,`읽기전용 ${state.readonly?'ON':'OFF'}`,'Bracket Pair','Sticky Scroll','CodeLens','Inlay Hints'];$('optionChips').innerHTML=arr.map(x=>`<span class="chip">${x}</span>`).join('')}
+  function toggleDiff(force){state.diff=force!==undefined?force:!state.diff;$('editorHost').style.display=state.diff?'none':'block';$('diffHost').style.display=state.diff?'block':'none';$('btnDiff').classList.toggle('active',state.diff);if(state.diff){const m=editor.getModel(),original=monaco.editor.createModel(state.saved.get(state.active)||m.getValue(),m.getLanguageId());diff.setModel({original,modified:m});log('Diff Editor: 저장 기준본과 현재 편집본을 비교합니다.','ok')}else{const dm=diff.getModel();if(dm&&dm.original)dm.original.dispose();diff.setModel(null);editor.focus()}}
+  function download(){const m=editor.getModel(),blob=new Blob([m.getValue()],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=state.active;a.click();URL.revokeObjectURL(a.href);state.saved.set(state.active,m.getValue());renderFiles();renderTabs();log(state.active+' 다운로드 완료','ok')}
+  function runCurrent(){const m=editor.getModel(),lang=m.getLanguageId();$('bottomPanel').classList.remove('collapsed');if(lang==='javascript'){try{const out=[];const fake={log:(...a)=>out.push(a.map(v=>typeof v==='object'?JSON.stringify(v):String(v)).join(' '))};new Function('console','demoAPI',m.getValue())(fake,{notify:x=>out.push('[demoAPI] '+x),version:'1.0'});log(out.join('\n')||'실행 완료','ok')}catch(e){log(e.stack||e.message,'error')}}else if(lang==='json'){try{JSON.parse(m.getValue());log('유효한 JSON입니다.','ok')}catch(e){log(e.message,'error')}}else log(lang+'은 이 샘플의 직접 실행 대상이 아닙니다.','info')}
+  const langs=monaco.languages.getLanguages().map(x=>x.id).sort();langs.forEach(l=>{const o=document.createElement('option');o.value=o.textContent=l;$('languageSelect').appendChild(o)});
+  $('languageSelect').onchange=e=>{monaco.editor.setModelLanguage(editor.getModel(),e.target.value);updateStats()};$('themeSelect').onchange=e=>{monaco.editor.setTheme(e.target.value);diff.updateOptions({theme:e.target.value})};$('fontSize').oninput=e=>editor.updateOptions({fontSize:+e.target.value});
+  $('btnNew').onclick=()=>{const name=prompt('파일 이름','untitled.js');if(name)createModel(name,name.endsWith('.json')?'json':name.endsWith('.css')?'css':name.endsWith('.html')?'html':name.endsWith('.md')?'markdown':'javascript','')};
+  $('btnOpen').onclick=()=>$('fileInput').click();$('fileInput').onchange=async e=>{for(const f of e.target.files){createModel(f.name,guessLang(f.name),await f.text())}e.target.value=''};
+  function guessLang(n){const x=n.split('.').pop().toLowerCase();return {js:'javascript',ts:'typescript',json:'json',css:'css',html:'html',htm:'html',md:'markdown',py:'python',java:'java',sql:'sql',xml:'xml',yml:'yaml',yaml:'yaml'}[x]||'plaintext'}
+  $('btnSave').onclick=download;$('btnUndo').onclick=()=>editor.trigger('ui','undo');$('btnRedo').onclick=()=>editor.trigger('ui','redo');$('btnFind').onclick=()=>editor.getAction('actions.find').run();$('btnCommand').onclick=()=>editor.getAction('editor.action.quickCommand').run();$('btnFormat').onclick=()=>editor.getAction('editor.action.formatDocument').run();$('btnDiff').onclick=()=>toggleDiff();$('btnRun').onclick=runCurrent;
+  $('btnWrap').onclick=()=>{state.wrap=!state.wrap;editor.updateOptions({wordWrap:state.wrap?'on':'off'});$('btnWrap').classList.toggle('active',state.wrap);renderOptions()};$('btnMinimap').onclick=()=>{state.minimap=!state.minimap;editor.updateOptions({minimap:{enabled:state.minimap}});$('btnMinimap').classList.toggle('active',state.minimap);renderOptions()};$('btnReadOnly').onclick=()=>{state.readonly=!state.readonly;editor.updateOptions({readOnly:state.readonly});$('btnReadOnly').classList.toggle('active',state.readonly);renderOptions()};
+  $('btnMarkers').onclick=()=>{const m=editor.getModel();monaco.editor.setModelMarkers(m,'demo',[{startLineNumber:2,startColumn:1,endLineNumber:2,endColumn:12,message:'샘플 오류: 이 위치를 확인하세요.',severity:monaco.MarkerSeverity.Error,source:'Demo Linter',code:'DEMO001'},{startLineNumber:4,startColumn:1,endLineNumber:4,endColumn:8,message:'샘플 경고입니다.',severity:monaco.MarkerSeverity.Warning,source:'Demo Linter'}]);log('Marker 오류와 경고를 생성했습니다.','ok')};
+  $('btnDecorate').onclick=()=>{state.decorations=editor.deltaDecorations(state.decorations,[{range:new monaco.Range(1,1,3,1),options:{isWholeLine:true,className:'demo-line-highlight',glyphMarginClassName:'demo-glyph',hoverMessage:{value:'Decoration API로 추가한 강조 영역'}}}]);const st=document.createElement('style');st.textContent='.demo-line-highlight{background:rgba(90,168,255,.12)}.demo-glyph{background:#5aa8ff;border-radius:50%}';document.head.appendChild(st);log('1~3행에 Decoration을 적용했습니다.','ok')};
+  const actions={actSuggest:'editor.action.triggerSuggest',actHover:'editor.action.showHover',actGotoLine:'workbench.action.gotoLine',actSymbols:'workbench.action.gotoSymbol',actRename:'editor.action.rename',actPeek:'editor.action.peekDefinition',actFold:'editor.foldAll',actUnfold:'editor.unfoldAll',actComment:'editor.action.commentLine',actDuplicate:'editor.action.copyLinesDownAction',actTrim:'editor.action.trimTrailingWhitespace'};Object.entries(actions).forEach(([id,a])=>$(id).onclick=()=>editor.getAction(a)?.run());
+  $('btnClearConsole').onclick=()=>$('console').innerHTML='';$('btnTogglePanel').onclick=()=>$('bottomPanel').classList.toggle('collapsed');
+  activateFile('app.js');renderOptions();updateMarkers();log('Monaco Editor 초기화 완료. Ctrl+Space와 Ctrl+Shift+P를 시험해 보세요.','ok');
+});
+</script>
+</body>
+</html>
