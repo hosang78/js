@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>fflate</title>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 90px;
+    font-family: ui-monospace, monospace;
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border: 1px solid #dbdfe6;
+    border-radius: 8px;
+    resize: vertical;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-right: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .stat-box.show { display: block; }
+  .stat-box strong { color: #205fb0; }
+  .file-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 12.5px;
+  }
+  .file-list li {
+    padding: 6px 10px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: #fafbfc;
+    cursor: pointer;
+  }
+  .file-list li:hover { background: #f0f4ff; }
+  .file-list li.dir { color: #888; cursor: default; }
+  .file-list li.dir:hover { background: #fafbfc; }
+  .file-preview {
+    margin-top: 8px;
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    display: none;
+  }
+  .file-preview.show { display: block; }
+  a.download-link {
+    display: inline-block;
+    padding: 7px 13px;
+    border-radius: 8px;
+    background: #2fa86a;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-right: 6px;
+  }
+  a.download-link:hover { background: #268a58; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  .progress-log {
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    color: #555;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>fflate 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>fflate</strong>(fast + inflate)는 순수 JavaScript로 만든 초경량·고성능 압축 라이브러리입니다.
+    DEFLATE/GZIP/Zlib 압축과 ZIP 아카이브 생성·해제를 브라우저에서 별도 서버 없이 바로 처리할 수 있습니다.
+    <ul>
+      <li><code class="inline">gzipSync</code> / <code class="inline">gunzipSync</code>로 하는
+        <strong>텍스트 압축 · 해제</strong> (압축률 확인)</li>
+      <li><code class="inline">zipSync</code>로 여러 파일을 묶는 <strong>ZIP 아카이브 생성 + 다운로드</strong></li>
+      <li><code class="inline">unzipSync</code>로 ZIP 안의 <strong>파일 목록·내용 다시 꺼내보기</strong></li>
+      <li><code class="inline">Deflate</code> 스트림 클래스로 하는 <strong>청크 단위 점진적 압축</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 일지·서류 내용은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계·기록과 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 텍스트 압축 · 해제</h2>
+    <div class="desc">
+      <code class="inline">strToU8()</code>로 문자열을 바이트로 바꾼 뒤 <code class="inline">gzipSync()</code>로
+      압축하고, <code class="inline">gunzipSync()</code> + <code class="inline">strFromU8()</code>로 다시
+      문자열로 되돌립니다. 반복되는 내용이 많을수록 압축률이 좋아집니다.
+    </div>
+    <textarea id="s1-input">오늘 위판은 오전 6시부터 시작됩니다. 참여를 원하는 조합원은 사전 등록이 필요합니다.
+오늘 위판은 오전 6시부터 시작됩니다. 참여를 원하는 조합원은 사전 등록이 필요합니다.
+오늘 위판은 오전 6시부터 시작됩니다. 참여를 원하는 조합원은 사전 등록이 필요합니다.
+정산은 위판 종료 후 익일 오전에 각 위판장을 통해 이루어집니다.</textarea>
+    <div>
+      <button id="s1-run">압축 후 다시 해제</button>
+    </div>
+    <div class="stat-box" id="s1-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const u8 = fflate.strToU8(text);
+const compressed = fflate.gzipSync(u8, { level: 9 });
+const ratio = (100 * (1 - compressed.length / u8.length)).toFixed(1) + '%';
+
+const restored = fflate.strFromU8(fflate.gunzipSync(compressed));
+console.log(restored === text); // true</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 여러 파일 ZIP 아카이브 생성 + 다운로드</h2>
+    <div class="desc">
+      <code class="inline">zipSync()</code>에 <strong>중첩된 객체</strong>를 넘기면 그대로 폴더 구조가
+      되는 ZIP 파일을 한 번에 만들 수 있습니다. 결과는 <code class="inline">Blob</code>으로 감싸서
+      바로 다운로드 링크를 만들 수 있습니다.
+    </div>
+    <button id="s2-run">ZIP 만들기</button>
+    <div class="stat-box" id="s2-stat"></div>
+    <div id="s2-download"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const zipped = fflate.zipSync({
+  '위판일지': {
+    '1월.txt': fflate.strToU8('1월 위판 기록...'),
+    '2월.txt': fflate.strToU8('2월 위판 기록...'),
+  },
+  '조합원명단.txt': fflate.strToU8('홍길동, 김철수, 이영희'),
+}, { level: 6 });
+
+const blob = new Blob([zipped], { type: 'application/zip' });
+const url = URL.createObjectURL(blob);
+// <a href="url" download="위판서류.zip">다운로드</a></code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. ZIP 내용물 다시 풀어보기</h2>
+    <div class="desc">
+      바로 위에서 만든 ZIP을 <code class="inline">unzipSync()</code>로 다시 풀어서 파일 목록을 확인하고,
+      클릭하면 내용을 미리 봅니다. 디렉터리 자체도 빈 항목(끝이 <code class="inline">/</code>인 키)으로
+      함께 나오므로 파일 목록에 표시할 때는 걸러내야 합니다.
+    </div>
+    <button id="s3-run" disabled>위에서 만든 ZIP 풀어보기</button>
+    <div class="stat-box" id="s3-stat"></div>
+    <ul class="file-list" id="s3-filelist"></ul>
+    <div class="file-preview" id="s3-preview"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const unzipped = fflate.unzipSync(zipped);
+// unzipped = { '위판일지/': Uint8Array(0), '위판일지/1월.txt': Uint8Array(...), ... }
+
+Object.keys(unzipped)
+  .filter((name) => !name.endsWith('/'))   // 디렉터리 항목 제외
+  .forEach((name) => {
+    console.log(name, fflate.strFromU8(unzipped[name]));
+  });</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 스트림으로 청크 단위 압축</h2>
+    <div class="desc">
+      큰 데이터를 한 번에 메모리에 올리지 않고 <strong>조각(청크) 단위로 순차 압축</strong>하고 싶을 때는
+      <code class="inline">Deflate</code> 클래스를 씁니다. <code class="inline">push()</code>를 호출할
+      때마다 압축된 조각이 <code class="inline">ondata</code> 콜백으로 나오고, 마지막 조각에는
+      <code class="inline">true</code>를 넘겨 스트림을 마무리합니다.
+    </div>
+    <button id="s4-run">청크 3개 순차 압축</button>
+    <div class="stat-box" id="s4-stat"></div>
+    <div class="progress-log" id="s4-log"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const chunks = [];
+const deflateStream = new fflate.Deflate({ level: 6 }, (chunk, isLast) => {
+  chunks.push(chunk);   // 압축된 조각이 준비될 때마다 호출됨
+});
+
+deflateStream.push(fflate.strToU8('1번째 위판 기록 조각...'), false);
+deflateStream.push(fflate.strToU8('2번째 위판 기록 조각...'), false);
+deflateStream.push(fflate.strToU8('3번째(마지막) 조각...'), true); // 마지막은 true
+
+// 조각들을 이어 붙이면 fflate.inflateSync()로 원본 복원 가능</code></pre>
+    </details>
+  </section>
+
+<script>
+  function fmtBytes(n) { return n.toLocaleString('ko-KR') + ' bytes'; }
+
+  // ---- 섹션 1: 텍스트 압축/해제 ----
+  (function section1() {
+    const btn = document.getElementById('s1-run');
+    const stat = document.getElementById('s1-stat');
+    const input = document.getElementById('s1-input');
+
+    btn.addEventListener('click', () => {
+      const text = input.value;
+      const u8 = fflate.strToU8(text);
+      const compressed = fflate.gzipSync(u8, { level: 9 });
+      const restored = fflate.strFromU8(fflate.gunzipSync(compressed));
+      const ratio = (100 * (1 - compressed.length / u8.length)).toFixed(1);
+      stat.classList.add('show');
+      stat.innerHTML =
+        '원본 <strong>' + fmtBytes(u8.length) + '</strong> → 압축 <strong>' + fmtBytes(compressed.length) +
+        '</strong> (약 ' + ratio + '% 감소)<br>' +
+        '압축 해제 후 원본과 일치: <strong>' + (restored === text ? '일치함' : '불일치') + '</strong>';
+    });
+  })();
+
+  // ---- 섹션 2: ZIP 생성 + 다운로드 ----
+  let lastZipped = null;
+  (function section2() {
+    const btn = document.getElementById('s2-run');
+    const stat = document.getElementById('s2-stat');
+    const downloadWrap = document.getElementById('s2-download');
+    const s3btn = document.getElementById('s3-run');
+
+    btn.addEventListener('click', () => {
+      const zipped = fflate.zipSync({
+        '위판일지': {
+          '1월.txt': fflate.strToU8('1월 위판 기록: 총 어획량 1,240kg, 참여 조합원 32명 (가상 예시)'),
+          '2월.txt': fflate.strToU8('2월 위판 기록: 총 어획량 1,510kg, 참여 조합원 29명 (가상 예시)'),
+        },
+        '조합원명단.txt': fflate.strToU8('홍길동, 김철수, 이영희 (가상 예시 이름)'),
+      }, { level: 6 });
+
+      lastZipped = zipped;
+      stat.classList.add('show');
+      stat.innerHTML = 'ZIP 파일 크기: <strong>' + fmtBytes(zipped.length) + '</strong> (파일 3개, 폴더 1개 포함)';
+
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      downloadWrap.innerHTML = '';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '위판서류.zip';
+      a.className = 'download-link';
+      a.textContent = 'ZIP 다운로드';
+      downloadWrap.appendChild(a);
+
+      s3btn.disabled = false;
+    });
+  })();
+
+  // ---- 섹션 3: ZIP 풀어보기 ----
+  (function section3() {
+    const btn = document.getElementById('s3-run');
+    const stat = document.getElementById('s3-stat');
+    const filelist = document.getElementById('s3-filelist');
+    const preview = document.getElementById('s3-preview');
+
+    btn.addEventListener('click', () => {
+      if (!lastZipped) return;
+      const unzipped = fflate.unzipSync(lastZipped);
+      const allNames = Object.keys(unzipped);
+      const fileNames = allNames.filter((name) => !name.endsWith('/'));
+
+      stat.classList.add('show');
+      stat.innerHTML =
+        '전체 항목 <strong>' + allNames.length + '개</strong> (디렉터리 포함) 중 파일 <strong>' +
+        fileNames.length + '개</strong>를 찾았습니다. 클릭하면 내용을 미리 봅니다.';
+
+      filelist.innerHTML = '';
+      allNames.sort().forEach((name) => {
+        const li = document.createElement('li');
+        const isDir = name.endsWith('/');
+        li.textContent = isDir ? '📁 ' + name : '📄 ' + name;
+        if (isDir) {
+          li.classList.add('dir');
+        } else {
+          li.addEventListener('click', () => {
+            preview.classList.add('show');
+            preview.textContent = name + ':\n' + fflate.strFromU8(unzipped[name]);
+          });
+        }
+        filelist.appendChild(li);
+      });
+    });
+  })();
+
+  // ---- 섹션 4: 스트리밍 압축 ----
+  (function section4() {
+    const btn = document.getElementById('s4-run');
+    const stat = document.getElementById('s4-stat');
+    const log = document.getElementById('s4-log');
+
+    btn.addEventListener('click', () => {
+      const chunks = [];
+      const logLines = [];
+      const deflateStream = new fflate.Deflate({ level: 6 }, (chunk, isLast) => {
+        chunks.push(chunk);
+        logLines.push('  → ' + chunk.length + ' bytes 압축된 조각 수신' + (isLast ? ' (마지막)' : ''));
+      });
+
+      // 입력 조각이 너무 작으면 내부 버퍼에 모이기만 하고 마지막에 한 번에 flush되어
+      // "점진적으로" 나오는 모습을 보기 어렵다. 조각당 데이터양을 충분히 크게 잡아서
+      // push()할 때마다 압축된 조각이 실제로 순차 도착하는 것을 보여준다.
+      const parts = [
+        '1번째 위판 기록 조각입니다. '.repeat(3000),
+        '2번째 위판 기록 조각입니다. '.repeat(3000),
+        '3번째(마지막) 위판 기록 조각입니다. '.repeat(3000),
+      ];
+      logLines.push('원본 3개 청크 push 시작 (각 약 ' + fmtBytes(fflate.strToU8(parts[0]).length) + ')');
+      parts.forEach((part, i) => {
+        const isLastChunk = i === parts.length - 1;
+        const before = chunks.length;
+        deflateStream.push(fflate.strToU8(part), isLastChunk);
+        logLines.push('push ' + (i + 1) + '/3 완료 → 이번 push에서 압축 조각 ' + (chunks.length - before) + '개 도착');
+      });
+
+      let totalLen = chunks.reduce((a, c) => a + c.length, 0);
+      let merged = new Uint8Array(totalLen);
+      let off = 0;
+      chunks.forEach((c) => { merged.set(c, off); off += c.length; });
+      const restored = fflate.strFromU8(fflate.inflateSync(merged));
+      const originalText = parts.join('');
+
+      log.textContent = logLines.join('\n');
+      stat.classList.add('show');
+      stat.innerHTML =
+        '조각 <strong>' + chunks.length + '개</strong>를 이어붙여 압축 해제한 결과가 원본과 <strong>' +
+        (restored === originalText ? '일치함' : '불일치') + '</strong> (원본 ' + fmtBytes(fflate.strToU8(originalText).length) +
+        ' → 압축 ' + fmtBytes(totalLen) + ')';
+    });
+  })();
+</script>
+</body>
+</html>
