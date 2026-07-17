@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>deck.gl</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .map-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 320px;
+    position: relative;
+    background: #e5e9f0;
+  }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .tooltip {
+    position: absolute;
+    background: #1a1d24;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>deck.gl 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>deck.gl</strong>은 Uber가 만든 WebGL 기반 대규모 데이터 시각화 프레임워크입니다.
+    MapLibre·OpenLayers 같은 범용 인터랙티브 지도와 달리, 수만~수백만 건의 데이터를
+    GPU 가속으로 빠르게 그리는 데 특화되어 있고, "레이어"를 쌓아 올리는 방식으로 동작합니다.
+    <ul>
+      <li><code>ScatterplotLayer</code>로 점 데이터를 값에 비례한 반지름·색상으로 표시</li>
+      <li><code>ArcLayer</code>로 두 지점을 잇는 곡선 — 유통·이동 경로 시각화에 흔히 사용</li>
+      <li><code>HeatmapLayer</code>로 데이터 밀도를 색상 그라데이션으로 표현</li>
+      <li>모든 레이어에 <code>pickable: true</code>와 <code>onClick</code>/<code>onHover</code>를 붙여 인터랙션 추가 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ deck.gl은 배경 지도 없이도 동작하며, 별도 지도 라이브러리(Mapbox/MapLibre/Google Maps)와
+      결합해 쓰는 경우가 많습니다. 이 페이지는 별도 라이브러리 없이 deck.gl 자체의
+      <code>TileLayer</code> + <code>BitmapLayer</code>로 OpenStreetMap 래스터 타일을 배경으로
+      직접 그렸습니다(API 키 불필요). 위판장 위치·물량·경로는 모두 <strong>가상의 예시</strong>이며
+      실제 수협중앙회의 자료가 아닙니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. ScatterplotLayer — 값에 비례한 점 크기</h2>
+    <div class="desc">위판 물량이 많을수록 점이 크게 표시됩니다.</div>
+    <div class="map-wrap" id="map1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">new deck.ScatterplotLayer({
+  data: [{ position: [129.0756, 35.0951], weight: 320 }, ...],
+  getPosition: (d) => d.position,
+  getRadius: (d) => d.weight,
+  radiusScale: 3,
+  getFillColor: [79, 125, 255],
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. ArcLayer — 유통 경로 표시</h2>
+    <div class="desc">위판장에서 각 유통 거점으로 이어지는 경로를 호 모양으로 표시합니다.</div>
+    <div class="map-wrap" id="map2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">new deck.ArcLayer({
+  data: [{ source: [129.0756, 35.0951], target: [129.09, 35.10] }, ...],
+  getSourcePosition: (d) => d.source,
+  getTargetPosition: (d) => d.target,
+  getSourceColor: [79, 125, 255],
+  getTargetColor: [27, 175, 122],
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. HeatmapLayer — 밀도 히트맵</h2>
+    <div class="desc">가상의 어획 지점 데이터를 밀도 기반 히트맵으로 표현합니다.</div>
+    <div class="map-wrap" id="map3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">new deck.HeatmapLayer({
+  data: points, // [{ position: [lon, lat], weight }, ...]
+  getPosition: (d) => d.position,
+  getWeight: (d) => d.weight,
+  radiusPixels: 40,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 클릭 인터랙션 — 정보 툴팁</h2>
+    <div class="desc">점을 클릭하면 해당 위판장의 정보가 툴팁으로 표시됩니다.</div>
+    <div class="map-wrap" id="map4"></div>
+    <div class="result-box" id="clickResult4">아직 클릭 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">new deck.ScatterplotLayer({
+  data: points,
+  pickable: true,
+  onClick: (info) => {
+    console.log(info.object); // 클릭한 지점의 데이터
+  },
+});</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/deck.gl@9.3.7/dist.min.js"></script>
+  <script>
+    const { DeckGL, ScatterplotLayer, ArcLayer, HeatmapLayer, TileLayer, BitmapLayer } = deck;
+
+    const INITIAL_VIEW_STATE = { longitude: 129.0756, latitude: 35.0951, zoom: 10, pitch: 0, bearing: 0 };
+
+    function makeTileLayer() {
+      return new TileLayer({
+        id: 'base-tiles',
+        data: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        minZoom: 0,
+        maxZoom: 19,
+        tileSize: 256,
+        renderSubLayers: (props) => {
+          const { bbox: { west, south, east, north } } = props.tile;
+          return new BitmapLayer(props, { data: null, image: props.data, bounds: [west, south, east, north] });
+        },
+      });
+    }
+
+    const POINTS = [
+      { position: [129.0756, 35.0951], species: '고등어', weight: 320, name: '부산공동어시장(가상)' },
+      { position: [129.09, 35.10], species: '갈치', weight: 180, name: '기장 유통거점(가상)' },
+      { position: [129.06, 35.08], species: '전복', weight: 90, name: '영도 유통거점(가상)' },
+    ];
+
+    // ---------- 1. ScatterplotLayer ----------
+    new DeckGL({
+      container: 'map1',
+      initialViewState: INITIAL_VIEW_STATE,
+      controller: true,
+      layers: [
+        makeTileLayer(),
+        new ScatterplotLayer({
+          id: 'scatter',
+          data: POINTS,
+          getPosition: (d) => d.position,
+          getRadius: (d) => d.weight,
+          radiusScale: 3,
+          getFillColor: [79, 125, 255],
+          pickable: true,
+        }),
+      ],
+    });
+
+    // ---------- 2. ArcLayer ----------
+    const ARCS = [
+      { source: POINTS[0].position, target: POINTS[1].position },
+      { source: POINTS[0].position, target: POINTS[2].position },
+    ];
+    new DeckGL({
+      container: 'map2',
+      initialViewState: INITIAL_VIEW_STATE,
+      controller: true,
+      layers: [
+        makeTileLayer(),
+        new ArcLayer({
+          id: 'arcs',
+          data: ARCS,
+          getSourcePosition: (d) => d.source,
+          getTargetPosition: (d) => d.target,
+          getSourceColor: [79, 125, 255],
+          getTargetColor: [27, 175, 122],
+          getWidth: 3,
+        }),
+      ],
+    });
+
+    // ---------- 3. HeatmapLayer ----------
+    const HEAT_POINTS = Array.from({ length: 60 }, () => ({
+      position: [129.0756 + (Math.random() - 0.5) * 0.06, 35.0951 + (Math.random() - 0.5) * 0.06],
+      weight: Math.random() * 100,
+    }));
+    new DeckGL({
+      container: 'map3',
+      initialViewState: INITIAL_VIEW_STATE,
+      controller: true,
+      layers: [
+        makeTileLayer(),
+        new HeatmapLayer({
+          id: 'heatmap',
+          data: HEAT_POINTS,
+          getPosition: (d) => d.position,
+          getWeight: (d) => d.weight,
+          radiusPixels: 40,
+        }),
+      ],
+    });
+
+    // ---------- 4. 클릭 인터랙션 ----------
+    new DeckGL({
+      container: 'map4',
+      initialViewState: INITIAL_VIEW_STATE,
+      controller: true,
+      layers: [
+        makeTileLayer(),
+        new ScatterplotLayer({
+          id: 'clickable-scatter',
+          data: POINTS,
+          getPosition: (d) => d.position,
+          getRadius: 500,
+          getFillColor: [200, 60, 60],
+          pickable: true,
+          onClick: (info) => {
+            if (info.object) {
+              document.getElementById('clickResult4').textContent =
+                `${info.object.name} — ${info.object.species} ${info.object.weight}kg`;
+            }
+          },
+        }),
+      ],
+    });
+  </script>
+</body>
+</html>
