@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Lunr.js</title>
+<script src="https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  .warning {
+    font-size: 12.5px;
+    color: #a01818;
+    background: #fff0f0;
+    border: 1px solid #ffc9c9;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  input[type=text] {
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid #dbdfe6;
+    border-radius: 6px;
+    width: 260px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 6px;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box.error { background: #fff0f0; border-color: #ffc9c9; color: #a01818; }
+  .stat-box strong { color: #205fb0; }
+  .result-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 13px;
+  }
+  .result-list li {
+    padding: 8px 10px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: #fafbfc;
+  }
+  .result-list li .meta {
+    display: block;
+    color: #777;
+    font-size: 12px;
+    margin-top: 3px;
+  }
+  .result-list li .score {
+    color: #205fb0;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .empty-msg {
+    font-size: 12.5px;
+    color: #999;
+    margin-top: 10px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Lunr.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Lunr.js</strong>는 Elasticsearch 같은 <strong>질의 문자열(query string) 문법</strong>을
+    브라우저에서 그대로 쓸 수 있는 전문(full-text) 검색 라이브러리입니다. FlexSearch·MiniSearch와 달리
+    검색어 자체에 <code class="inline">field:단어</code>, <code class="inline">단어~2</code>,
+    <code class="inline">단어^3</code> 같은 문법을 섞어 쓸 수 있습니다.
+    <ul>
+      <li><code class="inline">field:단어</code>로 하는 <strong>필드 지정 검색</strong></li>
+      <li><code class="inline">단어*</code> 와일드카드, <code class="inline">단어~N</code> <strong>오타 허용(편집 거리)</strong></li>
+      <li><code class="inline">단어^N</code> 부스트, <code class="inline">+필수 -제외</code> <strong>검색</strong></li>
+      <li><code class="inline">JSON.stringify(idx)</code> + <code class="inline">lunr.Index.load()</code>로
+        하는 <strong>인덱스 직렬화</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 물품 목록은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      물품·통계와 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+    <div class="warning">
+      ⚠ <strong>실제로 겪은 문제:</strong> Lunr.js의 기본 파이프라인에는
+      <code class="inline">lunr.trimmer</code>가 들어있는데, 이 함수는 <code class="inline">\W</code>
+      (영문 기준 "단어가 아닌 문자") 정규식으로 토큰 앞뒤를 잘라냅니다. 한글은 이 기준으로 전부
+      "단어가 아닌 문자"라서, 토큰 전체가 통째로 사라져 <strong>한글 검색이 아예 안 됩니다</strong>
+      (<code class="inline">'고등어'.replace(/^\W+/,'').replace(/\W+$/,'')</code>를 콘솔에 찍어보면
+      빈 문자열이 나옵니다). 이 페이지의 모든 예시는
+      <code class="inline">this.pipeline.remove(lunr.trimmer)</code>로 이 문제를 우회한 상태입니다.
+      (라이브러리 소스 코드에도 "이 구현은 비라틴 문자에는 맞지 않을 수 있다"는 주석이 있습니다.)
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 필드 지정 검색 (field:단어)</h2>
+    <div class="desc">
+      검색어 앞에 필드명을 붙이면 그 필드에서만 찾습니다. 아무 접두어 없이 검색하면 색인된
+      모든 필드에서 찾습니다.
+    </div>
+    <input type="text" id="s1-query" value="name:고등어" />
+    <button id="s1-run">검색</button>
+    <div class="stat-box" id="s1-stat"></div>
+    <ul class="result-list" id="s1-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const idx = lunr(function () {
+  this.ref('id');
+  this.field('name');
+  this.field('description');
+  this.pipeline.remove(lunr.trimmer);       // 한글이 지워지는 문제 우회
+  this.searchPipeline.remove(lunr.trimmer);
+  products.forEach((p) => this.add(p));
+});
+
+idx.search('name:고등어');   // name 필드에서만 검색</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 와일드카드 · 오타 허용(편집 거리)</h2>
+    <div class="desc">
+      <code class="inline">*</code>는 와일드카드, <code class="inline">~N</code>은 N까지의 편집 거리를
+      허용하는 오타 검색입니다.
+    </div>
+    <input type="text" id="s2-query" value="고둥어~1" />
+    <button id="s2-run">검색</button>
+    <div class="stat-box" id="s2-stat"></div>
+    <ul class="result-list" id="s2-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>idx.search('고등*');     // 와일드카드: '고등'으로 시작하는 단어
+idx.search('고둥어~1');  // 오타 허용: 편집 거리 1까지 ('고둥어' → '고등어' 매칭)</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 부스트 · 필수/제외 검색</h2>
+    <div class="desc">
+      <code class="inline">단어^N</code>은 그 단어의 가중치를 N배로 높입니다.
+      <code class="inline">+단어</code>는 반드시 포함, <code class="inline">-단어</code>는 반드시
+      제외합니다.
+    </div>
+    <input type="text" id="s3-query" value="+위판장 -전복" />
+    <button id="s3-run">검색</button>
+    <div class="stat-box" id="s3-stat"></div>
+    <ul class="result-list" id="s3-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>idx.search('name:갈치^5 description:갈치');  // name에서 찾으면 5배 가중치
+idx.search('+위판장 -전복');                  // '위판장'은 필수, '전복'은 제외</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 인덱스 직렬화 (저장 · 다시 불러오기)</h2>
+    <div class="desc">
+      한 번 만든 인덱스를 <code class="inline">JSON.stringify()</code>로 저장해두면, 나중에 문서를
+      다시 추가하지 않고도 <code class="inline">lunr.Index.load()</code>로 바로 검색할 수 있습니다.
+      (정적 사이트 검색에 자주 쓰는 방식입니다.)
+    </div>
+    <button id="s4-run">직렬화 → 저장 → 새 인덱스로 다시 불러와서 검색</button>
+    <div class="stat-box" id="s4-stat"></div>
+    <ul class="result-list" id="s4-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const json = JSON.stringify(idx);     // 인덱스를 문자열로 저장 (파일이나 localStorage 등에)
+// ...나중에, 문서를 다시 추가하지 않고...
+const loadedIdx = lunr.Index.load(JSON.parse(json));
+loadedIdx.search('갈치');             // 바로 검색 가능</code></pre>
+    </details>
+  </section>
+
+<script>
+  const PRODUCTS = [
+    { id: '1', name: '고등어', description: '가상 위판장 오늘 낙찰 기록: 싱싱한 고등어', category: '어류' },
+    { id: '2', name: '갈치', description: '가상 위판장 은빛 갈치, 경매 인기 품목', category: '어류' },
+    { id: '3', name: '전복', description: '가상 위판장 자연산 전복 입고', category: '패류' },
+    { id: '4', name: '홍합', description: '가상 위판장 조합원 채취 홍합', category: '패류' },
+    { id: '5', name: '오징어', description: '가상 위판장 야간 조업 오징어', category: '연체류' },
+  ];
+
+  function buildIndex() {
+    return lunr(function () {
+      this.ref('id');
+      this.field('name');
+      this.field('description');
+      this.field('category');
+      // 기본 파이프라인의 stemmer(영문 전용)와 trimmer(\W 기준으로 한글을 통째로 지움)를 제거
+      this.pipeline.remove(lunr.stemmer);
+      this.searchPipeline.remove(lunr.stemmer);
+      this.pipeline.remove(lunr.trimmer);
+      this.searchPipeline.remove(lunr.trimmer);
+      PRODUCTS.forEach((p) => this.add(p));
+    });
+  }
+
+  function productById(id) { return PRODUCTS.find((p) => p.id === id); }
+
+  function renderResults(container, results) {
+    container.innerHTML = results.map((r) => {
+      const p = productById(r.ref);
+      const score = typeof r.score === 'number' ? '<span class="score">score ' + r.score.toFixed(3) + '</span> ' : '';
+      return '<li>' + score + p.name + '<span class="meta">' + p.description + '</span></li>';
+    }).join('') || '<div class="empty-msg">일치하는 결과가 없습니다.</div>';
+  }
+
+  function runSectionSearch(idx, queryInputId, btnId, statId, resultsId) {
+    const queryInput = document.getElementById(queryInputId);
+    const btn = document.getElementById(btnId);
+    const stat = document.getElementById(statId);
+    const resultsList = document.getElementById(resultsId);
+
+    function execute() {
+      const query = queryInput.value.trim();
+      stat.classList.remove('error');
+      if (!query) { stat.textContent = '검색어를 입력해 보세요.'; resultsList.innerHTML = ''; return; }
+      try {
+        const results = idx.search(query);
+        stat.innerHTML = '<strong>"' + query + '"</strong> → <strong>' + results.length + '건</strong>';
+        renderResults(resultsList, results);
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '질의 문법 오류: ' + e.message;
+        resultsList.innerHTML = '';
+      }
+    }
+    btn.addEventListener('click', execute);
+    queryInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') execute(); });
+    execute();
+  }
+
+  const idx1 = buildIndex();
+  runSectionSearch(idx1, 's1-query', 's1-run', 's1-stat', 's1-results');
+
+  const idx2 = buildIndex();
+  runSectionSearch(idx2, 's2-query', 's2-run', 's2-stat', 's2-results');
+
+  const idx3 = buildIndex();
+  runSectionSearch(idx3, 's3-query', 's3-run', 's3-stat', 's3-results');
+
+  // ---- 섹션 4: 직렬화 ----
+  (function section4() {
+    const btn = document.getElementById('s4-run');
+    const stat = document.getElementById('s4-stat');
+    const resultsList = document.getElementById('s4-results');
+
+    btn.addEventListener('click', () => {
+      stat.classList.remove('error');
+      try {
+        const original = buildIndex();
+        const json = JSON.stringify(original);
+
+        // lunr.Index.load()는 저장된 pipeline 함수 이름으로 등록된 함수를 다시 연결하는데,
+        // trimmer/stemmer를 빼고 만든 인덱스라 로드 시에도 같은 이름의 함수가 등록되어 있어야 함.
+        const loaded = lunr.Index.load(JSON.parse(json));
+        const results = loaded.search('갈치');
+
+        stat.innerHTML =
+          '직렬화된 JSON 크기: <strong>' + json.length.toLocaleString('ko-KR') + ' bytes</strong> → 다시 불러온 인덱스에서 "갈치" 검색 → <strong>' + results.length + '건</strong>';
+        renderResults(resultsList, results);
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
