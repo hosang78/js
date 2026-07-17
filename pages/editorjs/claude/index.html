@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Editor.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .editor-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+    background: #fff;
+    min-height: 120px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    max-height: 260px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Editor.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Editor.js</strong>는 글을 하나의 큰 HTML 덩어리가 아니라, 제목·문단·목록·인용 같은
+    <strong>블록 단위</strong>로 쌓아서 만드는 방식의 리치 텍스트 에디터입니다.
+    <ul>
+      <li>블록마다 <code>+</code> 버튼으로 원하는 타입(제목/목록/인용 등)을 골라 추가</li>
+      <li><code>save()</code>를 호출하면 HTML이 아니라 <code>{ blocks: [...] }</code> 형태의 구조화된 JSON을 반환</li>
+      <li>저장해둔 JSON을 <code>render()</code>에 그대로 넣으면 동일한 블록 구성으로 복원</li>
+      <li><code>readOnly.toggle()</code>로 편집 가능 여부를 즉시 전환</li>
+    </ul>
+    <div class="disclaimer">
+      ※ Editor.js 코어(<code>@editorjs/editorjs</code>)는 문단(Paragraph) 블록만 내장하고 있어,
+      제목·목록·인용 블록을 쓰려면 <code>@editorjs/header</code>, <code>@editorjs/list</code>,
+      <code>@editorjs/quote</code> 같은 별도 플러그인 패키지를 함께 불러와야 합니다. 실제로 이 셋을
+      빼고 테스트했더니 해당 블록 타입이 그냥 동작하지 않는 것을 확인했습니다. 이 페이지의 위판 공지
+      내용은 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의 공지·자료가 아닙니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 블록 스타일 에디터</h2>
+    <div class="desc">아래 에디터 빈 줄에서 <code>+</code> 버튼(또는 <code>Tab</code>)을 눌러 제목·목록·인용 블록을 자유롭게 추가해보세요.</div>
+    <div class="editor-wrap" id="editor1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const editor = new EditorJS({
+  holder: 'editor1',
+  tools: {
+    header: Header,
+    list: { class: EditorjsList, inlineToolbar: true },
+    quote: Quote,
+  },
+  data: {
+    blocks: [
+      { type: 'header', data: { text: '위판 공지(가상)', level: 2 } },
+      { type: 'paragraph', data: { text: '오늘 위판 일정을 안내합니다.' } },
+    ],
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. save() — 구조화된 JSON으로 출력</h2>
+    <div class="desc">위 에디터의 현재 내용을 <code>save()</code>로 읽어옵니다. HTML 문자열이 아니라 블록 타입별 데이터가 담긴 JSON 배열이 나오는 것을 확인하세요.</div>
+    <div class="controls"><button id="saveBtn2">현재 내용 JSON으로 저장</button></div>
+    <pre class="output" id="output2">아직 저장 안 함</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const data = await editor.save();
+console.log(data);
+// { time, blocks: [ { type: 'header', data: {...} }, { type: 'list', data: {...} }, ... ], version }</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. render() — 저장된 JSON 다시 불러오기</h2>
+    <div class="desc">위에서 저장한 JSON을 <strong>새로운</strong> 에디터 인스턴스에 <code>render()</code>로 그대로 넣어 복원합니다. 먼저 2번에서 저장을 한 번 해주세요.</div>
+    <div class="controls"><button id="renderBtn3">아래 에디터에 복원</button></div>
+    <div class="editor-wrap" id="editor3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const editor2 = new EditorJS({ holder: 'editor3', tools: { header: Header, list: EditorjsList, quote: Quote } });
+await editor2.isReady;
+await editor2.render(savedData); // save()로 받은 JSON을 그대로 전달</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 읽기 전용 모드 토글</h2>
+    <div class="desc"><code>readOnly.toggle()</code>로 1번 에디터의 편집 가능 여부를 즉시 전환합니다. 공지가 확정된 뒤 잠그는 용도 등에 씁니다.</div>
+    <div class="controls">
+      <button class="ghost" id="readOnlyBtn4">읽기 전용 켜기</button>
+      <span class="result-box" id="readOnlyState4" style="margin-top:0;">현재: 편집 가능</span>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">await editor.readOnly.toggle(true);   // 잠금
+await editor.readOnly.toggle(false);  // 잠금 해제
+editor.readOnly.isEnabled;            // 현재 상태</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.31.6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.9"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.9"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.6"></script>
+  <script>
+    const TOOLS = {
+      header: Header,
+      list: { class: EditorjsList, inlineToolbar: true },
+      quote: Quote,
+    };
+
+    // ---------- 1. 블록 스타일 에디터 ----------
+    const editor1 = new EditorJS({
+      holder: 'editor1',
+      autofocus: false,
+      tools: TOOLS,
+      data: {
+        blocks: [
+          { type: 'header', data: { text: '위판 공지(가상)', level: 2 } },
+          { type: 'paragraph', data: { text: '오늘 부산공동어시장 위판 일정을 안내합니다.' } },
+          { type: 'list', data: { style: 'unordered', items: [{ content: '고등어 320kg', items: [] }, { content: '갈치 180kg', items: [] }] } },
+          { type: 'quote', data: { text: '위판 시작 5분 전 집합 바랍니다.', caption: '위판장(가상)' } },
+        ],
+      },
+    });
+
+    // ---------- 2. save() ----------
+    let lastSaved = null;
+    document.getElementById('saveBtn2').addEventListener('click', async () => {
+      lastSaved = await editor1.save();
+      document.getElementById('output2').textContent = JSON.stringify(lastSaved, null, 2);
+    });
+
+    // ---------- 3. render() 라운드트립 ----------
+    const editor3 = new EditorJS({ holder: 'editor3', autofocus: false, tools: TOOLS });
+    document.getElementById('renderBtn3').addEventListener('click', async () => {
+      if (!lastSaved) {
+        alert('먼저 2번 섹션에서 "현재 내용 JSON으로 저장"을 눌러주세요.');
+        return;
+      }
+      await editor3.isReady;
+      await editor3.render(lastSaved);
+    });
+
+    // ---------- 4. 읽기 전용 토글 ----------
+    let readOnly4 = false;
+    document.getElementById('readOnlyBtn4').addEventListener('click', async (e) => {
+      readOnly4 = !readOnly4;
+      await editor1.readOnly.toggle(readOnly4);
+      e.target.textContent = readOnly4 ? '읽기 전용 끄기' : '읽기 전용 켜기';
+      document.getElementById('readOnlyState4').textContent = `현재: ${readOnly4 ? '읽기 전용' : '편집 가능'}`;
+    });
+  </script>
+</body>
+</html>
