@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>MicroModal 0.7.0 Feature Lab</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: rgba(255,255,255,.88);
+      --surface-solid: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #dbe3ef;
+      --primary: #5458e8;
+      --primary-strong: #3d41c7;
+      --primary-soft: #eeefff;
+      --accent: #0f9f8f;
+      --warning: #d97706;
+      --danger: #dc3545;
+      --success: #168554;
+      --shadow: 0 18px 50px rgba(28, 39, 70, .12);
+      --radius: 18px;
+      --modal-radius: 22px;
+      --header-h: 72px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1420;
+        --surface: rgba(24,31,48,.9);
+        --surface-solid: #181f30;
+        --text: #edf2ff;
+        --muted: #a8b1c4;
+        --line: #303a50;
+        --primary: #8589ff;
+        --primary-strong: #a6a9ff;
+        --primary-soft: #252a51;
+        --accent: #4ed8c5;
+        --warning: #f2ad46;
+        --danger: #ff6978;
+        --success: #51d38e;
+        --shadow: 0 20px 60px rgba(0,0,0,.35);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(84,88,232,.13), transparent 27rem),
+        radial-gradient(circle at 100% 15%, rgba(15,159,143,.11), transparent 24rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+    a { color: inherit; }
+    code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    :focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 75%, white); outline-offset: 3px; }
+
+    .skip-link {
+      position: fixed; left: 16px; top: -80px; z-index: 10000;
+      padding: 10px 14px; border-radius: 10px; background: var(--surface-solid); box-shadow: var(--shadow);
+    }
+    .skip-link:focus { top: 16px; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      min-height: var(--header-h);
+      display: flex; align-items: center; gap: 18px;
+      padding: 12px clamp(16px, 3vw, 34px);
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+      background: color-mix(in srgb, var(--bg) 84%, transparent);
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 230px; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 15px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--primary), #8c5de8);
+      color: white; box-shadow: 0 9px 25px rgba(84,88,232,.28);
+      font-weight: 900; font-size: 21px;
+    }
+    .brand h1 { margin: 0; font-size: 17px; line-height: 1.1; }
+    .brand p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .topbar-tools { flex: 1; display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+
+    .searchbox {
+      position: relative; width: min(420px, 42vw);
+    }
+    .searchbox input {
+      width: 100%; min-height: 44px; border-radius: 14px; border: 1px solid var(--line);
+      background: var(--surface); color: var(--text); padding: 10px 42px 10px 42px;
+    }
+    .searchbox svg { position: absolute; left: 14px; top: 13px; color: var(--muted); }
+    .searchbox kbd { position: absolute; right: 11px; top: 10px; }
+
+    kbd {
+      border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 7px;
+      background: var(--surface-solid); padding: 2px 7px; color: var(--muted); font-size: 11px;
+    }
+
+    .layout {
+      width: min(1480px, 100%); margin: 0 auto; padding: 28px clamp(16px, 3vw, 34px) 70px;
+      display: grid; grid-template-columns: 260px minmax(0,1fr) 300px; gap: 24px;
+    }
+    .sidebar, .lab-panel {
+      position: sticky; top: calc(var(--header-h) + 20px); align-self: start;
+      max-height: calc(100vh - var(--header-h) - 38px); overflow: auto;
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow);
+    }
+    .sidebar { padding: 18px; }
+    .sidebar-title { margin: 0 0 12px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .nav-list { display: grid; gap: 7px; }
+    .nav-list a {
+      text-decoration: none; padding: 9px 11px; border-radius: 10px; color: var(--muted); font-size: 14px;
+    }
+    .nav-list a:hover, .nav-list a.active { background: var(--primary-soft); color: var(--primary-strong); font-weight: 700; }
+    .sidebar-note { margin-top: 18px; padding: 13px; border-radius: 13px; background: color-mix(in srgb, var(--accent) 10%, transparent); font-size: 12px; color: var(--muted); }
+
+    .content { min-width: 0; }
+    .hero {
+      position: relative; overflow: hidden;
+      min-height: 250px; padding: clamp(24px, 4vw, 44px); margin-bottom: 28px;
+      border-radius: 28px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: ""; position: absolute; width: 330px; height: 330px; right: -110px; top: -130px; border-radius: 50%;
+      background: conic-gradient(from 10deg, rgba(84,88,232,.3), rgba(15,159,143,.14), transparent 65%);
+    }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--primary-strong); text-transform: uppercase; letter-spacing: .08em; }
+    .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 15%, transparent); }
+    .hero h2 { position: relative; z-index: 1; max-width: 780px; margin: 14px 0 10px; font-size: clamp(30px, 4vw, 54px); line-height: 1.06; letter-spacing: -.04em; }
+    .hero p { position: relative; z-index: 1; max-width: 780px; margin: 0; color: var(--muted); }
+    .hero-actions { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .stats { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-top: 28px; }
+    .stat { padding: 12px 14px; border: 1px solid var(--line); border-radius: 13px; background: color-mix(in srgb, var(--surface-solid) 82%, transparent); }
+    .stat strong { display: block; font-size: 20px; }
+    .stat span { font-size: 12px; color: var(--muted); }
+
+    .section { scroll-margin-top: calc(var(--header-h) + 20px); margin: 34px 0; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 15px; }
+    .section-head h3 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+    .section-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .section-count { flex: none; font-size: 12px; color: var(--muted); }
+    .card-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+    .demo-card {
+      min-height: 206px; display: flex; flex-direction: column; padding: 18px;
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 12px 32px rgba(28,39,70,.07);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .demo-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--primary) 35%, var(--line)); }
+    .card-top { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .icon-box { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: var(--primary-soft); color: var(--primary-strong); font-size: 20px; }
+    .badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font-size: 10px; font-weight: 800; }
+    .demo-card h4 { margin: 15px 0 6px; font-size: 16px; }
+    .demo-card p { margin: 0; color: var(--muted); font-size: 13px; flex: 1; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+    .btn {
+      appearance: none; border: 1px solid transparent; min-height: 40px; padding: 9px 14px; border-radius: 11px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; text-decoration: none; font-weight: 750; font-size: 13px; transition: .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 8px 20px rgba(84,88,232,.22); }
+    .btn-primary:hover { background: var(--primary-strong); }
+    .btn-secondary { background: var(--surface-solid); border-color: var(--line); color: var(--text); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-small { min-height: 34px; padding: 6px 10px; font-size: 12px; }
+    .btn-icon { width: 40px; padding: 0; }
+
+    .lab-panel { padding: 0; }
+    .lab-panel header { padding: 17px 18px; border-bottom: 1px solid var(--line); }
+    .lab-panel h3 { margin: 0; font-size: 15px; }
+    .lab-panel header p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+    .control-group { padding: 15px 18px; border-bottom: 1px solid var(--line); }
+    .control-group h4 { margin: 0 0 11px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .switch-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin: 10px 0; font-size: 13px; }
+    .switch { position: relative; width: 40px; height: 23px; flex: none; }
+    .switch input { position: absolute; opacity: 0; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--line); cursor: pointer; transition: .2s; }
+    .switch span::after { content: ""; position: absolute; width: 17px; height: 17px; left: 3px; top: 3px; border-radius: 50%; background: white; box-shadow: 0 2px 7px rgba(0,0,0,.25); transition: .2s; }
+    .switch input:checked + span { background: var(--primary); }
+    .switch input:checked + span::after { transform: translateX(17px); }
+    .select { width: 100%; border: 1px solid var(--line); background: var(--surface-solid); color: var(--text); border-radius: 10px; padding: 8px 10px; }
+    .log-wrap { padding: 15px 18px; }
+    .event-log { height: 210px; overflow: auto; display: grid; align-content: start; gap: 7px; font-size: 11px; }
+    .log-item { padding: 7px 8px; border-radius: 8px; background: color-mix(in srgb, var(--surface-solid) 75%, transparent); border: 1px solid var(--line); }
+    .log-item strong { color: var(--primary-strong); }
+    .log-item time { float: right; color: var(--muted); }
+    .lab-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+
+    .empty-state { display: none; padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); }
+    .footer-note { margin-top: 45px; padding: 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+    .toast-region { position: fixed; right: 18px; bottom: 18px; z-index: 9999; display: grid; gap: 10px; pointer-events: none; }
+    .toast { min-width: 260px; max-width: 380px; padding: 13px 15px; border-radius: 13px; background: var(--surface-solid); border: 1px solid var(--line); box-shadow: var(--shadow); animation: toastIn .25s ease; }
+    .toast strong { display: block; font-size: 13px; }
+    .toast span { color: var(--muted); font-size: 12px; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } }
+
+    /* MicroModal base */
+    .modal { display: none; position: fixed; inset: 0; z-index: 1000; }
+    .modal.is-open, .modal.is-drawer-open, .modal.is-fullscreen-open, .modal.is-zoom-open { display: block; }
+    .modal__overlay {
+      position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto;
+      padding: clamp(16px, 4vw, 44px); background: rgba(11,16,30,.70); backdrop-filter: blur(8px);
+    }
+    .modal__container {
+      width: min(680px, 100%); max-height: min(820px, calc(100vh - 32px)); overflow: hidden;
+      display: flex; flex-direction: column;
+      border-radius: var(--modal-radius); border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+      background: var(--surface-solid); color: var(--text); box-shadow: 0 28px 90px rgba(0,0,0,.35);
+    }
+    .modal__container--small { width: min(420px, 100%); }
+    .modal__container--large { width: min(980px, 100%); }
+    .modal__header { display: flex; align-items: flex-start; gap: 16px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+    .modal__heading { flex: 1; min-width: 0; }
+    .modal__title { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+    .modal__subtitle { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .modal__close { width: 38px; height: 38px; flex: none; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-solid); cursor: pointer; font-size: 20px; line-height: 1; }
+    .modal__content { padding: 22px; overflow: auto; overscroll-behavior: contain; }
+    .modal__footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; padding: 15px 22px; border-top: 1px solid var(--line); }
+    .modal__content p:first-child { margin-top: 0; }
+    .modal__content p:last-child { margin-bottom: 0; }
+
+    .modal[aria-hidden="false"] .modal__overlay { animation: modalFadeIn .22s ease both; }
+    .modal[aria-hidden="false"] .modal__container { animation: modalSlideIn .28s cubic-bezier(.2,.75,.25,1) both; }
+    .modal[aria-hidden="true"].is-open .modal__overlay,
+    .modal[aria-hidden="true"].is-zoom-open .modal__overlay,
+    .modal[aria-hidden="true"].is-drawer-open .modal__overlay,
+    .modal[aria-hidden="true"].is-fullscreen-open .modal__overlay { animation: modalFadeOut .18s ease both; }
+    .modal[aria-hidden="true"].is-open .modal__container,
+    .modal[aria-hidden="true"].is-zoom-open .modal__container { animation: modalSlideOut .18s ease both; }
+    .modal.is-zoom-open[aria-hidden="false"] .modal__container { animation-name: modalZoomIn; }
+    .modal.is-zoom-open[aria-hidden="true"] .modal__container { animation-name: modalZoomOut; }
+    @keyframes modalFadeIn { from { opacity: 0; } }
+    @keyframes modalFadeOut { to { opacity: 0; } }
+    @keyframes modalSlideIn { from { opacity: 0; transform: translateY(22px) scale(.98); } }
+    @keyframes modalSlideOut { to { opacity: 0; transform: translateY(14px) scale(.985); } }
+    @keyframes modalZoomIn { from { opacity: 0; transform: scale(.82); } }
+    @keyframes modalZoomOut { to { opacity: 0; transform: scale(.86); } }
+
+    .modal.is-drawer-open .modal__overlay { display: flex; justify-content: flex-end; padding: 0; }
+    .modal.is-drawer-open .modal__container { width: min(480px, 92vw); height: 100%; max-height: none; border-radius: 24px 0 0 24px; }
+    .modal.is-drawer-open[aria-hidden="false"] .modal__container { animation: drawerIn .28s ease both; }
+    .modal.is-drawer-open[aria-hidden="true"] .modal__container { animation: drawerOut .2s ease both; }
+    @keyframes drawerIn { from { transform: translateX(100%); } }
+    @keyframes drawerOut { to { transform: translateX(100%); } }
+
+    .modal.is-fullscreen-open .modal__overlay { padding: 0; }
+    .modal.is-fullscreen-open .modal__container { width: 100%; height: 100%; max-height: none; border-radius: 0; border: 0; }
+
+    .form-grid { display: grid; gap: 14px; }
+    .field { display: grid; gap: 6px; }
+    .field label { font-weight: 700; font-size: 12px; }
+    .field input, .field select, .field textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-solid); color: var(--text); padding: 10px 12px;
+    }
+    .field small { color: var(--muted); }
+    .field-error { min-height: 18px; color: var(--danger); font-size: 11px; }
+    .check-row { display: flex; gap: 9px; align-items: flex-start; font-size: 12px; color: var(--muted); }
+
+    .notice { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--primary-soft); font-size: 12px; }
+    .notice.warning { background: color-mix(in srgb, var(--warning) 12%, transparent); border-color: color-mix(in srgb, var(--warning) 35%, var(--line)); }
+    .notice.danger { background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+
+    .progress { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .progress > span { display: block; height: 100%; width: 33.33%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width .25s ease; }
+    .wizard-step { display: none; }
+    .wizard-step.active { display: block; animation: stepIn .2s ease; }
+    @keyframes stepIn { from { opacity: 0; transform: translateX(8px); } }
+
+    .skeleton { display: grid; gap: 10px; }
+    .skeleton span { display: block; height: 14px; border-radius: 8px; background: linear-gradient(90deg, var(--line), color-mix(in srgb, var(--line) 45%, white), var(--line)); background-size: 220% 100%; animation: shimmer 1.2s linear infinite; }
+    .skeleton span:nth-child(2) { width: 82%; }
+    .skeleton span:nth-child(3) { width: 60%; }
+    @keyframes shimmer { to { background-position: -220% 0; } }
+
+    .gallery-stage { aspect-ratio: 16/9; border-radius: 16px; display: grid; place-items: center; color: white; background: linear-gradient(135deg, #4e54c8, #8f94fb); overflow: hidden; }
+    .gallery-stage::before { content: "MicroModal"; font-size: clamp(34px, 8vw, 78px); font-weight: 900; letter-spacing: -.06em; text-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .palette { display: flex; gap: 10px; margin-top: 14px; }
+    .palette button { width: 38px; height: 38px; border-radius: 12px; border: 3px solid var(--surface-solid); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
+
+    .command-list { display: grid; gap: 8px; }
+    .command { display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-solid); cursor: pointer; }
+    .command:hover { background: var(--primary-soft); }
+    .command span { flex: 1; }
+
+    .code-block { position: relative; margin: 14px 0 0; border: 1px solid var(--line); border-radius: 13px; overflow: hidden; }
+    .code-block pre { margin: 0; padding: 15px; overflow: auto; background: #121827; color: #dce6ff; font-size: 11px; line-height: 1.65; }
+    .code-label { padding: 7px 10px; background: color-mix(in srgb, var(--surface-solid) 85%, transparent); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 220px minmax(0,1fr); }
+      .lab-panel { position: fixed; right: 12px; bottom: 12px; top: auto; width: min(330px, calc(100vw - 24px)); max-height: 75vh; z-index: 60; transform: translateY(calc(100% + 24px)); transition: transform .25s ease; }
+      .lab-panel.is-visible { transform: translateY(0); }
+      .lab-toggle { display: inline-flex !important; }
+    }
+    @media (max-width: 820px) {
+      .topbar { flex-wrap: wrap; }
+      .brand { min-width: 0; flex: 1; }
+      .topbar-tools { width: 100%; }
+      .searchbox { width: 100%; }
+      .layout { display: block; padding-top: 18px; }
+      .sidebar { display: none; }
+      .card-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 560px) {
+      .card-grid { grid-template-columns: 1fr; }
+      .hero { border-radius: 21px; }
+      .hero-actions .btn { flex: 1 1 130px; }
+      .modal__overlay { padding: 10px; align-items: end; }
+      .modal__container { max-height: 92vh; border-radius: 20px 20px 0 0; }
+      .modal__header, .modal__content, .modal__footer { padding-left: 16px; padding-right: 16px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+    .lab-toggle { display: none; }
+    .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">M</div>
+    <div>
+      <h1>MicroModal Feature Lab</h1>
+      <p>Accessible modal playground · v0.7.0 API</p>
+    </div>
+  </div>
+  <div class="topbar-tools">
+    <label class="searchbox">
+      <span class="visually-hidden">샘플 검색</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="demoSearch" type="search" placeholder="기능 검색: 중첩, 폼, drawer…" autocomplete="off">
+      <kbd>/</kbd>
+    </label>
+    <button class="btn btn-secondary btn-icon lab-toggle" id="labToggle" aria-label="옵션 패널 열기">⚙</button>
+    <button class="btn btn-secondary btn-icon" id="openCommand" aria-label="명령 팔레트 열기" title="Ctrl/⌘ + K">⌘</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" aria-label="페이지 목차">
+    <p class="sidebar-title">Feature map</p>
+    <nav class="nav-list">
+      <a href="#basics">01 · 기본 및 트리거</a>
+      <a href="#layouts">02 · 크기 및 레이아웃</a>
+      <a href="#flows">03 · 폼 및 사용자 흐름</a>
+      <a href="#accessibility">04 · 접근성 및 포커스</a>
+      <a href="#api">05 · v0.7 API</a>
+      <a href="#patterns">06 · 실전 패턴</a>
+    </nav>
+    <div class="sidebar-note">
+      <strong>키보드 시험</strong><br>
+      모달을 연 뒤 <kbd>Tab</kbd>, <kbd>Shift</kbd>+<kbd>Tab</kbd>, <kbd>Esc</kbd>를 사용해 포커스 트랩과 복귀 동작을 확인해 봐.
+    </div>
+  </aside>
+
+  <main class="content" id="main">
+    <section class="hero">
+      <span class="eyebrow">Single HTML interactive demo</span>
+      <h2>MicroModal의 핵심과 신규 API를 한 화면에서 시험</h2>
+      <p>데이터 속성 트리거, JavaScript 제어, 애니메이션 대기, 스크롤 잠금, 포커스 트랩, 중첩 모달, alertdialog, 동적 등록·재설정·제거까지 실제로 동작하도록 구성했다.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" data-micromodal-trigger="basic-modal">대표 모달 열기</button>
+        <button class="btn btn-secondary" id="runTour">핵심 기능 순차 보기</button>
+        <button class="btn btn-secondary" data-micromodal-trigger="code-modal">초기화 코드 보기</button>
+      </div>
+      <div class="stats" aria-label="샘플 요약">
+        <div class="stat"><strong id="demoCount">24</strong><span>기능 데모</span></div>
+        <div class="stat"><strong>6</strong><span>레이아웃 유형</span></div>
+        <div class="stat"><strong>8</strong><span>주요 설정 옵션</span></div>
+        <div class="stat"><strong id="librarySource">확인 중</strong><span>라이브러리 로드</span></div>
+      </div>
+    </section>
+
+    <div id="emptyState" class="empty-state">검색 조건과 일치하는 데모가 없다.</div>
+
+    <section class="section" id="basics" data-section>
+      <div class="section-head">
+        <div><h3>01. 기본 및 트리거</h3><p>가장 자주 사용하는 열기·닫기 방식과 동작 차이</p></div>
+        <span class="section-count">5 demos</span>
+      </div>
+      <div class="card-grid">
+        <article class="demo-card" data-search="기본 데이터 속성 트리거 overlay esc close aria hidden">
+          <div class="card-top"><div class="icon-box">◎</div><span class="badge">DATA API</span></div>
+          <h4>기본 모달</h4><p><code>data-micromodal-trigger</code>와 overlay·닫기 버튼을 이용한 표준 구조.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="basic-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="javascript api show close programmatic 프로그래밍">
+          <div class="card-top"><div class="icon-box">{ }</div><span class="badge">JS API</span></div>
+          <h4>JavaScript 제어</h4><p><code>MicroModal.show()</code>와 <code>close()</code>를 직접 호출.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openProgrammatic">show()</button><button class="btn btn-secondary" id="closeProgrammatic">close()</button></div>
+        </article>
+        <article class="demo-card" data-search="custom trigger closeTrigger custom attribute 커스텀 속성">
+          <div class="card-top"><div class="icon-box">⌁</div><span class="badge">CUSTOM ATTR</span></div>
+          <h4>사용자 정의 속성</h4><p><code>data-demo-open</code>과 <code>data-demo-close</code>로 트리거 이름 변경.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-demo-open="custom-trigger-modal">커스텀 열기</button></div>
+        </article>
+        <article class="demo-card" data-search="persistent overlay close disabled esc no overlay 고정 모달">
+          <div class="card-top"><div class="icon-box">▣</div><span class="badge">PERSISTENT</span></div>
+          <h4>Overlay 닫기 방지</h4><p>overlay에 닫기 속성을 두지 않아 바깥 클릭으로 닫히지 않는 구조.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="persistent-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="auto close timer timed countdown 자동 닫기">
+          <div class="card-top"><div class="icon-box">◷</div><span class="badge">TIMER</span></div>
+          <h4>자동 닫기</h4><p>열린 뒤 5초 카운트다운 후 JavaScript API로 자동 종료.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openAutoModal">5초 데모</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="layouts" data-section>
+      <div class="section-head">
+        <div><h3>02. 크기 및 레이아웃</h3><p>CSS만 바꿔 다양한 표현을 만드는 방법</p></div>
+        <span class="section-count">5 demos</span>
+      </div>
+      <div class="card-grid">
+        <article class="demo-card" data-search="small compact confirm 작은 모달">
+          <div class="card-top"><div class="icon-box">S</div><span class="badge">SMALL</span></div>
+          <h4>소형 다이얼로그</h4><p>간단한 확인이나 짧은 안내에 적합한 420px 컨테이너.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="small-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="large scroll long content 긴 콘텐츠 스크롤">
+          <div class="card-top"><div class="icon-box">L</div><span class="badge">SCROLL</span></div>
+          <h4>대형·긴 콘텐츠</h4><p>헤더와 푸터는 고정하고 본문만 독립적으로 스크롤.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="long-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="drawer side panel right slide 서랍 사이드 패널">
+          <div class="card-top"><div class="icon-box">→</div><span class="badge">OPEN CLASS</span></div>
+          <h4>우측 Drawer</h4><p><code>openClass</code>를 변경하고 CSS 슬라이드 애니메이션 적용.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="drawer-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="fullscreen full screen 전체 화면">
+          <div class="card-top"><div class="icon-box">⛶</div><span class="badge">FULLSCREEN</span></div>
+          <h4>전체 화면</h4><p>편집기·미리보기 같은 집중 작업용 전체 화면 레이아웃.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="fullscreen-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="gallery image media responsive 갤러리 이미지">
+          <div class="card-top"><div class="icon-box">▧</div><span class="badge">MEDIA</span></div>
+          <h4>반응형 갤러리</h4><p>미디어 영역과 색상 팔레트를 포함한 시각적 모달 패턴.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="gallery-modal">열기</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="flows" data-section>
+      <div class="section-head">
+        <div><h3>03. 폼 및 사용자 흐름</h3><p>검증·확인·단계형·비동기 콘텐츠 패턴</p></div>
+        <span class="section-count">5 demos</span>
+      </div>
+      <div class="card-grid">
+        <article class="demo-card" data-search="form validation login input 폼 검증 로그인">
+          <div class="card-top"><div class="icon-box">✎</div><span class="badge">FORM</span></div>
+          <h4>폼 검증</h4><p>제출 오류를 모달 내부에 표시하고 성공 시 닫기·알림 처리.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="form-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="alertdialog confirm destructive escape disabled 삭제 확인 경고">
+          <div class="card-top"><div class="icon-box">!</div><span class="badge">ALERTDIALOG</span></div>
+          <h4>중요 작업 확인</h4><p><code>role="alertdialog"</code>로 Esc 종료를 막고 명시적 선택 요구.</p>
+          <div class="card-actions"><button class="btn btn-danger" data-micromodal-trigger="confirm-modal">삭제 확인</button></div>
+        </article>
+        <article class="demo-card" data-search="nested layered stack 중첩 모달 레이어 esc top">
+          <div class="card-top"><div class="icon-box">▦</div><span class="badge">v0.7 NEW</span></div>
+          <h4>중첩 모달</h4><p>상위 모달 위에 하위 모달을 열고 Esc로 최상단만 닫기.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="nested-parent-modal">시작</button></div>
+        </article>
+        <article class="demo-card" data-search="wizard steps multi step 단계형 마법사">
+          <div class="card-top"><div class="icon-box">1→3</div><span class="badge">FLOW</span></div>
+          <h4>3단계 Wizard</h4><p>하나의 모달 내부에서 단계별 입력과 진행률 관리.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="wizard-modal">시작</button></div>
+        </article>
+        <article class="demo-card" data-search="async ajax loading skeleton 비동기 로딩">
+          <div class="card-top"><div class="icon-box">↻</div><span class="badge">ASYNC</span></div>
+          <h4>비동기 콘텐츠</h4><p>로딩 skeleton을 먼저 표시하고 지연된 데이터를 모달에 삽입.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openAsyncModal">불러오기</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="accessibility" data-section>
+      <div class="section-head">
+        <div><h3>04. 접근성 및 포커스</h3><p>MicroModal이 담당하는 주요 접근성 동작 시험</p></div>
+        <span class="section-count">4 demos</span>
+      </div>
+      <div class="card-grid">
+        <article class="demo-card" data-search="focus trap tab shift keyboard 포커스 트랩 키보드">
+          <div class="card-top"><div class="icon-box">⇥</div><span class="badge">A11Y</span></div>
+          <h4>포커스 트랩</h4><p>첫 요소 자동 포커스, Tab 순환, 닫은 후 원래 버튼으로 복귀 확인.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="focus-modal">시험</button></div>
+        </article>
+        <article class="demo-card" data-search="disableFocus autofocus disabled focus option 자동 포커스 비활성">
+          <div class="card-top"><div class="icon-box">⊘</div><span class="badge">OPTION</span></div>
+          <h4>자동 포커스 비활성</h4><p><code>disableFocus: true</code>를 런타임 설정으로 적용.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openNoFocus">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="aria labelledby describedby screen reader 접근성 aria">
+          <div class="card-top"><div class="icon-box">A11y</div><span class="badge">ARIA</span></div>
+          <h4>ARIA 설명 연결</h4><p><code>aria-labelledby</code>와 <code>aria-describedby</code>를 함께 사용.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="aria-modal">열기</button></div>
+        </article>
+        <article class="demo-card" data-search="options disable scroll animation debug openClass 설정 실험실">
+          <div class="card-top"><div class="icon-box">⚙</div><span class="badge">LAB</span></div>
+          <h4>옵션 실험실</h4><p>우측 패널의 옵션을 조합해 동일 모달의 동작 차이 확인.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openWithOptions">설정 적용 열기</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="api" data-section>
+      <div class="section-head">
+        <div><h3>05. MicroModal 0.7 API</h3><p>동적 화면 구성에 필요한 신규 메서드</p></div>
+        <span class="section-count">4 demos</span>
+      </div>
+      <div class="card-grid">
+        <article class="demo-card" data-search="initModal dynamic create register 동적 등록 생성">
+          <div class="card-top"><div class="icon-box">＋</div><span class="badge">initModal()</span></div>
+          <h4>동적 생성·등록</h4><p>DOM에 새 모달을 추가하고 <code>initModal()</code>로 등록 후 즉시 열기.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="createDynamic">생성·열기</button></div>
+        </article>
+        <article class="demo-card" data-search="config reconfigure disableFocus disableScroll 설정 변경">
+          <div class="card-top"><div class="icon-box">↯</div><span class="badge">config()</span></div>
+          <h4>등록 후 재설정</h4><p><code>config()</code>로 자동 포커스·스크롤 설정을 변경.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openReconfig">현재 설정 열기</button><button class="btn btn-secondary" id="toggleReconfig">설정 변경</button></div>
+        </article>
+        <article class="demo-card" data-search="closeAll all nested 모두 닫기">
+          <div class="card-top"><div class="icon-box">×N</div><span class="badge">closeAll()</span></div>
+          <h4>모든 모달 닫기</h4><p>중첩된 여러 모달을 한 번에 닫는 신규 API.</p>
+          <div class="card-actions"><button class="btn btn-primary" id="openCloseAllDemo">2개 열기</button></div>
+        </article>
+        <article class="demo-card" data-search="removeModal unregister cleanup 제거 등록 해제">
+          <div class="card-top"><div class="icon-box">−</div><span class="badge">removeModal()</span></div>
+          <h4>등록 해제·정리</h4><p>동적 모달의 이벤트를 정리하고 인스턴스를 제거.</p>
+          <div class="card-actions"><button class="btn btn-secondary" id="removeDynamic">동적 모달 제거</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="patterns" data-section>
+      <div class="section-head">
+        <div><h3>06. 실전 패턴</h3><p>제품 화면에 바로 응용 가능한 구성</p></div>
+        <span class="section-count">1 demo</span>
+      </div>
+      <div class="card-grid">
+        <article class="demo-card" data-search="command palette keyboard shortcut ctrl k 명령 팔레트">
+          <div class="card-top"><div class="icon-box">⌘K</div><span class="badge">SHORTCUT</span></div>
+          <h4>명령 팔레트</h4><p><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>K</kbd>로 열고 빠른 기능 실행.</p>
+          <div class="card-actions"><button class="btn btn-primary" data-micromodal-trigger="command-modal">열기</button></div>
+        </article>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      이 파일은 MicroModal 0.7.0 CDN을 우선 사용하며, 네트워크가 차단된 환경에서도 데모가 실행되도록 호환 fallback을 포함한다. 실제 배포 시에는 패키지를 로컬에 내려받아 고정 버전으로 관리하는 방식을 권장한다.
+    </div>
+  </main>
+
+  <aside class="lab-panel" id="labPanel" aria-label="MicroModal 옵션 및 이벤트 로그">
+    <header>
+      <h3>옵션 실험실</h3>
+      <p>아래 설정은 “설정 적용 열기” 데모에 사용</p>
+    </header>
+    <div class="control-group">
+      <h4>Runtime config</h4>
+      <div class="switch-row"><span>페이지 스크롤 잠금</span><label class="switch"><input id="optScroll" type="checkbox" checked><span></span></label></div>
+      <div class="switch-row"><span>첫 요소 자동 포커스</span><label class="switch"><input id="optFocus" type="checkbox" checked><span></span></label></div>
+      <div class="switch-row"><span>애니메이션 완료 대기</span><label class="switch"><input id="optAnimation" type="checkbox" checked><span></span></label></div>
+      <div class="switch-row"><span>Debug mode</span><label class="switch"><input id="optDebug" type="checkbox" checked><span></span></label></div>
+      <label class="field" style="margin-top:12px"><span style="font-size:12px;font-weight:700">Open class</span>
+        <select id="optOpenClass" class="select"><option value="is-open">is-open · slide</option><option value="is-zoom-open">is-zoom-open · zoom</option></select>
+      </label>
+      <button class="btn btn-primary" id="openWithOptionsPanel" style="width:100%;margin-top:12px">설정 적용 열기</button>
+    </div>
+    <div class="log-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h4 style="margin:0;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Event log</h4><span class="chip" id="activeCount">0 open</span></div>
+      <div class="event-log" id="eventLog" aria-live="polite"></div>
+      <div class="lab-actions"><button class="btn btn-secondary btn-small" id="clearLog">로그 비우기</button><button class="btn btn-secondary btn-small" id="copyLog">로그 복사</button></div>
+    </div>
+  </aside>
+</div>
+
+<div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="false"></div>
+<div id="liveRegion" class="visually-hidden" aria-live="assertive"></div>
+
+<!-- 1. 기본 -->
+<div class="modal" id="basic-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="basic-title" aria-describedby="basic-desc">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="basic-title">기본 MicroModal</h2><p class="modal__subtitle" id="basic-desc">표준 마크업과 기본 접근성 동작</p></div><button class="modal__close" aria-label="모달 닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content">
+        <p>이 모달은 데이터 속성으로 열렸다. 바깥 영역 클릭, <kbd>Esc</kbd>, 닫기 버튼으로 종료할 수 있다.</p>
+        <div class="notice">모달이 열리면 <code>aria-hidden="false"</code>로 바뀌고, 포커스가 첫 번째 유효 요소로 이동한다.</div>
+        <div class="chip-row" style="margin-top:14px"><span class="chip">Focus trap</span><span class="chip">Esc close</span><span class="chip">Overlay close</span><span class="chip">Focus restore</span></div>
+      </div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>취소</button><button class="btn btn-primary" id="basicContinue">계속</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="programmatic-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="programmatic-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="programmatic-title">JavaScript로 열린 모달</h2><p class="modal__subtitle">MicroModal.show('programmatic-modal')</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p>카드의 <code>show()</code> 버튼으로 열리고, 페이지 어디에서든 <code>close()</code> 호출로 닫을 수 있다.</p></div>
+      <footer class="modal__footer"><button class="btn btn-primary" id="insideProgrammaticClose">API로 닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="custom-trigger-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-demo-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="custom-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="custom-title">사용자 정의 트리거</h2><p class="modal__subtitle">openTrigger / closeTrigger 변경</p></div><button class="modal__close" aria-label="닫기" data-demo-close>×</button></header>
+      <div class="modal__content"><div class="code-block"><div class="code-label">configuration</div><pre>MicroModal.initModal('custom-trigger-modal', {
+  openTrigger: 'data-demo-open',
+  closeTrigger: 'data-demo-close',
+  triggers: [...document.querySelectorAll('[data-demo-open]')]
+})</pre></div></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-demo-close>커스텀 속성으로 닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="persistent-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1">
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="persistent-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="persistent-title">바깥 클릭으로 닫히지 않음</h2><p class="modal__subtitle">Overlay에 close 속성 없음</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p>overlay를 눌러도 유지된다. 다만 <kbd>Esc</kbd>와 명시적 닫기 버튼은 여전히 동작한다.</p></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>확인</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="auto-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="auto-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="auto-title">자동 닫기</h2><p class="modal__subtitle">프로그램 제어형 타이머</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p><strong id="autoCountdown">5</strong>초 후 자동으로 닫힌다.</p><div class="progress"><span id="autoProgress" style="width:100%"></span></div></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" id="cancelAutoClose">타이머 취소</button></footer>
+    </section>
+  </div>
+</div>
+
+<!-- 2. 레이아웃 -->
+<div class="modal" id="small-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="small-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="small-title">저장할까?</h2></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p>변경된 내용 3건이 있다.</p></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>나중에</button><button class="btn btn-primary" id="saveSmall">저장</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="long-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <article class="modal__container modal__container--large" role="dialog" aria-modal="true" aria-labelledby="long-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="long-title">긴 콘텐츠와 내부 스크롤</h2><p class="modal__subtitle">헤더·푸터 고정 / 본문 독립 스크롤</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content" id="longContent"></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>닫기</button><button class="btn btn-primary" id="scrollTopLong">본문 맨 위로</button></footer>
+    </article>
+  </div>
+</div>
+
+<div class="modal" id="drawer-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <aside class="modal__container" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="drawer-title">우측 Drawer</h2><p class="modal__subtitle">openClass: is-drawer-open</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content">
+        <div class="form-grid">
+          <div class="field"><label for="drawerName">프로젝트명</label><input id="drawerName" value="신규 서비스"></div>
+          <div class="field"><label for="drawerStatus">상태</label><select id="drawerStatus"><option>검토</option><option>진행</option><option>완료</option></select></div>
+          <div class="field"><label for="drawerMemo">메모</label><textarea id="drawerMemo" rows="7" placeholder="상세 메모"></textarea></div>
+        </div>
+      </div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>취소</button><button class="btn btn-primary" id="saveDrawer">적용</button></footer>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="fullscreen-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1">
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="fullscreen-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="fullscreen-title">전체 화면 작업 공간</h2><p class="modal__subtitle">집중형 편집·미리보기 UI</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content" style="display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:18px;align-items:start">
+        <div class="notice"><strong>문서 개요</strong><ol><li>목적</li><li>주요 기능</li><li>접근성</li><li>배포 고려사항</li></ol></div>
+        <div class="field"><label for="fullEditor">콘텐츠 편집기</label><textarea id="fullEditor" rows="20">MicroModal 전체 화면 데모입니다.\n\nCSS로 컨테이너의 너비와 높이, border-radius를 바꿔 전체 화면 작업 공간을 구성했습니다.</textarea></div>
+      </div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>닫기</button><button class="btn btn-primary" id="saveFullscreen">저장</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="gallery-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--large" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="gallery-title">반응형 미디어 모달</h2><p class="modal__subtitle">외부 이미지 없이 CSS 그래픽 사용</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><div class="gallery-stage" id="galleryStage"></div><div class="palette" aria-label="배경 색상 선택"><button aria-label="보라색" data-gradient="linear-gradient(135deg,#4e54c8,#8f94fb)" style="background:linear-gradient(135deg,#4e54c8,#8f94fb)"></button><button aria-label="초록색" data-gradient="linear-gradient(135deg,#11998e,#38ef7d)" style="background:linear-gradient(135deg,#11998e,#38ef7d)"></button><button aria-label="주황색" data-gradient="linear-gradient(135deg,#ff512f,#f09819)" style="background:linear-gradient(135deg,#ff512f,#f09819)"></button><button aria-label="분홍색" data-gradient="linear-gradient(135deg,#ee0979,#ff6a00)" style="background:linear-gradient(135deg,#ee0979,#ff6a00)"></button></div></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>완료</button></footer>
+    </section>
+  </div>
+</div>
+
+<!-- 3. 사용자 흐름 -->
+<div class="modal" id="form-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="form-title" aria-describedby="form-desc">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="form-title">프로필 등록</h2><p class="modal__subtitle" id="form-desc">필수 항목 검증과 오류 메시지 포커스 처리</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <form id="profileForm" novalidate>
+        <div class="modal__content"><div class="form-grid">
+          <div class="field"><label for="profileName">이름 *</label><input id="profileName" name="name" autocomplete="name" required><div class="field-error" id="nameError"></div></div>
+          <div class="field"><label for="profileEmail">이메일 *</label><input id="profileEmail" name="email" type="email" autocomplete="email" required><div class="field-error" id="emailError"></div></div>
+          <div class="field"><label for="profileRole">역할</label><select id="profileRole" name="role"><option>기획</option><option>개발</option><option>디자인</option><option>운영</option></select></div>
+          <label class="check-row"><input id="profileAgree" type="checkbox" required><span>개인정보 처리 안내를 확인했다.</span></label><div class="field-error" id="agreeError"></div>
+        </div></div>
+        <footer class="modal__footer"><button type="button" class="btn btn-secondary" data-micromodal-close>취소</button><button type="submit" class="btn btn-primary">등록</button></footer>
+      </form>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="confirm-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1">
+    <section class="modal__container modal__container--small" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-desc">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="confirm-title">정말 삭제할까?</h2><p class="modal__subtitle">Esc로 닫히지 않는 alertdialog</p></div></header>
+      <div class="modal__content"><div class="notice danger" id="confirm-desc">이 작업은 되돌릴 수 없다. 반드시 아래 버튼 중 하나를 선택해야 한다.</div></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>삭제하지 않음</button><button class="btn btn-danger" id="confirmDelete">영구 삭제</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="nested-parent-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="nested-parent-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="nested-parent-title">1단계 · 상위 모달</h2><p class="modal__subtitle">하위 모달을 추가로 열 수 있음</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p>아래 버튼을 눌러 이 모달을 유지한 채 두 번째 모달을 연다.</p><div class="notice">중첩 상태에서 <kbd>Esc</kbd>를 누르면 가장 위의 모달만 닫힌다.</div></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>상위 닫기</button><button class="btn btn-primary" data-micromodal-trigger="nested-child-modal">하위 모달 열기</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="nested-child-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="nested-child-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="nested-child-title">2단계 · 하위 모달</h2><p class="modal__subtitle">최상단 레이어</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p>현재 두 개의 모달이 열려 있다.</p></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>이 모달만 닫기</button><button class="btn btn-danger" id="closeAllInside">모두 닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="wizard-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="wizard-title">프로젝트 생성 Wizard</h2><p class="modal__subtitle" id="wizardStatus">1 / 3 단계</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><div class="progress" style="margin-bottom:18px"><span id="wizardProgress"></span></div>
+        <div class="wizard-step active" data-step="1"><div class="field"><label for="wizardName">프로젝트명</label><input id="wizardName" value="MicroModal 도입"></div></div>
+        <div class="wizard-step" data-step="2"><div class="field"><label for="wizardType">유형</label><select id="wizardType"><option>웹 애플리케이션</option><option>내부 업무도구</option><option>모바일 웹</option></select></div></div>
+        <div class="wizard-step" data-step="3"><div class="notice"><strong>설정 확인</strong><p id="wizardSummary" style="margin:7px 0 0"></p></div></div>
+      </div>
+      <footer class="modal__footer"><button class="btn btn-secondary" id="wizardPrev">이전</button><button class="btn btn-primary" id="wizardNext">다음</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="async-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="async-title" aria-busy="true">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="async-title">비동기 상세 정보</h2><p class="modal__subtitle" id="asyncSubtitle">데이터를 불러오는 중</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content" id="asyncContent"><div class="skeleton"><span></span><span></span><span></span></div></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>닫기</button><button class="btn btn-primary" id="reloadAsync">다시 불러오기</button></footer>
+    </section>
+  </div>
+</div>
+
+<!-- 4. 접근성 -->
+<div class="modal" id="focus-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="focus-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="focus-title">포커스 트랩 시험</h2><p class="modal__subtitle">Tab 키로 모든 요소를 순환</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><div class="form-grid"><div class="field"><label for="focusFirst">첫 입력</label><input id="focusFirst" placeholder="자동 포커스 대상"></div><div class="field"><label for="focusSecond">두 번째 입력</label><input id="focusSecond"></div><div class="field"><label for="focusSelect">선택</label><select id="focusSelect"><option>항목 A</option><option>항목 B</option></select></div><a href="#accessibility">모달 내부 링크</a></div><div class="notice" style="margin-top:14px">마지막 버튼에서 Tab을 누르면 첫 입력으로 돌아간다.</div></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" data-micromodal-close>닫기</button><button class="btn btn-primary">마지막 포커스 요소</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="no-focus-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="no-focus-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="no-focus-title">disableFocus: true</h2><p class="modal__subtitle">자동 포커스 이동 없음</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><input aria-label="모달 내부 입력" placeholder="자동으로 선택되지 않음"><p>포커스 트랩 자체는 유지되지만, 열릴 때 첫 요소로 자동 이동하지 않는다.</p></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="aria-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="aria-title" aria-describedby="aria-description">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="aria-title">접근성 속성 연결</h2></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><p id="aria-description">스크린리더는 제목과 이 설명을 연결해 다이얼로그의 목적을 전달한다.</p><div class="code-block"><div class="code-label">ARIA markup</div><pre>role="dialog"
+aria-modal="true"
+aria-labelledby="aria-title"
+aria-describedby="aria-description"</pre></div></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>확인</button></footer>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="options-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container" role="dialog" aria-modal="true" aria-labelledby="options-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="options-title">런타임 옵션 적용 결과</h2><p class="modal__subtitle" id="optionsSubtitle">설정 요약</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><div id="optionsSummary" class="chip-row"></div><div class="notice" style="margin-top:16px">스크롤 잠금은 배경 페이지를, 자동 포커스는 현재 포커스 위치를, 애니메이션 대기는 포커스 전환 및 닫기 타이밍을 바꾼다.</div></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<!-- 5. v0.7 API -->
+<div class="modal" id="reconfig-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="reconfig-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="reconfig-title">config() 적용 모달</h2><p class="modal__subtitle" id="reconfigStatus">기본 설정</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><input id="reconfigInput" aria-label="포커스 확인 입력" placeholder="자동 포커스 확인"><p>카드의 “설정 변경”을 누른 뒤 다시 열어 차이를 확인해 봐.</p></div>
+      <footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<!-- 6. 실전 패턴 -->
+<div class="modal" id="command-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="command-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="command-title">빠른 명령</h2><p class="modal__subtitle">Ctrl/⌘ + K</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><div class="field" style="margin-bottom:12px"><label for="commandSearch">명령 검색</label><input id="commandSearch" placeholder="명령 이름 입력"></div><div class="command-list" id="commandList"><button class="command" data-command="basic"><span>기본 모달 열기</span><kbd>1</kbd></button><button class="command" data-command="drawer"><span>Drawer 열기</span><kbd>2</kbd></button><button class="command" data-command="gallery"><span>갤러리 열기</span><kbd>3</kbd></button><button class="command" data-command="clear"><span>이벤트 로그 비우기</span><kbd>4</kbd></button></div></div>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="code-modal" aria-hidden="true">
+  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+    <section class="modal__container modal__container--large" role="dialog" aria-modal="true" aria-labelledby="code-title">
+      <header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="code-title">핵심 초기화 코드</h2><p class="modal__subtitle">실제 페이지에서 사용하는 구성</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header>
+      <div class="modal__content"><div class="code-block"><div class="code-label">JavaScript</div><pre id="mainCode">MicroModal.init({
+  onShow: (modal, trigger) =&gt; console.info(modal.id, trigger),
+  onClose: modal =&gt; console.info(modal.id),
+  openClass: 'is-open',
+  disableScroll: true,
+  disableFocus: false,
+  awaitOpenAnimation: true,
+  awaitCloseAnimation: true,
+  debugMode: true
+});</pre></div><div class="code-block"><div class="code-label">HTML</div><pre>&lt;button data-micromodal-trigger="sample-modal"&gt;열기&lt;/button&gt;
+
+&lt;div id="sample-modal" class="modal" aria-hidden="true"&gt;
+  &lt;div tabindex="-1" data-micromodal-close&gt;
+    &lt;section role="dialog" aria-modal="true"
+      aria-labelledby="sample-title"&gt;
+      ...
+    &lt;/section&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div></div>
+      <footer class="modal__footer"><button class="btn btn-secondary" id="copyCode">코드 복사</button><button class="btn btn-primary" data-micromodal-close>닫기</button></footer>
+    </section>
+  </div>
+</div>
+
+<script>
+/* 네트워크 차단 시 실행되는 MicroModal 0.7 API 호환 fallback. 실제 배포에서는 정식 라이브러리 파일을 로컬에 고정하는 것을 권장. */
+window.__MicroModalFallback = (() => {
+    const focusSelector = 'a[href],area[href],input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),iframe,object,embed,[contenteditable],[tabindex]:not([tabindex^="-"])';
+    const defaults = { openTrigger:'data-micromodal-trigger', closeTrigger:'data-micromodal-close', openClass:'is-open', disableScroll:false, disableFocus:false, awaitOpenAnimation:false, awaitCloseAnimation:false, debugMode:false, onShow:()=>{}, onClose:()=>{} };
+    const registry = new Map();
+    const stack = [];
+    let globalConfig = {...defaults};
+    let generated = 0;
+
+    function getElement(target) { return typeof target === 'string' ? document.getElementById(target) : target; }
+    function getId(target) {
+      const el = getElement(target);
+      if (!el) return typeof target === 'string' ? target : null;
+      if (el.id) return el.id;
+      let id = el.getAttribute('data-micromodal-id');
+      if (!id) { id = `micromodal-${++generated}`; el.setAttribute('data-micromodal-id', id); }
+      return id;
+    }
+    function focusable(modal) { return [...modal.querySelectorAll(focusSelector)].filter(el => el.offsetParent !== null); }
+    function lockScroll() { document.body.style.overflow='hidden'; document.body.style.touchAction='none'; }
+    function unlockScroll() { if (!stack.some(id => registry.get(id)?.config.disableScroll)) { document.body.style.overflow=''; document.body.style.touchAction=''; } }
+    function waitAnimation(el, callback, enabled) {
+      if (!enabled) return callback();
+      let done = false;
+      const finish = () => { if (done) return; done=true; el.removeEventListener('animationend', finish); callback(); };
+      el.addEventListener('animationend', finish, {once:true});
+      setTimeout(finish, 420);
+    }
+    function createInstance(target, config={}) {
+      const modal = getElement(target); if (!modal) { if (config.debugMode) console.warn('MicroModal fallback: modal not found', target); return null; }
+      const id = getId(modal);
+      const instance = {
+        id, modal, config:{...globalConfig, ...config}, activeElement:null, triggers:[],
+        show(event=null) {
+          if (this.modal.classList.contains(this.config.openClass)) return;
+          this.activeElement = document.activeElement;
+          this.modal.setAttribute('aria-hidden','false');
+          this.modal.classList.add(this.config.openClass);
+          if (!stack.includes(this.id)) stack.push(this.id);
+          if (this.config.disableScroll) lockScroll();
+          bindOpenEvents(this);
+          waitAnimation(this.modal, () => {
+            if (!this.config.disableFocus) {
+              const nodes = focusable(this.modal).filter(n => !n.hasAttribute(this.config.closeTrigger));
+              (nodes[0] || focusable(this.modal)[0])?.focus();
+            }
+          }, this.config.awaitOpenAnimation);
+          this.config.onShow(this.modal, this.activeElement, event);
+        },
+        close(event=null) {
+          if (!this.modal.classList.contains(this.config.openClass)) return;
+          const index = stack.lastIndexOf(this.id); if (index >= 0) stack.splice(index,1);
+          this.modal.setAttribute('aria-hidden','true');
+          unbindOpenEvents(this);
+          this.activeElement?.focus?.();
+          this.config.onClose(this.modal, this.activeElement, event);
+          waitAnimation(this.modal, () => this.modal.classList.remove(this.config.openClass), this.config.awaitCloseAnimation);
+          unlockScroll();
+        }
+      };
+      registry.set(id, instance);
+      return instance;
+    }
+    function onClick(event, instance) {
+      const attr = instance.config.closeTrigger;
+      const closeNode = event.target.closest?.(`[${attr}]`);
+      if (!closeNode) return;
+      const overlay = event.target === instance.modal || event.target.parentNode === instance.modal || event.target.classList.contains('modal__overlay');
+      const isOverlayClose = overlay && event.target.hasAttribute(attr);
+      const isInnerClose = !overlay && closeNode && !closeNode.classList.contains('modal__overlay');
+      if (isOverlayClose || isInnerClose) { event.preventDefault(); event.stopPropagation(); instance.close(event); }
+    }
+    function onKeydown(event, instance) {
+      const top = stack[stack.length-1]; if (top !== instance.id) return;
+      if ((event.key === 'Escape' || event.keyCode === 27) && !instance.modal.querySelector('[role="alertdialog"]')) instance.close(event);
+      if (event.key === 'Tab' || event.keyCode === 9) {
+        const nodes = focusable(instance.modal); if (!nodes.length) return;
+        const index = nodes.indexOf(document.activeElement);
+        if (event.shiftKey && index <= 0) { nodes[nodes.length-1].focus(); event.preventDefault(); }
+        else if (!event.shiftKey && index === nodes.length-1) { nodes[0].focus(); event.preventDefault(); }
+      }
+    }
+    function bindOpenEvents(instance) {
+      instance._click = e => onClick(e, instance); instance._key = e => onKeydown(e, instance);
+      instance.modal.addEventListener('click', instance._click); instance.modal.addEventListener('keydown', instance._key);
+    }
+    function unbindOpenEvents(instance) {
+      instance.modal.removeEventListener('click', instance._click); instance.modal.removeEventListener('keydown', instance._key);
+    }
+    function registerTriggers(instance, triggers) {
+      instance.triggers = [...(triggers || [])].filter(Boolean);
+      instance._triggerHandlers = instance.triggers.map(trigger => {
+        const handler = event => { event.preventDefault(); instance.show(event); };
+        trigger.addEventListener('click', handler); return [trigger, handler];
+      });
+    }
+    function initModal(target, config={}) {
+      const id = getId(target); if (registry.has(id)) return;
+      const instance = createInstance(target, config); if (!instance) return;
+      registerTriggers(instance, config.triggers || []);
+    }
+    function init(config={}) {
+      globalConfig = {...globalConfig, ...config};
+      const attr = globalConfig.openTrigger;
+      const triggers = [...document.querySelectorAll(`[${attr}]`)];
+      const grouped = new Map();
+      triggers.forEach(t => { const id=t.getAttribute(attr); if(!grouped.has(id)) grouped.set(id,[]); grouped.get(id).push(t); });
+      grouped.forEach((list,id) => { if(!registry.has(id)) { const instance=createInstance(id, globalConfig); if(instance) registerTriggers(instance,list); } });
+    }
+    function config(target, next={}) { const id=getId(target); const instance=registry.get(id); if(instance) Object.assign(instance.config,next); }
+    function show(target, next) { const id=getId(target); if(!registry.has(id)) initModal(target,next||{}); else if(next) config(target,next); registry.get(id)?.show(); }
+    function close(target) { if(target) registry.get(getId(target))?.close(); else registry.get(stack[stack.length-1])?.close(); }
+    function closeAll() { [...stack].reverse().forEach(id => registry.get(id)?.close()); }
+    function removeModal(target) { const id=getId(target); const instance=registry.get(id); if(!instance) return; instance.close(); (instance._triggerHandlers||[]).forEach(([t,h])=>t.removeEventListener('click',h)); registry.delete(id); }
+    return {init, initModal, config, show, close, closeAll, removeModal};
+  })();
+</script>
+<script>
+window.__microReady = new Promise(resolve => {
+  const script = document.createElement('script');
+  let settled = false;
+  const finish = (api, source) => {
+    if (settled) return;
+    settled = true;
+    window.MicroModal = api;
+    window.__MICROMODAL_SOURCE = source;
+    resolve(api);
+  };
+  script.src = 'https://cdn.jsdelivr.net/npm/micromodal@0.7.0/dist/micromodal.min.js';
+  script.async = true;
+  script.onload = () => finish(window.MicroModal, 'CDN 0.7.0');
+  script.onerror = () => finish(window.__MicroModalFallback, '오프라인 fallback');
+  document.head.append(script);
+  setTimeout(() => {
+    if (!settled) {
+      script.remove();
+      finish(window.__MicroModalFallback, '오프라인 fallback');
+    }
+  }, 1400);
+});
+</script>
+<script>
+window.__microReady.then(() => {
+  'use strict';
+  const MM = window.MicroModal;
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (s, root=document) => root.querySelector(s);
+  const $$ = (s, root=document) => [...root.querySelectorAll(s)];
+  const logEl = $('#eventLog');
+  const activeCount = $('#activeCount');
+  const liveRegion = $('#liveRegion');
+  let autoTimer = null;
+  let wizardStep = 1;
+  let reconfigAlt = false;
+  let asyncToken = 0;
+  let tourTimer = null;
+
+  const modalOpenClasses = ['is-open','is-drawer-open','is-fullscreen-open','is-zoom-open'];
+  const baseConfig = {
+    openClass: 'is-open',
+    disableScroll: true,
+    disableFocus: false,
+    awaitOpenAnimation: !reducedMotion,
+    awaitCloseAnimation: !reducedMotion,
+    debugMode: true,
+    onShow: handleShow,
+    onClose: handleClose
+  };
+
+  function now() { return new Date().toLocaleTimeString('ko-KR', {hour12:false}); }
+  function addLog(type, id, detail='') {
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `<strong>${escapeHtml(type)}</strong> · ${escapeHtml(id)} ${detail ? `<span>· ${escapeHtml(detail)}</span>`:''}<time>${now()}</time>`;
+    logEl.prepend(item);
+    while (logEl.children.length > 60) logEl.lastElementChild.remove();
+    updateActiveCount();
+  }
+  function escapeHtml(value='') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function handleShow(modal, trigger) {
+    const label = trigger?.id || trigger?.textContent?.trim().slice(0,24) || 'programmatic';
+    addLog('onShow', modal.id || modal.getAttribute('data-micromodal-id') || 'dynamic', label);
+    liveRegion.textContent = `${modal.querySelector('.modal__title')?.textContent || '모달'} 열림`;
+  }
+  function handleClose(modal) {
+    addLog('onClose', modal.id || modal.getAttribute('data-micromodal-id') || 'dynamic');
+    liveRegion.textContent = `${modal.querySelector('.modal__title')?.textContent || '모달'} 닫힘`;
+    if (modal.id === 'auto-modal') stopAutoTimer();
+  }
+  function updateActiveCount() {
+    const count = $$('.modal').filter(m => modalOpenClasses.some(c => m.classList.contains(c))).length;
+    activeCount.textContent = `${count} open`;
+  }
+  function toast(title, message='') {
+    const node = document.createElement('div'); node.className='toast';
+    node.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
+    $('#toastRegion').append(node); setTimeout(()=>node.remove(), 3200);
+  }
+  function safeShow(id, config) { MM.show(id, config); setTimeout(updateActiveCount, 20); }
+  function safeClose(id) { MM.close(id); setTimeout(updateActiveCount, 250); }
+
+  MM.init(baseConfig);
+  // 기본 init 이후 개별 모달 설정 변경
+  MM.config('drawer-modal', {...baseConfig, openClass:'is-drawer-open'});
+  MM.config('fullscreen-modal', {...baseConfig, openClass:'is-fullscreen-open'});
+  MM.initModal('reconfig-modal', baseConfig);
+
+  // 사용자 정의 열기/닫기 속성
+  MM.initModal('custom-trigger-modal', {
+    ...baseConfig,
+    openTrigger: 'data-demo-open',
+    closeTrigger: 'data-demo-close',
+    triggers: $$('[data-demo-open]')
+  });
+
+  $('#librarySource').textContent = window.__MICROMODAL_SOURCE === 'CDN 0.7.0' ? 'CDN' : 'Offline';
+  $('#librarySource').title = window.__MICROMODAL_SOURCE;
+  addLog('ready', 'MicroModal', window.__MICROMODAL_SOURCE);
+
+  // 검색
+  const search = $('#demoSearch');
+  function filterDemos() {
+    const q = search.value.trim().toLowerCase(); let visible = 0;
+    $$('.demo-card').forEach(card => {
+      const match = !q || `${card.dataset.search} ${card.textContent}`.toLowerCase().includes(q);
+      card.hidden = !match; if (match) visible++;
+    });
+    $$('[data-section]').forEach(section => { section.hidden = !$$('.demo-card:not([hidden])', section).length; });
+    $('#emptyState').style.display = visible ? 'none' : 'block';
+  }
+  search.addEventListener('input', filterDemos);
+  document.addEventListener('keydown', e => {
+    const editable = /input|textarea|select/i.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+    if (e.key === '/' && !editable) { e.preventDefault(); search.focus(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); safeShow('command-modal'); }
+    if (e.key === '?' && !editable) safeShow('code-modal');
+  });
+
+  // 네비게이션 active
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => { if(entry.isIntersecting) { $$('.nav-list a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === `#${entry.target.id}`)); } });
+  }, {rootMargin:'-25% 0px -65%'});
+  $$('[data-section]').forEach(s => observer.observe(s));
+
+  // 기본 동작
+  $('#basicContinue').addEventListener('click', () => { safeClose('basic-modal'); toast('계속 처리 완료', '기본 모달에서 작업을 진행했다.'); });
+  $('#openProgrammatic').addEventListener('click', () => safeShow('programmatic-modal', baseConfig));
+  $('#closeProgrammatic').addEventListener('click', () => safeClose('programmatic-modal'));
+  $('#insideProgrammaticClose').addEventListener('click', () => safeClose('programmatic-modal'));
+
+  function startAutoTimer() {
+    stopAutoTimer(); let remain=5; $('#autoCountdown').textContent=remain; $('#autoProgress').style.width='100%';
+    safeShow('auto-modal', baseConfig);
+    autoTimer=setInterval(()=>{ remain--; $('#autoCountdown').textContent=remain; $('#autoProgress').style.width=`${remain/5*100}%`; if(remain<=0){ stopAutoTimer(); safeClose('auto-modal'); toast('자동 닫기 완료','5초 타이머가 종료됐다.'); } },1000);
+  }
+  function stopAutoTimer(){ if(autoTimer){clearInterval(autoTimer);autoTimer=null;} }
+  $('#openAutoModal').addEventListener('click', startAutoTimer);
+  $('#cancelAutoClose').addEventListener('click', () => { stopAutoTimer(); toast('타이머 취소','모달은 직접 닫아야 한다.'); });
+
+  // 긴 콘텐츠 생성
+  $('#longContent').innerHTML = Array.from({length:12}, (_,i)=>`<section><h3>${i+1}. 콘텐츠 섹션</h3><p>MicroModal은 스타일을 강제하지 않으므로 컨테이너 구조와 스크롤 정책을 직접 설계할 수 있다. 이 문단은 긴 콘텐츠 상황의 내부 스크롤과 포커스 유지 동작을 확인하기 위한 샘플이다.</p>${i===3?'<div class="notice warning">배경 페이지는 disableScroll 설정 때문에 고정되고, 이 본문만 스크롤된다.</div>':''}</section>`).join('');
+  $('#scrollTopLong').addEventListener('click', () => $('#longContent').scrollTo({top:0,behavior:'smooth'}));
+  $('#saveSmall').addEventListener('click', () => { safeClose('small-modal'); toast('저장 완료','변경 내용 3건을 저장했다.'); });
+  $('#saveDrawer').addEventListener('click', () => { safeClose('drawer-modal'); toast('Drawer 적용 완료', $('#drawerName').value); });
+  $('#saveFullscreen').addEventListener('click', () => { toast('임시 저장 완료','전체 화면 모달은 유지된다.'); addLog('action','fullscreen-modal','save'); });
+  $$('.palette button').forEach(btn => btn.addEventListener('click', () => { $('#galleryStage').style.background=btn.dataset.gradient; addLog('action','gallery-modal',btn.getAttribute('aria-label')); }));
+
+  // 폼
+  $('#profileForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name=$('#profileName'), email=$('#profileEmail'), agree=$('#profileAgree');
+    $('#nameError').textContent = name.value.trim() ? '' : '이름을 입력해 줘.';
+    $('#emailError').textContent = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value) ? '' : '올바른 이메일 형식이 필요해.';
+    $('#agreeError').textContent = agree.checked ? '' : '안내 확인이 필요해.';
+    const firstInvalid = [name,email,agree].find((el,i)=>[$('#nameError'),$('#emailError'),$('#agreeError')][i].textContent);
+    if(firstInvalid){ firstInvalid.focus(); addLog('validation','form-modal','failed'); return; }
+    safeClose('form-modal'); toast('프로필 등록 완료', `${name.value} · ${$('#profileRole').value}`); e.target.reset();
+  });
+  $('#confirmDelete').addEventListener('click', () => { safeClose('confirm-modal'); toast('삭제 완료','샘플 항목이 삭제됐다.'); });
+
+  // Wizard
+  function renderWizard() {
+    $$('.wizard-step').forEach(step => step.classList.toggle('active', Number(step.dataset.step)===wizardStep));
+    $('#wizardStatus').textContent=`${wizardStep} / 3 단계`; $('#wizardProgress').style.width=`${wizardStep/3*100}%`;
+    $('#wizardPrev').style.visibility=wizardStep===1?'hidden':'visible'; $('#wizardNext').textContent=wizardStep===3?'완료':'다음';
+    if(wizardStep===3) $('#wizardSummary').textContent=`${$('#wizardName').value || '이름 없음'} · ${$('#wizardType').value}`;
+  }
+  $('#wizardPrev').addEventListener('click',()=>{ if(wizardStep>1){wizardStep--;renderWizard();} });
+  $('#wizardNext').addEventListener('click',()=>{ if(wizardStep<3){wizardStep++;renderWizard();}else{safeClose('wizard-modal');toast('프로젝트 생성 완료',$('#wizardName').value);wizardStep=1;renderWizard();} });
+  renderWizard();
+
+  // Async
+  function loadAsync() {
+    const token=++asyncToken; const modal=$('#async-modal'); modal.querySelector('[role="dialog"]').setAttribute('aria-busy','true');
+    $('#asyncSubtitle').textContent='데이터를 불러오는 중'; $('#asyncContent').innerHTML='<div class="skeleton"><span></span><span></span><span></span></div>';
+    setTimeout(()=>{ if(token!==asyncToken) return; modal.querySelector('[role="dialog"]').setAttribute('aria-busy','false'); $('#asyncSubtitle').textContent='1.4초 후 데이터 수신 완료'; $('#asyncContent').innerHTML='<div class="notice"><strong>프로젝트 현황</strong><p style="margin:7px 0 0">진행률 72% · 담당자 5명 · 미해결 이슈 3건</p></div><div class="chip-row" style="margin-top:14px"><span class="chip">API response</span><span class="chip">aria-busy=false</span><span class="chip">DOM update</span></div>'; addLog('loaded','async-modal','success'); },1400);
+  }
+  $('#openAsyncModal').addEventListener('click',()=>{loadAsync();safeShow('async-modal',baseConfig);});
+  $('#reloadAsync').addEventListener('click',loadAsync);
+
+  // 접근성 옵션
+  $('#openNoFocus').addEventListener('click',()=>safeShow('no-focus-modal',{...baseConfig,disableFocus:true}));
+  function optionConfig() {
+    return {
+      ...baseConfig,
+      disableScroll: $('#optScroll').checked,
+      disableFocus: !$('#optFocus').checked,
+      awaitOpenAnimation: $('#optAnimation').checked && !reducedMotion,
+      awaitCloseAnimation: $('#optAnimation').checked && !reducedMotion,
+      debugMode: $('#optDebug').checked,
+      openClass: $('#optOpenClass').value
+    };
+  }
+  function openOptions() {
+    const config=optionConfig();
+    $('#optionsSubtitle').textContent=`openClass: ${config.openClass}`;
+    $('#optionsSummary').innerHTML=[`scroll lock: ${config.disableScroll}`,`auto focus: ${!config.disableFocus}`,`await animation: ${config.awaitOpenAnimation}`,`debug: ${config.debugMode}`].map(t=>`<span class="chip">${t}</span>`).join('');
+    safeShow('options-modal',config);
+  }
+  $('#openWithOptions').addEventListener('click',openOptions); $('#openWithOptionsPanel').addEventListener('click',openOptions);
+
+  // v0.7 동적 API
+  function createDynamicModal() {
+    let modal=$('#dynamic-runtime-modal');
+    if(!modal){
+      modal=document.createElement('div'); modal.className='modal'; modal.id='dynamic-runtime-modal'; modal.setAttribute('aria-hidden','true');
+      modal.innerHTML=`<div class="modal__overlay" tabindex="-1" data-micromodal-close><section class="modal__container modal__container--small" role="dialog" aria-modal="true" aria-labelledby="dynamic-title"><header class="modal__header"><div class="modal__heading"><h2 class="modal__title" id="dynamic-title">런타임 동적 모달</h2><p class="modal__subtitle">DOM 생성 → initModal(element) → show(element)</p></div><button class="modal__close" aria-label="닫기" data-micromodal-close>×</button></header><div class="modal__content"><p>페이지 로드 시에는 존재하지 않았던 모달이다.</p><div class="notice">0.7부터 HTML 요소 자체를 대상으로 등록·표시·제거할 수 있다.</div></div><footer class="modal__footer"><button class="btn btn-primary" data-micromodal-close>확인</button></footer></section></div>`;
+      document.body.append(modal); MM.initModal(modal,baseConfig); addLog('initModal','dynamic-runtime-modal','registered');
+    }
+    safeShow(modal,baseConfig);
+  }
+  $('#createDynamic').addEventListener('click',createDynamicModal);
+  $('#removeDynamic').addEventListener('click',()=>{ const modal=$('#dynamic-runtime-modal'); if(!modal){toast('제거 대상 없음','먼저 동적 모달을 생성해 줘.');return;} MM.removeModal(modal); modal.remove(); addLog('removeModal','dynamic-runtime-modal','removed'); toast('등록 해제 완료','이벤트와 DOM을 정리했다.'); });
+
+  $('#openReconfig').addEventListener('click',()=>safeShow('reconfig-modal'));
+  $('#toggleReconfig').addEventListener('click',()=>{
+    reconfigAlt=!reconfigAlt;
+    MM.config('reconfig-modal',{disableFocus:reconfigAlt,disableScroll:!reconfigAlt,onShow:handleShow,onClose:handleClose});
+    $('#reconfigStatus').textContent=reconfigAlt?'변경 설정 · 자동 포커스 OFF / 스크롤 잠금 OFF':'기본 설정 · 자동 포커스 ON / 스크롤 잠금 ON';
+    addLog('config','reconfig-modal',reconfigAlt?'alternate':'default'); toast('설정 변경', $('#reconfigStatus').textContent);
+  });
+
+  $('#closeAllInside').addEventListener('click',()=>{MM.closeAll();setTimeout(updateActiveCount,250);toast('closeAll() 실행','열린 모달을 모두 닫았다.');});
+  $('#openCloseAllDemo').addEventListener('click',()=>{safeShow('nested-parent-modal');setTimeout(()=>safeShow('nested-child-modal'),350);});
+
+  // 명령 팔레트
+  $('#openCommand').addEventListener('click',()=>safeShow('command-modal'));
+  $('#commandSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();$$('.command').forEach(c=>c.hidden=!c.textContent.toLowerCase().includes(q));});
+  $('#commandList').addEventListener('click',e=>{const cmd=e.target.closest('.command')?.dataset.command;if(!cmd)return;safeClose('command-modal');setTimeout(()=>{if(cmd==='basic')safeShow('basic-modal');if(cmd==='drawer')safeShow('drawer-modal');if(cmd==='gallery')safeShow('gallery-modal');if(cmd==='clear'){$('#eventLog').innerHTML='';addLog('action','event-log','cleared');}},220);});
+
+  // 로그/코드
+  $('#clearLog').addEventListener('click',()=>{logEl.innerHTML='';addLog('action','event-log','cleared');});
+  async function copyText(text, success) { try{await navigator.clipboard.writeText(text);toast(success,'클립보드에 복사했다.');}catch{toast('복사 실패','브라우저 권한을 확인해 줘.');} }
+  $('#copyLog').addEventListener('click',()=>copyText([...logEl.children].map(x=>x.innerText).join('\n'),'로그 복사 완료'));
+  $('#copyCode').addEventListener('click',()=>copyText($('#mainCode').innerText,'코드 복사 완료'));
+
+  // 모바일 옵션 패널
+  $('#labToggle').addEventListener('click',()=>$('#labPanel').classList.toggle('is-visible'));
+
+  // 핵심 기능 순차 보기
+  $('#runTour').addEventListener('click',()=>{
+    if(tourTimer){clearTimeout(tourTimer);tourTimer=null;}
+    const sequence=['basic-modal','drawer-modal','nested-parent-modal']; let i=0;
+    const next=()=>{ if(i>=sequence.length){toast('순차 보기 완료','기본·Drawer·중첩 진입점을 확인했다.');return;} MM.closeAll(); setTimeout(()=>{safeShow(sequence[i++]);tourTimer=setTimeout(next,1800);},220); };
+    next();
+  });
+
+  // 공통 액션 및 상태
+  $('#confirmDelete').addEventListener('keydown',e=>{ if(e.key==='Escape') toast('Esc 차단 확인','alertdialog는 Esc로 닫히지 않는다.'); });
+  document.addEventListener('click',e=>{ if(e.target.closest('[data-micromodal-trigger],[data-demo-open]')) setTimeout(updateActiveCount,30); });
+  setInterval(updateActiveCount,1000);
+});
+</script>
+</body>
+</html>
