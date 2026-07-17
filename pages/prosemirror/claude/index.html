@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>ProseMirror</title>
+<link rel="stylesheet" href="./prosemirror-bundle.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .editor-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 4px 12px 12px;
+    font-size: 14px;
+    background: #fff;
+    min-height: 100px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    max-height: 220px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>ProseMirror 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>ProseMirror</strong>는 Quill·Editor.js보다 훨씬 낮은 수준의 API를 제공하는
+    리치 텍스트 에디터 <em>툴킷</em>입니다. 완제품 에디터가 아니라, 문서 구조를 엄격하게
+    정의하고 상태 변화를 직접 제어하고 싶은 개발자를 위한 빌딩 블록에 가깝습니다.
+    <ul>
+      <li><strong>Schema</strong>가 어떤 노드/마크가 어디에 올 수 있는지 강제 — 스키마에 안 맞는 구조를 만들면 즉시 에러 발생</li>
+      <li>모든 변경은 <strong>Transaction</strong>을 통해서만 이루어짐 — <code>state.apply(tr)</code>로 새 상태를 만드는 불변(immutable) 방식</li>
+      <li>굵게·인용 같은 서식 적용도 상태를 직접 바꾸는 대신, <code>toggleMark(state, dispatch)</code> 같은 순수 함수형 <strong>Command</strong>로 실행</li>
+      <li>기능이 <code>prosemirror-state</code>, <code>prosemirror-view</code>, <code>prosemirror-model</code> 등 여러 개의 작은 패키지로 쪼개져 있어 필요한 것만 골라 조합</li>
+    </ul>
+    <div class="disclaimer">
+      ※ ProseMirror는 CodeMirror 6와 마찬가지로 npm 패키지 자체에 브라우저용 번들이 없습니다
+      (ESM 전용, <code>prosemirror-state</code> + <code>prosemirror-view</code> + <code>prosemirror-model</code> +
+      <code>prosemirror-example-setup</code> 등 10여 개 패키지로 분산). CDN에서 각각 따로 불러오면
+      CodeMirror 때와 같은 이유로 여러 인스턴스 충돌 문제가 생길 수 있어, 이 페이지는 필요한 패키지들을
+      한 번에 올바르게 묶어 만든 번들 파일(<code>prosemirror-bundle.esm.js</code>, 같은 CDN 배포 버전으로
+      직접 빌드)을 함께 담아 사용합니다. 이 페이지의 위판 공지 내용은 모두 <strong>가상의 예시</strong>이며
+      실제 수협중앙회의 공지·자료가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 에디터 (exampleSetup)</h2>
+    <div class="desc"><code>exampleSetup()</code> 플러그인 하나로 메뉴바·키맵·실행취소가 갖춰진 에디터가 즉시 완성됩니다. 자유롭게 입력해보세요.</div>
+    <div class="editor-wrap" id="editor1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const mySchema = new Schema({
+  nodes: addListNodes(basicSchema.spec.nodes, 'paragraph block*', 'block'),
+  marks: basicSchema.spec.marks,
+});
+
+const view = new EditorView(el, {
+  state: EditorState.create({
+    schema: mySchema,
+    plugins: exampleSetup({ schema: mySchema, menuBar: true }),
+  }),
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Schema가 문서 구조를 강제</h2>
+    <div class="desc">ProseMirror에서는 <code>doc</code> 노드 바로 아래에 텍스트를 직접 넣을 수 없습니다(문단 같은 블록 노드로 감싸야 함). 버튼을 눌러 스키마 위반 시 실제로 에러가 나는 것을 확인하세요.</div>
+    <div class="controls"><button id="schemaBtn2">잘못된 구조로 문서 만들어보기</button></div>
+    <pre class="output" id="schemaOutput2">아직 시도 안 함</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">try {
+  // doc 바로 아래에 text를 넣음 (허용되지 않는 구조)
+  schema.nodes.doc.createChecked(null, [schema.text('직접 텍스트를 doc에 넣으면 안됨')]);
+} catch (e) {
+  console.log(e.message); // "Invalid content for node doc: ..."
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Transaction 기반 상태 관리</h2>
+    <div class="desc">모든 변경은 트랜잭션으로 전달됩니다. <code>dispatchTransaction</code>을 가로채서 트랜잭션이 몇 번 발생했는지, 현재 문서가 어떤 JSON 구조인지 실시간으로 보여줍니다. 아래 에디터에 입력해보세요.</div>
+    <div class="editor-wrap" id="editor3"></div>
+    <div class="result-box" id="txCount3">트랜잭션: 0회</div>
+    <pre class="output" id="docJson3"></pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">let txCount = 0;
+const view = new EditorView(el, {
+  state,
+  dispatchTransaction(tr) {
+    txCount++;
+    const newState = view.state.apply(tr); // 불변 상태 갱신
+    view.updateState(newState);
+    console.log(newState.doc.toJSON());
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. Command로 서식 적용 + 실행 취소/다시 실행</h2>
+    <div class="desc">아래 문장을 드래그해서 선택한 뒤 "굵게" 버튼을 눌러보세요. <code>toggleMark</code>는 상태를 직접 바꾸지 않고, 트랜잭션을 만들어 <code>dispatch</code>로 전달하는 순수 함수(Command)입니다.</div>
+    <div class="editor-wrap" id="editor4"></div>
+    <div class="controls">
+      <button class="ghost" id="boldBtn4">굵게</button>
+      <button class="ghost" id="undoBtn4">실행 취소</button>
+      <button class="ghost" id="redoBtn4">다시 실행</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const view = new EditorView(el, {
+  state: EditorState.create({
+    schema: basicSchema,
+    plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap)],
+  }),
+});
+
+toggleMark(schema.marks.strong)(view.state, view.dispatch); // 선택 영역에 굵게 토글
+undo(view.state, view.dispatch);
+redo(view.state, view.dispatch);</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    import {
+      EditorState, EditorView, Schema, basicSchema, addListNodes,
+      exampleSetup, toggleMark, keymap, undo, redo, history, baseKeymap, TextSelection,
+    } from './prosemirror-bundle.esm.js';
+
+    const mySchema = new Schema({
+      nodes: addListNodes(basicSchema.spec.nodes, 'paragraph block*', 'block'),
+      marks: basicSchema.spec.marks,
+    });
+
+    // ---------- 1. 기본 에디터 (exampleSetup) ----------
+    const view1 = new EditorView(document.getElementById('editor1'), {
+      state: EditorState.create({
+        doc: mySchema.node('doc', null, [
+          mySchema.node('paragraph', null, [mySchema.text('금일 위판 공지(가상): 부산공동어시장 05시 개장')]),
+        ]),
+        schema: mySchema,
+        plugins: exampleSetup({ schema: mySchema, menuBar: true }),
+      }),
+    });
+
+    // ---------- 2. Schema 강제 ----------
+    document.getElementById('schemaBtn2').addEventListener('click', () => {
+      const out = document.getElementById('schemaOutput2');
+      try {
+        mySchema.nodes.doc.createChecked(null, [mySchema.text('직접 텍스트를 doc에 넣으면 안됨')]);
+        out.textContent = '(예상과 다르게 에러 없이 생성됨)';
+      } catch (e) {
+        out.textContent = '에러 발생 (의도된 동작):\n' + e.message;
+      }
+    });
+
+    // ---------- 3. Transaction 기반 상태 관리 ----------
+    let txCount3 = 0;
+    const txCountEl = document.getElementById('txCount3');
+    const docJsonEl = document.getElementById('docJson3');
+    const view3 = new EditorView(document.getElementById('editor3'), {
+      state: EditorState.create({
+        doc: basicSchema.node('doc', null, [basicSchema.node('paragraph', null, [basicSchema.text('여기에 입력해보세요.')])]),
+        schema: basicSchema,
+        plugins: [keymap(baseKeymap)],
+      }),
+      dispatchTransaction(tr) {
+        txCount3++;
+        const newState = view3.state.apply(tr);
+        view3.updateState(newState);
+        txCountEl.textContent = `트랜잭션: ${txCount3}회`;
+        docJsonEl.textContent = JSON.stringify(newState.doc.toJSON(), null, 2);
+      },
+    });
+    docJsonEl.textContent = JSON.stringify(view3.state.doc.toJSON(), null, 2);
+
+    // ---------- 4. Command + 실행 취소/다시 실행 ----------
+    const view4 = new EditorView(document.getElementById('editor4'), {
+      state: EditorState.create({
+        doc: basicSchema.node('doc', null, [basicSchema.node('paragraph', null, [basicSchema.text('금일 위판 시세 4500원/kg (가상 예시)')])]),
+        schema: basicSchema,
+        plugins: [history(), keymap({ 'Mod-z': undo, 'Mod-y': redo }), keymap(baseKeymap)],
+      }),
+    });
+    document.getElementById('boldBtn4').addEventListener('click', () => {
+      if (view4.state.selection.empty) {
+        alert('먼저 에디터의 문장을 드래그해서 선택해주세요.');
+        return;
+      }
+      toggleMark(basicSchema.marks.strong)(view4.state, view4.dispatch);
+      view4.focus();
+    });
+    document.getElementById('undoBtn4').addEventListener('click', () => undo(view4.state, view4.dispatch));
+    document.getElementById('redoBtn4').addEventListener('click', () => redo(view4.state, view4.dispatch));
+  </script>
+</body>
+</html>
