@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>epub.js</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  button.secondary { background: #edf0f5; color: #333; }
+  button.secondary:hover { background: #dfe4ec; }
+  #reader-area {
+    width: 100%;
+    height: 320px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    margin-top: 10px;
+    background: #fff;
+  }
+  .reader-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .stat-box.show { display: block; }
+  .stat-box.error { background: #fff0f0; border-color: #ffc9c9; color: #a01818; }
+  .stat-box strong { color: #205fb0; }
+  .toc-list, .search-results {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 13px;
+  }
+  .toc-list li, .search-results li {
+    padding: 8px 10px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: #fafbfc;
+    cursor: pointer;
+  }
+  .toc-list li:hover, .search-results li:hover { background: #f0f4ff; }
+  .search-results li .excerpt {
+    display: block;
+    color: #777;
+    font-size: 12px;
+    margin-top: 3px;
+  }
+  input[type=text] {
+    font-size: 13px;
+    padding: 6px 9px;
+    border: 1px solid #dbdfe6;
+    border-radius: 6px;
+    width: 160px;
+  }
+  input[type=range] { width: 150px; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>epub.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>epub.js</strong>는 EPUB(전자책) 파일을 브라우저에서 바로 렌더링하는 라이브러리입니다. EPUB은
+    실제로는 HTML/CSS 파일들을 정해진 규칙으로 묶은 ZIP 파일이라, 압축 해제를 위해
+    <strong>JSZip</strong>이 함께 필요합니다.
+    <ul>
+      <li>EPUB 파일 <strong>렌더링 + 페이지 넘기기</strong></li>
+      <li><strong>목차(TOC)</strong> 표시와 챕터 이동</li>
+      <li>책 전체에 대한 <strong>텍스트 검색</strong></li>
+      <li><strong>폰트 크기 · 테마</strong> 변경</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 EPUB 샘플("가상 위판장 이야기", 3장)은 이 페이지를 위해 지어낸 <strong>가상의 짧은 소설</strong>이며,
+      실제 인물·사건과 무관합니다. 공식 검증 도구인 <code class="inline">epubcheck</code>로 오류 0건을
+      확인한 표준 EPUB3 파일입니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. EPUB 렌더링 + 페이지 넘기기</h2>
+    <div class="desc">
+      <code class="inline">ePub(file)</code>로 책을 열고 <code class="inline">book.renderTo(엘리먼트)</code>로
+      지정한 영역에 그립니다. 아래 읽기 영역은 이 페이지의 모든 섹션이 공유합니다.
+    </div>
+    <button id="s1-open">EPUB 열기</button>
+    <div class="stat-box" id="s1-stat"></div>
+    <div id="reader-area"></div>
+    <div class="reader-controls">
+      <button id="s1-prev" class="secondary" disabled>◀ 이전</button>
+      <span id="s1-location"></span>
+      <button id="s1-next" class="secondary" disabled>다음 ▶</button>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const book = ePub(arrayBufferOrUrl);
+const rendition = book.renderTo('reader-area', { width: '100%', height: 320 });
+await rendition.display();
+
+rendition.next(); // 다음 섹션/페이지
+rendition.prev(); // 이전 섹션/페이지</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 목차(TOC)로 이동</h2>
+    <div class="desc">
+      <code class="inline">book.loaded.navigation</code>에서 목차 구조를 받아, 원하는 항목을 클릭하면
+      바로 그 챕터로 이동합니다. (먼저 위에서 EPUB을 열어야 합니다.)
+    </div>
+    <div class="stat-box" id="s2-stat"></div>
+    <ul class="toc-list" id="s2-toc"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const nav = await book.loaded.navigation;
+nav.toc.forEach((item) => {
+  console.log(item.label, item.href);
+  // rendition.display(item.href) 로 해당 챕터로 이동
+});</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 책 전체 텍스트 검색</h2>
+    <div class="desc">
+      각 챕터(section)를 임시로 불러와 <code class="inline">section.find(검색어)</code>로 찾은 뒤
+      <code class="inline">section.unload()</code>로 메모리를 정리합니다. 결과를 클릭하면 해당 위치로
+      이동합니다.
+    </div>
+    <div>
+      <input type="text" id="s3-query" placeholder="예: 경매사" value="경매사" />
+      <button id="s3-run">검색</button>
+    </div>
+    <div class="stat-box" id="s3-stat"></div>
+    <ul class="search-results" id="s3-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const results = await Promise.all(
+  book.spine.spineItems.map((section) =>
+    section.load(book.load.bind(book)).then(() => {
+      const found = section.find('검색어'); // [{ cfi, excerpt }, ...]
+      section.unload();
+      return found;
+    })
+  )
+);
+const flat = [].concat(...results);
+rendition.display(flat[0].cfi); // 검색 결과 위치로 바로 이동(CFI)</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 폰트 크기 · 테마 변경</h2>
+    <div class="desc">
+      <code class="inline">rendition.themes</code>로 글자 크기를 조절하거나, CSS 규칙을 테마로 등록해서
+      즉시 바꿔 적용할 수 있습니다.
+    </div>
+    <div class="reader-controls">
+      <label>글자 크기: <span id="s4-size-val">100%</span></label>
+      <input type="range" id="s4-fontsize" min="70" max="200" step="10" value="100" />
+      <button id="s4-light" class="secondary">밝은 테마</button>
+      <button id="s4-dark" class="secondary">어두운 테마</button>
+    </div>
+    <div class="stat-box" id="s4-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>rendition.themes.fontSize('130%');
+
+rendition.themes.register('dark', {
+  body: { background: '#222', color: '#eee' },
+});
+rendition.themes.select('dark');</code></pre>
+    </details>
+  </section>
+
+<script>
+  let book = null;
+  let rendition = null;
+
+  function fmtLoc(loc) {
+    if (!loc || !loc.start) return '';
+    return loc.start.href;
+  }
+
+  // ---- 섹션 1: 열기 + 페이지 넘기기 ----
+  (function section1() {
+    const openBtn = document.getElementById('s1-open');
+    const stat = document.getElementById('s1-stat');
+    const prevBtn = document.getElementById('s1-prev');
+    const nextBtn = document.getElementById('s1-next');
+    const locationLabel = document.getElementById('s1-location');
+
+    openBtn.addEventListener('click', async () => {
+      openBtn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = 'EPUB 여는 중...';
+      try {
+        const buf = await fetch('./sample.epub').then((r) => r.arrayBuffer());
+        book = ePub(buf);
+        await book.ready;
+        rendition = book.renderTo('reader-area', { width: '100%', height: 320 });
+        await rendition.display();
+
+        rendition.on('relocated', (loc) => {
+          locationLabel.textContent = fmtLoc(loc);
+        });
+
+        stat.innerHTML =
+          '<strong>' + book.packaging.metadata.title + '</strong> (' + book.packaging.metadata.creator + ') 을 열었습니다.';
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
+        locationLabel.textContent = fmtLoc(rendition.currentLocation());
+
+        await loadToc();
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        openBtn.disabled = false;
+      }
+    });
+
+    prevBtn.addEventListener('click', () => rendition && rendition.prev());
+    nextBtn.addEventListener('click', () => rendition && rendition.next());
+  })();
+
+  // ---- 섹션 2: 목차 ----
+  async function loadToc() {
+    const stat = document.getElementById('s2-stat');
+    const tocList = document.getElementById('s2-toc');
+    try {
+      const nav = await book.loaded.navigation;
+      stat.classList.add('show');
+      stat.classList.remove('error');
+      stat.innerHTML = '총 <strong>' + nav.toc.length + '개</strong> 챕터를 찾았습니다.';
+      tocList.innerHTML = '';
+      nav.toc.forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = item.label.trim();
+        li.addEventListener('click', () => rendition.display(item.href));
+        tocList.appendChild(li);
+      });
+    } catch (e) {
+      stat.classList.add('show', 'error');
+      stat.textContent = '오류: ' + e.message;
+    }
+  }
+
+  // ---- 섹션 3: 검색 ----
+  (function section3() {
+    const runBtn = document.getElementById('s3-run');
+    const queryInput = document.getElementById('s3-query');
+    const stat = document.getElementById('s3-stat');
+    const resultsList = document.getElementById('s3-results');
+
+    runBtn.addEventListener('click', async () => {
+      if (!book) {
+        stat.classList.add('show', 'error');
+        stat.textContent = '먼저 1번 섹션에서 EPUB을 열어주세요.';
+        return;
+      }
+      runBtn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '검색 중...';
+      try {
+        const query = queryInput.value.trim();
+        const perSection = await Promise.all(
+          book.spine.spineItems.map((sec) =>
+            sec.load(book.load.bind(book)).then(() => {
+              const found = sec.find(query);
+              sec.unload();
+              return found;
+            })
+          )
+        );
+        const flat = [].concat(...perSection);
+        stat.innerHTML = '<strong>"' + query + '"</strong> 검색 결과 <strong>' + flat.length + '건</strong>';
+        resultsList.innerHTML = '';
+        flat.forEach((r) => {
+          const li = document.createElement('li');
+          const excerpt = document.createElement('span');
+          excerpt.className = 'excerpt';
+          excerpt.textContent = r.excerpt;
+          li.textContent = '';
+          li.appendChild(document.createTextNode('결과 보기 → '));
+          li.appendChild(excerpt);
+          li.addEventListener('click', () => rendition.display(r.cfi));
+          resultsList.appendChild(li);
+        });
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 4: 폰트 크기 / 테마 ----
+  (function section4() {
+    const fontSlider = document.getElementById('s4-fontsize');
+    const fontVal = document.getElementById('s4-size-val');
+    const lightBtn = document.getElementById('s4-light');
+    const darkBtn = document.getElementById('s4-dark');
+    const stat = document.getElementById('s4-stat');
+
+    fontSlider.addEventListener('input', () => {
+      fontVal.textContent = fontSlider.value + '%';
+      if (rendition) rendition.themes.fontSize(fontSlider.value + '%');
+    });
+
+    function requireBook() {
+      if (!rendition) {
+        stat.classList.add('show', 'error');
+        stat.textContent = '먼저 1번 섹션에서 EPUB을 열어주세요.';
+        return false;
+      }
+      return true;
+    }
+
+    lightBtn.addEventListener('click', () => {
+      if (!requireBook()) return;
+      rendition.themes.register('demo-light', { body: { background: '#fff', color: '#222' } });
+      rendition.themes.select('demo-light');
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '밝은 테마를 적용했습니다.';
+    });
+
+    darkBtn.addEventListener('click', () => {
+      if (!requireBook()) return;
+      rendition.themes.register('demo-dark', { body: { background: '#222', color: '#eee' } });
+      rendition.themes.select('demo-dark');
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '어두운 테마를 적용했습니다.';
+    });
+  })();
+</script>
+</body>
+</html>
