@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>OpenLayers</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.9.0/ol.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .map-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 320px;
+    position: relative;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.active { background: #1baf7a; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  .ol-popup {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translate(-50%, -120%);
+    white-space: nowrap;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>OpenLayers 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>OpenLayers</strong>는 오래되고 검증된 오픈소스 지도 라이브러리로, 다양한 좌표계와
+    데이터 포맷을 폭넓게 다루는 전통적인 지도 툴킷입니다.
+    <ul>
+      <li><code>ol.Map</code> + <code>ol.View</code> + 타일 <code>source</code>로 기본 지도 구성</li>
+      <li>벡터 레이어에 <code>Feature</code>를 올리고, <code>ol.Overlay</code>로 지도 위에 HTML 팝업 배치</li>
+      <li><code>ol.interaction.Draw</code>로 사용자가 지도 위에 직접 점·선·면을 그릴 수 있는 편집 기능 — MapLibre 데모에서는 다루지 않은 부분</li>
+      <li>내부적으로 지도 좌표는 Web Mercator(EPSG:3857)를 쓰기 때문에, 위경도(EPSG:4326)와 서로 변환하는 <code>fromLonLat</code>/<code>toLonLat</code>이 필수적으로 쓰임</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 "부산공동어시장" 등 위치·명칭은 실제 좌표와 다를 수 있는 <strong>가상의 예시</strong>이며
+      실제 수협중앙회의 위치 정보가 아닙니다. 타일은 OpenStreetMap을 별도 API 키 없이 사용합니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 지도 생성</h2>
+    <div class="desc">OSM 타일 위에 확대/축소 컨트롤이 기본으로 포함된 지도입니다.</div>
+    <div class="map-wrap" id="map1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const map = new ol.Map({
+  target: 'map1',
+  layers: [new ol.layer.Tile({ source: new ol.source.OSM() })],
+  view: new ol.View({
+    center: ol.proj.fromLonLat([129.0756, 35.0951]), // 위경도 → Web Mercator
+    zoom: 13,
+  }),
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 마커(벡터 레이어) + Overlay 팝업</h2>
+    <div class="desc">지도 위 파란 점을 클릭하면 <code>ol.Overlay</code>로 만든 HTML 팝업이 뜹니다.</div>
+    <div class="map-wrap" id="map2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const marker = new ol.Feature({ geometry: new ol.geom.Point(coord) });
+map.addLayer(new ol.layer.Vector({ source: new ol.source.Vector({ features: [marker] }) }));
+
+const overlay = new ol.Overlay({ element: popupEl });
+map.addOverlay(overlay);
+
+map.on('click', (evt) => {
+  const hit = map.hasFeatureAtPixel(evt.pixel);
+  if (hit) overlay.setPosition(evt.coordinate);
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Draw 인터랙션 — 직접 그리기</h2>
+    <div class="desc">도형 종류를 고르고 지도를 클릭해서 그려보세요. 면(Polygon)은 더블클릭으로 완료합니다.</div>
+    <div class="controls">
+      <button class="draw-btn active" data-type="Point">점</button>
+      <button class="draw-btn ghost" data-type="LineString">선</button>
+      <button class="draw-btn ghost" data-type="Polygon">면</button>
+      <button class="ghost" id="clearDrawBtn">전체 지우기</button>
+    </div>
+    <div class="map-wrap" id="map3"></div>
+    <div class="result-box" id="drawCount3">그려진 도형: 0개</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const source = new ol.source.Vector();
+map.addLayer(new ol.layer.Vector({ source }));
+
+const draw = new ol.interaction.Draw({ source, type: 'Polygon' }); // 'Point' | 'LineString' | 'Polygon'
+map.addInteraction(draw);
+draw.on('drawend', () => console.log('도형 추가됨'));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 좌표계 변환</h2>
+    <div class="desc">지도를 클릭하면 내부 좌표(Web Mercator)를 <code>toLonLat()</code>로 위경도로 변환해 보여줍니다.</div>
+    <div class="map-wrap" id="map4"></div>
+    <div class="result-box" id="coordOutput4">지도를 클릭해보세요</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">map.on('click', (evt) => {
+  const [lon, lat] = ol.proj.toLonLat(evt.coordinate);
+  console.log(lon.toFixed(4), lat.toFixed(4));
+});</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/ol@10.9.0/dist/ol.js"></script>
+  <script>
+    const CENTER = ol.proj.fromLonLat([129.0756, 35.0951]); // 부산 인근(가상 예시 좌표)
+
+    // ---------- 1. 기본 지도 생성 ----------
+    new ol.Map({
+      target: 'map1',
+      layers: [new ol.layer.Tile({ source: new ol.source.OSM() })],
+      view: new ol.View({ center: CENTER, zoom: 13 }),
+    });
+
+    // ---------- 2. 마커 + Overlay 팝업 ----------
+    const map2 = new ol.Map({
+      target: 'map2',
+      layers: [new ol.layer.Tile({ source: new ol.source.OSM() })],
+      view: new ol.View({ center: CENTER, zoom: 13 }),
+    });
+    const markerFeature = new ol.Feature({ geometry: new ol.geom.Point(CENTER) });
+    markerFeature.setStyle(new ol.style.Style({
+      image: new ol.style.Circle({
+        radius: 8,
+        fill: new ol.style.Fill({ color: '#4f7dff' }),
+        stroke: new ol.style.Stroke({ color: '#fff', width: 2 }),
+      }),
+    }));
+    map2.addLayer(new ol.layer.Vector({ source: new ol.source.Vector({ features: [markerFeature] }) }));
+    const popupEl2 = document.createElement('div');
+    popupEl2.className = 'ol-popup';
+    popupEl2.textContent = '부산공동어시장(가상) — 05시 개장';
+    const overlay2 = new ol.Overlay({ element: popupEl2 });
+    map2.addOverlay(overlay2);
+    map2.on('click', (evt) => {
+      const hit = map2.hasFeatureAtPixel(evt.pixel);
+      overlay2.setPosition(hit ? evt.coordinate : undefined);
+    });
+
+    // ---------- 3. Draw 인터랙션 ----------
+    const map3 = new ol.Map({
+      target: 'map3',
+      layers: [new ol.layer.Tile({ source: new ol.source.OSM() })],
+      view: new ol.View({ center: CENTER, zoom: 13 }),
+    });
+    const drawSource3 = new ol.source.Vector();
+    map3.addLayer(new ol.layer.Vector({ source: drawSource3 }));
+    let currentDraw = new ol.interaction.Draw({ source: drawSource3, type: 'Point' });
+    map3.addInteraction(currentDraw);
+    const drawCount3 = document.getElementById('drawCount3');
+    function updateDrawCount() {
+      drawCount3.textContent = `그려진 도형: ${drawSource3.getFeatures().length}개`;
+    }
+    currentDraw.on('drawend', () => setTimeout(updateDrawCount, 0));
+    document.querySelectorAll('.draw-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.draw-btn').forEach((b) => { b.classList.remove('active'); b.classList.add('ghost'); });
+        btn.classList.add('active');
+        btn.classList.remove('ghost');
+        map3.removeInteraction(currentDraw);
+        currentDraw = new ol.interaction.Draw({ source: drawSource3, type: btn.dataset.type });
+        currentDraw.on('drawend', () => setTimeout(updateDrawCount, 0));
+        map3.addInteraction(currentDraw);
+      });
+    });
+    document.getElementById('clearDrawBtn').addEventListener('click', () => {
+      drawSource3.clear();
+      updateDrawCount();
+    });
+
+    // ---------- 4. 좌표계 변환 ----------
+    const map4 = new ol.Map({
+      target: 'map4',
+      layers: [new ol.layer.Tile({ source: new ol.source.OSM() })],
+      view: new ol.View({ center: CENTER, zoom: 13 }),
+    });
+    map4.on('click', (evt) => {
+      const [lon, lat] = ol.proj.toLonLat(evt.coordinate);
+      document.getElementById('coordOutput4').textContent =
+        `위도: ${lat.toFixed(4)} · 경도: ${lon.toFixed(4)} (Web Mercator 좌표: ${evt.coordinate.map((v) => v.toFixed(1)).join(', ')})`;
+    });
+  </script>
+</body>
+</html>
