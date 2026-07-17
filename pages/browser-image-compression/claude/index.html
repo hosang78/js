@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>browser-image-compression</title>
+<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  .privacy {
+    font-size: 12.5px;
+    color: #1a6b3c;
+    background: #eafff2;
+    border: 1px solid #b7f0cf;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  input[type=file] { font-size: 13px; }
+  .loader-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .loader-status {
+    font-size: 13px;
+    color: #555;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .controls input[type=number] {
+    width: 70px;
+    padding: 5px 7px;
+    border: 1px solid #dbdfe6;
+    border-radius: 6px;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .stat-box.show { display: block; }
+  .stat-box.error { background: #fff0f0; border-color: #ffc9c9; color: #a01818; }
+  .stat-box strong { color: #205fb0; }
+  .compare {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .compare figure {
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: #666;
+  }
+  .compare img {
+    max-width: 200px;
+    max-height: 200px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .progress-track {
+    margin-top: 10px;
+    height: 10px;
+    background: #e4e7ec;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #4f7dff;
+    transition: width 0.1s linear;
+  }
+  .busy-indicator {
+    display: inline-block;
+    font-size: 12.5px;
+    color: #a15c00;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>browser-image-compression 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>browser-image-compression</strong>도 Compressor.js처럼 캔버스로 이미지를 압축하는
+    라이브러리지만, <strong>"이 용량 이하로 만들어줘"</strong> 식의 목표 용량 기반 압축과
+    <strong>웹 워커(멀티스레드)</strong> 지원이 특징입니다. Promise 기반 API라 <code class="inline">await</code>로
+    바로 결과를 받습니다.
+    <ul>
+      <li><code class="inline">maxSizeMB</code>로 하는 <strong>목표 용량까지 자동 압축</strong></li>
+      <li><code class="inline">maxWidthOrHeight</code>로 하는 <strong>해상도 제한</strong></li>
+      <li><code class="inline">onProgress</code>로 보는 <strong>압축 진행률</strong></li>
+      <li><code class="inline">useWebWorker</code>로 하는 <strong>메인 스레드 안 막는 압축</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 준비된 사진이 없어도 확인할 수 있도록, 그라데이션·도형으로 구성된 가상의 샘플 이미지를 즉석에서
+      만드는 기능을 함께 제공합니다.
+    </div>
+    <div class="privacy">
+      🔒 모든 처리는 <strong>브라우저 안에서만</strong> 이루어집니다. 업로드한 사진은 서버로 전송되지
+      않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>이미지 준비</h2>
+    <div class="desc">
+      압축 효과를 제대로 보려면 용량이 어느 정도 있는 사진이 좋습니다. 준비된 사진이 없다면 아래
+      버튼으로 샘플 이미지를 만들어서 확인해 보세요.
+    </div>
+    <div class="loader-box">
+      <input type="file" id="file-input" accept="image/*" />
+      <button id="sample-btn">샘플 이미지 생성해서 사용</button>
+      <span class="loader-status" id="loader-status"></span>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>1. 목표 용량까지 자동 압축 (maxSizeMB)</h2>
+    <div class="desc">
+      <code class="inline">quality</code> 값을 직접 정하는 대신, <strong>"결과가 이 용량을 넘지
+      않게 해줘"</strong>라고 목표만 주면 라이브러리가 내부적으로 여러 번 시도(기본 최대 10회)해서
+      맞춰줍니다. 업로드 용량 제한이 있는 서비스에 특히 유용합니다.
+    </div>
+    <div class="controls">
+      <label>목표 용량(MB): <input type="number" id="s1-maxsize" value="0.2" min="0.05" step="0.05" /></label>
+      <button id="s1-run" disabled>압축 실행</button>
+    </div>
+    <div class="stat-box" id="s1-stat"></div>
+    <div class="compare" id="s1-compare" style="display:none;">
+      <figure><img id="s1-original" alt="원본" />원본</figure>
+      <figure><img id="s1-result" alt="압축 결과" />압축 결과</figure>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const compressed = await imageCompression(file, {
+  maxSizeMB: 0.2,        // 결과가 이 용량을 넘지 않도록 알아서 반복 압축
+  useWebWorker: false,
+});
+console.log(file.size, '→', compressed.size);</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 해상도 제한 (maxWidthOrHeight)</h2>
+    <div class="desc">
+      가로·세로 중 <strong>더 긴 쪽</strong>이 지정한 값보다 작아지도록 비율을 유지한 채 줄입니다.
+    </div>
+    <div class="controls">
+      <label>maxWidthOrHeight(px): <input type="number" id="s2-maxdim" value="300" min="10" /></label>
+      <button id="s2-run" disabled>리사이즈 실행</button>
+    </div>
+    <div class="stat-box" id="s2-stat"></div>
+    <div class="compare" id="s2-compare" style="display:none;">
+      <figure><img id="s2-original" alt="원본" />원본</figure>
+      <figure><img id="s2-result" alt="리사이즈 결과" />리사이즈 결과</figure>
+    </div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const compressed = await imageCompression(file, {
+  maxWidthOrHeight: 300,   // 가로/세로 중 긴 쪽이 300px 이하가 되도록 축소
+  useWebWorker: false,
+});</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 압축 진행률 (onProgress)</h2>
+    <div class="desc">
+      <code class="inline">onProgress</code>는 0~100 사이의 진행률을 여러 번 호출해줍니다. 큰 이미지를
+      압축할 때 진행 상황을 보여주는 용도로 쓸 수 있습니다.
+    </div>
+    <button id="s3-run" disabled>진행률 보면서 압축</button>
+    <div class="progress-track"><div class="progress-fill" id="s3-fill"></div></div>
+    <div class="stat-box" id="s3-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>await imageCompression(file, {
+  maxSizeMB: 0.3,
+  onProgress(percent) {
+    console.log(percent + '%'); // 0~100 사이 값으로 여러 번 호출됨
+  },
+});</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 웹 워커로 압축 (useWebWorker)</h2>
+    <div class="desc">
+      <code class="inline">useWebWorker: true</code>(기본값)이면 압축 작업이 <strong>별도 스레드</strong>에서
+      돌아가서 메인 스레드(화면 반응성)를 막지 않습니다. 워커 안에서 라이브러리 자신을
+      <code class="inline">libURL</code> 옵션의 주소로 다시 불러오기 때문에, 이 주소가 막혀 있으면
+      워커 압축만 조용히 실패할 수 있습니다.
+    </div>
+    <button id="s4-run" disabled>워커로 압축 (메인 스레드 반응성 확인용 애니메이션 포함)</button>
+    <span class="busy-indicator" id="s4-spinner"></span>
+    <div class="stat-box" id="s4-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>await imageCompression(file, {
+  maxSizeMB: 0.3,
+  useWebWorker: true,
+  // 이 라이브러리를 CDN에서 쓴다면, 워커 안에서도 같은 버전을 불러오도록
+  // libURL을 명시적으로 고정해두는 게 안전하다 (기본값은 버전 미고정 URL).
+  libURL: 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js',
+});</code></pre>
+    </details>
+  </section>
+
+<script>
+  const fileInput = document.getElementById('file-input');
+  const sampleBtn = document.getElementById('sample-btn');
+  const loaderStatus = document.getElementById('loader-status');
+  let currentFile = null;
+
+  function fmtBytes(n) { return (n / 1024).toFixed(1) + ' KB'; }
+
+  function makeSampleImageFile() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1600;
+    canvas.height = 1200;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 1600, 1200);
+    grad.addColorStop(0, '#4f7dff');
+    grad.addColorStop(1, '#2fa86a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1600, 1200);
+    for (let i = 0; i < 24; i++) {
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(255,255,255,${0.05 + Math.random() * 0.15})`;
+      ctx.arc(Math.random() * 1600, Math.random() * 1200, 60 + Math.random() * 200, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 64px sans-serif';
+    ctx.fillText('가상 위판 사진', 80, 500);
+    return new Promise((resolve) => canvas.toBlob(
+      (b) => resolve(new File([b], 'sample.png', { type: 'image/png' })),
+      'image/png', 1
+    ));
+  }
+
+  async function loadImage(file, label) {
+    currentFile = file;
+    loaderStatus.textContent = label + ' 준비됨 (' + fmtBytes(file.size) + ')';
+    ['s1-run', 's2-run', 's3-run', 's4-run'].forEach((id) => { document.getElementById(id).disabled = false; });
+  }
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadImage(fileInput.files[0], '업로드한 사진');
+  });
+
+  sampleBtn.addEventListener('click', async () => {
+    const file = await makeSampleImageFile();
+    loadImage(file, '샘플 이미지');
+  });
+
+  // ---- 섹션 1: 목표 용량 압축 ----
+  (function section1() {
+    const runBtn = document.getElementById('s1-run');
+    const stat = document.getElementById('s1-stat');
+    const compare = document.getElementById('s1-compare');
+    const originalImg = document.getElementById('s1-original');
+    const resultImg = document.getElementById('s1-result');
+
+    runBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+      runBtn.disabled = true;
+      stat.classList.remove('error');
+      try {
+        const maxSizeMB = parseFloat(document.getElementById('s1-maxsize').value) || 0.2;
+        const result = await imageCompression(currentFile, {
+          maxSizeMB,
+          useWebWorker: false,
+          fileType: 'image/jpeg',
+        });
+        const ratio = (100 * (1 - result.size / currentFile.size)).toFixed(1);
+        stat.classList.add('show');
+        stat.innerHTML =
+          '목표 <strong>' + maxSizeMB + ' MB</strong> 이하로 압축 → 원본 <strong>' + fmtBytes(currentFile.size) +
+          '</strong> → 결과 <strong>' + fmtBytes(result.size) + '</strong> (' + ratio + '% 감소)';
+        originalImg.src = URL.createObjectURL(currentFile);
+        resultImg.src = URL.createObjectURL(result);
+        compare.style.display = 'flex';
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 2: 해상도 제한 ----
+  (function section2() {
+    const runBtn = document.getElementById('s2-run');
+    const stat = document.getElementById('s2-stat');
+    const compare = document.getElementById('s2-compare');
+    const originalImg = document.getElementById('s2-original');
+    const resultImg = document.getElementById('s2-result');
+
+    runBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+      runBtn.disabled = true;
+      stat.classList.remove('error');
+      try {
+        const maxWidthOrHeight = parseInt(document.getElementById('s2-maxdim').value, 10) || 300;
+        const result = await imageCompression(currentFile, { maxWidthOrHeight, useWebWorker: false });
+        const dims = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+          img.src = URL.createObjectURL(result);
+        });
+        stat.classList.add('show');
+        stat.innerHTML =
+          '결과 크기: <strong>' + dims.w + ' × ' + dims.h + 'px</strong>, 용량 <strong>' + fmtBytes(result.size) + '</strong>' +
+          ' (원본 ' + fmtBytes(currentFile.size) + ')';
+        originalImg.src = URL.createObjectURL(currentFile);
+        resultImg.src = URL.createObjectURL(result);
+        compare.style.display = 'flex';
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 3: 진행률 ----
+  (function section3() {
+    const runBtn = document.getElementById('s3-run');
+    const stat = document.getElementById('s3-stat');
+    const fill = document.getElementById('s3-fill');
+
+    runBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+      runBtn.disabled = true;
+      fill.style.width = '0%';
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '압축 중...';
+      const events = [];
+      try {
+        const result = await imageCompression(currentFile, {
+          maxSizeMB: 0.3,
+          useWebWorker: false,
+          onProgress(percent) {
+            events.push(percent);
+            fill.style.width = percent + '%';
+          },
+        });
+        stat.innerHTML =
+          '진행률 콜백 <strong>' + events.length + '회</strong> 호출됨 (' + events.join(' → ') + '). 결과 용량: <strong>' +
+          fmtBytes(result.size) + '</strong>';
+      } catch (e) {
+        stat.classList.add('error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 4: 웹 워커 ----
+  (function section4() {
+    const runBtn = document.getElementById('s4-run');
+    const stat = document.getElementById('s4-stat');
+    const spinner = document.getElementById('s4-spinner');
+    let spinnerTick = 0;
+    let spinnerTimer = null;
+
+    runBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+      runBtn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '워커에서 압축 중... (아래 점이 계속 움직이면 메인 스레드가 안 막힌 것)';
+      spinnerTick = 0;
+      spinnerTimer = setInterval(() => {
+        spinnerTick = (spinnerTick + 1) % 4;
+        spinner.textContent = '메인 스레드 반응 확인: ' + '●'.repeat(spinnerTick + 1);
+      }, 150);
+      const t0 = performance.now();
+      try {
+        const result = await imageCompression(currentFile, {
+          maxSizeMB: 0.3,
+          useWebWorker: true,
+          libURL: 'https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js',
+        });
+        const elapsed = Math.round(performance.now() - t0);
+        stat.innerHTML =
+          '워커에서 <strong>' + elapsed + 'ms</strong> 만에 압축 완료. 결과 용량: <strong>' + fmtBytes(result.size) + '</strong>' +
+          ' (이 시간 동안 위 점 애니메이션이 멈추지 않았다면 메인 스레드가 막히지 않은 것입니다)';
+      } catch (e) {
+        stat.classList.add('error');
+        stat.innerHTML = '오류: ' + e.message + ' — CDN에서 워커용 스크립트를 못 불러왔을 수 있습니다.';
+      } finally {
+        clearInterval(spinnerTimer);
+        spinner.textContent = '';
+        runBtn.disabled = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
