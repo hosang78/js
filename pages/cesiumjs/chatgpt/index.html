@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CesiumJS 종합 기능 샘플</title>
+  <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <style>
+    :root{--bg:#0b1020;--panel:#121a30;--panel2:#17233f;--line:#2b385d;--text:#eaf0ff;--muted:#a9b6d6;--accent:#7fc7ff;--good:#70e0a2;--warn:#ffd166;--bad:#ff7b7b}
+    *{box-sizing:border-box} html,body,#app{width:100%;height:100%;margin:0;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;background:var(--bg);color:var(--text)}
+    #cesiumContainer{position:absolute;inset:0;background:#000}.cesium-viewer-bottom{display:none!important}
+    .topbar{position:absolute;left:14px;right:14px;top:12px;z-index:10;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:rgba(11,16,32,.88);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+    .brand{font-weight:900;letter-spacing:-.04em;margin-right:4px}.pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.04)}
+    button,input,select{font:inherit}button{border:1px solid var(--line);background:linear-gradient(180deg,#243657,#17233f);color:var(--text);border-radius:11px;padding:8px 10px;cursor:pointer;box-shadow:inset 0 1px rgba(255,255,255,.08)}button:hover{border-color:#5373b5;background:linear-gradient(180deg,#2b426d,#1c2d50)}button.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(127,199,255,.18) inset}button.warn{border-color:#6f5730;background:#332816}.small{font-size:12px;padding:6px 8px}input,select{border:1px solid var(--line);background:#0e162a;color:var(--text);border-radius:10px;padding:7px 9px;min-width:0}.token{width:280px}.side{position:absolute;top:86px;bottom:16px;left:14px;width:380px;z-index:9;display:flex;flex-direction:column;gap:10px;pointer-events:none}.panel{pointer-events:auto;background:rgba(18,26,48,.9);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 36px rgba(0,0,0,.34);overflow:hidden}.panel h2{margin:0;padding:12px 14px;font-size:15px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}.panel .body{padding:12px 14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.section{margin-top:12px}.section:first-child{margin-top:0}.label{font-size:12px;color:var(--muted);margin-bottom:6px}.log{max-height:160px;overflow:auto;font-size:12px;line-height:1.45;color:#d7e3ff;background:#0c1325;border:1px solid var(--line);border-radius:12px;padding:9px;white-space:pre-wrap}.hint{font-size:12px;color:var(--muted);line-height:1.45}.stat{display:grid;grid-template-columns:92px 1fr;gap:5px;font-size:12px;line-height:1.45}.stat b{color:#fff}.right{position:absolute;right:14px;top:86px;width:320px;z-index:9;display:flex;flex-direction:column;gap:10px}.legend{display:grid;grid-template-columns:18px 1fr;gap:7px;font-size:12px;align-items:center}.dot{width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,.35)}.toolbar-bottom{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:10;display:flex;gap:8px;align-items:center;padding:9px;background:rgba(11,16,32,.86);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.35)}.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;color:var(--muted);background:rgba(255,255,255,.04)}.hidden{display:none!important}@media(max-width:900px){.side{width:calc(100vw - 28px);right:14px;bottom:auto;max-height:47vh;overflow:auto}.right{display:none}.topbar{max-height:30vh;overflow:auto}.toolbar-bottom{left:14px;right:14px;transform:none;overflow:auto;justify-content:flex-start}.token{width:180px}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="cesiumContainer"></div>
+  <div class="topbar">
+    <div class="brand">CesiumJS 기능 종합 샘플</div><span class="pill">토큰 없이 기본 실행</span><span class="pill">토큰 입력 시 ion 지형/3D Buildings</span>
+    <input id="ionToken" class="token" placeholder="선택: Cesium ion access token" />
+    <button id="applyToken" class="small">ion 적용</button>
+    <button id="resetAll" class="small warn">초기화</button>
+  </div>
+  <div class="side">
+    <div class="panel"><h2>1. 장면·카메라·레이어</h2><div class="body">
+      <div class="grid3">
+        <button data-view="seoul">서울</button><button data-view="jeju">제주</button><button data-view="busan">부산</button>
+        <button data-mode="3D">3D</button><button data-mode="2D">2D</button><button data-mode="CV">Columbus</button>
+      </div>
+      <div class="section grid">
+        <button id="toggleSun">태양/달</button><button id="toggleLighting">조명</button>
+        <button id="toggleFog">안개</button><button id="toggleBloom">Bloom</button>
+        <button id="toggleFxaa">FXAA</button><button id="toggleDepth">깊이검사</button>
+      </div>
+      <div class="section">
+        <div class="label">영상 레이어</div>
+        <select id="imagerySelect"><option value="osm">OpenStreetMap</option><option value="toner">Stamen Toner</option><option value="esri">Esri World Imagery</option></select>
+      </div>
+    </div></div>
+    <div class="panel"><h2>2. 데이터 표시 기능</h2><div class="body">
+      <div class="grid">
+        <button id="toggleEntities" class="active">엔티티</button><button id="toggleGeoJson" class="active">GeoJSON</button>
+        <button id="toggleCzml" class="active">CZML 시간</button><button id="toggleBillboards" class="active">마커/라벨</button>
+        <button id="loadAirplane">glTF 비행기</button><button id="loadOsmBuildings">OSM Buildings</button>
+      </div>
+      <div class="section hint">OSM Buildings와 월드 지형은 Cesium ion 토큰이 필요할 수 있다. 토큰 없이도 박스·원기둥·폴리곤·벽·경로·GeoJSON·CZML은 동작한다.</div>
+    </div></div>
+    <div class="panel"><h2>3. 측정·피킹·상호작용</h2><div class="body">
+      <div class="grid"><button id="measureBtn">거리측정 시작</button><button id="clearMeasure">측정삭제</button><button id="pickMode">좌표피킹 켜기</button><button id="trackDrone">드론 추적</button></div>
+      <div class="section stat"><b>마우스 좌표</b><span id="mouseCoord">-</span><b>클릭 좌표</b><span id="clickCoord">-</span><b>측정거리</b><span id="measureDist">0 m</span><b>선택객체</b><span id="pickedName">-</span></div>
+    </div></div>
+  </div>
+  <div class="right">
+    <div class="panel"><h2>포함 기능 목록</h2><div class="body">
+      <div class="legend"><span class="dot" style="background:#3bd671"></span><span>Entity: point, billboard, label, polyline, corridor</span><span class="dot" style="background:#ffb703"></span><span>Geometry: extruded polygon, ellipse, rectangle, wall</span><span class="dot" style="background:#8ecae6"></span><span>3D primitives: box, cylinder, ellipsoid</span><span class="dot" style="background:#fb7185"></span><span>CZML clock/path animation</span><span class="dot" style="background:#c084fc"></span><span>GeoJSON polygon/line/point</span></div>
+      <div class="section hint">마커를 클릭하면 InfoBox가 열리고, 하단 타임라인을 재생하면 드론 경로가 움직인다.</div>
+    </div></div>
+    <div class="panel"><h2>실행 로그</h2><div class="body"><div id="log" class="log"></div></div></div>
+  </div>
+  <div class="toolbar-bottom">
+    <span class="badge">🖱 휠 확대/축소</span><span class="badge">Shift+드래그 회전</span><span class="badge">좌클릭 선택</span><span class="badge">타임라인 재생</span>
+  </div>
+</div>
+<script>
+(function(){
+  const logEl=document.getElementById('log');
+  const log=(msg)=>{logEl.textContent=`${new Date().toLocaleTimeString()}  ${msg}\n`+logEl.textContent;};
+  if(!window.Cesium){alert('CesiumJS CDN을 불러오지 못했습니다. 인터넷 연결 또는 보안망 CDN 차단 여부를 확인하세요.');return;}
+  Cesium.Camera.DEFAULT_VIEW_RECTANGLE=Cesium.Rectangle.fromDegrees(124,32,132,39.5);
+  const viewer=new Cesium.Viewer('cesiumContainer',{
+    animation:true,timeline:true,baseLayerPicker:false,geocoder:true,homeButton:true,sceneModePicker:false,navigationHelpButton:true,fullscreenButton:true,infoBox:true,selectionIndicator:true,
+    terrainProvider:new Cesium.EllipsoidTerrainProvider(),
+    imageryProvider:new Cesium.UrlTemplateImageryProvider({url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',credit:'© OpenStreetMap contributors'})
+  });
+  viewer.scene.globe.depthTestAgainstTerrain=false;
+  viewer.scene.fog.enabled=true;
+  viewer.scene.skyAtmosphere.show=true;
+  viewer.scene.sun.show=true;
+  viewer.scene.moon.show=true;
+  viewer.scene.postProcessStages.fxaa.enabled=true;
+  viewer.scene.debugShowFramesPerSecond=true;
+  const groups={entities:[],geojson:null,czml:null,billboards:[],measure:[],model:null,buildings:null};
+  function fly(lon,lat,height=26000,heading=0,pitch=-35){viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(lon,lat,height),orientation:{heading:Cesium.Math.toRadians(heading),pitch:Cesium.Math.toRadians(pitch),roll:0},duration:1.6});}
+  function color(c,a=.85){return Cesium.Color.fromCssColorString(c).withAlpha(a)}
+  function addEntity(e){const x=viewer.entities.add(e);groups.entities.push(x);return x;}
+  function addBillboard(e){const x=viewer.entities.add(e);groups.billboards.push(x);return x;}
+  function makeEntities(){
+    const seoul=[126.978,37.5665];
+    addBillboard({name:'서울시청 마커',position:Cesium.Cartesian3.fromDegrees(seoul[0],seoul[1],300),billboard:{image:'https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/svg/location-sharp.svg',width:34,height:34,verticalOrigin:Cesium.VerticalOrigin.BOTTOM},label:{text:'서울시청',font:'15px sans-serif',pixelOffset:new Cesium.Cartesian2(0,-42),fillColor:Cesium.Color.WHITE,outlineColor:Cesium.Color.BLACK,outlineWidth:3,style:Cesium.LabelStyle.FILL_AND_OUTLINE},description:'Billboard + Label 샘플'});
+    addEntity({name:'한강 3D 폴리라인',polyline:{positions:Cesium.Cartesian3.fromDegreesArray([126.84,37.54,126.90,37.53,126.98,37.52,127.07,37.52,127.15,37.55]),width:8,material:new Cesium.PolylineGlowMaterialProperty({glowPower:.18,color:Cesium.Color.CYAN})}});
+    addEntity({name:'압구정 돌출 폴리곤',polygon:{hierarchy:Cesium.Cartesian3.fromDegreesArray([127.025,37.525,127.045,37.526,127.050,37.513,127.030,37.510]),material:color('#ffb703',.55),extrudedHeight:1200,outline:true,outlineColor:Cesium.Color.WHITE},description:'extrudedHeight를 사용한 3D 폴리곤'});
+    addEntity({name:'여의도 회랑 Corridor',corridor:{positions:Cesium.Cartesian3.fromDegreesArray([126.91,37.53,126.925,37.525,126.94,37.525]),width:600,material:color('#3bd671',.45),outline:true}});
+    addEntity({name:'남산 원기둥',position:Cesium.Cartesian3.fromDegrees(126.9882,37.5512,750),cylinder:{length:1500,topRadius:250,bottomRadius:500,material:color('#8ecae6',.65),outline:true}});
+    addEntity({name:'잠실 박스',position:Cesium.Cartesian3.fromDegrees(127.1025,37.5125,650),box:{dimensions:new Cesium.Cartesian3(850,850,1300),material:color('#70e0a2',.65),outline:true}});
+    addEntity({name:'북한산 Ellipsoid',position:Cesium.Cartesian3.fromDegrees(126.99,37.66,1300),ellipsoid:{radii:new Cesium.Cartesian3(850,850,550),material:color('#c084fc',.45),outline:true}});
+    addEntity({name:'인천공항 Rectangle',rectangle:{coordinates:Cesium.Rectangle.fromDegrees(126.42,37.42,126.48,37.48),material:color('#fb7185',.45),height:100,extrudedHeight:900,outline:true}});
+    addEntity({name:'제주 타원',position:Cesium.Cartesian3.fromDegrees(126.53,33.50,10),ellipse:{semiMajorAxis:25000,semiMinorAxis:11000,material:color('#00b4d8',.35),outline:true}});
+    addEntity({name:'부산 해안 Wall',wall:{positions:Cesium.Cartesian3.fromDegreesArrayHeights([129.03,35.09,0,129.07,35.13,1600,129.12,35.16,500,129.17,35.15,1300]),material:color('#f97316',.45),outline:true}});
+  }
+  async function makeGeoJson(){
+    const data={type:'FeatureCollection',features:[
+      {type:'Feature',properties:{name:'GeoJSON 점: 광화문'},geometry:{type:'Point',coordinates:[126.9769,37.5759]}},
+      {type:'Feature',properties:{name:'GeoJSON 선: 샘플 항로'},geometry:{type:'LineString',coordinates:[[126.55,33.51],[126.82,33.35],[127.05,33.45]]}},
+      {type:'Feature',properties:{name:'GeoJSON 면: 제주 관심권역'},geometry:{type:'Polygon',coordinates:[[[126.25,33.22],[126.70,33.22],[126.77,33.55],[126.35,33.62],[126.25,33.22]]]}}
+    ]};
+    groups.geojson=await Cesium.GeoJsonDataSource.load(data,{stroke:Cesium.Color.PURPLE,fill:Cesium.Color.PURPLE.withAlpha(.28),strokeWidth:4,markerColor:Cesium.Color.PURPLE});
+    viewer.dataSources.add(groups.geojson);
+  }
+  async function makeCzml(){
+    const start=Cesium.JulianDate.now(); const stop=Cesium.JulianDate.addSeconds(start,120,new Cesium.JulianDate());
+    viewer.clock.startTime=start.clone(); viewer.clock.stopTime=stop.clone(); viewer.clock.currentTime=start.clone(); viewer.clock.clockRange=Cesium.ClockRange.LOOP_STOP; viewer.clock.multiplier=1;
+    const isoStart=Cesium.JulianDate.toIso8601(start);
+    const czml=[{id:'document',name:'CZML Drone',version:'1.0',clock:{interval:`${isoStart}/${Cesium.JulianDate.toIso8601(stop)}`,currentTime:isoStart,multiplier:1,range:'LOOP_STOP'}},{id:'drone',name:'CZML 이동 드론',availability:`${isoStart}/${Cesium.JulianDate.toIso8601(stop)}`,position:{epoch:isoStart,cartographicDegrees:[0,126.90,37.50,900,30,126.97,37.56,1800,60,127.07,37.55,1200,90,127.12,37.50,2200,120,126.90,37.50,900]},point:{pixelSize:13,color:{rgba:[251,113,133,255]},outlineColor:{rgba:[255,255,255,255]},outlineWidth:2},label:{text:'CZML Drone',font:'14px sans-serif',pixelOffset:{cartesian2:[0,-22]},fillColor:{rgba:[255,255,255,255]},outlineColor:{rgba:[0,0,0,255]},outlineWidth:2,style:'FILL_AND_OUTLINE'},path:{material:{polylineGlow:{color:{rgba:[251,113,133,255]},glowPower:.25}},width:5,leadTime:0,trailTime:80},orientation:{velocityReference:'#position'}}];
+    groups.czml=await Cesium.CzmlDataSource.load(czml); viewer.dataSources.add(groups.czml); log('CZML 시간 애니메이션 로드');
+  }
+  async function loadModel(){
+    try{ if(groups.model){viewer.entities.remove(groups.model);groups.model=null;return log('glTF 모델 제거');}
+      groups.model=viewer.entities.add({name:'Cesium Air glTF 모델',position:Cesium.Cartesian3.fromDegrees(127.02,37.57,2500),orientation:Cesium.Transforms.headingPitchRollQuaternion(Cesium.Cartesian3.fromDegrees(127.02,37.57,2500),new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(120),0,0)),model:{uri:'https://cesium.com/downloads/cesiumjs/releases/1.132/Apps/SampleData/models/CesiumAir/Cesium_Air.glb',minimumPixelSize:64,maximumScale:200},description:'외부 glTF/GLB 모델 로딩 샘플'});
+      viewer.trackedEntity=groups.model; log('glTF 모델 로드');
+    }catch(e){log('glTF 로드 실패: '+e.message)}
+  }
+  async function applyIon(){
+    const token=document.getElementById('ionToken').value.trim(); if(!token){log('ion 토큰이 비어 있음. 기본 기능만 사용');return;}
+    Cesium.Ion.defaultAccessToken=token;
+    try{viewer.terrainProvider=await Cesium.CesiumTerrainProvider.fromIonAssetId(1); log('Cesium World Terrain 적용');}catch(e){log('지형 적용 실패: '+e.message)}
+  }
+  async function loadBuildings(){
+    const token=document.getElementById('ionToken').value.trim(); if(token) Cesium.Ion.defaultAccessToken=token;
+    try{ if(groups.buildings){viewer.scene.primitives.remove(groups.buildings);groups.buildings=null;return log('OSM Buildings 제거');}
+      groups.buildings=await Cesium.createOsmBuildingsAsync(); viewer.scene.primitives.add(groups.buildings); log('OSM Buildings 로드');
+    }catch(e){log('OSM Buildings 실패: ion 토큰을 넣어 보세요. '+e.message)}
+  }
+  function replaceImagery(kind){viewer.imageryLayers.removeAll(); const p={osm:['https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap contributors'],toner:['https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png','Map tiles by Stamen Design'],esri:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}','Tiles © Esri']}; const [url,credit]=p[kind]; viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({url,credit})); log('영상 레이어 변경: '+kind);}
+  function setVisible(list,show){list.forEach(e=>e.show=show)}
+  let measuring=false,picking=false,measurePositions=[],measureLine=null,measureLabels=[];
+  function clearMeasure(){groups.measure.forEach(e=>viewer.entities.remove(e));groups.measure=[];measurePositions=[];document.getElementById('measureDist').textContent='0 m';}
+  function formatMeters(m){return m>1000?(m/1000).toFixed(2)+' km':m.toFixed(1)+' m'}
+  function distance(a,b){return Cesium.Cartesian3.distance(a,b)}
+  const handler=new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+  handler.setInputAction((movement)=>{const c=viewer.camera.pickEllipsoid(movement.endPosition,viewer.scene.globe.ellipsoid); if(c){const g=Cesium.Cartographic.fromCartesian(c);document.getElementById('mouseCoord').textContent=`${Cesium.Math.toDegrees(g.longitude).toFixed(5)}, ${Cesium.Math.toDegrees(g.latitude).toFixed(5)}`;}},Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+  handler.setInputAction((click)=>{
+    const picked=viewer.scene.pick(click.position); document.getElementById('pickedName').textContent=Cesium.defined(picked)&&picked.id?picked.id.name||'(이름 없음)':'-';
+    const cart=viewer.scene.pickPositionSupported?viewer.scene.pickPosition(click.position):viewer.camera.pickEllipsoid(click.position,viewer.scene.globe.ellipsoid); const pos=cart||viewer.camera.pickEllipsoid(click.position,viewer.scene.globe.ellipsoid);
+    if(pos){const g=Cesium.Cartographic.fromCartesian(pos); const txt=`${Cesium.Math.toDegrees(g.longitude).toFixed(6)}, ${Cesium.Math.toDegrees(g.latitude).toFixed(6)}, h=${g.height.toFixed(1)}m`; if(picking)document.getElementById('clickCoord').textContent=txt;
+      if(measuring){measurePositions.push(pos); groups.measure.push(viewer.entities.add({position:pos,point:{pixelSize:9,color:Cesium.Color.YELLOW,outlineColor:Cesium.Color.BLACK,outlineWidth:2}})); if(measurePositions.length>1){let total=0;for(let i=1;i<measurePositions.length;i++)total+=distance(measurePositions[i-1],measurePositions[i]);document.getElementById('measureDist').textContent=formatMeters(total); if(measureLine)viewer.entities.remove(measureLine); measureLine=viewer.entities.add({name:'측정선',polyline:{positions:measurePositions,width:4,material:Cesium.Color.YELLOW}});groups.measure.push(measureLine);}}
+    }
+  },Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{const v=b.dataset.view;if(v==='seoul')fly(126.99,37.55,28000);if(v==='jeju')fly(126.54,33.40,95000);if(v==='busan')fly(129.10,35.14,42000);});
+  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{const v=b.dataset.mode;if(v==='3D')viewer.scene.morphTo3D(1);if(v==='2D')viewer.scene.morphTo2D(1);if(v==='CV')viewer.scene.morphToColumbusView(1);});
+  document.getElementById('toggleSun').onclick=()=>{viewer.scene.sun.show=!viewer.scene.sun.show;viewer.scene.moon.show=viewer.scene.sun.show;};
+  document.getElementById('toggleLighting').onclick=()=>{viewer.scene.globe.enableLighting=!viewer.scene.globe.enableLighting;};
+  document.getElementById('toggleFog').onclick=()=>{viewer.scene.fog.enabled=!viewer.scene.fog.enabled;};
+  document.getElementById('toggleBloom').onclick=()=>{const s=viewer.scene.postProcessStages; if(!s.bloom)return log('현재 빌드에서 bloom stage 확인 불가'); s.bloom.enabled=!s.bloom.enabled;};
+  document.getElementById('toggleFxaa').onclick=()=>{viewer.scene.postProcessStages.fxaa.enabled=!viewer.scene.postProcessStages.fxaa.enabled;};
+  document.getElementById('toggleDepth').onclick=()=>{viewer.scene.globe.depthTestAgainstTerrain=!viewer.scene.globe.depthTestAgainstTerrain;};
+  document.getElementById('imagerySelect').onchange=e=>replaceImagery(e.target.value);
+  document.getElementById('toggleEntities').onclick=e=>{const show=!e.target.classList.toggle('active'); e.target.classList.toggle('active',!show); setVisible(groups.entities,!show);};
+  document.getElementById('toggleBillboards').onclick=e=>{const show=!e.target.classList.toggle('active'); e.target.classList.toggle('active',!show); setVisible(groups.billboards,!show);};
+  document.getElementById('toggleGeoJson').onclick=e=>{if(groups.geojson){groups.geojson.show=!groups.geojson.show;e.target.classList.toggle('active',groups.geojson.show)}};
+  document.getElementById('toggleCzml').onclick=e=>{if(groups.czml){groups.czml.show=!groups.czml.show;e.target.classList.toggle('active',groups.czml.show)}};
+  document.getElementById('loadAirplane').onclick=loadModel; document.getElementById('loadOsmBuildings').onclick=loadBuildings; document.getElementById('applyToken').onclick=applyIon;
+  document.getElementById('measureBtn').onclick=e=>{measuring=!measuring;e.target.classList.toggle('active',measuring);e.target.textContent=measuring?'거리측정 중':'거리측정 시작';};
+  document.getElementById('clearMeasure').onclick=clearMeasure; document.getElementById('pickMode').onclick=e=>{picking=!picking;e.target.classList.toggle('active',picking);e.target.textContent=picking?'좌표피킹 켜짐':'좌표피킹 켜기';};
+  document.getElementById('trackDrone').onclick=()=>{const ds=groups.czml; if(!ds)return; const ent=ds.entities.getById('drone'); viewer.trackedEntity=viewer.trackedEntity?undefined:ent;};
+  document.getElementById('resetAll').onclick=()=>{viewer.trackedEntity=undefined; viewer.selectedEntity=undefined; clearMeasure(); fly(126.99,37.55,28000); log('화면 초기화');};
+  makeEntities(); makeGeoJson(); makeCzml(); fly(126.99,37.55,28000); log('샘플 초기화 완료');
+})();
+</script>
+</body>
+</html>
