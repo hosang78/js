@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>epub.js 기능 종합 샘플 페이지</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://unpkg.com/epubjs@0.3.93/dist/epub.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel2: #f8fafc;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #d8e0ea;
+      --accent: #2563eb;
+      --accent2: #0f766e;
+      --danger: #dc2626;
+      --shadow: 0 16px 36px rgba(15, 23, 42, .10);
+      --radius: 18px;
+      --reader-height: 72vh;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top left, #dbeafe 0, transparent 34rem), var(--bg);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(14px);
+      background: rgba(244,247,251,.88);
+      border-bottom: 1px solid rgba(216,224,234,.88);
+    }
+    .topbar {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    h1 { margin: 0; font-size: 22px; letter-spacing: -0.03em; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .badges { display:flex; flex-wrap: wrap; gap: 8px; justify-content:flex-end; }
+    .badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding: 7px 10px; border-radius:999px;
+      background: #eef2ff; color:#3730a3; font-size:12px; font-weight:700;
+      border: 1px solid #c7d2fe;
+    }
+    main {
+      max-width: 1720px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 360px minmax(520px, 1fr) 390px;
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel > h2 {
+      margin: 0;
+      padding: 13px 15px;
+      font-size: 15px;
+      background: linear-gradient(180deg, #fff, #f8fafc);
+      border-bottom: 1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .panel-body { padding: 14px; }
+    .section-title {
+      margin: 18px 0 8px;
+      font-size: 12px;
+      font-weight: 900;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .section-title:first-child { margin-top: 0; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    button, input, select, textarea {
+      font: inherit;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button {
+      cursor: pointer;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      transition: transform .05s ease, border-color .15s ease, background .15s ease;
+    }
+    button:hover { border-color: var(--accent); background: #f8fbff; }
+    button:active { transform: translateY(1px); }
+    button.primary { background: #2563eb; border-color:#2563eb; color:white; }
+    button.good { background: #0f766e; border-color:#0f766e; color:white; }
+    button.warn { background: #fff7ed; border-color:#fdba74; color:#9a3412; }
+    button.danger { background: #fef2f2; border-color:#fecaca; color:#991b1b; }
+    button.ghost { background: #f8fafc; }
+    input, select, textarea { padding: 9px 10px; width: 100%; font-size: 13px; }
+    input[type="range"] { padding: 0; }
+    textarea { min-height: 68px; resize: vertical; }
+    label { display:block; font-size: 12px; color: #475569; margin-bottom: 5px; font-weight: 700; }
+    .control { margin-bottom: 9px; }
+    .mini { font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 7px 9px;
+      white-space: nowrap;
+      overflow: auto;
+      font-size: 11px;
+    }
+    .reader-shell {
+      min-width: 0;
+      display:grid;
+      grid-template-rows: auto auto minmax(400px, var(--reader-height)) auto;
+      gap: 12px;
+    }
+    .reader-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      padding: 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.96);
+      box-shadow: var(--shadow);
+    }
+    .navbuttons { display:flex; gap: 8px; align-items:center; }
+    .navbuttons button { min-width: 54px; font-size: 20px; padding: 8px 14px; }
+    .viewer-wrap {
+      position: relative;
+      min-width: 0;
+      background: #ffffff;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    #viewer {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      background: #fff;
+    }
+    .drop-mask {
+      position:absolute; inset: 10px;
+      border: 2px dashed transparent;
+      border-radius: 15px;
+      pointer-events:none;
+      transition: .15s;
+    }
+    .viewer-wrap.dragover .drop-mask {
+      border-color: #2563eb;
+      background: rgba(37,99,235,.08);
+    }
+    .progress-card {
+      padding: 12px 14px;
+      background: rgba(255,255,255,.96);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .meter-line { display:flex; justify-content:space-between; gap:10px; color:#475569; font-size:12px; font-weight:800; margin-bottom:6px; }
+    .toc, .list { display:flex; flex-direction:column; gap: 8px; }
+    .toc button, .list button.item {
+      text-align: left;
+      width:100%;
+      background: #f8fafc;
+      border-color:#e2e8f0;
+      font-weight: 700;
+      color:#1e293b;
+      line-height:1.35;
+    }
+    .toc .sub { margin-left: 16px; }
+    .result, .event, .bookmark, .anno, .meta-item, .feature {
+      border: 1px solid #e2e8f0;
+      border-radius: 13px;
+      background: #f8fafc;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .result strong, .anno strong, .bookmark strong { color:#0f172a; }
+    .result mark { background:#fde68a; padding: 0 2px; border-radius: 3px; }
+    .scrollbox { max-height: 330px; overflow:auto; padding-right: 4px; }
+    .right-stack, .left-stack { display:flex; flex-direction:column; gap: 16px; }
+    .status {
+      padding: 9px 11px;
+      border-radius: 12px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      font-size:12px;
+      line-height:1.45;
+      font-weight:700;
+    }
+    .status.error { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+    .status.ok { background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+    .kpi {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .kpi .box {
+      padding:10px;
+      border:1px solid #e2e8f0;
+      border-radius:14px;
+      background: #f8fafc;
+    }
+    .kpi .num { font-size: 19px; font-weight: 950; letter-spacing:-.03em; }
+    .kpi .label { color:var(--muted); font-size: 11px; font-weight: 800; }
+    .pill-row { display:flex; flex-wrap:wrap; gap:6px; }
+    .pill { border-radius:999px; padding:4px 8px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:11px; font-weight:800; color:#475569; }
+    .small-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .small-actions button { padding:6px 8px; border-radius:9px; font-size:11px; }
+    details { border: 1px solid #e2e8f0; background:#f8fafc; border-radius: 13px; padding: 9px 10px; }
+    summary { cursor:pointer; font-size:12px; font-weight:900; color:#334155; }
+    .hidden { display:none !important; }
+    @media (max-width: 1280px) {
+      main { grid-template-columns: 330px 1fr; }
+      .right-stack { grid-column: 1 / -1; display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      .topbar { grid-template-columns: 1fr; }
+      .badges { justify-content:flex-start; }
+      main { grid-template-columns: 1fr; padding: 10px; }
+      .right-stack { display:flex; }
+      .reader-shell { grid-template-rows: auto auto 64vh auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div>
+        <h1>epub.js 기능 종합 샘플 페이지</h1>
+        <div class="subtitle">EPUB 생성 · 업로드 · 렌더링 · 목차 · 검색 · 테마 · CFI · 진행률 · 주석 · 북마크 · 이벤트 · 내보내기</div>
+      </div>
+      <div class="badges">
+        <span class="badge">epub.js 0.3.93</span>
+        <span class="badge">JSZip 사용</span>
+        <span class="badge">단일 HTML</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <aside class="left-stack">
+      <section class="panel">
+        <h2>1. EPUB 불러오기</h2>
+        <div class="panel-body">
+          <div id="status" class="status">초기화 중...</div>
+          <div class="section-title">데모 / 실제 파일</div>
+          <div class="row">
+            <button id="btnLoadDemo" class="primary">내장 데모 열기</button>
+            <button id="btnDownloadDemo" class="good">샘플 EPUB 저장</button>
+          </div>
+          <div class="control" style="margin-top:10px">
+            <label for="fileInput">내 EPUB 파일 업로드</label>
+            <input id="fileInput" type="file" accept=".epub,application/epub+zip" />
+          </div>
+          <p class="mini">가운데 뷰어 영역으로 EPUB 파일을 끌어다 놓아도 열린다. DRM이 걸린 EPUB은 브라우저에서 열리지 않을 수 있다.</p>
+
+          <div class="section-title">렌더링 옵션</div>
+          <div class="row">
+            <div class="control"><label for="managerSelect">Manager</label><select id="managerSelect"><option value="default">default</option><option value="continuous">continuous</option></select></div>
+            <div class="control"><label for="flowSelect">Flow</label><select id="flowSelect"><option value="paginated">paginated</option><option value="scrolled-doc">scrolled-doc</option><option value="scrolled-continuous">scrolled-continuous</option><option value="auto">auto</option></select></div>
+          </div>
+          <div class="row">
+            <div class="control"><label for="spreadSelect">Spread</label><select id="spreadSelect"><option value="auto">auto</option><option value="none">none</option><option value="always">always</option></select></div>
+            <div class="control"><label for="directionSelect">Direction</label><select id="directionSelect"><option value="ltr">ltr</option><option value="rtl">rtl</option></select></div>
+          </div>
+          <div class="row">
+            <div class="control"><label for="minSpreadWidth">Min spread width</label><input id="minSpreadWidth" type="number" value="800" min="320" step="20" /></div>
+            <div class="control"><label for="readerHeight">Reader height</label><input id="readerHeight" type="number" value="72" min="45" max="92" step="1" /></div>
+          </div>
+          <button id="btnRerender" class="warn" style="width:100%">현재 위치 유지하고 렌더링 재생성</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>2. 목차 / Spine</h2>
+        <div class="panel-body">
+          <div class="kpi">
+            <div class="box"><div id="tocCount" class="num">0</div><div class="label">TOC 항목</div></div>
+            <div class="box"><div id="spineCount" class="num">0</div><div class="label">Spine 문서</div></div>
+          </div>
+          <div class="section-title">목차 이동</div>
+          <div id="tocList" class="toc scrollbox"><div class="mini">EPUB을 열면 목차가 표시된다.</div></div>
+          <details style="margin-top:10px">
+            <summary>Spine / manifest 정보 보기</summary>
+            <div id="spineList" class="list" style="margin-top:8px"></div>
+          </details>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>3. 지원 기능 목록</h2>
+        <div class="panel-body">
+          <div class="pill-row">
+            <span class="pill">renderTo</span><span class="pill">prev/next</span><span class="pill">display CFI</span><span class="pill">TOC</span><span class="pill">spine</span><span class="pill">metadata</span><span class="pill">coverUrl</span><span class="pill">locations</span><span class="pill">percentage</span><span class="pill">themes</span><span class="pill">font</span><span class="pill">fontSize</span><span class="pill">override</span><span class="pill">flow</span><span class="pill">spread</span><span class="pill">direction</span><span class="pill">annotations</span><span class="pill">highlight</span><span class="pill">underline</span><span class="pill">mark</span><span class="pill">selected event</span><span class="pill">relocated event</span><span class="pill">rendered event</span><span class="pill">content hook</span><span class="pill">getRange</span><span class="pill">getContents</span><span class="pill">spine find</span><span class="pill">bookmarks</span><span class="pill">localStorage</span><span class="pill">JSON import/export</span>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <section class="reader-shell">
+      <div class="reader-toolbar">
+        <div class="navbuttons">
+          <button id="btnPrev" title="이전">‹</button>
+          <button id="btnNext" title="다음">›</button>
+          <button id="btnBookmark" class="ghost">북마크</button>
+          <button id="btnCopyCfi" class="ghost">CFI 복사</button>
+        </div>
+        <div class="navbuttons">
+          <button id="btnCurrentText" class="ghost">현재 화면 텍스트</button>
+          <button id="btnResize" class="ghost">resize()</button>
+          <button id="btnPrint" class="ghost">인쇄</button>
+        </div>
+      </div>
+
+      <div class="progress-card">
+        <div class="meter-line"><span id="locationLabel">위치 정보 없음</span><span id="percentLabel">0%</span></div>
+        <input id="progressRange" type="range" min="0" max="1000" value="0" />
+        <div class="row" style="margin-top:9px">
+          <input id="cfiInput" placeholder="EPUB CFI를 붙여넣고 이동" />
+          <button id="btnGotoCfi" class="primary">CFI 이동</button>
+        </div>
+        <div id="currentCfi" class="code" style="margin-top:8px">현재 CFI 없음</div>
+      </div>
+
+      <div id="viewerWrap" class="viewer-wrap">
+        <div id="viewer"></div>
+        <div class="drop-mask"></div>
+      </div>
+
+      <section class="panel">
+        <h2>선택 영역 주석</h2>
+        <div class="panel-body">
+          <div class="row3">
+            <button id="btnHighlight" class="good">하이라이트</button>
+            <button id="btnUnderline" class="warn">밑줄</button>
+            <button id="btnMark" class="ghost">마크</button>
+          </div>
+          <div class="control" style="margin-top:9px"><label for="noteInput">선택 텍스트 / 메모</label><textarea id="noteInput" placeholder="책 안에서 텍스트를 드래그하면 CFI와 텍스트가 여기에 잡힌다."></textarea></div>
+          <div id="selectedCfi" class="code">선택 CFI 없음</div>
+        </div>
+      </section>
+    </section>
+
+    <aside class="right-stack">
+      <section class="panel">
+        <h2>4. 메타데이터</h2>
+        <div class="panel-body">
+          <div id="metadataBox" class="list"><div class="mini">EPUB 메타데이터가 표시된다.</div></div>
+          <div class="small-actions">
+            <button id="btnCover">coverUrl()</button>
+            <button id="btnDestroy" class="danger">destroy()</button>
+          </div>
+          <div id="coverBox" class="mini" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>5. 테마 / 글꼴</h2>
+        <div class="panel-body">
+          <div class="row">
+            <div class="control"><label for="themeSelect">Theme</label><select id="themeSelect"><option value="light">light</option><option value="sepia">sepia</option><option value="night">night</option><option value="contrast">contrast</option><option value="paper">paper</option><option value="ocean">ocean</option></select></div>
+            <div class="control"><label for="fontSelect">Font</label><select id="fontSelect"><option value="-apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif">System Sans</option><option value="Georgia, 'Times New Roman', serif">Serif</option><option value="'Noto Serif KR', Georgia, serif">Noto Serif KR</option><option value="ui-monospace, Consolas, monospace">Monospace</option></select></div>
+          </div>
+          <div class="row">
+            <div class="control"><label for="fontSize">Font size <span id="fontSizeLabel">100%</span></label><input id="fontSize" type="range" min="70" max="180" value="100" /></div>
+            <div class="control"><label for="lineHeight">Line height <span id="lineHeightLabel">1.7</span></label><input id="lineHeight" type="range" min="1.1" max="2.4" step="0.1" value="1.7" /></div>
+          </div>
+          <div class="row">
+            <div class="control"><label for="paragraphGap">문단 간격</label><select id="paragraphGap"><option value="0.8em">보통</option><option value="1.4em">넓게</option><option value="0.2em">좁게</option></select></div>
+            <div class="control"><label for="selectionColor">선택/강조 색</label><select id="selectionColor"><option value="yellow">yellow</option><option value="cyan">cyan</option><option value="lime">lime</option><option value="pink">pink</option></select></div>
+          </div>
+          <button id="btnApplyTheme" class="primary" style="width:100%">테마 적용</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>6. 검색</h2>
+        <div class="panel-body">
+          <div class="row">
+            <input id="searchInput" placeholder="예: epub.js, 목차, CFI" />
+            <button id="btnSearch" class="primary">전체 검색</button>
+          </div>
+          <p class="mini">spine 문서를 순회하며 `section.find()` 방식으로 검색한다. 큰 EPUB은 시간이 걸릴 수 있다.</p>
+          <div id="searchResults" class="list scrollbox"><div class="mini">검색 결과 없음</div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>7. Locations / 진행률</h2>
+        <div class="panel-body">
+          <div class="row">
+            <input id="locationChars" type="number" value="700" min="100" step="100" />
+            <button id="btnGenerateLocations" class="primary">생성</button>
+          </div>
+          <div class="small-actions">
+            <button id="btnSaveLocations">save()</button>
+            <button id="btnLoadLocations">load()</button>
+          </div>
+          <div id="locationsInfo" class="mini" style="margin-top:8px">locations 미생성</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>8. 북마크 / 주석 저장소</h2>
+        <div class="panel-body">
+          <div class="small-actions">
+            <button id="btnExportJson" class="good">JSON 내보내기</button>
+            <button id="btnImportJson" class="warn">JSON 가져오기</button>
+            <button id="btnClearStorage" class="danger">저장소 비우기</button>
+          </div>
+          <input id="jsonFile" class="hidden" type="file" accept="application/json,.json" />
+          <div class="section-title">북마크</div>
+          <div id="bookmarkList" class="list scrollbox"><div class="mini">북마크 없음</div></div>
+          <div class="section-title">주석</div>
+          <div id="annotationList" class="list scrollbox"><div class="mini">주석 없음</div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>9. 이벤트 로그</h2>
+        <div class="panel-body">
+          <div id="eventLog" class="list scrollbox"><div class="mini">로그 대기 중</div></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let book = null;
+    let rendition = null;
+    let currentBuffer = null;
+    let currentBookName = "demo";
+    let currentBookKey = "demo";
+    let currentCfi = "";
+    let currentPercent = 0;
+    let lastSelection = { cfi: "", text: "" };
+    let store = { bookmarks: [], annotations: [], locations: null };
+    let isReady = false;
+
+    const els = {
+      status: $("status"), viewer: $("viewer"), viewerWrap: $("viewerWrap"), tocList: $("tocList"), spineList: $("spineList"),
+      metadataBox: $("metadataBox"), eventLog: $("eventLog"), searchResults: $("searchResults"), bookmarkList: $("bookmarkList"), annotationList: $("annotationList")
+    };
+
+    function setStatus(text, type = "") {
+      els.status.textContent = text;
+      els.status.className = "status" + (type ? " " + type : "");
+    }
+
+    function logEvent(message, type = "info") {
+      const empty = els.eventLog.querySelector(".mini");
+      if (empty) empty.remove();
+      const div = document.createElement("div");
+      div.className = "event";
+      const time = new Date().toLocaleTimeString("ko-KR", { hour12: false });
+      div.innerHTML = `<strong>[${escapeHtml(time)}]</strong> ${escapeHtml(message)}`;
+      els.eventLog.prepend(div);
+      while (els.eventLog.children.length > 50) els.eventLog.lastElementChild.remove();
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+    }
+
+    function storageKey() { return `epubjs-feature-lab:${currentBookKey || currentBookName || "book"}`; }
+
+    function saveStore() {
+      try { localStorage.setItem(storageKey(), JSON.stringify(store)); }
+      catch (err) { logEvent("localStorage 저장 실패: " + err.message); }
+    }
+
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(storageKey());
+        store = raw ? JSON.parse(raw) : { bookmarks: [], annotations: [], locations: null };
+        if (!store.bookmarks) store.bookmarks = [];
+        if (!store.annotations) store.annotations = [];
+      } catch (err) {
+        store = { bookmarks: [], annotations: [], locations: null };
+      }
+      renderBookmarks();
+      renderAnnotations();
+    }
+
+    async function createDemoEpubBuffer() {
+      const zip = new JSZip();
+      zip.file("mimetype", "application/epub+zip", { compression: "STORE" });
+      zip.file("META-INF/container.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`);
+
+      const css = `body{font-family:serif;line-height:1.7;color:#1f2937;margin:0;padding:0 1.4rem;}h1,h2{line-height:1.25;color:#0f172a;}h1{border-bottom:2px solid #dbeafe;padding-bottom:.4em;}p{margin:0 0 .85em;}blockquote{border-left:5px solid #93c5fd;margin:1em 0;padding:.7em 1em;background:#eff6ff;}table{border-collapse:collapse;width:100%;margin:1em 0;}th,td{border:1px solid #cbd5e1;padding:.55em;}th{background:#f1f5f9;}code{background:#f1f5f9;border-radius:.35em;padding:.1em .35em;}figure{margin:1em 0;text-align:center;}figcaption{font-size:.88em;color:#64748b;}.callout{background:#ecfeff;border:1px solid #a5f3fc;border-radius:12px;padding:1em;margin:1em 0;}.pagebreak{break-before:page;}`;
+      zip.file("OPS/styles/book.css", css);
+
+      const coverSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#1d4ed8"/><stop offset="1" stop-color="#0f766e"/></linearGradient></defs><rect width="900" height="1200" fill="url(#g)"/><circle cx="720" cy="180" r="130" fill="rgba(255,255,255,.18)"/><rect x="110" y="180" width="680" height="760" rx="42" fill="rgba(255,255,255,.92)"/><text x="450" y="340" font-size="76" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" fill="#0f172a">EPUB.js</text><text x="450" y="430" font-size="34" text-anchor="middle" font-family="Arial, sans-serif" fill="#334155">Feature Demo Book</text><text x="450" y="535" font-size="28" text-anchor="middle" font-family="Arial, sans-serif" fill="#475569">목차 · 검색 · CFI · 주석 · 테마</text><text x="450" y="840" font-size="22" text-anchor="middle" font-family="Arial, sans-serif" fill="#64748b">Generated in browser with JSZip</text></svg>`;
+      zip.file("OPS/images/cover.svg", coverSvg);
+
+      const chapters = [
+        {
+          file: "ch01.xhtml", title: "1장. 렌더링과 이동", body: `
+<h1 id="c1">1장. 렌더링과 이동</h1>
+<p>이 EPUB은 샘플 페이지 안에서 JSZip으로 즉석 생성한 파일이다. epub.js는 <code>ePub()</code>으로 책을 열고 <code>book.renderTo()</code>로 뷰어에 렌더링한다.</p>
+<p>왼쪽과 오른쪽 버튼, 키보드 방향키, 목차, CFI 입력, 진행률 슬라이더를 이용해 이동 기능을 시험할 수 있다.</p>
+<div class="callout"><strong>테스트 키워드:</strong> epub.js, CFI, locations, rendition, navigation, spine.</div>
+<h2 id="c1-1">렌더링 모드</h2>
+<p>paginated는 전자책처럼 페이지 단위로 넘기는 방식이고, scrolled-doc은 문서처럼 세로 스크롤한다. continuous manager는 여러 섹션을 이어 보여주는 데 유리하다.</p>
+<blockquote>현재 샘플에서는 렌더링 옵션을 바꾼 뒤 “현재 위치 유지하고 렌더링 재생성” 버튼으로 즉시 비교할 수 있다.</blockquote>
+<h2 id="c1-2">CFI와 현재 위치</h2>
+<p>EPUB CFI는 전자책 내부의 특정 위치를 가리키는 식별자다. 진행률과 북마크, 하이라이트 저장에 활용할 수 있다.</p>`
+        },
+        {
+          file: "ch02.xhtml", title: "2장. 목차·메타데이터·Spine", body: `
+<h1 id="c2">2장. 목차·메타데이터·Spine</h1>
+<p>EPUB은 OPF 패키지, manifest, spine, navigation 문서, 실제 XHTML 본문으로 구성된다. epub.js는 metadata, navigation, spine 정보를 읽어서 앱에서 활용할 수 있게 제공한다.</p>
+<table><thead><tr><th>구성</th><th>역할</th></tr></thead><tbody><tr><td>metadata</td><td>제목, 저자, 언어, 식별자</td></tr><tr><td>manifest</td><td>책에 포함된 리소스 목록</td></tr><tr><td>spine</td><td>읽기 순서</td></tr><tr><td>nav / ncx</td><td>목차</td></tr></tbody></table>
+<h2 id="c2-1">목차 이동</h2>
+<p>이 장의 하위 제목은 nav.xhtml과 toc.ncx에 모두 들어 있다. 오른쪽/왼쪽 패널에서 항목을 클릭하면 해당 위치로 이동한다.</p>
+<h2 id="c2-2">표지</h2>
+<figure><img src="images/cover.svg" alt="demo cover" style="max-width:55%;border-radius:16px"/><figcaption>SVG 표지 이미지. coverUrl() 테스트에 사용된다.</figcaption></figure>`
+        },
+        {
+          file: "ch03.xhtml", title: "3장. 검색·주석·북마크", body: `
+<h1 id="c3">3장. 검색·주석·북마크</h1>
+<p>검색 기능은 각 spine item을 로드한 뒤 <code>section.find()</code>를 호출하는 방식으로 구현했다. 결과를 누르면 CFI 위치로 이동한다.</p>
+<p>텍스트를 드래그하면 선택 이벤트가 발생한다. 선택 영역은 highlight, underline, mark 형태로 저장할 수 있다. 저장된 주석은 localStorage와 JSON 내보내기로 관리한다.</p>
+<h2 id="c3-1">하이라이트 테스트 문장</h2>
+<p>이 문장을 드래그한 다음 하이라이트 버튼을 눌러라. 다시 주석 목록에서 이동하거나 삭제할 수 있다. epub.js annotations 기능은 CFI 범위를 기준으로 표시된다.</p>
+<h2 id="c3-2">북마크 테스트</h2>
+<p>현재 CFI를 북마크로 저장하면 다음 번에 같은 책을 열었을 때 목록에서 다시 이동할 수 있다.</p>
+<p>반복 검색 키워드: 자동화, 전자책, epub.js, CFI, 검색, 주석, 북마크, locations.</p>`
+        },
+        {
+          file: "ch04.xhtml", title: "4장. 테마·훅·이벤트", body: `
+<h1 id="c4">4장. 테마·훅·이벤트</h1>
+<p>테마는 책 내부 문서에 CSS를 주입해 배경색, 글자색, 글꼴, 줄간격 등을 바꾼다. 이 샘플은 light, sepia, night, contrast, paper, ocean 테마를 제공한다.</p>
+<h2 id="c4-1">Content Hook</h2>
+<p>rendition.hooks.content.register()를 이용하면 각 섹션이 표시되기 전에 내부 문서에 스타일, 이벤트, 링크 속성 등을 추가할 수 있다.</p>
+<p><a href="https://github.com/futurepress/epub.js">외부 링크 예시</a>는 content hook에서 새 창 속성이 부여된다.</p>
+<h2 id="c4-2">이벤트</h2>
+<p>relocated, rendered, selected 이벤트가 오른쪽 이벤트 로그에 기록된다. 화면 크기 변경과 resize()도 시험할 수 있다.</p>
+<div class="pagebreak"></div>
+<p>이 문장은 강제 페이지 나눔 뒤에 배치했다. paginated 모드에서 페이지 이동 차이를 확인해 보자.</p>`
+        }
+      ];
+
+      for (const ch of chapters) {
+        zip.file(`OPS/${ch.file}`, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko">
+<head><title>${escapeXml(ch.title)}</title><link rel="stylesheet" type="text/css" href="styles/book.css" /></head>
+<body>${ch.body}</body>
+</html>`);
+      }
+
+      const manifestItems = chapters.map((ch, i) => `<item id="ch${i+1}" href="${ch.file}" media-type="application/xhtml+xml"/>`).join("\n    ");
+      const spineItems = chapters.map((ch, i) => `<itemref idref="ch${i+1}"/>`).join("\n    ");
+      zip.file("OPS/content.opf", `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="bookid">urn:uuid:epubjs-feature-lab-demo</dc:identifier>
+    <dc:title>epub.js 기능 종합 데모북</dc:title>
+    <dc:creator>ChatGPT Sample Generator</dc:creator>
+    <dc:language>ko</dc:language>
+    <meta property="dcterms:modified">2026-07-17T00:00:00Z</meta>
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    <item id="style" href="styles/book.css" media-type="text/css"/>
+    <item id="cover" href="images/cover.svg" media-type="image/svg+xml" properties="cover-image"/>
+    ${manifestItems}
+  </manifest>
+  <spine toc="ncx">
+    ${spineItems}
+  </spine>
+</package>`);
+
+      const navItems = chapters.map((ch, i) => `<li><a href="${ch.file}">${escapeXml(ch.title)}</a>${i === 0 ? `<ol><li><a href="${ch.file}#c1-1">렌더링 모드</a></li><li><a href="${ch.file}#c1-2">CFI와 현재 위치</a></li></ol>` : ""}${i === 1 ? `<ol><li><a href="${ch.file}#c2-1">목차 이동</a></li><li><a href="${ch.file}#c2-2">표지</a></li></ol>` : ""}${i === 2 ? `<ol><li><a href="${ch.file}#c3-1">하이라이트 테스트 문장</a></li><li><a href="${ch.file}#c3-2">북마크 테스트</a></li></ol>` : ""}${i === 3 ? `<ol><li><a href="${ch.file}#c4-1">Content Hook</a></li><li><a href="${ch.file}#c4-2">이벤트</a></li></ol>` : ""}</li>`).join("\n        ");
+      zip.file("OPS/nav.xhtml", `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="ko" xml:lang="ko">
+<head><title>목차</title></head>
+<body><nav epub:type="toc" id="toc"><h1>목차</h1><ol>${navItems}</ol></nav></body></html>`);
+
+      const navPoints = chapters.map((ch, i) => `<navPoint id="navPoint-${i+1}" playOrder="${i+1}"><navLabel><text>${escapeXml(ch.title)}</text></navLabel><content src="${ch.file}"/></navPoint>`).join("\n    ");
+      zip.file("OPS/toc.ncx", `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head><meta name="dtb:uid" content="urn:uuid:epubjs-feature-lab-demo"/></head>
+  <docTitle><text>epub.js 기능 종합 데모북</text></docTitle>
+  <navMap>${navPoints}</navMap>
+</ncx>`);
+
+      return await zip.generateAsync({ type: "arraybuffer", mimeType: "application/epub+zip", compression: "DEFLATE" });
+    }
+
+    function escapeXml(str) {
+      return String(str ?? "").replace(/[<>&"']/g, (m) => ({"<":"&lt;",">":"&gt;","&":"&amp;","\"":"&quot;","'":"&apos;"}[m]));
+    }
+
+    async function loadDemo() {
+      try {
+        setStatus("데모 EPUB 생성 중...");
+        const buffer = await createDemoEpubBuffer();
+        await loadBookFromBuffer(buffer, "epubjs-feature-lab-demo.epub");
+      } catch (err) {
+        console.error(err);
+        setStatus("데모 EPUB 생성 실패: " + err.message, "error");
+      }
+    }
+
+    async function loadBookFromBuffer(buffer, name, displayTarget = null) {
+      if (!window.ePub || !window.JSZip) {
+        setStatus("CDN 라이브러리 로드 실패. 인터넷 연결 또는 epub.min.js / jszip.min.js 경로를 확인해야 한다.", "error");
+        return;
+      }
+      currentBuffer = buffer.slice ? buffer.slice(0) : buffer;
+      currentBookName = name || "uploaded.epub";
+      isReady = false;
+      currentCfi = "";
+      setStatus(`EPUB 여는 중: ${currentBookName}`);
+      destroyReader(false);
+      els.viewer.innerHTML = "";
+
+      book = ePub(currentBuffer);
+      const manager = $("managerSelect").value;
+      const flow = $("flowSelect").value;
+      const spread = $("spreadSelect").value;
+      const minSpreadWidth = parseInt($("minSpreadWidth").value, 10) || 800;
+
+      rendition = book.renderTo("viewer", {
+        width: "100%",
+        height: "100%",
+        manager,
+        flow,
+        spread,
+        minSpreadWidth,
+        ignoreClass: "epubjs-ignore"
+      });
+
+      registerHooks();
+      registerThemes();
+      attachRenditionEvents();
+
+      try {
+        const metadata = await book.loaded.metadata;
+        currentBookKey = metadata.identifier || metadata.title || currentBookName;
+        renderMetadata(metadata);
+        loadStore();
+        if (store.locations && book.locations) {
+          try { book.locations.load(store.locations); updateLocationsInfo(); } catch (e) {}
+        }
+      } catch (err) {
+        currentBookKey = currentBookName;
+        loadStore();
+      }
+
+      await Promise.allSettled([renderNavigation(), renderSpine()]);
+
+      try {
+        await rendition.display(displayTarget || currentCfi || undefined);
+        applyThemeControls();
+        replayAnnotations();
+        isReady = true;
+        setStatus(`열림: ${currentBookName}`, "ok");
+        logEvent(`book opened: ${currentBookName}, manager=${manager}, flow=${flow}`);
+      } catch (err) {
+        console.error(err);
+        setStatus("렌더링 실패: " + err.message, "error");
+      }
+    }
+
+    function destroyReader(clearViewer = true) {
+      try { if (rendition && rendition.destroy) rendition.destroy(); } catch (e) {}
+      try { if (book && book.destroy) book.destroy(); } catch (e) {}
+      rendition = null;
+      book = null;
+      if (clearViewer) els.viewer.innerHTML = "";
+    }
+
+    function registerHooks() {
+      if (!rendition) return;
+      rendition.hooks.content.register(function(contents) {
+        try {
+          const doc = contents.document;
+          const style = doc.createElement("style");
+          style.textContent = `
+            html[data-epubjs-feature-lab="on"] body { transition: background .15s ease, color .15s ease; }
+            .epubjs-hl { fill: rgba(250, 204, 21, .45); mix-blend-mode: multiply; }
+            a[target="_blank"]::after { content:" ↗"; font-size:.8em; }
+          `;
+          doc.head.appendChild(style);
+          doc.documentElement.setAttribute("data-epubjs-feature-lab", "on");
+          Array.from(doc.querySelectorAll("a[href^='http']")).forEach(a => {
+            a.setAttribute("target", "_blank");
+            a.setAttribute("rel", "noopener noreferrer");
+          });
+        } catch (err) {
+          logEvent("content hook 실패: " + err.message);
+        }
+      });
+    }
+
+    function registerThemes() {
+      if (!rendition) return;
+      const common = {
+        "body": { "line-height": $("lineHeight").value, "padding": "0 1em" },
+        "p": { "margin-bottom": $("paragraphGap").value },
+        "::selection": { "background": selectionRgba() }
+      };
+      rendition.themes.register({
+        light: Object.assign({}, common, { "body": { ...common.body, "background": "#ffffff", "color": "#1f2937" }, "h1,h2,h3": { "color": "#0f172a" } }),
+        sepia: Object.assign({}, common, { "body": { ...common.body, "background": "#fbf0d9", "color": "#4b371c" }, "h1,h2,h3": { "color": "#3b2a15" } }),
+        night: Object.assign({}, common, { "body": { ...common.body, "background": "#0f172a", "color": "#dbeafe" }, "h1,h2,h3": { "color": "#f8fafc" }, "a": { "color": "#93c5fd" }, "blockquote": { "background": "#172554", "border-left-color": "#60a5fa" } }),
+        contrast: Object.assign({}, common, { "body": { ...common.body, "background": "#000000", "color": "#ffffff" }, "h1,h2,h3": { "color": "#ffffff" }, "a": { "color": "#ffff00" } }),
+        paper: Object.assign({}, common, { "body": { ...common.body, "background": "#fffdf7", "color": "#243042" }, "h1,h2,h3": { "color": "#111827" } }),
+        ocean: Object.assign({}, common, { "body": { ...common.body, "background": "#ecfeff", "color": "#164e63" }, "h1,h2,h3": { "color": "#155e75" }, "a": { "color": "#0369a1" } })
+      });
+      rendition.themes.default({
+        "::selection": { "background": selectionRgba() },
+        ".epubjs-hl": { "fill": selectionRgba(), "fill-opacity": "0.55", "mix-blend-mode": "multiply" }
+      });
+    }
+
+    function attachRenditionEvents() {
+      if (!rendition) return;
+      rendition.on("relocated", (location) => {
+        try {
+          currentCfi = location?.start?.cfi || "";
+          let pct = 0;
+          if (book?.locations?.length && currentCfi) pct = book.locations.percentageFromCfi(currentCfi) || 0;
+          else if (typeof location?.start?.percentage === "number") pct = location.start.percentage;
+          currentPercent = Math.max(0, Math.min(1, pct || 0));
+          updateProgress(location);
+          logEvent(`relocated: ${Math.round(currentPercent * 1000) / 10}%`);
+        } catch (err) { logEvent("relocated 처리 실패: " + err.message); }
+      });
+      rendition.on("rendered", (section) => {
+        logEvent(`rendered: ${section?.href || section?.idref || "section"}`);
+      });
+      rendition.on("selected", async (cfiRange, contents) => {
+        try {
+          let text = "";
+          const range = await book.getRange(cfiRange);
+          if (range) text = range.toString().trim();
+          lastSelection = { cfi: cfiRange, text };
+          $("selectedCfi").textContent = cfiRange;
+          $("noteInput").value = text ? `선택 텍스트: ${text}\n\n메모: ` : "메모: ";
+          try { contents.window.getSelection().removeAllRanges(); } catch (e) {}
+          logEvent(`selected: ${text.slice(0, 32) || cfiRange}`);
+        } catch (err) { logEvent("selected 처리 실패: " + err.message); }
+      });
+      rendition.on("keyup", handleKeys);
+    }
+
+    function selectionRgba() {
+      const v = $("selectionColor").value;
+      if (v === "cyan") return "rgba(34, 211, 238, .42)";
+      if (v === "lime") return "rgba(132, 204, 22, .42)";
+      if (v === "pink") return "rgba(244, 114, 182, .42)";
+      return "rgba(250, 204, 21, .45)";
+    }
+
+    function applyThemeControls() {
+      if (!rendition) return;
+      const theme = $("themeSelect").value;
+      const fontSize = $("fontSize").value + "%";
+      const font = $("fontSelect").value;
+      const lineHeight = $("lineHeight").value;
+      const paragraphGap = $("paragraphGap").value;
+      registerThemes();
+      rendition.themes.select(theme);
+      rendition.themes.fontSize(fontSize);
+      rendition.themes.font(font);
+      try {
+        rendition.themes.override("line-height", lineHeight, true);
+        rendition.themes.override("font-family", font, true);
+        rendition.themes.override("font-size", fontSize, true);
+      } catch (e) {}
+      const bg = { light:"#ffffff", sepia:"#fbf0d9", night:"#0f172a", contrast:"#000000", paper:"#fffdf7", ocean:"#ecfeff" }[theme] || "#fff";
+      els.viewer.style.background = bg;
+      $("fontSizeLabel").textContent = fontSize;
+      $("lineHeightLabel").textContent = lineHeight;
+      logEvent(`theme selected: ${theme}, font=${fontSize}, line-height=${lineHeight}, p-gap=${paragraphGap}`);
+    }
+
+    function updateProgress(location) {
+      $("percentLabel").textContent = `${Math.round(currentPercent * 1000) / 10}%`;
+      $("progressRange").value = Math.round(currentPercent * 1000);
+      $("currentCfi").textContent = currentCfi || "현재 CFI 없음";
+      const locNum = book?.locations?.length && currentCfi ? book.locations.locationFromCfi(currentCfi) : null;
+      const total = book?.locations?.length || 0;
+      const section = location?.start?.index != null ? `section ${location.start.index + 1}` : "section ?";
+      $("locationLabel").textContent = total ? `${section} · location ${locNum ?? "?"} / ${total}` : `${section} · locations 미생성`;
+    }
+
+    async function renderMetadata(metadata) {
+      const entries = [
+        ["제목", metadata.title], ["저자", metadata.creator], ["언어", metadata.language], ["식별자", metadata.identifier], ["출판사", metadata.publisher], ["수정일", metadata.modified_date || metadata.pubdate]
+      ].filter(([,v]) => v);
+      els.metadataBox.innerHTML = entries.map(([k,v]) => `<div class="meta-item"><strong>${escapeHtml(k)}</strong><br>${escapeHtml(v)}</div>`).join("") || `<div class="mini">메타데이터 없음</div>`;
+    }
+
+    async function renderNavigation() {
+      try {
+        const nav = await book.loaded.navigation;
+        const toc = nav.toc || [];
+        $("tocCount").textContent = countToc(toc);
+        els.tocList.innerHTML = "";
+        if (!toc.length) {
+          els.tocList.innerHTML = `<div class="mini">목차 없음</div>`;
+          return;
+        }
+        renderTocItems(toc, els.tocList, 0);
+      } catch (err) {
+        els.tocList.innerHTML = `<div class="mini">목차 로드 실패: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function countToc(items) { return (items || []).reduce((sum, item) => sum + 1 + countToc(item.subitems || item.children || []), 0); }
+
+    function renderTocItems(items, parent, depth) {
+      (items || []).forEach((item) => {
+        const btn = document.createElement("button");
+        btn.className = depth ? "sub" : "";
+        btn.textContent = `${"　".repeat(depth)}${item.label || item.title || item.href}`;
+        btn.onclick = () => { if (rendition) rendition.display(item.href); };
+        parent.appendChild(btn);
+        const subs = item.subitems || item.children || [];
+        if (subs.length) renderTocItems(subs, parent, depth + 1);
+      });
+    }
+
+    async function renderSpine() {
+      try {
+        await book.ready;
+        const items = getSpineItems();
+        $("spineCount").textContent = items.length;
+        els.spineList.innerHTML = items.map((item, i) => `<button class="item" data-index="${i}"><strong>${i + 1}. ${escapeHtml(item.idref || item.id || "item")}</strong><br><span class="mini">${escapeHtml(item.href || item.url || "")}</span></button>`).join("") || `<div class="mini">spine 정보 없음</div>`;
+        els.spineList.querySelectorAll("button[data-index]").forEach(btn => {
+          btn.onclick = () => rendition && rendition.display(parseInt(btn.dataset.index, 10));
+        });
+      } catch (err) {
+        els.spineList.innerHTML = `<div class="mini">spine 로드 실패: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function getSpineItems() {
+      if (!book?.spine) return [];
+      return book.spine.spineItems || book.spine.items || [];
+    }
+
+    async function generateLocations() {
+      if (!book) return;
+      try {
+        setStatus("locations 생성 중... 큰 EPUB은 시간이 걸릴 수 있음");
+        const chars = parseInt($("locationChars").value, 10) || 700;
+        await book.locations.generate(chars);
+        store.locations = book.locations.save();
+        saveStore();
+        updateLocationsInfo();
+        if (currentCfi) updateProgress({ start: { cfi: currentCfi } });
+        setStatus(`locations 생성 완료: ${book.locations.length}개`, "ok");
+        logEvent(`locations generated: chars=${chars}, count=${book.locations.length}`);
+      } catch (err) {
+        setStatus("locations 생성 실패: " + err.message, "error");
+      }
+    }
+
+    function updateLocationsInfo() {
+      const len = book?.locations?.length || 0;
+      $("locationsInfo").textContent = len ? `locations ${len}개 사용 중. 진행률 슬라이더와 percentageFromCfi/cfiFromPercentage 이동 가능.` : "locations 미생성";
+    }
+
+    async function doSearch() {
+      if (!book) return;
+      const query = $("searchInput").value.trim();
+      if (!query) return;
+      els.searchResults.innerHTML = `<div class="mini">검색 중...</div>`;
+      const items = getSpineItems();
+      const results = [];
+      for (const item of items) {
+        try {
+          await item.load(book.load.bind(book));
+          const found = item.find(query) || [];
+          found.forEach(f => results.push({ section: item.href || item.idref, cfi: f.cfi, excerpt: f.excerpt || f.text || "" }));
+          if (item.unload) item.unload();
+        } catch (err) {
+          results.push({ section: item.href || item.idref || "unknown", cfi: "", excerpt: `검색 실패: ${err.message}` });
+        }
+      }
+      if (!results.length) {
+        els.searchResults.innerHTML = `<div class="mini">검색 결과 없음: ${escapeHtml(query)}</div>`;
+        logEvent(`search: ${query}, 0 result`);
+        return;
+      }
+      els.searchResults.innerHTML = results.slice(0, 80).map((r, i) => `<button class="item result" data-cfi="${escapeHtml(r.cfi)}"><strong>${i + 1}. ${escapeHtml(r.section)}</strong><br>${highlightExcerpt(r.excerpt, query)}<br><span class="mini">${escapeHtml(r.cfi)}</span></button>`).join("");
+      els.searchResults.querySelectorAll("button[data-cfi]").forEach(btn => btn.onclick = () => btn.dataset.cfi && rendition.display(btn.dataset.cfi));
+      logEvent(`search: ${query}, ${results.length} result(s)`);
+    }
+
+    function highlightExcerpt(text, query) {
+      const safe = escapeHtml(text || "");
+      if (!query) return safe;
+      const q = escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return safe.replace(new RegExp(q, "gi"), m => `<mark>${m}</mark>`);
+    }
+
+    function addBookmark() {
+      if (!currentCfi) return alert("현재 CFI가 아직 없습니다.");
+      const label = prompt("북마크 이름", `북마크 ${new Date().toLocaleString("ko-KR")}`);
+      if (label === null) return;
+      store.bookmarks.unshift({ id: cryptoRandomId(), cfi: currentCfi, percent: currentPercent, label: label || "북마크", createdAt: new Date().toISOString() });
+      saveStore();
+      renderBookmarks();
+      logEvent("bookmark added");
+    }
+
+    function renderBookmarks() {
+      if (!store.bookmarks?.length) {
+        els.bookmarkList.innerHTML = `<div class="mini">북마크 없음</div>`;
+        return;
+      }
+      els.bookmarkList.innerHTML = store.bookmarks.map(b => `<div class="bookmark"><strong>${escapeHtml(b.label)}</strong><br><span class="mini">${Math.round((b.percent || 0) * 1000) / 10}% · ${new Date(b.createdAt).toLocaleString("ko-KR")}</span><div class="code">${escapeHtml(b.cfi)}</div><div class="small-actions"><button data-go-bookmark="${b.id}">이동</button><button data-del-bookmark="${b.id}" class="danger">삭제</button></div></div>`).join("");
+      els.bookmarkList.querySelectorAll("[data-go-bookmark]").forEach(btn => btn.onclick = () => {
+        const b = store.bookmarks.find(x => x.id === btn.dataset.goBookmark);
+        if (b && rendition) rendition.display(b.cfi);
+      });
+      els.bookmarkList.querySelectorAll("[data-del-bookmark]").forEach(btn => btn.onclick = () => {
+        store.bookmarks = store.bookmarks.filter(x => x.id !== btn.dataset.delBookmark);
+        saveStore(); renderBookmarks();
+      });
+    }
+
+    async function addAnnotation(type) {
+      if (!lastSelection.cfi) return alert("책 안의 텍스트를 먼저 드래그하세요.");
+      const note = $("noteInput").value.trim();
+      const item = { id: cryptoRandomId(), type, cfi: lastSelection.cfi, text: lastSelection.text, note, createdAt: new Date().toISOString() };
+      store.annotations.unshift(item);
+      applyAnnotation(item);
+      saveStore();
+      renderAnnotations();
+      logEvent(`annotation added: ${type}`);
+    }
+
+    function applyAnnotation(item) {
+      if (!rendition || !item?.cfi) return;
+      try {
+        const cb = () => logEvent(`annotation clicked: ${item.type}`);
+        const styles = item.type === "underline" ? { "stroke": "#f97316", "stroke-width": "2" } : item.type === "mark" ? { "fill": "#38bdf8", "fill-opacity": "0.35" } : { "fill": selectionRgba(), "fill-opacity": "0.45" };
+        if (item.type === "underline" && rendition.annotations.underline) rendition.annotations.underline(item.cfi, item, cb, "demo-underline", styles);
+        else if (item.type === "mark" && rendition.annotations.mark) rendition.annotations.mark(item.cfi, item, cb, "demo-mark", styles);
+        else rendition.annotations.highlight(item.cfi, item, cb, "demo-highlight", styles);
+      } catch (err) { logEvent("annotation 적용 실패: " + err.message); }
+    }
+
+    function replayAnnotations() { (store.annotations || []).forEach(applyAnnotation); }
+
+    function renderAnnotations() {
+      if (!store.annotations?.length) {
+        els.annotationList.innerHTML = `<div class="mini">주석 없음</div>`;
+        return;
+      }
+      els.annotationList.innerHTML = store.annotations.map(a => `<div class="anno"><strong>${escapeHtml(a.type)}</strong> <span class="mini">${new Date(a.createdAt).toLocaleString("ko-KR")}</span><br>${escapeHtml((a.text || a.note || "").slice(0, 130))}<div class="code">${escapeHtml(a.cfi)}</div><div class="small-actions"><button data-go-anno="${a.id}">이동</button><button data-del-anno="${a.id}" class="danger">삭제</button></div></div>`).join("");
+      els.annotationList.querySelectorAll("[data-go-anno]").forEach(btn => btn.onclick = () => {
+        const a = store.annotations.find(x => x.id === btn.dataset.goAnno);
+        if (a && rendition) rendition.display(a.cfi);
+      });
+      els.annotationList.querySelectorAll("[data-del-anno]").forEach(btn => btn.onclick = () => {
+        const a = store.annotations.find(x => x.id === btn.dataset.delAnno);
+        if (a && rendition?.annotations?.remove) {
+          try { rendition.annotations.remove(a.cfi, a.type); } catch (e) {}
+        }
+        store.annotations = store.annotations.filter(x => x.id !== btn.dataset.delAnno);
+        saveStore(); renderAnnotations();
+      });
+    }
+
+    function cryptoRandomId() {
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    async function gotoProgress(value) {
+      if (!book?.locations?.length) {
+        alert("먼저 Locations를 생성하세요.");
+        return;
+      }
+      const pct = Number(value) / 1000;
+      const cfi = book.locations.cfiFromPercentage(pct);
+      if (cfi) rendition.display(cfi);
+    }
+
+    function copyText(text) {
+      if (!text) return;
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      else fallbackCopy(text);
+    }
+    function fallbackCopy(text) {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+    }
+
+    function getVisibleText() {
+      if (!rendition?.getContents) return "";
+      return rendition.getContents().map(c => c.document?.body?.innerText || "").join("\n\n--- section ---\n\n");
+    }
+
+    async function showCover() {
+      if (!book?.coverUrl) return;
+      try {
+        const url = await book.coverUrl();
+        $("coverBox").innerHTML = url ? `<img src="${url}" alt="cover" style="max-width:150px;border-radius:12px;border:1px solid #e2e8f0"><br><span class="code">${escapeHtml(url)}</span>` : "표지 URL 없음";
+        logEvent("coverUrl() resolved");
+      } catch (err) { $("coverBox").textContent = "coverUrl 실패: " + err.message; }
+    }
+
+    function exportJson() {
+      const payload = { book: currentBookName, key: currentBookKey, exportedAt: new Date().toISOString(), data: store };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `epubjs-notes-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importJsonFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          store = parsed.data || parsed;
+          if (!store.bookmarks) store.bookmarks = [];
+          if (!store.annotations) store.annotations = [];
+          saveStore(); renderBookmarks(); renderAnnotations(); replayAnnotations();
+          logEvent("JSON imported");
+        } catch (err) { alert("JSON 파싱 실패: " + err.message); }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleKeys(e) {
+      const tag = document.activeElement?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+      if ((e.keyCode || e.which) === 37) rendition?.prev();
+      if ((e.keyCode || e.which) === 39) rendition?.next();
+    }
+
+    function wireEvents() {
+      $("btnLoadDemo").onclick = loadDemo;
+      $("btnDownloadDemo").onclick = async () => {
+        const buffer = await createDemoEpubBuffer();
+        const blob = new Blob([buffer], { type: "application/epub+zip" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "epubjs-feature-lab-demo.epub";
+        a.click(); URL.revokeObjectURL(a.href);
+      };
+      $("fileInput").onchange = (e) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => loadBookFromBuffer(reader.result, file.name);
+        reader.readAsArrayBuffer(file);
+      };
+      $("btnPrev").onclick = () => rendition?.prev();
+      $("btnNext").onclick = () => rendition?.next();
+      $("btnBookmark").onclick = addBookmark;
+      $("btnCopyCfi").onclick = () => { copyText(currentCfi); logEvent("CFI copied"); };
+      $("btnGotoCfi").onclick = () => { const cfi = $("cfiInput").value.trim(); if (cfi) rendition?.display(cfi); };
+      $("progressRange").onchange = (e) => gotoProgress(e.target.value);
+      $("btnGenerateLocations").onclick = generateLocations;
+      $("btnSaveLocations").onclick = () => { if (book?.locations?.length) { store.locations = book.locations.save(); saveStore(); alert("locations JSON 저장 완료"); } };
+      $("btnLoadLocations").onclick = () => { if (store.locations && book?.locations) { book.locations.load(store.locations); updateLocationsInfo(); alert("locations JSON 로드 완료"); } else alert("저장된 locations 없음"); };
+      $("btnSearch").onclick = doSearch;
+      $("searchInput").onkeydown = (e) => { if (e.key === "Enter") doSearch(); };
+      $("btnHighlight").onclick = () => addAnnotation("highlight");
+      $("btnUnderline").onclick = () => addAnnotation("underline");
+      $("btnMark").onclick = () => addAnnotation("mark");
+      $("btnApplyTheme").onclick = applyThemeControls;
+      ["themeSelect", "fontSelect", "selectionColor", "paragraphGap"].forEach(id => $(id).onchange = applyThemeControls);
+      $("fontSize").oninput = () => { $("fontSizeLabel").textContent = $("fontSize").value + "%"; applyThemeControls(); };
+      $("lineHeight").oninput = () => { $("lineHeightLabel").textContent = $("lineHeight").value; applyThemeControls(); };
+      $("directionSelect").onchange = () => rendition?.direction?.($("directionSelect").value);
+      $("spreadSelect").onchange = () => rendition?.spread?.($("spreadSelect").value, parseInt($("minSpreadWidth").value, 10) || 800);
+      $("flowSelect").onchange = () => rendition?.flow?.($("flowSelect").value);
+      $("readerHeight").onchange = () => {
+        document.documentElement.style.setProperty("--reader-height", $("readerHeight").value + "vh");
+        setTimeout(() => rendition?.resize?.(), 50);
+      };
+      $("btnRerender").onclick = () => {
+        if (!currentBuffer) return;
+        const target = currentCfi || null;
+        loadBookFromBuffer(currentBuffer.slice ? currentBuffer.slice(0) : currentBuffer, currentBookName, target);
+      };
+      $("btnResize").onclick = () => { rendition?.resize?.(); logEvent("rendition.resize() called"); };
+      $("btnCurrentText").onclick = () => {
+        const text = getVisibleText();
+        if (!text) return alert("추출할 현재 화면 텍스트가 없습니다.");
+        const preview = text.slice(0, 2500);
+        const w = window.open("", "_blank");
+        if (w) { w.document.write(`<pre style="white-space:pre-wrap;font-family:system-ui;padding:20px">${escapeHtml(preview)}</pre>`); }
+        else { copyText(preview); alert("팝업 차단으로 클립보드에 복사했습니다."); }
+      };
+      $("btnPrint").onclick = () => window.print();
+      $("btnCover").onclick = showCover;
+      $("btnDestroy").onclick = () => { destroyReader(true); setStatus("destroy() 실행 완료", "ok"); };
+      $("btnExportJson").onclick = exportJson;
+      $("btnImportJson").onclick = () => $("jsonFile").click();
+      $("jsonFile").onchange = (e) => e.target.files?.[0] && importJsonFile(e.target.files[0]);
+      $("btnClearStorage").onclick = () => {
+        if (!confirm("현재 책의 북마크/주석/locations 저장소를 비울까요?")) return;
+        localStorage.removeItem(storageKey());
+        store = { bookmarks: [], annotations: [], locations: null };
+        renderBookmarks(); renderAnnotations(); updateLocationsInfo();
+        logEvent("storage cleared");
+      };
+      document.addEventListener("keyup", handleKeys);
+
+      ["dragenter", "dragover"].forEach(evt => els.viewerWrap.addEventListener(evt, (e) => { e.preventDefault(); els.viewerWrap.classList.add("dragover"); }));
+      ["dragleave", "drop"].forEach(evt => els.viewerWrap.addEventListener(evt, (e) => { e.preventDefault(); els.viewerWrap.classList.remove("dragover"); }));
+      els.viewerWrap.addEventListener("drop", (e) => {
+        const file = e.dataTransfer.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => loadBookFromBuffer(reader.result, file.name);
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      wireEvents();
+      if (!window.ePub || !window.JSZip) {
+        setStatus("CDN 로딩 대기 중... 인터넷이 막혀 있으면 라이브러리 파일을 로컬로 내려받아 script 경로를 바꾸세요.");
+      }
+      setTimeout(loadDemo, 250);
+    });
+  </script>
+</body>
+</html>
