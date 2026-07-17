@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>zip.js</title>
+<script src="https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.8.31/dist/zip.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  input[type=text], input[type=password] {
+    font-size: 13px;
+    padding: 6px 9px;
+    border: 1px solid #dbdfe6;
+    border-radius: 6px;
+    margin-right: 6px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-right: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .stat-box.show { display: block; }
+  .stat-box.error { background: #fff0f0; border-color: #ffc9c9; color: #a01818; }
+  .stat-box strong { color: #205fb0; }
+  .stat-box.error strong { color: #a01818; }
+  .file-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 12.5px;
+  }
+  .file-list li {
+    padding: 6px 10px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: #fafbfc;
+    cursor: pointer;
+  }
+  .file-list li:hover { background: #f0f4ff; }
+  .file-preview {
+    margin-top: 8px;
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    display: none;
+  }
+  .file-preview.show { display: block; }
+  a.download-link {
+    display: inline-block;
+    padding: 7px 13px;
+    border-radius: 8px;
+    background: #2fa86a;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-right: 6px;
+  }
+  a.download-link:hover { background: #268a58; }
+  .progress-track {
+    margin-top: 10px;
+    height: 10px;
+    background: #e4e7ec;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #4f7dff;
+    transition: width 0.15s ease;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>zip.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>zip.js</strong>는 브라우저에서 ZIP 파일을 만들고 읽는 데 특화된 라이브러리입니다.
+    <code class="inline">Reader</code>/<code class="inline">Writer</code> 조합으로 데이터 흐름을
+    다루는 스트림 기반 API가 특징이며, AES 암호화·진행률 콜백처럼 단순 압축 라이브러리에는 잘 없는
+    기능도 지원합니다.
+    <ul>
+      <li><code class="inline">ZipWriter</code> + <code class="inline">TextReader</code>로 만드는
+        <strong>다중 파일 ZIP 생성 + 다운로드</strong></li>
+      <li><code class="inline">ZipReader</code>로 하는 <strong>ZIP 파일 목록·내용 읽기</strong></li>
+      <li><code class="inline">password</code> 옵션으로 하는 <strong>암호화된 ZIP 생성/해제</strong></li>
+      <li><code class="inline">onprogress</code> 콜백으로 보는 <strong>압축 진행률</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 서류 내용은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계·기록과 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 다중 파일 ZIP 생성 + 다운로드</h2>
+    <div class="desc">
+      <code class="inline">BlobWriter</code>에 쓰는 <code class="inline">ZipWriter</code>를 만들고,
+      <code class="inline">add(파일명, Reader)</code>를 여러 번 호출해서 파일을 하나씩 담습니다.
+      경로에 <code class="inline">/</code>가 들어가면 그대로 폴더 구조가 됩니다.
+    </div>
+    <button id="s1-run">ZIP 만들기</button>
+    <div class="stat-box" id="s1-stat"></div>
+    <div id="s1-download"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const zipWriter = new zip.ZipWriter(new zip.BlobWriter());
+await zipWriter.add('위판일지/1월.txt', new zip.TextReader('1월 위판 기록...'));
+await zipWriter.add('위판일지/2월.txt', new zip.TextReader('2월 위판 기록...'));
+await zipWriter.add('조합원명단.txt', new zip.TextReader('홍길동, 김철수, 이영희'));
+
+const zipBlob = await zipWriter.close();   // ZIP 내용이 담긴 Blob
+const url = URL.createObjectURL(zipBlob);
+// <a href="url" download="위판서류.zip">다운로드</a></code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. ZIP 파일 목록·내용 읽기</h2>
+    <div class="desc">
+      바로 위에서 만든 ZIP을 <code class="inline">ZipReader</code>로 열어 <code class="inline">getEntries()</code>로
+      항목 목록을 가져오고, 각 항목의 <code class="inline">getData(Writer)</code>로 내용을 꺼냅니다.
+    </div>
+    <button id="s2-run" disabled>위에서 만든 ZIP 읽어보기</button>
+    <div class="stat-box" id="s2-stat"></div>
+    <ul class="file-list" id="s2-filelist"></ul>
+    <div class="file-preview" id="s2-preview"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const zipReader = new zip.ZipReader(new zip.BlobReader(zipBlob));
+const entries = await zipReader.getEntries();
+// entries[i].filename, entries[i].uncompressedSize, entries[i].directory 등
+
+for (const entry of entries) {
+  if (!entry.directory) {
+    const text = await entry.getData(new zip.TextWriter());
+    console.log(entry.filename, text);
+  }
+}
+await zipReader.close();</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 비밀번호로 암호화된 ZIP</h2>
+    <div class="desc">
+      <code class="inline">ZipWriter</code>의 <code class="inline">password</code> 옵션을 주면 AES로
+      암호화된 ZIP을 만들 수 있습니다. 읽을 때도 같은 옵션이 필요하며, 비밀번호가 틀리면
+      <code class="inline">getData()</code>가 <strong>에러를 던집니다</strong>.
+    </div>
+    <div>
+      <input type="password" id="s3-password" placeholder="비밀번호 (예: secret123)" value="secret123" />
+      <button id="s3-run">암호화된 ZIP 만들고 바로 열어보기</button>
+    </div>
+    <div>
+      <input type="password" id="s3-tryPassword" placeholder="이 비밀번호로 열어보기" />
+      <button id="s3-tryOpen" disabled>이 비밀번호로 열기 시도</button>
+    </div>
+    <div class="stat-box" id="s3-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const zipWriter = new zip.ZipWriter(new zip.BlobWriter(), { password: 'secret123' });
+await zipWriter.add('비밀문서.txt', new zip.TextReader('암호화된 내용입니다'));
+const zipBlob = await zipWriter.close();
+
+const zipReader = new zip.ZipReader(new zip.BlobReader(zipBlob));
+const entries = await zipReader.getEntries();
+try {
+  // password는 getData()에 넘겨야 함 (ZipReader 생성자가 아니라)
+  const text = await entries[0].getData(new zip.TextWriter(), { password: '틀린비밀번호' });
+} catch (e) {
+  console.log(e.message); // "Invalid password"
+}</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 압축 진행률 표시</h2>
+    <div class="desc">
+      큰 파일을 담을 때는 <code class="inline">add()</code> 호출의 <strong>옵션에</strong>
+      <code class="inline">onprogress</code>를 넘기면 진행 상황을 알 수 있습니다.
+      <code class="inline">ZipWriter</code> 생성자에 주는 것이 아니라 <strong>각 add() 호출마다</strong>
+      따로 지정해야 한다는 점에 유의해야 합니다.
+    </div>
+    <button id="s4-run">큰 파일(약 500KB) 압축하며 진행률 보기</button>
+    <div class="progress-track"><div class="progress-fill" id="s4-fill"></div></div>
+    <div class="stat-box" id="s4-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const zipWriter = new zip.ZipWriter(new zip.BlobWriter());
+
+// onprogress는 add()의 옵션 인자로 전달한다 (ZipWriter 생성자 옵션이 아님!)
+await zipWriter.add('대용량파일.txt', new zip.TextReader(bigText), {
+  onprogress: (progress, total) => {
+    console.log(Math.round(100 * progress / total) + '%');
+  }
+});
+await zipWriter.close();</code></pre>
+    </details>
+  </section>
+
+<script>
+  function fmtBytes(n) { return n.toLocaleString('ko-KR') + ' bytes'; }
+
+  // ---- 섹션 1: ZIP 생성 + 다운로드 ----
+  let lastZipBlob = null;
+  (function section1() {
+    const btn = document.getElementById('s1-run');
+    const stat = document.getElementById('s1-stat');
+    const downloadWrap = document.getElementById('s1-download');
+    const s2btn = document.getElementById('s2-run');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const zipWriter = new zip.ZipWriter(new zip.BlobWriter());
+        await zipWriter.add('위판일지/1월.txt', new zip.TextReader('1월 위판 기록: 총 어획량 1,240kg, 참여 조합원 32명 (가상 예시)'));
+        await zipWriter.add('위판일지/2월.txt', new zip.TextReader('2월 위판 기록: 총 어획량 1,510kg, 참여 조합원 29명 (가상 예시)'));
+        await zipWriter.add('조합원명단.txt', new zip.TextReader('홍길동, 김철수, 이영희 (가상 예시 이름)'));
+        const zipBlob = await zipWriter.close();
+        lastZipBlob = zipBlob;
+
+        stat.classList.add('show');
+        stat.classList.remove('error');
+        stat.innerHTML = 'ZIP 파일 크기: <strong>' + fmtBytes(zipBlob.size) + '</strong> (파일 3개 포함)';
+
+        const url = URL.createObjectURL(zipBlob);
+        downloadWrap.innerHTML = '';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '위판서류.zip';
+        a.className = 'download-link';
+        a.textContent = 'ZIP 다운로드';
+        downloadWrap.appendChild(a);
+
+        s2btn.disabled = false;
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 2: ZIP 읽기 ----
+  (function section2() {
+    const btn = document.getElementById('s2-run');
+    const stat = document.getElementById('s2-stat');
+    const filelist = document.getElementById('s2-filelist');
+    const preview = document.getElementById('s2-preview');
+
+    btn.addEventListener('click', async () => {
+      if (!lastZipBlob) return;
+      btn.disabled = true;
+      try {
+        const zipReader = new zip.ZipReader(new zip.BlobReader(lastZipBlob));
+        const entries = await zipReader.getEntries();
+
+        stat.classList.add('show');
+        stat.classList.remove('error');
+        stat.innerHTML = '항목 <strong>' + entries.length + '개</strong>를 찾았습니다. 클릭하면 내용을 미리 봅니다.';
+
+        filelist.innerHTML = '';
+        for (const entry of entries) {
+          const li = document.createElement('li');
+          li.textContent = '📄 ' + entry.filename + ' (' + fmtBytes(entry.uncompressedSize) + ')';
+          li.addEventListener('click', async () => {
+            const text = await entry.getData(new zip.TextWriter());
+            preview.classList.add('show');
+            preview.textContent = entry.filename + ':\n' + text;
+          });
+          filelist.appendChild(li);
+        }
+        await zipReader.close();
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 3: 비밀번호로 암호화된 ZIP ----
+  let lastEncryptedBlob = null;
+  (function section3() {
+    const runBtn = document.getElementById('s3-run');
+    const tryBtn = document.getElementById('s3-tryOpen');
+    const stat = document.getElementById('s3-stat');
+    const pwInput = document.getElementById('s3-password');
+    const tryInput = document.getElementById('s3-tryPassword');
+
+    runBtn.addEventListener('click', async () => {
+      runBtn.disabled = true;
+      const password = pwInput.value || 'secret123';
+      try {
+        const zipWriter = new zip.ZipWriter(new zip.BlobWriter(), { password });
+        await zipWriter.add('비밀문서.txt', new zip.TextReader('암호화된 내용입니다 (가상 예시)'));
+        const encryptedBlob = await zipWriter.close();
+        lastEncryptedBlob = encryptedBlob;
+
+        const zipReader = new zip.ZipReader(new zip.BlobReader(encryptedBlob));
+        const entries = await zipReader.getEntries();
+        const text = await entries[0].getData(new zip.TextWriter(), { password });
+        await zipReader.close();
+
+        stat.classList.add('show');
+        stat.classList.remove('error');
+        stat.innerHTML =
+          '비밀번호 <strong>"' + password + '"</strong>로 암호화된 ZIP(' + fmtBytes(encryptedBlob.size) +
+          ')을 만들고, 같은 비밀번호로 정상적으로 열어 내용을 확인했습니다: <strong>' + text + '</strong>';
+        tryBtn.disabled = false;
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+
+    tryBtn.addEventListener('click', async () => {
+      if (!lastEncryptedBlob) return;
+      const tryPassword = tryInput.value;
+      try {
+        const zipReader = new zip.ZipReader(new zip.BlobReader(lastEncryptedBlob));
+        const entries = await zipReader.getEntries();
+        const text = await entries[0].getData(new zip.TextWriter(), { password: tryPassword });
+        await zipReader.close();
+        stat.classList.add('show');
+        stat.classList.remove('error');
+        stat.innerHTML = '비밀번호 <strong>"' + tryPassword + '"</strong>로 열기 <strong>성공</strong>: ' + text;
+      } catch (e) {
+        stat.classList.add('show', 'error');
+        stat.innerHTML = '비밀번호 <strong>"' + tryPassword + '"</strong>로 열기 <strong>실패</strong>: ' + e.message;
+      }
+    });
+  })();
+
+  // ---- 섹션 4: 진행률 표시 ----
+  (function section4() {
+    const btn = document.getElementById('s4-run');
+    const stat = document.getElementById('s4-stat');
+    const fill = document.getElementById('s4-fill');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      fill.style.width = '0%';
+      stat.classList.add('show');
+      stat.classList.remove('error');
+      stat.textContent = '압축 중...';
+      try {
+        const zipWriter = new zip.ZipWriter(new zip.BlobWriter());
+        const bigText = '위판 실적 데이터 한 줄. '.repeat(20000);
+        await zipWriter.add('대용량파일.txt', new zip.TextReader(bigText), {
+          onprogress: (progress, total) => {
+            const pct = Math.round((100 * progress) / total);
+            fill.style.width = pct + '%';
+          },
+        });
+        const blob = await zipWriter.close();
+        stat.innerHTML = '압축 완료: <strong>' + fmtBytes(bigText.length) + '</strong> → <strong>' + fmtBytes(blob.size) + '</strong>';
+      } catch (e) {
+        stat.classList.add('error');
+        stat.innerHTML = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
