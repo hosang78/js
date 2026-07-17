@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tribute.js 종합 기능 샘플</title>
+
+  <!-- Tribute.js CDN: 인터넷 연결 필요 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.css">
+  <script src="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f5f7fb; --panel:#ffffff; --ink:#142033; --muted:#627086;
+      --line:#dde5f0; --primary:#2563eb; --primary2:#1d4ed8;
+      --soft:#eef4ff; --ok:#0f766e; --warn:#b45309; --danger:#b91c1c;
+      --code:#0f172a; --shadow:0 16px 40px rgba(15,23,42,.10);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{line-height:1.55}
+    .wrap{max-width:1240px;margin:0 auto;padding:26px}
+    .hero{
+      background:linear-gradient(135deg,#172554,#2563eb 60%,#38bdf8);
+      color:white;border-radius:28px;padding:34px;box-shadow:var(--shadow);
+      position:relative;overflow:hidden
+    }
+    .hero:after{
+      content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;
+      border-radius:50%;background:rgba(255,255,255,.12)
+    }
+    h1{margin:0;font-size:clamp(28px,4vw,46px);letter-spacing:-.04em}
+    h2{font-size:22px;margin:0 0 12px}
+    h3{font-size:17px;margin:0 0 10px}
+    p{margin:8px 0}
+    .hero p{max-width:850px;color:#dbeafe;font-size:16px}
+    .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+    .badge{padding:7px 11px;border-radius:999px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);font-size:13px}
+    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:18px}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+    .card{
+      background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+      padding:18px;box-shadow:0 10px 24px rgba(15,23,42,.05)
+    }
+    .card.full{grid-column:1/-1}
+    .hint{color:var(--muted);font-size:14px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+    button,.btn{
+      border:0;background:var(--primary);color:white;border-radius:12px;
+      padding:10px 13px;font-weight:700;cursor:pointer;transition:.15s;
+      box-shadow:0 8px 18px rgba(37,99,235,.16)
+    }
+    button:hover{background:var(--primary2);transform:translateY(-1px)}
+    button.secondary{background:#e2e8f0;color:#0f172a;box-shadow:none}
+    button.danger{background:#ef4444}
+    button.ok{background:#0f766e}
+    button.warn{background:#d97706}
+    button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+    textarea,input,.editor{
+      width:100%;border:1px solid #cbd5e1;border-radius:14px;background:#fff;
+      color:var(--ink);padding:14px;font:inherit;outline:none;transition:.15s
+    }
+    textarea:focus,input:focus,.editor:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+    textarea{min-height:132px;resize:vertical}
+    .editor{min-height:210px;overflow:auto}
+    .editor:empty:before{content:attr(data-placeholder);color:#94a3b8}
+    .mention{
+      display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;
+      font-weight:750;white-space:nowrap;margin:0 1px
+    }
+    .mention.user{background:#dbeafe;color:#1d4ed8}
+    .mention.topic{background:#dcfce7;color:#15803d}
+    .mention.emoji{background:#fef3c7;color:#92400e}
+    .mention.var{background:#f3e8ff;color:#7e22ce}
+    .mention.cmd{background:#fee2e2;color:#b91c1c}
+    .mention.remote{background:#ccfbf1;color:#0f766e}
+    .pill{display:inline-block;border-radius:999px;background:#eef2ff;color:#3730a3;padding:2px 8px;font-weight:700;font-size:12px;margin-right:5px}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#111827;color:white;border-radius:7px;padding:2px 6px;font-size:12px}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .statusbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+    .stat{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fafcff}
+    .stat strong{display:block;font-size:21px}
+    .log{
+      height:260px;overflow:auto;background:#0f172a;color:#d1d5db;border-radius:14px;
+      padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px
+    }
+    .log .time{color:#93c5fd}
+    .log .type{color:#86efac}
+    .preview{
+      min-height:125px;border:1px dashed #cbd5e1;border-radius:14px;background:#fbfdff;
+      padding:12px;overflow:auto
+    }
+    .output{
+      white-space:pre-wrap;background:#0f172a;color:#e5e7eb;border-radius:14px;padding:12px;
+      overflow:auto;font-size:13px;min-height:112px
+    }
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{border-bottom:1px solid var(--line);padding:9px 7px;text-align:left;vertical-align:top}
+    th{color:#475569;background:#f8fafc}
+    .note{border-left:4px solid var(--primary);padding:10px 12px;background:var(--soft);border-radius:10px;color:#1e3a8a}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .small{font-size:13px}
+    code{background:#e2e8f0;border-radius:6px;padding:1px 5px}
+    .tribute-container{
+      border-radius:14px!important;overflow:hidden!important;border:1px solid #cbd5e1!important;
+      box-shadow:0 18px 45px rgba(15,23,42,.20)!important;z-index:9999!important
+    }
+    .tribute-container ul{margin:0!important;padding:6px!important;background:white!important}
+    .tribute-container li{
+      border-radius:11px!important;padding:9px 10px!important;border:1px solid transparent!important
+    }
+    .tribute-container li.highlight, .tribute-container li:hover{
+      background:#eff6ff!important;border-color:#bfdbfe!important;color:#0f172a!important
+    }
+    .menu-person{display:flex;align-items:center;gap:10px}
+    .avatar{
+      width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+      color:white;font-weight:900;background:linear-gradient(135deg,#2563eb,#06b6d4);flex:0 0 auto
+    }
+    .meta{display:block;color:#64748b;font-size:12px;margin-top:1px}
+    .template-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .template-key{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#7e22ce;font-weight:800}
+    .template-value{color:#64748b;font-size:12px}
+    .floating-box{
+      height:310px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#f8fafc;padding:16px
+    }
+    .spacer{height:340px}
+    @media (max-width:900px){
+      .grid,.cards,.split,.two-col{grid-template-columns:1fr}
+      .statusbar{grid-template-columns:repeat(2,1fr)}
+      .wrap{padding:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Tribute.js 종합 기능 샘플</h1>
+      <p>
+        <b>@멘션</b>, <b>#태그</b>, <b>:이모지</b>, <b>{{변수}}</b>, <b>/명령어</b>, <b>+비동기 검색</b>,
+        템플릿 커스터마이징, 이벤트 로그, 프로그래밍 방식 메뉴 열기, 동적 데이터 추가, attach/detach까지 한 페이지에서 확인한다.
+      </p>
+      <div class="badges">
+        <span class="badge">Textarea</span>
+        <span class="badge">contenteditable</span>
+        <span class="badge">multiple collections</span>
+        <span class="badge">remote values</span>
+        <span class="badge">autocomplete mode</span>
+        <span class="badge">events</span>
+        <span class="badge">append / detach</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>1. 풍부한 에디터 데모</h2>
+        <p class="hint">
+          아래 편집창에 <span class="kbd">@</span>, <span class="kbd">#</span>, <span class="kbd">:</span>,
+          <span class="kbd">{{</span>, <span class="kbd">/</span>, <span class="kbd">+</span>를 입력해 메뉴를 확인한다.
+          메뉴는 방향키·Enter·Tab·마우스로 선택 가능하다.
+        </p>
+
+        <div id="richEditor" class="editor" contenteditable="true" spellcheck="false"
+             data-placeholder="예: @김민수 님, #업무자동화 안건에 대해 :rocket: {{meeting_date}} 전에 /todo 등록하고 +server 검색"></div>
+
+        <div class="toolbar">
+          <button data-open="0">@ 사용자 메뉴 열기</button>
+          <button data-open="1"># 태그 메뉴 열기</button>
+          <button data-open="2">: 이모지 메뉴 열기</button>
+          <button data-open="3">{{ 변수 메뉴 열기</button>
+          <button data-open="4">/ 명령어 메뉴 열기</button>
+          <button data-open="5">+ 비동기 메뉴 열기</button>
+          <button id="addUserBtn" class="ok">사용자 동적 추가</button>
+          <button id="toggleDetachBtn" class="warn">detach</button>
+          <button id="clearEditorBtn" class="secondary">초기화</button>
+        </div>
+
+        <div class="statusbar">
+          <div class="stat"><span class="hint">메뉴 상태</span><strong id="activeState">닫힘</strong></div>
+          <div class="stat"><span class="hint">치환 횟수</span><strong id="replaceCount">0</strong></div>
+          <div class="stat"><span class="hint">No match</span><strong id="noMatchCount">0</strong></div>
+          <div class="stat"><span class="hint">사용자 수</span><strong id="userCount">0</strong></div>
+        </div>
+      </div>
+
+      <aside class="card">
+        <h2>이벤트 로그</h2>
+        <p class="hint">Tribute 이벤트와 버튼 액션이 기록된다.</p>
+        <div id="eventLog" class="log" aria-live="polite"></div>
+        <div class="toolbar">
+          <button id="checkActiveBtn" class="secondary">isActive 확인</button>
+          <button id="clearLogBtn" class="secondary">로그 지우기</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="cards">
+      <div class="card">
+        <h2>2. 일반 textarea @멘션</h2>
+        <p class="hint">HTML이 아닌 일반 텍스트 삽입 방식이다. <span class="kbd">@</span> 입력 후 선택.</p>
+        <textarea id="plainText" placeholder="@ 입력 후 사용자 선택"></textarea>
+        <div class="toolbar">
+          <button id="openPlainBtn">@ 메뉴 열기</button>
+          <button id="copyPlainBtn" class="secondary">값 복사</button>
+        </div>
+        <pre id="plainOutput" class="output"></pre>
+      </div>
+
+      <div class="card">
+        <h2>3. 자동완성 모드</h2>
+        <p class="hint">
+          별도 트리거 없이 입력어 기반 자동완성. 예: <span class="kbd">기획</span>, <span class="kbd">회원</span>,
+          <span class="kbd">정책</span> 입력.
+        </p>
+        <input id="autoInput" placeholder="트리거 없이 부서명 자동완성" autocomplete="off">
+        <div class="toolbar">
+          <button id="openAutoBtn">자동완성 메뉴 열기</button>
+          <button id="clearAutoBtn" class="secondary">초기화</button>
+        </div>
+        <div class="note small">
+          <b>autocompleteMode</b>는 검색형 입력창, 태그 입력, 담당부서 선택창처럼 “트리거 문자 없이” 후보를 보여줄 때 유용하다.
+        </div>
+      </div>
+
+      <div class="card full">
+        <h2>4. 스크롤 컨테이너 안 메뉴 부착</h2>
+        <p class="hint">
+          <code>menuContainer</code>를 스크롤 부모로 지정한 예시다. 내부 박스를 아래로 스크롤한 뒤 <span class="kbd">@</span>를 입력해 메뉴 위치를 확인한다.
+        </p>
+        <div id="scrollWrap" class="floating-box">
+          <p class="hint">스크롤 테스트 영역 상단</p>
+          <div class="spacer"></div>
+          <div id="scrollEditor" class="editor" contenteditable="true" spellcheck="false"
+               data-placeholder="여기서 @ 입력. 메뉴가 이 스크롤 박스에 붙음."></div>
+          <div class="spacer"></div>
+          <p class="hint">스크롤 테스트 영역 하단</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>5. 현재 HTML 미리보기</h2>
+        <p class="hint">contenteditable에 삽입된 mention span 구조 확인.</p>
+        <div id="htmlPreview" class="preview"></div>
+        <div class="toolbar">
+          <button id="refreshHtmlBtn" class="secondary">HTML 갱신</button>
+          <button id="stripTextBtn" class="secondary">텍스트만 보기</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>6. 적용 기능 요약</h2>
+        <table>
+          <thead><tr><th>기능</th><th>확인 위치</th></tr></thead>
+          <tbody>
+            <tr><td>다중 collection</td><td>@, #, :, {{, /, +</td></tr>
+            <tr><td>템플릿</td><td>아바타 메뉴, span 삽입, 변수 행</td></tr>
+            <tr><td>동적 검색</td><td>+ 트리거, setTimeout 모의 API</td></tr>
+            <tr><td>프로그램 제어</td><td>메뉴 열기 버튼</td></tr>
+            <tr><td>데이터 추가</td><td>사용자 동적 추가 버튼</td></tr>
+            <tr><td>detach/attach</td><td>detach 버튼</td></tr>
+            <tr><td>이벤트</td><td>replaced / no-match / active true·false</td></tr>
+            <tr><td>자동완성</td><td>부서명 input</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = (sel) => document.querySelector(sel);
+  const richEditor = $("#richEditor");
+  const plainText = $("#plainText");
+  const autoInput = $("#autoInput");
+  const scrollEditor = $("#scrollEditor");
+  const eventLog = $("#eventLog");
+
+  const state = {
+    replaceCount: 0,
+    noMatchCount: 0,
+    detached: false,
+    userSeq: 100
+  };
+
+  const people = [
+    { id: 1, key: "김민수", value: "김민수", role: "개발", email: "minsu@example.com", team: "ICT전략실" },
+    { id: 2, key: "박서연", value: "박서연", role: "데이터", email: "seoyeon@example.com", team: "데이터정비TF" },
+    { id: 3, key: "이준호", value: "이준호", role: "인프라", email: "junho@example.com", team: "인프라운영" },
+    { id: 4, key: "최하린", value: "최하린", role: "보안", email: "harin@example.com", team: "정보보호" },
+    { id: 5, key: "정도윤", value: "정도윤", role: "기획", email: "doyoon@example.com", team: "기획조정" },
+    { id: 6, key: "한지우", value: "한지우", role: "업무자동화", email: "jiwoo@example.com", team: "AI자동화" },
+    { id: 7, key: "오태식", value: "오태식", role: "품질관리", email: "taesik@example.com", team: "운영지원" }
+  ];
+
+  const topics = [
+    { key: "업무자동화", value: "업무자동화", desc: "반복 업무 자동화 과제" },
+    { key: "데이터정비", value: "데이터정비", desc: "기준정보·민감정보·이력 정비" },
+    { key: "인프라관리", value: "인프라관리", desc: "백업·연계·형상·장애관리" },
+    { key: "정보보호", value: "정보보호", desc: "접근권한·로그·보안점검" },
+    { key: "교육관리", value: "교육관리", desc: "직무연계 역량관리" },
+    { key: "보고서", value: "보고서", desc: "원페이퍼·추진계획 작성" },
+    { key: "시스템매뉴얼", value: "시스템매뉴얼", desc: "담당 시스템 운영문서" }
+  ];
+
+  const emojis = [
+    { key: "rocket", value: "🚀", label: "추진/런칭" },
+    { key: "check", value: "✅", label: "완료" },
+    { key: "warning", value: "⚠️", label: "주의" },
+    { key: "memo", value: "📝", label: "메모" },
+    { key: "bug", value: "🐛", label: "오류" },
+    { key: "sparkles", value: "✨", label: "개선" },
+    { key: "lock", value: "🔒", label: "보안" },
+    { key: "chart", value: "📊", label: "분석" }
+  ];
+
+  const variables = [
+    { key: "meeting_date", value: "2026-07-31", desc: "회의일" },
+    { key: "department", value: "ICT전략실", desc: "부서명" },
+    { key: "owner", value: "담당자", desc: "업무 담당자" },
+    { key: "deadline", value: "D-7", desc: "마감" },
+    { key: "system_name", value: "업무시스템", desc: "시스템명" },
+    { key: "risk_level", value: "중", desc: "위험도" }
+  ];
+
+  const commands = [
+    { key: "todo", value: "TODO", desc: "할 일 항목 삽입" },
+    { key: "decision", value: "DECISION", desc: "결정사항 삽입" },
+    { key: "risk", value: "RISK", desc: "위험요인 삽입" },
+    { key: "quote", value: "QUOTE", desc: "인용 블록 삽입" },
+    { key: "table", value: "TABLE", desc: "표 작성 메모 삽입" },
+    { key: "summary", value: "SUMMARY", desc: "요약 요청 삽입" }
+  ];
+
+  const remotePool = [
+    { key: "server-backup", name: "server-backup", type: "인프라", desc: "서버 백업 점검" },
+    { key: "license-audit", name: "license-audit", type: "관리", desc: "라이선스 사용현황" },
+    { key: "manual-cleanup", name: "manual-cleanup", type: "문서", desc: "기동·장애 매뉴얼 정비" },
+    { key: "privacy-scan", name: "privacy-scan", type: "보안", desc: "민감정보 포함 여부 점검" },
+    { key: "history-log", name: "history-log", type: "이력", desc: "구축·운영 이력 관리" },
+    { key: "asset-map", name: "asset-map", type: "자산", desc: "IT 자산·연계 구성도" }
+  ];
+
+  const departments = [
+    { key: "ICT전략실", value: "ICT전략실", desc: "IT 기획·시스템 전략" },
+    { key: "기획조정실", value: "기획조정실", desc: "예산·회계·직제" },
+    { key: "회원지원부", value: "회원지원부", desc: "회원조합 지원" },
+    { key: "어업양식지원부", value: "어업양식지원부", desc: "어업·양식 지원" },
+    { key: "정책보험부", value: "정책보험부", desc: "정책보험 업무" },
+    { key: "정보보호본부", value: "정보보호본부", desc: "보안 관리" },
+    { key: "자금운용본부", value: "자금운용본부", desc: "자금운용" }
+  ];
+
+  function escapeHtml(value){
+    return String(value ?? "")
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  function initials(name){
+    return String(name || "?").slice(-2);
+  }
+
+  function log(type, msg, payload){
+    const time = new Date().toLocaleTimeString("ko-KR", { hour12:false });
+    const line = document.createElement("div");
+    line.innerHTML = `<span class="time">[${time}]</span> <span class="type">${escapeHtml(type)}</span> ${escapeHtml(msg)}`;
+    if(payload){
+      const pre = document.createElement("pre");
+      pre.style.margin = "3px 0 9px 0";
+      pre.style.whiteSpace = "pre-wrap";
+      pre.textContent = JSON.stringify(payload, null, 2).slice(0, 900);
+      line.appendChild(pre);
+    }
+    eventLog.prepend(line);
+  }
+
+  function updateStats(){
+    $("#replaceCount").textContent = state.replaceCount;
+    $("#noMatchCount").textContent = state.noMatchCount;
+    $("#userCount").textContent = people.length;
+    $("#activeState").textContent = tributeRich && tributeRich.isActive ? "열림" : "닫힘";
+  }
+
+  function refreshHtmlPreview(textOnly=false){
+    $("#htmlPreview").textContent = textOnly ? richEditor.innerText : richEditor.innerHTML;
+  }
+
+  function remoteSearch(text, cb){
+    const q = String(text || "").toLowerCase();
+    setTimeout(() => {
+      const result = remotePool.filter(item =>
+        (item.name + " " + item.type + " " + item.desc).toLowerCase().includes(q)
+      );
+      cb(result);
+      log("remote", `비동기 검색 완료: "${text}" → ${result.length}건`);
+    }, 450);
+  }
+
+  function makePersonMenu(item){
+    const p = item.original;
+    return `
+      <div class="menu-person">
+        <span class="avatar">${escapeHtml(initials(p.value))}</span>
+        <span>
+          <b>${item.string}</b>
+          <span class="meta">${escapeHtml(p.team)} · ${escapeHtml(p.role)} · ${escapeHtml(p.email)}</span>
+        </span>
+      </div>`;
+  }
+
+  function makeChip(cls, text, extraAttrs=""){
+    return `<span class="mention ${cls}" contenteditable="false" ${extraAttrs}>${text}</span>`;
+  }
+
+  const tributeRich = new Tribute({
+    collection: [
+      {
+        trigger: "@",
+        values: people,
+        lookup: function(person, mentionText){
+          return `${person.value} ${person.role} ${person.email} ${person.team}`;
+        },
+        fillAttr: "value",
+        allowSpaces: true,
+        requireLeadingSpace: false,
+        replaceTextSuffix: " ",
+        menuItemLimit: 8,
+        menuShowMinLength: 0,
+        selectClass: "highlight",
+        menuItemTemplate: makePersonMenu,
+        selectTemplate: function(item){
+          if(!item) return "";
+          const p = item.original;
+          return makeChip("user", `@${escapeHtml(p.value)}`, `data-id="${escapeHtml(p.id)}" title="${escapeHtml(p.email)}"`);
+        },
+        noMatchTemplate: function(){ return "<li>일치하는 사용자가 없음</li>"; }
+      },
+      {
+        trigger: "#",
+        values: topics,
+        lookup: function(t){ return `${t.key} ${t.desc}`; },
+        fillAttr: "value",
+        replaceTextSuffix: " ",
+        menuItemLimit: 10,
+        menuItemTemplate: function(item){
+          return `<b>#${item.string}</b><span class="meta">${escapeHtml(item.original.desc)}</span>`;
+        },
+        selectTemplate: function(item){
+          if(!item) return "";
+          return makeChip("topic", `#${escapeHtml(item.original.value)}`);
+        },
+        noMatchTemplate: function(){ return "<li>해당 태그 없음</li>"; }
+      },
+      {
+        trigger: ":",
+        values: emojis,
+        lookup: function(e){ return `${e.key} ${e.label} ${e.value}`; },
+        fillAttr: "key",
+        requireLeadingSpace: false,
+        replaceTextSuffix: " ",
+        menuItemTemplate: function(item){
+          return `<span style="font-size:20px;margin-right:8px">${escapeHtml(item.original.value)}</span><b>${item.string}</b><span class="meta">${escapeHtml(item.original.label)}</span>`;
+        },
+        selectTemplate: function(item){
+          if(!item) return "";
+          return makeChip("emoji", `${escapeHtml(item.original.value)} ${escapeHtml(item.original.key)}`);
+        },
+        noMatchTemplate: function(){ return "<li>이모지 없음</li>"; }
+      },
+      {
+        trigger: "{{",
+        values: variables,
+        lookup: function(v){ return `${v.key} ${v.value} ${v.desc}`; },
+        fillAttr: "key",
+        requireLeadingSpace: false,
+        replaceTextSuffix: " ",
+        menuItemTemplate: function(item){
+          return `<div class="template-row"><span><span class="template-key">{{${item.string}}}</span><span class="meta">${escapeHtml(item.original.desc)}</span></span><span class="template-value">${escapeHtml(item.original.value)}</span></div>`;
+        },
+        selectTemplate: function(item){
+          if(!item) return "";
+          return makeChip("var", `{{${escapeHtml(item.original.key)}}}`, `data-value="${escapeHtml(item.original.value)}" title="${escapeHtml(item.original.desc)}"`);
+        },
+        noMatchTemplate: function(){ return "<li>변수 없음</li>"; }
+      },
+      {
+        trigger: "/",
+        values: commands,
+        lookup: function(c){ return `${c.key} ${c.value} ${c.desc}`; },
+        fillAttr: "key",
+        requireLeadingSpace: false,
+        menuShowMinLength: 0,
+        menuItemTemplate: function(item){
+          return `<b>/${item.string}</b><span class="meta">${escapeHtml(item.original.desc)}</span>`;
+        },
+        selectTemplate: function(item){
+          if(!item) return "";
+          const c = item.original;
+          return `<div class="mention cmd" contenteditable="false" data-command="${escapeHtml(c.key)}">/${escapeHtml(c.key)} · ${escapeHtml(c.desc)}</div><br>`;
+        },
+        noMatchTemplate: function(){ return "<li>명령어 없음</li>"; }
+      },
+      {
+        trigger: "+",
+        values: function(text, cb){ remoteSearch(text, cb); },
+        lookup: "name",
+        fillAttr: "name",
+        requireLeadingSpace: false,
+        loadingItemTemplate: "<li>검색 중...</li>",
+        searchOpts: { pre: "<mark>", post: "</mark>", skip: true },
+        menuItemTemplate: function(item){
+          return `<b>+${escapeHtml(item.original.name)}</b><span class="meta">${escapeHtml(item.original.type)} · ${escapeHtml(item.original.desc)}</span>`;
+        },
+        selectTemplate: function(item){
+          if(!item) return "";
+          return makeChip("remote", `+${escapeHtml(item.original.name)}`, `title="${escapeHtml(item.original.desc)}"`);
+        },
+        noMatchTemplate: function(){ return "<li>비동기 결과 없음</li>"; }
+      }
+    ]
+  });
+
+  tributeRich.attach(richEditor);
+
+  const tributePlain = new Tribute({
+    trigger: "@",
+    values: people,
+    lookup: "value",
+    fillAttr: "value",
+    requireLeadingSpace: false,
+    replaceTextSuffix: " ",
+    menuItemTemplate: makePersonMenu,
+    selectTemplate: function(item){
+      return item ? "@" + item.original.value : "";
+    },
+    noMatchTemplate: function(){ return "<li>사용자 없음</li>"; }
+  });
+  tributePlain.attach(plainText);
+
+  const tributeAuto = new Tribute({
+    values: departments,
+    lookup: function(d){ return `${d.key} ${d.desc}`; },
+    fillAttr: "value",
+    autocompleteMode: true,
+    autocompleteSeparator: /[\s,;]+/,
+    requireLeadingSpace: false,
+    menuItemLimit: 7,
+    menuItemTemplate: function(item){
+      return `<b>${item.string}</b><span class="meta">${escapeHtml(item.original.desc)}</span>`;
+    },
+    selectTemplate: function(item){
+      return item ? item.original.value : "";
+    },
+    noMatchTemplate: function(){ return "<li>부서 없음</li>"; }
+  });
+  tributeAuto.attach(autoInput);
+
+  const tributeScroll = new Tribute({
+    trigger: "@",
+    values: people,
+    lookup: "value",
+    fillAttr: "value",
+    menuContainer: $("#scrollWrap"),
+    requireLeadingSpace: false,
+    menuItemTemplate: makePersonMenu,
+    selectTemplate: function(item){
+      if(!item) return "";
+      return makeChip("user", `@${escapeHtml(item.original.value)}`);
+    }
+  });
+  tributeScroll.attach(scrollEditor);
+
+  ["tribute-replaced","tribute-no-match","tribute-active-true","tribute-active-false"].forEach(evt => {
+    richEditor.addEventListener(evt, function(e){
+      if(evt === "tribute-replaced") state.replaceCount++;
+      if(evt === "tribute-no-match") state.noMatchCount++;
+      if(evt === "tribute-active-true") $("#activeState").textContent = "열림";
+      if(evt === "tribute-active-false") $("#activeState").textContent = "닫힘";
+      log(evt, evt === "tribute-replaced" ? "항목 삽입 완료" : "상태 변경", e.detail && e.detail.item ? e.detail.item.original : null);
+      updateStats();
+      refreshHtmlPreview();
+    });
+  });
+
+  plainText.addEventListener("tribute-replaced", e => {
+    log("plain", "textarea 멘션 삽입", e.detail && e.detail.item ? e.detail.item.original : null);
+    $("#plainOutput").textContent = plainText.value;
+  });
+
+  autoInput.addEventListener("tribute-replaced", e => {
+    log("auto", "자동완성 선택", e.detail && e.detail.item ? e.detail.item.original : null);
+  });
+
+  document.querySelectorAll("[data-open]").forEach(btn => {
+    btn.addEventListener("mousedown", function(e){
+      e.preventDefault();
+      if(state.detached){
+        log("blocked", "현재 rich editor가 detach 상태");
+        return;
+      }
+      richEditor.focus();
+      const index = Number(this.dataset.open);
+      tributeRich.showMenuForCollection(richEditor, index);
+      log("open", `collection ${index} 메뉴 수동 열기`);
+      updateStats();
+    });
+  });
+
+  $("#addUserBtn").addEventListener("click", function(){
+    const n = ++state.userSeq;
+    const user = {
+      id: n,
+      key: `신규사용자${n}`,
+      value: `신규사용자${n}`,
+      role: "동적추가",
+      email: `new${n}@example.com`,
+      team: "샘플팀"
+    };
+    people.push(user);
+    tributeRich.append(0, [user]);
+    tributePlain.append(0, [user]);
+    tributeScroll.append(0, [user]);
+    log("append", "사용자 collection에 신규 데이터 추가", user);
+    updateStats();
+  });
+
+  $("#toggleDetachBtn").addEventListener("click", function(){
+    if(!state.detached){
+      tributeRich.detach(richEditor);
+      state.detached = true;
+      this.textContent = "attach";
+      this.className = "ok";
+      log("detach", "rich editor에서 Tribute 이벤트 제거");
+    }else{
+      tributeRich.attach(richEditor);
+      state.detached = false;
+      this.textContent = "detach";
+      this.className = "warn";
+      log("attach", "rich editor에 Tribute 다시 연결");
+    }
+    updateStats();
+  });
+
+  $("#checkActiveBtn").addEventListener("click", function(){
+    log("isActive", tributeRich.isActive ? "메뉴가 열려 있음" : "메뉴가 닫혀 있음");
+    updateStats();
+  });
+
+  $("#clearLogBtn").addEventListener("click", function(){ eventLog.innerHTML = ""; });
+  $("#clearEditorBtn").addEventListener("click", function(){
+    richEditor.innerHTML = "";
+    refreshHtmlPreview();
+    log("clear", "rich editor 초기화");
+  });
+
+  $("#openPlainBtn").addEventListener("mousedown", function(e){
+    e.preventDefault();
+    plainText.focus();
+    tributePlain.showMenuForCollection(plainText);
+  });
+  $("#copyPlainBtn").addEventListener("click", function(){
+    $("#plainOutput").textContent = plainText.value;
+    navigator.clipboard && navigator.clipboard.writeText(plainText.value).catch(()=>{});
+    log("copy", "textarea 값 출력/복사 시도");
+  });
+  $("#openAutoBtn").addEventListener("mousedown", function(e){
+    e.preventDefault();
+    autoInput.focus();
+    tributeAuto.showMenuForCollection(autoInput);
+  });
+  $("#clearAutoBtn").addEventListener("click", function(){ autoInput.value = ""; autoInput.focus(); });
+
+  $("#refreshHtmlBtn").addEventListener("click", function(){ refreshHtmlPreview(false); });
+  $("#stripTextBtn").addEventListener("click", function(){ refreshHtmlPreview(true); });
+
+  richEditor.addEventListener("input", () => refreshHtmlPreview());
+  richEditor.innerHTML = '회의 전 <span class="mention user" contenteditable="false">@김민수</span> 님에게 <span class="mention topic" contenteditable="false">#업무자동화</span> 검토 요청 ';
+  plainText.value = "보고 공유 대상: @김민수 ";
+  $("#plainOutput").textContent = plainText.value;
+
+  log("ready", "Tribute.js 샘플 초기화 완료");
+  updateStats();
+  refreshHtmlPreview();
+})();
+</script>
+</body>
+</html>
