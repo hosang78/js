@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quill 기능 종합 샘플</title>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.bubble.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css" />
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9e1ef;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --chip: #eef2ff;
+      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #eef4ff 0%, #f8fafc 52%, #fefce8 100%);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      padding: 34px 20px 24px;
+      text-align: center;
+    }
+    header h1 { margin: 0 0 10px; font-size: clamp(28px, 4vw, 44px); }
+    header p { margin: 0 auto; max-width: 980px; color: var(--muted); line-height: 1.65; }
+
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 0 18px 36px; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr); gap: 18px; align-items: start; }
+    .card { background: rgba(255,255,255,.92); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+    .card h2 { margin: 0; padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 20px; }
+    .card-body { padding: 18px; }
+
+    .toolbar-shell { border-bottom: 1px solid var(--line); background: #fbfdff; }
+    #toolbar { border: 0; border-bottom: 1px solid var(--line); }
+    .ql-toolbar.ql-snow { border: 0; }
+    #editor { min-height: 420px; background: white; }
+    .ql-container.ql-snow { border: 0; font-size: 16px; }
+    .ql-editor { min-height: 420px; line-height: 1.8; }
+    .ql-editor img { max-width: 100%; border-radius: 10px; }
+
+    .bubble-box { padding: 16px; }
+    #bubbleEditor { min-height: 180px; border: 1px dashed var(--line); border-radius: 14px; background: #fff; }
+    #bubbleEditor .ql-editor { min-height: 180px; }
+
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+    button, select, input[type="text"], input[type="number"] {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 12px;
+      font: inherit;
+    }
+    button { cursor: pointer; font-weight: 700; transition: .15s ease; }
+    button:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+    button.primary { background: var(--primary); border-color: var(--primary); color: white; }
+    button.primary:hover { background: var(--primary-dark); color: white; }
+    button.danger { color: var(--danger); }
+    button.ok { color: var(--ok); }
+
+    .section { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+    .section:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+    .section h3 { margin: 0 0 10px; font-size: 16px; }
+    .hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 8px 0 0; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .row > input[type="text"] { flex: 1 1 220px; min-width: 0; }
+
+    .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .stat { background: #f8fafc; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .stat strong { display:block; font-size: 22px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+
+    pre {
+      margin: 0;
+      max-height: 300px;
+      overflow: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-list { max-height: 230px; overflow:auto; display: grid; gap: 8px; }
+    .log { border-left: 4px solid var(--primary); background: #f8fafc; padding: 9px 10px; border-radius: 8px; font-size: 12px; color: #334155; }
+    .chip { display:inline-flex; gap:6px; align-items:center; background: var(--chip); color: #3730a3; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .custom-badge { background:#111827; color:#fff; border-radius:999px; padding: 2px 7px; font-size: .85em; font-weight: 800; }
+    .marked-word { background: #fef3c7; border-radius: 5px; padding: 0 3px; }
+
+    .tabs { display:flex; border-bottom:1px solid var(--line); background:#f8fafc; }
+    .tab { flex:1; border:0; border-radius:0; background:transparent; padding: 13px 10px; }
+    .tab.active { background:#fff; color:var(--primary); border-bottom:3px solid var(--primary); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+
+    .two { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+    .mini-card { border: 1px solid var(--line); border-radius: 14px; background:#fff; padding: 12px; }
+    .mini-card h4 { margin:0 0 8px; }
+    .switch { display:flex; align-items:center; gap:8px; }
+
+    footer { text-align:center; color: var(--muted); font-size: 13px; padding: 0 0 28px; }
+
+    @media (max-width: 1020px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { .two, .stats { grid-template-columns: 1fr; } .wrap { padding: 0 10px 26px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Quill 기능 종합 샘플</h1>
+    <p>Snow/Bubble 테마, 전체 툴바, Delta/HTML 추출, 이벤트 로그, 선택 영역 API, 히스토리, 클립보드, 코드 하이라이트, 수식, 이미지·동영상 삽입, 커스텀 포맷, 로컬 자동저장까지 한 페이지에서 확인할 수 있는 샘플입니다.</p>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+      <section class="card">
+        <h2>메인 에디터 · Snow Theme</h2>
+        <div class="toolbar-shell">
+          <div id="toolbar">
+            <span class="ql-formats">
+              <select class="ql-header">
+                <option value="1"></option><option value="2"></option><option value="3"></option><option selected></option>
+              </select>
+              <select class="ql-font"></select>
+              <select class="ql-size">
+                <option value="small"></option><option selected></option><option value="large"></option><option value="huge"></option>
+              </select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-bold"></button><button class="ql-italic"></button><button class="ql-underline"></button><button class="ql-strike"></button>
+            </span>
+            <span class="ql-formats">
+              <select class="ql-color"></select><select class="ql-background"></select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-script" value="sub"></button><button class="ql-script" value="super"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-blockquote"></button><button class="ql-code-block"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-list" value="ordered"></button><button class="ql-list" value="bullet"></button><button class="ql-list" value="check"></button>
+              <button class="ql-indent" value="-1"></button><button class="ql-indent" value="+1"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-direction" value="rtl"></button><select class="ql-align"></select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-link"></button><button class="ql-image"></button><button class="ql-video"></button><button class="ql-formula"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-clean"></button>
+            </span>
+          </div>
+        </div>
+        <div id="editor"></div>
+      </section>
+
+      <aside class="card">
+        <div class="tabs">
+          <button class="tab active" data-panel="controls">기능 조작</button>
+          <button class="tab" data-panel="data">Delta/HTML</button>
+          <button class="tab" data-panel="events">이벤트</button>
+        </div>
+
+        <div id="controls" class="panel active card-body">
+          <div class="section">
+            <h3>문서 조작 API</h3>
+            <div class="btns">
+              <button class="primary" id="btnSample">샘플 문서 넣기</button>
+              <button id="btnInsertText">현재 위치 텍스트</button>
+              <button id="btnFormatSelection">선택영역 강조</button>
+              <button id="btnBadge">커스텀 배지</button>
+              <button id="btnClear" class="danger">비우기</button>
+            </div>
+            <p class="hint">선택 영역을 드래그한 뒤 “선택영역 강조”를 누르면 formatText API가 적용됩니다.</p>
+          </div>
+
+          <div class="section">
+            <h3>삽입 기능</h3>
+            <div class="row">
+              <input id="imageUrl" type="text" value="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop" />
+              <button id="btnImage">이미지 URL 삽입</button>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <input id="videoUrl" type="text" value="https://www.youtube.com/embed/dQw4w9WgXcQ" />
+              <button id="btnVideo">동영상 삽입</button>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <input id="formulaText" type="text" value="E=mc^2" />
+              <button id="btnFormula">수식 삽입</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>히스토리 / 상태</h3>
+            <div class="btns">
+              <button id="btnUndo">Undo</button>
+              <button id="btnRedo">Redo</button>
+              <button id="btnReadOnly">읽기전용 전환</button>
+              <button id="btnFocus">Focus</button>
+              <button id="btnBlur">Blur</button>
+            </div>
+            <p id="statusLine" class="hint">상태: 편집 가능</p>
+          </div>
+
+          <div class="section">
+            <h3>선택 / 범위 API</h3>
+            <div class="row">
+              <input id="rangeIndex" type="number" value="0" min="0" style="width:90px" />
+              <input id="rangeLength" type="number" value="5" min="0" style="width:90px" />
+              <button id="btnSetSelection">선택 지정</button>
+              <button id="btnGetSelection">선택 확인</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>실시간 통계</h3>
+            <div class="stats">
+              <div class="stat"><strong id="charCount">0</strong><span>글자 수</span></div>
+              <div class="stat"><strong id="wordCount">0</strong><span>단어 수</span></div>
+              <div class="stat"><strong id="lineCount">0</strong><span>줄 수</span></div>
+              <div class="stat"><strong id="deltaOps">0</strong><span>Delta ops</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="data" class="panel card-body">
+          <div class="section">
+            <h3>데이터 가져오기 / 내보내기</h3>
+            <div class="btns">
+              <button id="btnRefreshData" class="primary">새로고침</button>
+              <button id="btnCopyDelta">Delta 복사</button>
+              <button id="btnCopyHtml">HTML 복사</button>
+              <button id="btnDownload">HTML 파일 저장</button>
+            </div>
+          </div>
+          <div class="section">
+            <h3>Delta JSON</h3>
+            <pre id="deltaOutput"></pre>
+          </div>
+          <div class="section">
+            <h3>Semantic HTML</h3>
+            <pre id="htmlOutput"></pre>
+          </div>
+        </div>
+
+        <div id="events" class="panel card-body">
+          <div class="section">
+            <h3>이벤트 로그</h3>
+            <div class="btns"><button id="btnClearLog">로그 지우기</button></div>
+            <p class="hint">text-change, selection-change, editor-change 이벤트를 기록합니다.</p>
+          </div>
+          <div id="logList" class="log-list section"></div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="card" style="margin-top:18px">
+      <h2>Bubble Theme / 모듈·확장 기능 예시</h2>
+      <div class="card-body two">
+        <div class="mini-card">
+          <h4>Bubble Theme 에디터</h4>
+          <p class="hint">텍스트를 선택하면 플로팅 툴바가 나타납니다. Snow와 달리 상단 고정 툴바가 없습니다.</p>
+          <div id="bubbleEditor"></div>
+        </div>
+        <div class="mini-card">
+          <h4>적용된 기능 목록</h4>
+          <p><span class="chip">Toolbar</span> <span class="chip">History</span> <span class="chip">Clipboard Matcher</span> <span class="chip">Keyboard</span> <span class="chip">Syntax</span> <span class="chip">Formula</span> <span class="chip">Delta</span> <span class="chip">Custom Blot</span></p>
+          <ul class="hint">
+            <li>Ctrl+B: 굵게 / Ctrl+K: 링크 입력 안내 / Ctrl+Shift+7: 번호 목록</li>
+            <li>붙여넣기 시 TEXT_NODE matcher로 “Quill” 단어 자동 마킹</li>
+            <li>History 모듈 delay, maxStack, userOnly 설정</li>
+            <li>Custom Inline Blot으로 배지 형태 포맷 등록</li>
+            <li>LocalStorage 자동 저장 및 복원</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>CDN을 사용하는 샘플입니다. 내부망/폐쇄망에서는 quill, katex, highlight.js 파일을 로컬로 내려받아 경로를 바꾸면 됩니다.</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script>
+    window.hljs = window.hljs || {};
+    if (window.hljs.configure) window.hljs.configure({ languages: ['javascript', 'css', 'html', 'json'] });
+
+    const Inline = Quill.import('blots/inline');
+    class BadgeBlot extends Inline {
+      static blotName = 'badge';
+      static tagName = 'span';
+      static className = 'custom-badge';
+      static create(value) {
+        const node = super.create();
+        node.setAttribute('data-badge', value || 'badge');
+        return node;
+      }
+      static formats(node) { return node.getAttribute('data-badge'); }
+    }
+    Quill.register(BadgeBlot);
+
+    const Delta = Quill.import('delta');
+
+    const toolbarOptions = {
+      container: '#toolbar',
+      handlers: {
+        image: function () {
+          const url = prompt('삽입할 이미지 URL을 입력하세요.');
+          if (url) {
+            const range = this.quill.getSelection(true);
+            this.quill.insertEmbed(range.index, 'image', url, 'user');
+            this.quill.setSelection(range.index + 1, 0, 'silent');
+          }
+        }
+      }
+    };
+
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      placeholder: '여기에 문서를 작성하세요. 툴바, 붙여넣기, 단축키, API 버튼을 모두 테스트할 수 있습니다.',
+      modules: {
+        toolbar: toolbarOptions,
+        history: { delay: 1200, maxStack: 120, userOnly: true },
+        syntax: true,
+        keyboard: {
+          bindings: {
+            customLinkHelp: {
+              key: 'K', shortKey: true,
+              handler: function(range) {
+                const url = prompt('링크 URL을 입력하세요.', 'https://quilljs.com');
+                if (url && range) this.quill.format('link', url, 'user');
+              }
+            },
+            orderedShortcut: {
+              key: '7', shortKey: true, shiftKey: true,
+              handler: function() { this.quill.format('list', 'ordered', 'user'); }
+            }
+          }
+        }
+      }
+    });
+
+    const bubble = new Quill('#bubbleEditor', {
+      theme: 'bubble',
+      placeholder: 'Bubble Theme: 이 문장을 선택해 보세요.',
+      modules: { toolbar: [['bold', 'italic', 'link'], [{ header: 1 }, { header: 2 }], ['blockquote']] }
+    });
+
+    quill.clipboard.addMatcher(Node.TEXT_NODE, function(node, delta) {
+      const text = node.data || '';
+      if (!/Quill/i.test(text)) return delta;
+      const parts = text.split(/(Quill)/gi);
+      let composed = new Delta();
+      parts.forEach(part => {
+        if (!part) return;
+        composed = composed.insert(part, /Quill/i.test(part) ? { background: '#fef3c7' } : {});
+      });
+      return composed;
+    });
+
+    const sampleDelta = new Delta()
+      .insert('Quill 기능 종합 샘플\n', { header: 1 })
+      .insert('Quill은 Delta 기반의 확장 가능한 웹 리치 텍스트 에디터입니다. 이 샘플은 실제 업무용 문서 입력 화면에 필요한 기능들을 한 번에 확인하도록 구성했습니다.\n\n')
+      .insert('주요 기능\n', { header: 2 })
+      .insert('굵게, 기울임, 밑줄, 취소선, 색상, 배경색, 정렬, 들여쓰기, 목록, 체크리스트\n', { list: 'bullet' })
+      .insert('이미지, 동영상, 링크, 수식, 코드 블록 삽입\n', { list: 'bullet' })
+      .insert('Delta JSON과 HTML 추출, 자동 저장, 이벤트 로깅\n', { list: 'bullet' })
+      .insert('중요 안내: ', { bold: true })
+      .insert('붙여넣기/HTML 저장 기능은 브라우저 보안 정책과 실행 환경에 영향을 받을 수 있습니다.\n\n')
+      .insert('예시 코드\n', { header: 2 })
+      .insert('const quill = new Quill("#editor", { theme: "snow" });\n', { 'code-block': 'javascript' })
+      .insert('수식 예시: ')
+      .insert({ formula: 'E=mc^2' })
+      .insert('\n동영상과 이미지는 우측 버튼으로 URL 삽입을 테스트하세요.\n');
+
+    function loadInitial() {
+      const saved = localStorage.getItem('quill-showcase-delta');
+      if (saved) {
+        try { quill.setContents(JSON.parse(saved)); return; } catch (e) {}
+      }
+      quill.setContents(sampleDelta);
+      bubble.setText('Bubble Theme도 별도 Quill 인스턴스입니다. 이 문장을 선택하면 플로팅 메뉴가 나타납니다.');
+    }
+
+    function getHtml() {
+      if (typeof quill.getSemanticHTML === 'function') return quill.getSemanticHTML();
+      return quill.root.innerHTML;
+    }
+
+    function updateData() {
+      const delta = quill.getContents();
+      document.getElementById('deltaOutput').textContent = JSON.stringify(delta, null, 2);
+      document.getElementById('htmlOutput').textContent = getHtml();
+      document.getElementById('deltaOps').textContent = delta.ops.length;
+      const text = quill.getText();
+      document.getElementById('charCount').textContent = Math.max(0, text.trimEnd().length);
+      document.getElementById('wordCount').textContent = text.trim().split(/\s+/).filter(Boolean).length;
+      document.getElementById('lineCount').textContent = text.split('\n').length;
+    }
+
+    function log(type, payload) {
+      const list = document.getElementById('logList');
+      const div = document.createElement('div');
+      div.className = 'log';
+      div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + type + ' · ' + JSON.stringify(payload).slice(0, 260);
+      list.prepend(div);
+      while (list.children.length > 40) list.removeChild(list.lastChild);
+    }
+
+    let readOnly = false;
+    quill.on('text-change', (delta, oldDelta, source) => {
+      localStorage.setItem('quill-showcase-delta', JSON.stringify(quill.getContents()));
+      updateData();
+      log('text-change', { source, delta });
+    });
+    quill.on('selection-change', (range, oldRange, source) => log('selection-change', { source, range }));
+    quill.on('editor-change', (eventName, ...args) => log('editor-change', { eventName, args: args.slice(0, 2) }));
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.panel).classList.add('active');
+        updateData();
+      });
+    });
+
+    document.getElementById('btnSample').onclick = () => quill.setContents(sampleDelta, 'api');
+    document.getElementById('btnInsertText').onclick = () => {
+      const range = quill.getSelection(true);
+      quill.insertText(range.index, ' [API로 삽입된 텍스트] ', { color: '#2563eb', bold: true }, 'user');
+    };
+    document.getElementById('btnFormatSelection').onclick = () => {
+      const range = quill.getSelection(true);
+      if (!range || range.length === 0) return alert('먼저 강조할 텍스트를 선택하세요.');
+      quill.formatText(range.index, range.length, { background: '#fef3c7', color: '#92400e' }, 'user');
+    };
+    document.getElementById('btnBadge').onclick = () => {
+      const range = quill.getSelection(true);
+      quill.insertText(range.index, '승인필요', { badge: 'approval' }, 'user');
+    };
+    document.getElementById('btnClear').onclick = () => { if (confirm('문서를 비울까요?')) quill.setText('', 'user'); };
+    document.getElementById('btnImage').onclick = () => {
+      const url = document.getElementById('imageUrl').value.trim();
+      if (!url) return;
+      const range = quill.getSelection(true);
+      quill.insertEmbed(range.index, 'image', url, 'user');
+      quill.insertText(range.index + 1, '\n', 'user');
+    };
+    document.getElementById('btnVideo').onclick = () => {
+      const url = document.getElementById('videoUrl').value.trim();
+      if (!url) return;
+      const range = quill.getSelection(true);
+      quill.insertEmbed(range.index, 'video', url, 'user');
+      quill.insertText(range.index + 1, '\n', 'user');
+    };
+    document.getElementById('btnFormula').onclick = () => {
+      const formula = document.getElementById('formulaText').value.trim();
+      if (!formula) return;
+      const range = quill.getSelection(true);
+      quill.insertEmbed(range.index, 'formula', formula, 'user');
+      quill.insertText(range.index + 1, ' ', 'user');
+    };
+    document.getElementById('btnUndo').onclick = () => quill.history.undo();
+    document.getElementById('btnRedo').onclick = () => quill.history.redo();
+    document.getElementById('btnReadOnly').onclick = () => {
+      readOnly = !readOnly;
+      quill.enable(!readOnly);
+      document.getElementById('statusLine').textContent = '상태: ' + (readOnly ? '읽기전용' : '편집 가능');
+    };
+    document.getElementById('btnFocus').onclick = () => quill.focus();
+    document.getElementById('btnBlur').onclick = () => quill.blur();
+    document.getElementById('btnSetSelection').onclick = () => {
+      quill.setSelection(Number(document.getElementById('rangeIndex').value), Number(document.getElementById('rangeLength').value), 'api');
+      quill.focus();
+    };
+    document.getElementById('btnGetSelection').onclick = () => alert(JSON.stringify(quill.getSelection(), null, 2));
+    document.getElementById('btnRefreshData').onclick = updateData;
+    document.getElementById('btnCopyDelta').onclick = () => navigator.clipboard.writeText(JSON.stringify(quill.getContents(), null, 2));
+    document.getElementById('btnCopyHtml').onclick = () => navigator.clipboard.writeText(getHtml());
+    document.getElementById('btnClearLog').onclick = () => document.getElementById('logList').innerHTML = '';
+    document.getElementById('btnDownload').onclick = () => {
+      const html = '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>Quill Export</title></head><body>' + getHtml() + '</body></html>';
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'quill-export.html';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    loadInitial();
+    updateData();
+  </script>
+</body>
+</html>
