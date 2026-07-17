@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>pdfmake</title>
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.3.11/build/pdfmake.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfmake@0.3.11/build/vfs_fonts.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+  iframe.pdf-preview {
+    width: 100%;
+    max-width: 480px;
+    height: 340px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    margin-top: 10px;
+    display: none;
+  }
+  iframe.pdf-preview.show { display: block; }
+  canvas#chart-source { display: none; }
+</style>
+</head>
+<body>
+
+  <h1>pdfmake 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>pdfmake</strong>는 JSON과 비슷한 "문서 정의(document definition)" 객체를 JS 코드만으로
+    작성하면 그대로 PDF 파일을 만들어주는 라이브러리입니다. 서버 없이 브라우저에서 바로 PDF를
+    생성·다운로드·미리보기할 수 있습니다.
+    <ul>
+      <li>제목·본문·스타일이 있는 <strong>기본 문서 생성 + 다운로드</strong></li>
+      <li>커스텀 테두리·줄무늬 배경이 있는 <strong>표(table) 생성</strong></li>
+      <li>캔버스로 그린 차트를 그대로 넣는 <strong>이미지 삽입</strong></li>
+      <li><code class="inline">getDataUrl()</code>로 다운로드 없이 바로 보는 <strong>미리보기</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 실적 데이터는 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 통계·보고서와 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 문서 생성 + 다운로드</h2>
+    <div class="desc">
+      제목·부제·목록이 있는 간단한 보고서를 만들어 PDF로 내려받습니다.
+      <code class="inline">download()</code>은 <strong>비동기(Promise)</strong>로 동작하므로
+      <code class="inline">await</code>로 완료를 기다려야 합니다.
+    </div>
+    <button id="s1-download">보고서 PDF 다운로드</button>
+    <div class="stat-box" id="s1-stat">아직 생성한 적이 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const docDefinition = {
+  content: [
+    { text: '위판 실적 보고서', style: 'header' },
+    { text: '작성일: 2026-07-17', style: 'subheader' },
+    '이 보고서는 가상의 위판 실적 데이터를 기반으로 작성되었습니다.',
+    { text: '주요 요약', style: 'sectionHeader' },
+    { ul: ['총 위판량: 4,820kg', '참여 위판장: 8곳', '평균 단가: 4,200원/kg'] },
+  ],
+  styles: {
+    header: { fontSize: 20, bold: true, margin: [0, 0, 0, 10] },
+    subheader: { fontSize: 11, color: '#666', margin: [0, 0, 0, 10] },
+    sectionHeader: { fontSize: 14, bold: true, margin: [0, 10, 0, 6] },
+  },
+};
+
+// download()/open()/getBlob() 등은 모두 Promise를 반환한다 (await 필요)
+await pdfMake.createPdf(docDefinition).download('위판_실적_보고서.pdf');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 표(table) 생성</h2>
+    <div class="desc">
+      위판장별 실적을 표로 정리합니다. <code class="inline">layout</code> 옵션으로 헤더 배경색과
+      줄무늬 배경을 직접 지정했습니다.
+    </div>
+    <button id="s2-download">실적 표 PDF 다운로드</button>
+    <div class="stat-box" id="s2-stat">아직 생성한 적이 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const tableDoc = {
+  content: [
+    { text: '위판장별 실적', style: 'header' },
+    {
+      table: {
+        headerRows: 1,
+        widths: ['*', 'auto', 'auto', 'auto'],
+        body: [
+          [
+            { text: '위판장', color: 'white', bold: true },
+            { text: '지역', color: 'white', bold: true },
+            { text: '위판량(kg)', color: 'white', bold: true },
+            { text: '평균가(원)', color: 'white', bold: true },
+          ],
+          ['A위판장', '부산', '820', '4,200'],
+          ['B위판장', '포항', '340', '3,900'],
+          ['C위판장', '여수', '560', '4,450'],
+          ['D위판장', '속초', '610', '4,100'],
+        ],
+      },
+      layout: {
+        fillColor: (rowIndex) => (rowIndex === 0 ? '#4f7dff' : rowIndex % 2 === 0 ? '#f5f6f8' : null),
+      },
+    },
+  ],
+  styles: { header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] } },
+};</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 이미지 삽입</h2>
+    <div class="desc">
+      캔버스에 직접 그린 막대그래프를 <code class="inline">canvas.toDataURL()</code>로 이미지 데이터
+      URL로 바꾼 뒤, <code class="inline">image</code> 항목으로 그대로 PDF에 삽입합니다.
+    </div>
+    <canvas id="chart-source" width="300" height="150"></canvas>
+    <button id="s3-download">차트 포함 PDF 다운로드</button>
+    <div class="stat-box" id="s3-stat">아직 생성한 적이 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const chartDataUrl = canvas.toDataURL('image/png');
+
+const imageDoc = {
+  content: [
+    { text: '월별 위판량 추이', style: 'header' },
+    { image: chartDataUrl, width: 300 },
+  ],
+  styles: { header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] } },
+};</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. getDataUrl()로 즉시 미리보기</h2>
+    <div class="desc">
+      다운로드하지 않고도 <code class="inline">getDataUrl()</code>로 PDF의 data URL을 바로 받아와
+      아래 iframe에 렌더링합니다.
+    </div>
+    <button id="s4-preview">미리보기 생성</button>
+    <div class="stat-box" id="s4-stat">아직 생성한 적이 없습니다.</div>
+    <iframe class="pdf-preview" id="s4-frame" title="PDF 미리보기"></iframe>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>const dataUrl = await pdfMake.createPdf(previewDoc).getDataUrl();
+document.getElementById('s4-frame').src = dataUrl;</pre>
+    </details>
+  </section>
+
+<script>
+  const STYLES_BASE = {
+    header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
+    subheader: { fontSize: 11, color: '#666', margin: [0, 0, 0, 10] },
+    sectionHeader: { fontSize: 14, bold: true, margin: [0, 10, 0, 6] },
+  };
+
+  // ---- 섹션 1: 기본 문서 생성 + 다운로드 ----
+  (function section1() {
+    const stat = document.getElementById('s1-stat');
+    const btn = document.getElementById('s1-download');
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.textContent = 'PDF 생성 중...';
+      const docDefinition = {
+        content: [
+          { text: '위판 실적 보고서', style: 'header' },
+          { text: '작성일: 2026-07-17', style: 'subheader' },
+          '이 보고서는 가상의 위판 실적 데이터를 기반으로 작성되었습니다.',
+          { text: '주요 요약', style: 'sectionHeader' },
+          { ul: ['총 위판량: 4,820kg', '참여 위판장: 8곳', '평균 단가: 4,200원/kg'] },
+        ],
+        styles: STYLES_BASE,
+      };
+      try {
+        await pdfMake.createPdf(docDefinition).download('위판_실적_보고서.pdf');
+        stat.innerHTML = '<strong>PDF 다운로드가 시작되었습니다.</strong>';
+      } catch (e) {
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 2: 표 생성 ----
+  (function section2() {
+    const stat = document.getElementById('s2-stat');
+    const btn = document.getElementById('s2-download');
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.textContent = 'PDF 생성 중...';
+      const tableDoc = {
+        content: [
+          { text: '위판장별 실적', style: 'header' },
+          {
+            table: {
+              headerRows: 1,
+              widths: ['*', 'auto', 'auto', 'auto'],
+              body: [
+                [
+                  { text: '위판장', color: 'white', bold: true },
+                  { text: '지역', color: 'white', bold: true },
+                  { text: '위판량(kg)', color: 'white', bold: true },
+                  { text: '평균가(원)', color: 'white', bold: true },
+                ],
+                ['A위판장', '부산', '820', '4,200'],
+                ['B위판장', '포항', '340', '3,900'],
+                ['C위판장', '여수', '560', '4,450'],
+                ['D위판장', '속초', '610', '4,100'],
+              ],
+            },
+            layout: {
+              fillColor: (rowIndex) => (rowIndex === 0 ? '#4f7dff' : rowIndex % 2 === 0 ? '#f5f6f8' : null),
+            },
+          },
+        ],
+        styles: STYLES_BASE,
+      };
+      try {
+        await pdfMake.createPdf(tableDoc).download('위판장별_실적표.pdf');
+        stat.innerHTML = '<strong>PDF 다운로드가 시작되었습니다.</strong>';
+      } catch (e) {
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 3: 이미지 삽입 ----
+  (function section3() {
+    const stat = document.getElementById('s3-stat');
+    const btn = document.getElementById('s3-download');
+
+    function makeChartDataUrl() {
+      const canvas = document.getElementById('chart-source');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const values = [40, 70, 55, 90, 60];
+      const labels = ['3월', '4월', '5월', '6월', '7월'];
+      const barWidth = 40;
+      const gap = 20;
+      const maxH = 110;
+      values.forEach((v, i) => {
+        const h = (v / 100) * maxH;
+        const x = 15 + i * (barWidth + gap);
+        const y = 130 - h;
+        ctx.fillStyle = '#4f7dff';
+        ctx.fillRect(x, y, barWidth, h);
+        ctx.fillStyle = '#333';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(labels[i], x + barWidth / 2, 145);
+      });
+      return canvas.toDataURL('image/png');
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.textContent = 'PDF 생성 중...';
+      const imageDoc = {
+        content: [
+          { text: '월별 위판량 추이', style: 'header' },
+          { image: makeChartDataUrl(), width: 300 },
+        ],
+        styles: STYLES_BASE,
+      };
+      try {
+        await pdfMake.createPdf(imageDoc).download('위판량_추이.pdf');
+        stat.innerHTML = '<strong>PDF 다운로드가 시작되었습니다.</strong>';
+      } catch (e) {
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 4: getDataUrl()로 즉시 미리보기 ----
+  (function section4() {
+    const stat = document.getElementById('s4-stat');
+    const btn = document.getElementById('s4-preview');
+    const frame = document.getElementById('s4-frame');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.textContent = '미리보기 생성 중...';
+      const previewDoc = {
+        content: [
+          { text: '위판 실적 요약 (미리보기)', style: 'header' },
+          { columns: [
+            { width: '*', text: '오늘 위판량: 4,820kg' },
+            { width: '*', text: '참여 위판장: 8곳' },
+          ] },
+        ],
+        styles: STYLES_BASE,
+      };
+      try {
+        const dataUrl = await pdfMake.createPdf(previewDoc).getDataUrl();
+        frame.src = dataUrl;
+        frame.classList.add('show');
+        stat.innerHTML = '<strong>미리보기를 생성했습니다.</strong>';
+      } catch (e) {
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
