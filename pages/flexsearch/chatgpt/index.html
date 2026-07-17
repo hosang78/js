@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlexSearch 종합 기능 샘플</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --panel:#ffffff;
+      --ink:#172033;
+      --muted:#667085;
+      --line:#d9e0ea;
+      --accent:#2563eb;
+      --accent2:#0f766e;
+      --warn:#b45309;
+      --danger:#b42318;
+      --good:#067647;
+      --code:#0f172a;
+      --soft:#eef4ff;
+      --radius:18px;
+      --shadow:0 14px 38px rgba(15, 23, 42, .08);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:linear-gradient(180deg,#eef4ff 0,#f5f7fb 220px);
+      color:var(--ink);
+    }
+    header{
+      padding:34px 22px 22px;
+      max-width:1440px;
+      margin:auto;
+    }
+    .hero{
+      background:linear-gradient(135deg,#0f172a,#1d4ed8 64%,#0f766e);
+      color:#fff;
+      border-radius:26px;
+      padding:30px;
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    .hero:after{
+      content:"";
+      position:absolute;
+      width:380px;height:380px;
+      right:-110px;top:-150px;
+      border-radius:50%;
+      background:rgba(255,255,255,.11);
+    }
+    h1{margin:0 0 10px;font-size:clamp(30px,4vw,52px);line-height:1.05}
+    h2{font-size:24px;margin:0 0 14px}
+    h3{font-size:18px;margin:0 0 10px}
+    p{line-height:1.6}
+    .hero p{max-width:880px;color:#e5eefc;margin:0}
+    .hero .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;position:relative;z-index:1}
+    .badge{
+      border:1px solid rgba(255,255,255,.28);
+      background:rgba(255,255,255,.12);
+      color:#fff;
+      border-radius:999px;
+      padding:7px 12px;
+      font-size:13px;
+      backdrop-filter:blur(4px);
+    }
+    main{
+      max-width:1440px;
+      margin:auto;
+      padding:0 22px 42px;
+    }
+    nav{
+      position:sticky;
+      top:0;
+      z-index:20;
+      margin:0 0 18px;
+      padding:10px;
+      background:rgba(245,247,251,.85);
+      backdrop-filter:blur(10px);
+      border:1px solid rgba(217,224,234,.8);
+      border-radius:16px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    nav a{
+      text-decoration:none;
+      color:#1d4ed8;
+      font-weight:700;
+      font-size:13px;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#fff;
+      border:1px solid var(--line);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      gap:16px;
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      min-width:0;
+    }
+    .span-12{grid-column:span 12}
+    .span-8{grid-column:span 8}
+    .span-7{grid-column:span 7}
+    .span-6{grid-column:span 6}
+    .span-5{grid-column:span 5}
+    .span-4{grid-column:span 4}
+    .span-3{grid-column:span 3}
+    .muted{color:var(--muted);font-size:14px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+    label{display:block;font-weight:800;font-size:13px;margin-bottom:6px;color:#344054}
+    input,select,textarea,button{
+      font:inherit;
+      border-radius:12px;
+      border:1px solid var(--line);
+    }
+    input,select,textarea{
+      width:100%;
+      background:#fff;
+      padding:10px 11px;
+      color:var(--ink);
+    }
+    textarea{min-height:92px;resize:vertical}
+    button{
+      cursor:pointer;
+      background:#fff;
+      color:#172033;
+      font-weight:800;
+      padding:10px 13px;
+      border:1px solid #cfd8e6;
+      transition:.16s transform,.16s background;
+    }
+    button:hover{transform:translateY(-1px);background:#f8fafc}
+    button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    button.good{background:var(--good);color:#fff;border-color:var(--good)}
+    button.warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+    button.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+    .mini{font-size:12px;padding:6px 9px;border-radius:10px}
+    .control{
+      min-width:150px;
+      flex:1;
+    }
+    .control.small{min-width:90px;max-width:130px}
+    .control.medium{min-width:180px;max-width:230px}
+    .status{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .stat{
+      flex:1;
+      min-width:150px;
+      background:#f8fafc;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+    }
+    .stat strong{display:block;font-size:22px}
+    .result-list{display:grid;gap:10px;margin-top:12px}
+    .result{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+    }
+    .result .title{font-weight:900}
+    .result .meta{font-size:12px;color:var(--muted);margin-top:4px}
+    mark{
+      background:#fef08a;
+      color:#111827;
+      padding:0 2px;
+      border-radius:4px;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      font-size:14px;
+    }
+    th,td{
+      border-bottom:1px solid var(--line);
+      padding:10px;
+      vertical-align:top;
+      text-align:left;
+    }
+    th{background:#f8fafc;color:#344054;font-size:13px}
+    tr:last-child td{border-bottom:0}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#eef4ff;
+      color:#1d4ed8;
+      font-weight:800;
+      font-size:12px;
+      margin:2px;
+    }
+    .pill.green{background:#ecfdf3;color:#067647}
+    .pill.orange{background:#fff7ed;color:#b45309}
+    .pill.gray{background:#f2f4f7;color:#475467}
+    pre{
+      margin:0;
+      white-space:pre-wrap;
+      word-break:break-word;
+      background:var(--code);
+      color:#e5e7eb;
+      padding:14px;
+      border-radius:14px;
+      overflow:auto;
+      font-size:13px;
+      line-height:1.55;
+    }
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .tab.active{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+    .hint{
+      border-left:4px solid var(--accent2);
+      background:#ecfdf3;
+      padding:12px 14px;
+      border-radius:12px;
+      color:#064e3b;
+      margin:12px 0 0;
+      font-size:14px;
+    }
+    .warning{
+      border-left:4px solid var(--warn);
+      background:#fff7ed;
+      padding:12px 14px;
+      border-radius:12px;
+      color:#7c2d12;
+      margin:12px 0 0;
+      font-size:14px;
+    }
+    .errorbox{
+      display:none;
+      border:1px solid #fecaca;
+      background:#fef2f2;
+      color:#991b1b;
+      padding:14px;
+      border-radius:14px;
+      margin:12px 0;
+    }
+    .two-col{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    details{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+      margin-top:10px;
+    }
+    summary{font-weight:900;cursor:pointer}
+    .footer-note{
+      color:#667085;
+      font-size:13px;
+      margin-top:22px;
+      text-align:center;
+    }
+    @media (max-width:980px){
+      .span-8,.span-7,.span-6,.span-5,.span-4,.span-3{grid-column:span 12}
+      .two-col{grid-template-columns:1fr}
+      nav{position:static}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <section class="hero">
+      <h1>FlexSearch 종합 기능 샘플</h1>
+      <p>
+        브라우저에서 바로 실행해 보며 FlexSearch의 단일 Index, Document Index, 필드 검색, 태그 검색,
+        토크나이저 비교, suggestion, context scoring, cache, async, resolver, export/import, serialize, 벤치마크를 확인하는 실습 페이지다.
+      </p>
+      <div class="badges">
+        <span class="badge">Index.add / update / remove / contain</span>
+        <span class="badge">Document multi-field search</span>
+        <span class="badge">Tag search</span>
+        <span class="badge">Highlight</span>
+        <span class="badge">Suggest</span>
+        <span class="badge">Context</span>
+        <span class="badge">Cache</span>
+        <span class="badge">Async</span>
+        <span class="badge">Export / Import</span>
+        <span class="badge">Resolver</span>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <nav>
+      <a href="#setup">기본 검색</a>
+      <a href="#tokenizer">토크나이저</a>
+      <a href="#document">문서 검색</a>
+      <a href="#context">Context</a>
+      <a href="#cache">Cache/Async</a>
+      <a href="#resolver">Resolver</a>
+      <a href="#export">Export/Import</a>
+      <a href="#benchmark">벤치마크</a>
+      <a href="#notes">주의사항</a>
+    </nav>
+
+    <div id="loadError" class="errorbox"></div>
+
+    <section class="grid" id="setup">
+      <div class="card span-8">
+        <h2>1. 기본 Index 검색</h2>
+        <p class="muted">왼쪽 조건을 바꾸면 단일 문자열 Index가 즉시 재생성된다. 검색어 예: <b>수협</b>, <b>AI</b>, <b>양식</b>, <b>marine</b>, <b>보험</b>, <b>workflow</b></p>
+        <div class="toolbar">
+          <div class="control">
+            <label>검색어</label>
+            <input id="basicQuery" value="AI 자동화" />
+          </div>
+          <div class="control medium">
+            <label>preset</label>
+            <select id="basicPreset">
+              <option value="default">default</option>
+              <option value="memory">memory</option>
+              <option value="performance">performance</option>
+              <option value="match">match</option>
+              <option value="score">score</option>
+            </select>
+          </div>
+          <div class="control medium">
+            <label>tokenize</label>
+            <select id="basicTokenize">
+              <option value="strict">strict / exact</option>
+              <option value="forward" selected>forward</option>
+              <option value="reverse">reverse / bidirectional</option>
+              <option value="full">full</option>
+              <option value="tolerant">tolerant</option>
+            </select>
+          </div>
+          <div class="control small">
+            <label>limit</label>
+            <input id="basicLimit" type="number" min="1" max="100" value="8" />
+          </div>
+          <div class="control small">
+            <label>offset</label>
+            <input id="basicOffset" type="number" min="0" max="100" value="0" />
+          </div>
+          <div class="control small">
+            <label>suggest</label>
+            <select id="basicSuggest">
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          </div>
+          <div class="control small">
+            <label>fastupdate</label>
+            <select id="basicFastupdate">
+              <option value="false">false</option>
+              <option value="true">true</option>
+            </select>
+          </div>
+          <button class="primary" id="runBasic">검색</button>
+        </div>
+        <div class="status">
+          <div class="stat"><strong id="basicCount">0</strong><span>검색 결과</span></div>
+          <div class="stat"><strong id="basicTime">0 ms</strong><span>검색 시간</span></div>
+          <div class="stat"><strong id="basicConfig">-</strong><span>현재 설정</span></div>
+        </div>
+        <div id="basicResults" class="result-list"></div>
+      </div>
+
+      <div class="card span-4">
+        <h2>데이터 조작</h2>
+        <p class="muted">Index.add / update / remove / contain 기능을 직접 확인한다. 문서 데이터도 함께 갱신된다.</p>
+        <div class="toolbar">
+          <div class="control small">
+            <label>ID</label>
+            <input id="editId" type="number" value="21" />
+          </div>
+          <div class="control">
+            <label>제목</label>
+            <input id="editTitle" value="회원조합 자동화 파일럿" />
+          </div>
+        </div>
+        <label style="margin-top:10px">본문</label>
+        <textarea id="editBody">회원조합 반복 보고, 민원 분류, 자료 취합을 FlexSearch와 로컬 데이터로 빠르게 검색하는 파일럿 과제</textarea>
+        <div class="toolbar" style="margin-top:10px">
+          <div class="control">
+            <label>카테고리</label>
+            <select id="editCategory">
+              <option>AI</option>
+              <option>수협</option>
+              <option>어업</option>
+              <option>보험</option>
+              <option>교육</option>
+              <option>데이터</option>
+            </select>
+          </div>
+          <div class="control">
+            <label>난이도</label>
+            <select id="editLevel">
+              <option>기초</option>
+              <option selected>실무</option>
+              <option>심화</option>
+            </select>
+          </div>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <button class="good" id="addDoc">add / append</button>
+          <button class="warn" id="updateDoc">update</button>
+          <button class="danger" id="removeDoc">remove</button>
+          <button id="containDoc">contain?</button>
+        </div>
+        <div id="editStatus" class="hint">데이터를 추가하거나 수정하면 전체 인덱스를 다시 만든다.</div>
+      </div>
+
+      <div class="card span-12">
+        <h2>기본 API 코드</h2>
+        <pre><code>const index = new Index({ preset: "default", tokenize: "forward", cache: 100 });
+index.add(1, "FlexSearch full-text search");
+index.update(1, "FlexSearch fast full-text search");
+index.remove(1);
+index.contain(1);
+const result = index.search("search", { limit: 10, suggest: true });</code></pre>
+      </div>
+    </section>
+
+    <section class="grid" id="tokenizer" style="margin-top:16px">
+      <div class="card span-12">
+        <h2>2. Tokenizer / Preset / Encoder 비교</h2>
+        <p class="muted">같은 데이터와 같은 검색어를 여러 설정에 넣어 결과 차이를 비교한다. partial match가 필요한 자동완성은 보통 forward/full 쪽이 유리하고, full은 메모리 사용량이 커질 수 있다.</p>
+        <div class="toolbar">
+          <div class="control">
+            <label>비교 검색어</label>
+            <input id="compareQuery" value="auto" />
+          </div>
+          <div class="control medium">
+            <label>encoder</label>
+            <select id="compareEncoder">
+              <option value="Default">Charset.Default</option>
+              <option value="Normalize">Charset.Normalize</option>
+              <option value="Exact">Charset.Exact</option>
+              <option value="LatinBalance">Charset.LatinBalance</option>
+              <option value="LatinAdvanced">Charset.LatinAdvanced</option>
+              <option value="CJK">Charset.CJK</option>
+            </select>
+          </div>
+          <button class="primary" id="runCompare">비교 실행</button>
+        </div>
+        <div class="two-col" style="margin-top:12px">
+          <div>
+            <h3>Tokenizer 비교</h3>
+            <div id="tokenizerTable"></div>
+          </div>
+          <div>
+            <h3>Preset 비교</h3>
+            <div id="presetTable"></div>
+          </div>
+        </div>
+        <details>
+          <summary>토크나이저 의미 요약</summary>
+          <table style="margin-top:10px">
+            <thead><tr><th>옵션</th><th>특징</th><th>적합한 상황</th></tr></thead>
+            <tbody>
+              <tr><td><code>strict/exact</code></td><td>단어 단위 정확 검색 중심</td><td>메모리 절약, 정확 매칭</td></tr>
+              <tr><td><code>forward</code></td><td>앞부분 prefix 검색 지원</td><td>자동완성, 검색창 입력 중 매칭</td></tr>
+              <tr><td><code>reverse/bidirectional</code></td><td>앞/뒤 방향 부분 검색</td><td>뒤쪽 단어 일부 검색</td></tr>
+              <tr><td><code>tolerant</code></td><td>일부 오타에 관대한 인덱싱</td><td>영문 오타 허용 검색</td></tr>
+              <tr><td><code>full</code></td><td>연속 부분 문자열을 폭넓게 인덱싱</td><td>부분 문자열 검색. 단, 메모리 부담 큼</td></tr>
+            </tbody>
+          </table>
+        </details>
+      </div>
+    </section>
+
+    <section class="grid" id="document" style="margin-top:16px">
+      <div class="card span-7">
+        <h2>3. Document Index: 필드·태그·저장소·하이라이트</h2>
+        <p class="muted">JSON 문서를 대상으로 title/body/category/author 필드 검색, category/level/tags 태그 검색, enrich/store, merge, pluck, highlight를 확인한다.</p>
+        <div class="toolbar">
+          <div class="control">
+            <label>문서 검색어</label>
+            <input id="docQuery" value="수협 AI" />
+          </div>
+          <div class="control medium">
+            <label>검색 필드</label>
+            <select id="docField">
+              <option value="">전체 필드</option>
+              <option value="title">title</option>
+              <option value="body">body</option>
+              <option value="category">category</option>
+              <option value="author">author</option>
+            </select>
+          </div>
+          <div class="control medium">
+            <label>category tag</label>
+            <select id="docCategory">
+              <option value="">전체</option>
+              <option>AI</option>
+              <option>수협</option>
+              <option>어업</option>
+              <option>보험</option>
+              <option>교육</option>
+              <option>데이터</option>
+            </select>
+          </div>
+          <div class="control medium">
+            <label>level tag</label>
+            <select id="docLevel">
+              <option value="">전체</option>
+              <option>기초</option>
+              <option>실무</option>
+              <option>심화</option>
+            </select>
+          </div>
+          <div class="control small">
+            <label>enrich</label>
+            <select id="docEnrich">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div class="control small">
+            <label>merge</label>
+            <select id="docMerge">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <div class="control small">
+            <label>highlight</label>
+            <select id="docHighlight">
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </div>
+          <button class="primary" id="runDoc">문서 검색</button>
+        </div>
+        <div class="status">
+          <div class="stat"><strong id="docCount">0</strong><span>문서 결과</span></div>
+          <div class="stat"><strong id="docTime">0 ms</strong><span>검색 시간</span></div>
+          <div class="stat"><strong id="storeCount">0</strong><span>store 문서 수</span></div>
+        </div>
+        <div id="docResults" class="result-list"></div>
+      </div>
+      <div class="card span-5">
+        <h2>Pluck / Store 직접 조회</h2>
+        <p class="muted">pluck은 특정 필드를 평평한 결과로 돌려받을 때 편하다. get/set은 내부 store를 확인하거나 수정할 때 사용한다.</p>
+        <div class="toolbar">
+          <div class="control">
+            <label>pluck 필드</label>
+            <select id="pluckField">
+              <option value="title">title</option>
+              <option value="body">body</option>
+              <option value="author">author</option>
+            </select>
+          </div>
+          <button id="runPluck">pluck 검색</button>
+        </div>
+        <div id="pluckResults" class="result-list"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0" />
+        <div class="toolbar">
+          <div class="control small">
+            <label>get(id)</label>
+            <input id="getId" type="number" value="1" />
+          </div>
+          <button id="runGet">store get</button>
+          <button id="runSet">store set 예시</button>
+        </div>
+        <pre id="storeOutput" style="margin-top:12px"><code>store 출력 대기</code></pre>
+      </div>
+      <div class="card span-12">
+        <h2>Document Index 코드</h2>
+        <pre><code>const documentIndex = new Document({
+  tokenize: "forward",
+  document: {
+    id: "id",
+    index: [
+      { field: "title", tokenize: "forward" },
+      { field: "body", tokenize: "forward" },
+      { field: "category", tokenize: "strict" },
+      { field: "author", tokenize: "forward" }
+    ],
+    tag: ["category", "level", "tags"],
+    store: ["title", "body", "category", "level", "tags", "author", "date"]
+  }
+});
+
+documentIndex.add({ id: 1, title: "수협 AI 전략", body: "...", category: "AI", level: "실무" });
+
+const result = documentIndex.search({
+  query: "수협 AI",
+  index: ["title", "body"],
+  tag: { category: "AI", level: "실무" },
+  enrich: true,
+  merge: true,
+  highlight: "&lt;mark&gt;$1&lt;/mark&gt;"
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="grid" id="context" style="margin-top:16px">
+      <div class="card span-6">
+        <h2>4. Context Search 비교</h2>
+        <p class="muted">같은 단어라도 서로 가까이 붙어 있는 문서를 더 높게 볼 수 있는 context scoring 차이를 확인한다.</p>
+        <div class="toolbar">
+          <div class="control">
+            <label>Context 검색어</label>
+            <input id="contextQuery" value="1 2 3" />
+          </div>
+          <button class="primary" id="runContext">비교</button>
+        </div>
+        <div id="contextResults" class="two-col" style="margin-top:12px"></div>
+        <div class="warning">Context Index는 공식 문서 기준 <code>strict</code> 토크나이저에서만 지원된다.</div>
+      </div>
+      <div class="card span-6">
+        <h2>5. Suggestion 검색</h2>
+        <p class="muted">완전 일치하지 않아도 일부 단어가 맞으면 결과를 반환할 수 있다. 예: <b>cat fish</b>, <b>수협 미확인단어</b></p>
+        <div class="toolbar">
+          <div class="control">
+            <label>Suggestion 검색어</label>
+            <input id="suggestQuery" value="cat fish" />
+          </div>
+          <button id="runSuggest">suggest 비교</button>
+        </div>
+        <div id="suggestResults" class="two-col" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <section class="grid" id="cache" style="margin-top:16px">
+      <div class="card span-6">
+        <h2>6. Query Cache</h2>
+        <p class="muted">cache 옵션을 켠 Index와 일반 Index를 비교한다. 작은 데이터에서는 차이가 작을 수 있으므로 반복 횟수를 높여 본다.</p>
+        <div class="toolbar">
+          <div class="control">
+            <label>검색어</label>
+            <input id="cacheQuery" value="AI" />
+          </div>
+          <div class="control small">
+            <label>반복</label>
+            <input id="cacheLoops" type="number" min="100" max="100000" value="5000" />
+          </div>
+          <button class="primary" id="runCache">측정</button>
+        </div>
+        <div id="cacheResults" style="margin-top:12px"></div>
+      </div>
+      <div class="card span-6">
+        <h2>7. Async Non-blocking</h2>
+        <p class="muted">addAsync / searchAsync를 사용해 대량 문서를 비동기 방식으로 넣고 검색한다. UI 블로킹 완화 목적의 기능이다.</p>
+        <div class="toolbar">
+          <div class="control small">
+            <label>문서 수</label>
+            <input id="asyncSize" type="number" min="100" max="20000" value="1500" />
+          </div>
+          <div class="control">
+            <label>검색어</label>
+            <input id="asyncQuery" value="workflow automation" />
+          </div>
+          <button class="primary" id="runAsync">비동기 생성/검색</button>
+        </div>
+        <div class="status">
+          <div class="stat"><strong id="asyncProgress">0%</strong><span>진행률</span></div>
+          <div class="stat"><strong id="asyncTime">0 ms</strong><span>소요 시간</span></div>
+          <div class="stat"><strong id="asyncCount">0</strong><span>결과 수</span></div>
+        </div>
+        <div id="asyncResults" class="result-list"></div>
+      </div>
+    </section>
+
+    <section class="grid" id="resolver" style="margin-top:16px">
+      <div class="card span-12">
+        <h2>8. Resolver: AND / OR / NOT / Boost 스타일 복합 질의</h2>
+        <p class="muted">resolve:false로 미해결 결과를 받은 뒤 and/or/not/boost/limit 등을 체인으로 적용한다. 브라우저 번들·버전에 따라 일부 메서드가 제한될 경우 기본 검색 결과를 함께 표시한다.</p>
+        <div class="toolbar">
+          <div class="control">
+            <label>A 검색어</label>
+            <input id="resolverA" value="AI" />
+          </div>
+          <div class="control">
+            <label>B 검색어</label>
+            <input id="resolverB" value="수협" />
+          </div>
+          <div class="control">
+            <label>NOT 검색어</label>
+            <input id="resolverNot" value="보험" />
+          </div>
+          <button class="primary" id="runResolver">Resolver 실행</button>
+        </div>
+        <div id="resolverResults" class="two-col" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <section class="grid" id="export" style="margin-top:16px">
+      <div class="card span-7">
+        <h2>9. Export / Import / LocalStorage</h2>
+        <p class="muted">인메모리 Index를 key/data 단위로 export하고 localStorage에 저장한 뒤, 같은 설정의 새 Index로 import한다.</p>
+        <div class="toolbar">
+          <button class="good" id="runExport">export → localStorage</button>
+          <button class="primary" id="runImport">import 후 검색</button>
+          <button id="clearExport">저장값 삭제</button>
+        </div>
+        <pre id="exportOutput" style="margin-top:12px"><code>export/import 출력 대기</code></pre>
+      </div>
+      <div class="card span-5">
+        <h2>10. Serialize</h2>
+        <p class="muted">serialize는 빠른 부팅용 JS 함수 문자열을 만든다. 공식 문서상 실험적 기능이며 Document Index에는 제한이 있다.</p>
+        <div class="toolbar">
+          <button id="runSerialize">serialize 보기</button>
+        </div>
+        <pre id="serializeOutput" style="margin-top:12px"><code>serialize 출력 대기</code></pre>
+      </div>
+    </section>
+
+    <section class="grid" id="benchmark" style="margin-top:16px">
+      <div class="card span-12">
+        <h2>11. 간이 벤치마크</h2>
+        <p class="muted">동일한 synthetic 문서를 여러 토크나이저에 넣어 add/search 시간을 비교한다. 브라우저·기기·데이터 길이에 따라 값이 크게 달라진다.</p>
+        <div class="toolbar">
+          <div class="control small">
+            <label>문서 수</label>
+            <input id="benchSize" type="number" min="100" max="20000" value="3000" />
+          </div>
+          <div class="control">
+            <label>검색어</label>
+            <input id="benchQuery" value="aquaculture automation" />
+          </div>
+          <button class="primary" id="runBench">벤치마크 실행</button>
+        </div>
+        <div id="benchResults" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <section class="grid" id="notes" style="margin-top:16px">
+      <div class="card span-12">
+        <h2>주의사항 및 한계</h2>
+        <ul>
+          <li>이 파일은 FlexSearch를 CDN에서 불러온다. 외부망 차단 환경에서는 <code>flexsearch.bundle.module.min.js</code>를 로컬에 저장한 뒤 import 경로를 수정해야 한다.</li>
+          <li>Worker/Persistent Index는 브라우저 보안 정책, Same-Origin, 별도 설정 파일, DB adapter가 필요할 수 있어 이 샘플에서는 설명과 코드 패턴 중심으로만 다룬다.</li>
+          <li>한글은 띄어쓰기·조사·복합명사 특성상 영문 자동완성과 다른 검색 품질을 보일 수 있다. 실제 업무 데이터는 형태소 처리나 별도 키워드 필드를 병행하는 편이 안정적이다.</li>
+          <li>FlexSearch는 빠른 클라이언트 검색용으로 좋지만, 권한관리·대용량 색인·동시 업데이트·정교한 랭킹이 필요한 업무 시스템에서는 서버 검색엔진 또는 DB 검색과 함께 설계해야 한다.</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="footer-note">FlexSearch 종합 기능 샘플 · 단일 HTML · 브라우저 실행</p>
+  </main>
+
+<script type="module">
+const CDN_URL = "https://unpkg.com/flexsearch@0.8.212/dist/flexsearch.bundle.module.min.js";
+
+const $ = (id) => document.getElementById(id);
+const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+}[ch]));
+const safeHighlight = (value) => escapeHTML(value).replace(/&lt;mark&gt;/g, "<mark>").replace(/&lt;\/mark&gt;/g, "</mark>");
+const fmt = (n) => `${Number(n).toFixed(3)} ms`;
+const now = () => performance.now();
+const unique = (arr) => [...new Set(arr)];
+
+let Index, FlexDocument, Charset, Resolver;
+let docs = [];
+let basicIndex, docIndex, cacheIndex, noCacheIndex;
+let currentConfig = {};
+
+function sampleDocs(){
+  return [
+    {id:1, title:"수협 AI 업무 자동화 전략", body:"중앙회와 회원조합의 반복 보고, 자료 취합, 공문 초안 작성, 민원 분류를 AI와 workflow automation으로 개선한다.", category:"AI", level:"실무", tags:["수협","AI","업무자동화"], author:"ICT전략실", date:"2026-07-01"},
+    {id:2, title:"어업 양식 현장 데이터 수집", body:"양식장 수온, 용존산소, 사료 급이, 폐사 기록을 현장에서 수집하고 marine data dashboard로 시각화한다.", category:"어업", level:"실무", tags:["양식","데이터","현장"], author:"어업양식지원부", date:"2026-07-02"},
+    {id:3, title:"정책보험 상담 검색", body:"어선원보험, 어선보험, 재해 보상, 사고 접수 절차를 신입직원이 빠르게 찾을 수 있도록 문서 검색을 구성한다.", category:"보험", level:"기초", tags:["보험","상담","검색"], author:"정책보험부", date:"2026-07-03"},
+    {id:4, title:"FlexSearch tokenizer 실습", body:"strict forward reverse full tolerant tokenizer 차이에 따라 partial matching, autocomplete, memory usage가 달라진다.", category:"교육", level:"기초", tags:["FlexSearch","tokenizer","autocomplete"], author:"교육담당", date:"2026-07-04"},
+    {id:5, title:"회원조합 IT 지원수요 조사", body:"엑셀 취합, 설문 자동 정리, 부서별 개선 요청, 시스템 오류 유형을 검색하고 태그로 분류한다.", category:"수협", level:"실무", tags:["회원조합","엑셀","설문"], author:"회원지원부", date:"2026-07-05"},
+    {id:6, title:"Marine weather API 검색", body:"Open-Meteo Marine API, 파고, 풍속, 조류, 해상예보를 어업인 안전 정보와 연결한다.", category:"데이터", level:"심화", tags:["marine","API","안전"], author:"어선안전조업부", date:"2026-07-06"},
+    {id:7, title:"문서 store와 highlight", body:"Document Index는 store를 켜면 enrich 결과와 result highlighting을 함께 사용할 수 있다.", category:"교육", level:"심화", tags:["Document","highlight","store"], author:"개발가이드", date:"2026-07-07"},
+    {id:8, title:"업무 매뉴얼 초고속 검색", body:"전자결재, 예산회계, 공제, 상호금융, 노량진 시세 데이터를 부서별로 검색 가능한 지식창고로 구성한다.", category:"수협", level:"실무", tags:["매뉴얼","검색","부서"], author:"기획조정실", date:"2026-07-08"},
+    {id:9, title:"Aquaculture AI risk alert", body:"AI model detects abnormal feeding, oxygen drop, water temperature risk and notifies aquaculture operators.", category:"AI", level:"심화", tags:["aquaculture","AI","risk"], author:"Data Lab", date:"2026-07-09"},
+    {id:10, title:"Search cache autocomplete", body:"Query cache improves repeated instant search scenarios such as autocomplete when the same user types related terms.", category:"교육", level:"기초", tags:["cache","autocomplete","performance"], author:"개발가이드", date:"2026-07-10"},
+    {id:11, title:"로컬 파일 검색 데모", body:"외부망이 차단된 환경에서는 npm 없이 로컬 JS 파일을 배치하고 단일 HTML에서 검색 샘플을 실행할 수 있다.", category:"데이터", level:"기초", tags:["오프라인","HTML","로컬"], author:"ICT전략실", date:"2026-07-11"},
+    {id:12, title:"어업인 안전 교육", body:"고령 어업인이 이해하기 쉬운 행동요령, 퀴즈, 사고 상황별 안내를 검색 가능한 콘텐츠로 만든다.", category:"어업", level:"기초", tags:["안전","교육","어업인"], author:"어선안전조업부", date:"2026-07-12"},
+    {id:13, title:"Resolver boolean query", body:"Resolver supports chained boolean operations such as and, or, xor, not, boost, limit and final resolve.", category:"교육", level:"심화", tags:["resolver","boolean","query"], author:"개발가이드", date:"2026-07-13"},
+    {id:14, title:"수산물 유통 데이터 검색", body:"위판장 정보, 위탁판매 현황, 산지 가격, 물류 흐름을 색인하여 업무 담당자가 빠르게 조회한다.", category:"데이터", level:"실무", tags:["유통","위판장","수산물"], author:"유통사업부", date:"2026-07-14"},
+    {id:15, title:"AI 교육관리 스킬맵", body:"직무연계 IT 전문역량 고도화를 위해 교육 이력, 스킬맵, 팀별 시스템 개선 아이디어를 관리한다.", category:"교육", level:"실무", tags:["스킬맵","교육관리","AI"], author:"ICT전략실", date:"2026-07-15"},
+    {id:16, title:"영문 오타 tolerant search", body:"Tolerant tokenization can help typo cases such as automation, automtaion, aquaculture, aquaclture and workflow.", category:"교육", level:"심화", tags:["tolerant","typo","english"], author:"개발가이드", date:"2026-07-16"},
+    {id:17, title:"Context scoring sample", body:"Term distance matters when query terms appear close together inside a document context window.", category:"교육", level:"심화", tags:["context","scoring","ranking"], author:"개발가이드", date:"2026-07-17"},
+    {id:18, title:"노량진 시세 데이터", body:"수산물 경매 가격과 품목별 추이를 sqlite에 저장하고 그래프와 검색 기능을 붙인다.", category:"데이터", level:"실무", tags:["노량진","sqlite","시세"], author:"경제기획부", date:"2026-07-18"},
+    {id:19, title:"공제 상품 설명 페이지", body:"신입직원이 공제 상품의 보장 범위, 가입 절차, 주요 질문을 쉽게 검색하도록 구성한다.", category:"보험", level:"기초", tags:["공제","상품","설명"], author:"공제보험본부", date:"2026-07-19"},
+    {id:20, title:"Workflow automation 사례", body:"문서 분류, 승인 라우팅, 일정 알림, 자료 취합, 보고서 초안 작성까지 workflow automation으로 연결한다.", category:"AI", level:"실무", tags:["workflow","automation","보고서"], author:"업무자동화TF", date:"2026-07-20"}
+  ];
+}
+
+function docText(d){
+  return `${d.title} ${d.body} ${d.category} ${d.level} ${d.tags.join(" ")} ${d.author}`;
+}
+
+function encoderFromName(name){
+  if(!Charset) return undefined;
+  return Charset[name] || Charset.Default || undefined;
+}
+
+function makeIndex({preset="default", tokenize="forward", suggest=false, cache=false, fastupdate=false, encoderName="Default", context=false} = {}){
+  const options = { tokenize };
+  if(preset && preset !== "default") options.preset = preset;
+  if(cache) options.cache = 100;
+  if(fastupdate) options.fastupdate = true;
+  if(context) options.context = typeof context === "object" ? context : true;
+  const enc = encoderFromName(encoderName);
+  if(enc) options.encoder = enc;
+  const index = new Index(options);
+  for(const d of docs){
+    index.add(d.id, docText(d));
+  }
+  return index;
+}
+
+function makeDocIndex(){
+  const options = {
+    tokenize:"forward",
+    document:{
+      id:"id",
+      index:[
+        { field:"title", tokenize:"forward" },
+        { field:"body", tokenize:"forward" },
+        { field:"category", tokenize:"strict" },
+        { field:"author", tokenize:"forward" }
+      ],
+      tag:["category","level","tags"],
+      store:["title","body","category","level","tags","author","date"]
+    }
+  };
+  const index = new FlexDocument(options);
+  for(const d of docs) index.add(d);
+  return index;
+}
+
+function rebuildAll(){
+  currentConfig = {
+    preset:$("basicPreset").value,
+    tokenize:$("basicTokenize").value,
+    fastupdate:$("basicFastupdate").value === "true"
+  };
+  basicIndex = makeIndex({
+    preset: currentConfig.preset,
+    tokenize: currentConfig.tokenize,
+    fastupdate: currentConfig.fastupdate,
+    cache: true
+  });
+  docIndex = makeDocIndex();
+  cacheIndex = makeIndex({ tokenize:"forward", cache:true });
+  noCacheIndex = makeIndex({ tokenize:"forward", cache:false });
+  $("storeCount").textContent = docs.length;
+}
+
+function renderBasicResults(ids, targetId="basicResults"){
+  const box = $(targetId);
+  if(!ids || !ids.length){
+    box.innerHTML = `<div class="result muted">결과 없음</div>`;
+    return;
+  }
+  box.innerHTML = ids.map((id) => {
+    const d = docs.find(x => x.id === Number(id)) || {title:`ID ${id}`, body:"", tags:[]};
+    return `<div class="result">
+      <div class="title">#${escapeHTML(id)} ${escapeHTML(d.title)}</div>
+      <div class="meta">${escapeHTML(d.category)} · ${escapeHTML(d.level)} · ${escapeHTML(d.author || "")}</div>
+      <p>${escapeHTML(d.body)}</p>
+      <div>${(d.tags || []).map(t => `<span class="pill">${escapeHTML(t)}</span>`).join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+function runBasic(){
+  try{
+    rebuildAll();
+    const q = $("basicQuery").value.trim();
+    const limit = Number($("basicLimit").value || 8);
+    const offset = Number($("basicOffset").value || 0);
+    const suggest = $("basicSuggest").value === "true";
+    const t0 = now();
+    let result = basicIndex.search(q, { limit, offset, suggest });
+    const t1 = now();
+    $("basicCount").textContent = result.length;
+    $("basicTime").textContent = fmt(t1 - t0);
+    $("basicConfig").textContent = `${currentConfig.preset}/${currentConfig.tokenize}`;
+    renderBasicResults(result);
+  }catch(err){
+    $("basicResults").innerHTML = `<div class="result" style="color:var(--danger)">${escapeHTML(err.message)}</div>`;
+  }
+}
+
+function table(headers, rows){
+  return `<table><thead><tr>${headers.map(h=>`<th>${escapeHTML(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function runCompare(){
+  const q = $("compareQuery").value.trim();
+  const encoderName = $("compareEncoder").value;
+  const tokenizers = ["strict","forward","reverse","tolerant","full"];
+  const presetList = ["default","memory","performance","match","score"];
+  const tokenRows = tokenizers.map(tok => {
+    try{
+      const t0 = now();
+      const idx = makeIndex({ tokenize:tok, encoderName });
+      const build = now() - t0;
+      const s0 = now();
+      const result = idx.search(q, { limit:10, suggest:true });
+      const search = now() - s0;
+      return [`<code>${tok}</code>`, fmt(build), fmt(search), `<b>${result.length}</b>`, result.slice(0,5).join(", ") || "-"];
+    }catch(err){
+      return [`<code>${tok}</code>`, "-", "-", "오류", escapeHTML(err.message)];
+    }
+  });
+  const presetRows = presetList.map(preset => {
+    try{
+      const t0 = now();
+      const idx = makeIndex({ preset, tokenize:"forward", encoderName });
+      const build = now() - t0;
+      const s0 = now();
+      const result = idx.search(q, { limit:10, suggest:true });
+      const search = now() - s0;
+      return [`<code>${preset}</code>`, fmt(build), fmt(search), `<b>${result.length}</b>`, result.slice(0,5).join(", ") || "-"];
+    }catch(err){
+      return [`<code>${preset}</code>`, "-", "-", "오류", escapeHTML(err.message)];
+    }
+  });
+  $("tokenizerTable").innerHTML = table(["tokenize","색인 시간","검색 시간","결과","상위 ID"], tokenRows);
+  $("presetTable").innerHTML = table(["preset","색인 시간","검색 시간","결과","상위 ID"], presetRows);
+}
+
+function normalizeDocResult(result){
+  if(!result) return [];
+  if(Array.isArray(result) && result.length && result[0] && "field" in result[0] && Array.isArray(result[0].result)){
+    const merged = [];
+    for(const group of result){
+      for(const item of group.result){
+        if(typeof item === "object"){
+          merged.push({...item, field: group.field});
+        }else{
+          merged.push({id:item, field: group.field});
+        }
+      }
+    }
+    return merged;
+  }
+  if(Array.isArray(result)) return result;
+  return [];
+}
+
+function renderDocResults(result, targetId="docResults"){
+  const items = normalizeDocResult(result);
+  const box = $(targetId);
+  if(!items.length){
+    box.innerHTML = `<div class="result muted">결과 없음</div>`;
+    return;
+  }
+  box.innerHTML = items.map(item => {
+    const d = item.doc || docs.find(x => x.id === Number(item.id)) || {};
+    const highlight = item.highlight ? `<p>${safeHighlight(item.highlight)}</p>` : `<p>${escapeHTML(d.body || "")}</p>`;
+    const fields = item.field ? (Array.isArray(item.field) ? item.field : [item.field]) : [];
+    return `<div class="result">
+      <div class="title">#${escapeHTML(item.id)} ${escapeHTML(d.title || "(store 없음)")}</div>
+      <div class="meta">${escapeHTML(d.category || "")} · ${escapeHTML(d.level || "")} · ${escapeHTML(d.author || "")} ${fields.length ? "· field: " + escapeHTML(fields.join(", ")) : ""}</div>
+      ${highlight}
+      <div>${(d.tags || []).map(t => `<span class="pill green">${escapeHTML(t)}</span>`).join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+function runDoc(){
+  try{
+    rebuildAll();
+    const q = $("docQuery").value.trim();
+    const field = $("docField").value;
+    const cat = $("docCategory").value;
+    const level = $("docLevel").value;
+    const enrich = $("docEnrich").value === "true";
+    const merge = $("docMerge").value === "true";
+    const highlight = $("docHighlight").value === "true";
+
+    const options = { limit: 20, enrich, merge };
+    if(q) options.query = q;
+    if(field) options.index = field;
+    const tag = {};
+    if(cat) tag.category = cat;
+    if(level) tag.level = level;
+    if(Object.keys(tag).length) options.tag = tag;
+    if(highlight) options.highlight = "<mark>$1</mark>";
+
+    const t0 = now();
+    const result = docIndex.search(options);
+    const t1 = now();
+    $("docTime").textContent = fmt(t1 - t0);
+    $("docCount").textContent = normalizeDocResult(result).length;
+    renderDocResults(result);
+  }catch(err){
+    $("docResults").innerHTML = `<div class="result" style="color:var(--danger)">${escapeHTML(err.message)}</div>`;
+  }
+}
+
+function runPluck(){
+  try{
+    const q = $("docQuery").value.trim();
+    const pluck = $("pluckField").value;
+    const result = docIndex.search({
+      query:q,
+      pluck,
+      enrich:true,
+      limit:20,
+      highlight:"<mark>$1</mark>"
+    });
+    renderDocResults(result, "pluckResults");
+  }catch(err){
+    $("pluckResults").innerHTML = `<div class="result" style="color:var(--danger)">${escapeHTML(err.message)}</div>`;
+  }
+}
+
+function runGet(){
+  const id = Number($("getId").value);
+  try{
+    const data = docIndex.get(id);
+    $("storeOutput").textContent = JSON.stringify(data, null, 2);
+  }catch(err){
+    $("storeOutput").textContent = err.message;
+  }
+}
+
+function runSet(){
+  const id = Number($("getId").value);
+  try{
+    const data = docIndex.get(id);
+    if(!data){
+      $("storeOutput").textContent = "해당 ID의 store 데이터가 없다.";
+      return;
+    }
+    const changed = {...data, title: data.title + " [store set 수정]", note:"set은 store만 바꾸며 색인 자체를 재색인하지 않는다."};
+    docIndex.set(id, changed);
+    $("storeOutput").textContent = JSON.stringify(docIndex.get(id), null, 2);
+  }catch(err){
+    $("storeOutput").textContent = err.message;
+  }
+}
+
+function runContext(){
+  const q = $("contextQuery").value.trim();
+  const base = new Index({ tokenize:"strict" });
+  const ctx = new Index({ tokenize:"strict", context:{ depth:3, resolution:5, bidirectional:true }});
+  const a = "1 A B C D 2 E F G H I 3 J K L";
+  const b = "A B C D E F G H I J 1 2 3 K L";
+  base.add(1, a); base.add(2, b);
+  ctx.add(1, a); ctx.add(2, b);
+  const r1 = base.search(q);
+  const r2 = ctx.search(q);
+  $("contextResults").innerHTML = `
+    <div class="result"><div class="title">일반 Index</div><p>결과 순서: <b>${escapeHTML(r1.join(" → ") || "-")}</b></p><p class="muted">${escapeHTML(a)}<br>${escapeHTML(b)}</p></div>
+    <div class="result"><div class="title">Context Index</div><p>결과 순서: <b>${escapeHTML(r2.join(" → ") || "-")}</b></p><p class="muted">검색어 간 거리가 가까운 문서가 더 앞에 올 수 있다.</p></div>
+  `;
+}
+
+function runSuggest(){
+  const q = $("suggestQuery").value.trim();
+  const idx = new Index({ tokenize:"forward" });
+  idx.add(1, "cat dog bird");
+  idx.add(2, "수협 AI 자동화 검색");
+  idx.add(3, "aquaculture marine data workflow");
+  const normal = idx.search(q, { limit:10 });
+  const suggested = idx.search(q, { limit:10, suggest:true });
+  $("suggestResults").innerHTML = `
+    <div class="result"><div class="title">suggest: false</div><p>${escapeHTML(normal.join(", ") || "결과 없음")}</p></div>
+    <div class="result"><div class="title">suggest: true</div><p>${escapeHTML(suggested.join(", ") || "결과 없음")}</p></div>
+  `;
+}
+
+function runCache(){
+  const q = $("cacheQuery").value.trim();
+  const loops = Number($("cacheLoops").value || 5000);
+  const warm = cacheIndex.searchCache ? cacheIndex.searchCache(q) : cacheIndex.search(q);
+  const t0 = now();
+  for(let i=0;i<loops;i++){
+    noCacheIndex.search(q, { limit:10 });
+  }
+  const t1 = now();
+  for(let i=0;i<loops;i++){
+    if(cacheIndex.searchCache) cacheIndex.searchCache(q);
+    else cacheIndex.search(q, { limit:10, cache:true });
+  }
+  const t2 = now();
+  $("cacheResults").innerHTML = table(["방식","반복","총 시간","1회 평균"], [
+    ["일반 search", loops, fmt(t1-t0), fmt((t1-t0)/loops)],
+    ["searchCache/cache", loops, fmt(t2-t1), fmt((t2-t1)/loops)]
+  ]);
+}
+
+async function runAsync(){
+  const size = Number($("asyncSize").value || 1500);
+  const q = $("asyncQuery").value.trim();
+  $("asyncProgress").textContent = "0%";
+  $("asyncResults").innerHTML = "";
+  const idx = new Index({ tokenize:"forward", priority:2 });
+  const t0 = now();
+  for(let i=0;i<size;i++){
+    const text = `document ${i} workflow automation aquaculture marine data 수협 AI ${i % 10 === 0 ? "special" : ""}`;
+    if(idx.addAsync){
+      await idx.addAsync(i, text);
+    }else{
+      idx.add(i, text);
+      if(i % 100 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    if(i % Math.max(1, Math.floor(size/20)) === 0){
+      $("asyncProgress").textContent = `${Math.round((i/size)*100)}%`;
+    }
+  }
+  let result;
+  if(idx.searchAsync) result = await idx.searchAsync(q, { limit:20 });
+  else result = idx.search(q, { limit:20 });
+  const t1 = now();
+  $("asyncProgress").textContent = "100%";
+  $("asyncTime").textContent = fmt(t1-t0);
+  $("asyncCount").textContent = result.length;
+  $("asyncResults").innerHTML = `<div class="result"><div class="title">상위 결과 ID</div><p>${escapeHTML(result.slice(0,20).join(", ") || "결과 없음")}</p></div>`;
+}
+
+function runResolver(){
+  const a = $("resolverA").value.trim();
+  const b = $("resolverB").value.trim();
+  const n = $("resolverNot").value.trim();
+  try{
+    const rawA = basicIndex.search(a, { resolve:false, suggest:true });
+    const rawB = basicIndex.search(b, { resolve:false, suggest:true });
+    let resolved;
+    if(rawA && typeof rawA.and === "function"){
+      resolved = rawA.and(rawB);
+      if(n && typeof resolved.not === "function"){
+        resolved = resolved.not({ query:n, index:basicIndex });
+      }
+      if(typeof resolved.resolve === "function") resolved = resolved.resolve({ limit:20 });
+    }else{
+      throw new Error("현재 번들에서 Resolver 체인 객체를 반환하지 않았다.");
+    }
+    $("resolverResults").innerHTML = `
+      <div><h3>Resolver 결과</h3><div id="resolverABox" class="result-list"></div></div>
+      <div><h3>참고: 단순 검색 교집합</h3><div id="resolverBBox" class="result-list"></div></div>
+    `;
+    renderBasicResults(Array.isArray(resolved) ? resolved : [], "resolverABox");
+    const simpleA = basicIndex.search(a, { limit:50, suggest:true });
+    const simpleB = basicIndex.search(b, { limit:50, suggest:true });
+    const simpleNot = n ? basicIndex.search(n, { limit:50, suggest:true }) : [];
+    const intersect = simpleA.filter(id => simpleB.includes(id) && !simpleNot.includes(id));
+    renderBasicResults(intersect, "resolverBBox");
+  }catch(err){
+    const simpleA = basicIndex.search(a, { limit:50, suggest:true });
+    const simpleB = basicIndex.search(b, { limit:50, suggest:true });
+    const simpleNot = n ? basicIndex.search(n, { limit:50, suggest:true }) : [];
+    const intersect = simpleA.filter(id => simpleB.includes(id) && !simpleNot.includes(id));
+    $("resolverResults").innerHTML = `
+      <div class="result"><div class="title">Resolver 제한/오류</div><p>${escapeHTML(err.message)}</p><p class="muted">대체로 JS 배열 교집합/차집합 결과를 표시한다.</p></div>
+      <div id="resolverBBox" class="result-list"></div>
+    `;
+    renderBasicResults(intersect, "resolverBBox");
+  }
+}
+
+async function runExport(){
+  try{
+    const idx = makeIndex({ tokenize:"forward", cache:false });
+    const chunks = [];
+    if(!idx.export) throw new Error("export 메서드를 사용할 수 없다.");
+    await idx.export((key, data) => {
+      chunks.push({ key, data });
+    });
+    localStorage.setItem("flexsearch-demo-export", JSON.stringify(chunks));
+    $("exportOutput").textContent = `저장 완료: ${chunks.length}개 chunk\n\n` + JSON.stringify(chunks.slice(0,3), null, 2).slice(0,2000);
+  }catch(err){
+    $("exportOutput").textContent = "오류: " + err.message;
+  }
+}
+
+async function runImport(){
+  try{
+    const raw = localStorage.getItem("flexsearch-demo-export");
+    if(!raw) throw new Error("저장된 export 값이 없다. 먼저 export를 실행해야 한다.");
+    const chunks = JSON.parse(raw);
+    const idx = new Index({ tokenize:"forward" });
+    for(const chunk of chunks){
+      await idx.import(chunk.key, chunk.data);
+    }
+    const q = $("basicQuery").value.trim();
+    const result = idx.search(q, { limit:10, suggest:true });
+    $("exportOutput").textContent = `import 완료 후 검색어 "${q}" 결과: ${result.join(", ") || "결과 없음"}\n\n동일 설정의 새 Index로 복원했다.`;
+  }catch(err){
+    $("exportOutput").textContent = "오류: " + err.message;
+  }
+}
+
+function runSerialize(){
+  try{
+    const idx = makeIndex({ tokenize:"forward", cache:false });
+    if(!idx.serialize) throw new Error("serialize 메서드를 사용할 수 없다.");
+    const fn = idx.serialize();
+    $("serializeOutput").textContent = String(fn).slice(0,2600) + (String(fn).length > 2600 ? "\n\n... 생략 ..." : "");
+  }catch(err){
+    $("serializeOutput").textContent = "오류: " + err.message;
+  }
+}
+
+function clearExport(){
+  localStorage.removeItem("flexsearch-demo-export");
+  $("exportOutput").textContent = "localStorage 저장값 삭제 완료";
+}
+
+function runBench(){
+  const size = Number($("benchSize").value || 3000);
+  const q = $("benchQuery").value.trim();
+  const tokenizers = ["strict","forward","reverse","tolerant","full"];
+  const corpus = Array.from({length:size}, (_,i) => `record ${i} aquaculture automation workflow marine search data 수협 어업 양식 AI ${i % 7 === 0 ? "insurance policy" : ""}`);
+  const rows = tokenizers.map(tok => {
+    try{
+      const idx = new Index({ tokenize:tok });
+      const t0 = now();
+      for(let i=0;i<corpus.length;i++) idx.add(i, corpus[i]);
+      const t1 = now();
+      const result = idx.search(q, { limit:20, suggest:true });
+      const t2 = now();
+      return [`<code>${tok}</code>`, size, fmt(t1-t0), fmt(t2-t1), result.length, result.slice(0,8).join(", ") || "-"];
+    }catch(err){
+      return [`<code>${tok}</code>`, size, "오류", "-", "-", escapeHTML(err.message)];
+    }
+  });
+  $("benchResults").innerHTML = table(["tokenize","문서 수","add 시간","search 시간","결과","상위 ID"], rows);
+}
+
+function addOrAppendDoc(){
+  const id = Number($("editId").value);
+  const existing = docs.find(x => x.id === id);
+  const item = readEditDoc();
+  if(existing){
+    Object.assign(existing, item);
+    $("editStatus").textContent = `ID ${id} 기존 문서가 있어 update 처리했다.`;
+  }else{
+    docs.push(item);
+    $("editStatus").textContent = `ID ${id} 문서 추가 완료.`;
+  }
+  rebuildAll();
+  runBasic();
+  runDoc();
+}
+
+function updateDoc(){
+  const id = Number($("editId").value);
+  const pos = docs.findIndex(x => x.id === id);
+  if(pos < 0){
+    $("editStatus").textContent = `ID ${id} 문서가 없어 update할 수 없다. add를 사용해라.`;
+    return;
+  }
+  docs[pos] = readEditDoc();
+  rebuildAll();
+  runBasic();
+  runDoc();
+  $("editStatus").textContent = `ID ${id} update 완료.`;
+}
+
+function removeDoc(){
+  const id = Number($("editId").value);
+  const before = docs.length;
+  docs = docs.filter(x => x.id !== id);
+  rebuildAll();
+  runBasic();
+  runDoc();
+  $("editStatus").textContent = before === docs.length ? `ID ${id} 없음.` : `ID ${id} remove 완료.`;
+}
+
+function containDoc(){
+  const id = Number($("editId").value);
+  const exists = basicIndex && basicIndex.contain ? basicIndex.contain(id) : docs.some(x => x.id === id);
+  $("editStatus").textContent = `contain(${id}) = ${exists}`;
+}
+
+function readEditDoc(){
+  const tags = unique([
+    $("editCategory").value,
+    $("editLevel").value,
+    ...$("editBody").value.split(/[,\s]+/).filter(Boolean).slice(0,4)
+  ]);
+  return {
+    id:Number($("editId").value),
+    title:$("editTitle").value.trim() || "제목 없음",
+    body:$("editBody").value.trim() || "본문 없음",
+    category:$("editCategory").value,
+    level:$("editLevel").value,
+    tags,
+    author:"사용자 입력",
+    date:new Date().toISOString().slice(0,10)
+  };
+}
+
+function bindEvents(){
+  $("runBasic").addEventListener("click", runBasic);
+  ["basicQuery","basicPreset","basicTokenize","basicLimit","basicOffset","basicSuggest","basicFastupdate"].forEach(id => {
+    $(id).addEventListener("change", runBasic);
+    if($(id).tagName === "INPUT") $(id).addEventListener("input", () => setTimeout(runBasic, 0));
+  });
+  $("addDoc").addEventListener("click", addOrAppendDoc);
+  $("updateDoc").addEventListener("click", updateDoc);
+  $("removeDoc").addEventListener("click", removeDoc);
+  $("containDoc").addEventListener("click", containDoc);
+  $("runCompare").addEventListener("click", runCompare);
+  $("runDoc").addEventListener("click", runDoc);
+  $("runPluck").addEventListener("click", runPluck);
+  $("runGet").addEventListener("click", runGet);
+  $("runSet").addEventListener("click", runSet);
+  $("runContext").addEventListener("click", runContext);
+  $("runSuggest").addEventListener("click", runSuggest);
+  $("runCache").addEventListener("click", runCache);
+  $("runAsync").addEventListener("click", runAsync);
+  $("runResolver").addEventListener("click", runResolver);
+  $("runExport").addEventListener("click", runExport);
+  $("runImport").addEventListener("click", runImport);
+  $("clearExport").addEventListener("click", clearExport);
+  $("runSerialize").addEventListener("click", runSerialize);
+  $("runBench").addEventListener("click", runBench);
+}
+
+async function boot(){
+  try{
+    const mod = await import(CDN_URL);
+    Index = mod.Index || mod.default?.Index;
+    FlexDocument = mod.Document || mod.default?.Document;
+    Charset = mod.Charset || mod.default?.Charset || {};
+    Resolver = mod.Resolver || mod.default?.Resolver;
+    if(!Index || !FlexDocument) throw new Error("FlexSearch 모듈에서 Index 또는 Document를 찾지 못했다.");
+    docs = sampleDocs();
+    bindEvents();
+    rebuildAll();
+    runBasic();
+    runCompare();
+    runDoc();
+    runPluck();
+    runContext();
+    runSuggest();
+  }catch(err){
+    const box = $("loadError");
+    box.style.display = "block";
+    box.innerHTML = `<b>FlexSearch 로드 실패</b><br>${escapeHTML(err.message)}<br><br>
+      외부 인터넷 또는 CDN 접근이 차단되었을 수 있다. 내부망에서는 FlexSearch 번들 파일을 내려받아 같은 폴더에 두고
+      코드의 <code>CDN_URL</code> 값을 <code>./flexsearch.bundle.module.min.js</code>로 바꿔 실행하면 된다.`;
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
