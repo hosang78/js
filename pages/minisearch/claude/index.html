@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>MiniSearch</title>
+<script src="https://cdn.jsdelivr.net/npm/minisearch@7.2.0/dist/umd/index.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  input[type=text] {
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid #dbdfe6;
+    border-radius: 6px;
+    width: 220px;
+  }
+  label.boost-toggle {
+    font-size: 13px;
+    margin-left: 10px;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  .result-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 13px;
+  }
+  .result-list li {
+    padding: 8px 10px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: #fafbfc;
+  }
+  .result-list li .meta {
+    display: block;
+    color: #777;
+    font-size: 12px;
+    margin-top: 3px;
+  }
+  .result-list li .score {
+    color: #205fb0;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .empty-msg {
+    font-size: 12.5px;
+    color: #999;
+    margin-top: 10px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>MiniSearch 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>MiniSearch</strong>는 작고 가벼운 인메모리 전문(full-text) 검색 라이브러리입니다. 같은 검색
+    라이브러리인 <strong>FlexSearch</strong>와 달리, <strong>필드 가중치·오타 허용·자동완성 제안</strong>
+    쪽에 좀 더 특화되어 있습니다.
+    <ul>
+      <li><code class="inline">boost</code> 옵션으로 하는 <strong>필드별 가중치 검색</strong></li>
+      <li><code class="inline">prefix: true</code>로 하는 <strong>접두어 검색</strong></li>
+      <li><code class="inline">fuzzy</code> 옵션으로 하는 <strong>오타 허용 검색</strong></li>
+      <li><code class="inline">autoSuggest()</code>로 하는 <strong>자동완성 제안</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 물품 목록은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      물품·통계와 무관합니다. 한글은 조사(은/는/이/가 등)가 단어에 그대로 붙기 때문에, 이 데모는 간단한
+      공백 기준 토크나이저를 씁니다 — 형태소 분석 없이 "위판장"과 "위판장에서"는 서로 다른 단어로
+      취급됩니다(자동완성 결과에서 확인할 수 있습니다). 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 필드별 가중치 검색 (boost)</h2>
+    <div class="desc">
+      <code class="inline">boost: { name: 3 }</code>처럼 특정 필드에 가중치를 주면, 그 필드에서 찾은
+      결과의 점수가 더 높아져 <strong>검색 결과 순위</strong>가 바뀝니다.
+    </div>
+    <input type="text" id="s1-query" placeholder="예: 위판장" value="위판장" />
+    <label class="boost-toggle"><input type="checkbox" id="s1-boost" checked /> name 필드 가중치 3배</label>
+    <div class="stat-box" id="s1-stat"></div>
+    <ul class="result-list" id="s1-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const mini = new MiniSearch({
+  fields: ['name', 'description'],
+  storeFields: ['name', 'description', 'category'],
+});
+mini.addAll(products);
+
+mini.search('위판장');                          // 기본 검색
+mini.search('위판장', { boost: { name: 3 } });   // name 필드에서 찾으면 점수 3배</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 접두어 검색 (prefix)</h2>
+    <div class="desc">
+      <code class="inline">prefix: true</code>를 주면 단어 앞부분만 입력해도 찾아줍니다. 기본값은
+      정확히 일치하는 단어만 찾습니다.
+    </div>
+    <input type="text" id="s2-query" placeholder="예: 고등, 홍합" value="고등" />
+    <div class="stat-box" id="s2-stat"></div>
+    <ul class="result-list" id="s2-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>mini.search('고등');                    // → [] (완전 일치하는 단어가 없음)
+mini.search('고등', { prefix: true });   // → [고등어] ('고등'으로 시작하는 단어를 찾음)</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 오타 허용 검색 (fuzzy)</h2>
+    <div class="desc">
+      <code class="inline">fuzzy: 0.2</code>는 단어 길이의 20%까지 오타(편집 거리)를 허용합니다. 아래
+      기본값은 일부러 오타가 섞인 검색어입니다.
+    </div>
+    <input type="text" id="s3-query" placeholder="예: 고둥어 (오타), 갈치" value="고둥어" />
+    <div class="stat-box" id="s3-stat"></div>
+    <ul class="result-list" id="s3-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>mini.search('고둥어');                  // → [] ('고둥어'라는 단어는 없음, 정확히는 '고등어')
+mini.search('고둥어', { fuzzy: 0.2 });   // → [고등어] (편집 거리 1까지 허용해서 찾음)</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 자동완성 제안 (autoSuggest)</h2>
+    <div class="desc">
+      입력 중인 검색어를 바탕으로, 실제로 인덱스에 있는 단어들로 이어질 만한 <strong>완성된 검색어</strong>를
+      제안합니다. 관련 문서의 점수를 기준으로 순위가 매겨집니다.
+    </div>
+    <input type="text" id="s4-query" placeholder="예: 위판" value="위판" />
+    <div class="stat-box" id="s4-stat"></div>
+    <ul class="result-list" id="s4-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>mini.autoSuggest('위판');
+// => [
+//   { suggestion: '위판장의', terms: ['위판장의'], score: 0.73 },
+//   { suggestion: '위판장에서', terms: ['위판장에서'], score: 0.65 },
+//   { suggestion: '위판장', terms: ['위판장'], score: 0.27 },
+// ]
+// 조사가 붙은 형태가 각각 다른 제안으로 나오는 것에 유의</code></pre>
+    </details>
+  </section>
+
+<script>
+  const PRODUCTS = [
+    { id: 1, name: '고등어', description: '가상 위판장에서 오늘 낙찰된 싱싱한 고등어', category: '어류' },
+    { id: 2, name: '갈치', description: '가상 위판장 은빛 갈치, 경매 인기 품목', category: '어류' },
+    { id: 3, name: '전복', description: '가상 위판장의 자연산 전복', category: '패류' },
+    { id: 4, name: '홍합', description: '가상 위판장 조합원이 채취한 홍합', category: '패류' },
+    { id: 5, name: '오징어', description: '가상 위판장 야간 조업으로 들어온 오징어', category: '연체류' },
+    { id: 6, name: '멸치', description: '가상 위판장 죽방렴 멸치, 조합원 직판', category: '어류' },
+  ];
+
+  function makeIndex() {
+    const mini = new MiniSearch({
+      fields: ['name', 'description'],
+      storeFields: ['name', 'description', 'category'],
+      tokenize: (text) => text.split(/[\s,]+/),
+    });
+    mini.addAll(PRODUCTS);
+    return mini;
+  }
+
+  function renderResults(container, results, scoreKey) {
+    container.innerHTML = results.map((r) => {
+      const score = scoreKey && typeof r.score === 'number' ? '<span class="score">score ' + r.score.toFixed(2) + '</span> ' : '';
+      return '<li>' + score + r.name + '<span class="meta">' + r.description + '</span></li>';
+    }).join('') || '<div class="empty-msg">일치하는 결과가 없습니다.</div>';
+  }
+
+  // ---- 섹션 1: 가중치 검색 ----
+  (function section1() {
+    const mini = makeIndex();
+    const queryInput = document.getElementById('s1-query');
+    const boostToggle = document.getElementById('s1-boost');
+    const stat = document.getElementById('s1-stat');
+    const resultsList = document.getElementById('s1-results');
+
+    function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) { stat.innerHTML = '검색어를 입력해 보세요.'; resultsList.innerHTML = ''; return; }
+      const options = boostToggle.checked ? { boost: { name: 3 } } : {};
+      const results = mini.search(query, options);
+      stat.innerHTML = '<strong>"' + query + '"</strong> → <strong>' + results.length + '건</strong>' +
+        (boostToggle.checked ? ' (name 필드 가중치 적용됨)' : ' (가중치 없음)');
+      renderResults(resultsList, results, true);
+    }
+    queryInput.addEventListener('input', runSearch);
+    boostToggle.addEventListener('change', runSearch);
+    runSearch();
+  })();
+
+  // ---- 섹션 2: 접두어 검색 ----
+  (function section2() {
+    const mini = makeIndex();
+    const queryInput = document.getElementById('s2-query');
+    const stat = document.getElementById('s2-stat');
+    const resultsList = document.getElementById('s2-results');
+
+    function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) { stat.innerHTML = '검색어를 입력해 보세요.'; resultsList.innerHTML = ''; return; }
+      const strict = mini.search(query);
+      const prefixed = mini.search(query, { prefix: true });
+      stat.innerHTML = '정확히 일치: <strong>' + strict.length + '건</strong> · 접두어 일치: <strong>' + prefixed.length + '건</strong>';
+      renderResults(resultsList, prefixed, false);
+    }
+    queryInput.addEventListener('input', runSearch);
+    runSearch();
+  })();
+
+  // ---- 섹션 3: 오타 허용 검색 ----
+  (function section3() {
+    const mini = makeIndex();
+    const queryInput = document.getElementById('s3-query');
+    const stat = document.getElementById('s3-stat');
+    const resultsList = document.getElementById('s3-results');
+
+    function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) { stat.innerHTML = '검색어를 입력해 보세요.'; resultsList.innerHTML = ''; return; }
+      const strict = mini.search(query);
+      const fuzzy = mini.search(query, { fuzzy: 0.2 });
+      stat.innerHTML = '정확히 일치: <strong>' + strict.length + '건</strong> · 오타 허용(fuzzy): <strong>' + fuzzy.length + '건</strong>';
+      renderResults(resultsList, fuzzy, false);
+    }
+    queryInput.addEventListener('input', runSearch);
+    runSearch();
+  })();
+
+  // ---- 섹션 4: 자동완성 제안 ----
+  (function section4() {
+    const mini = makeIndex();
+    const queryInput = document.getElementById('s4-query');
+    const stat = document.getElementById('s4-stat');
+    const resultsList = document.getElementById('s4-results');
+
+    function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) { stat.innerHTML = '검색어를 입력해 보세요.'; resultsList.innerHTML = ''; return; }
+      const suggestions = mini.autoSuggest(query);
+      stat.innerHTML = '<strong>"' + query + '"</strong> → 제안 <strong>' + suggestions.length + '건</strong>';
+      resultsList.innerHTML = suggestions.map((s) =>
+        '<li><span class="score">score ' + s.score.toFixed(2) + '</span> ' + s.suggestion + '</li>'
+      ).join('') || '<div class="empty-msg">제안할 결과가 없습니다.</div>';
+    }
+    queryInput.addEventListener('input', runSearch);
+    runSearch();
+  })();
+</script>
+</body>
+</html>
