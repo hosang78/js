@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Yjs 종합 기능 실험실</title>
+  <style>
+    :root{
+      --bg:#08111f;--panel:#101c2d;--panel2:#15243a;--line:#2a3c55;
+      --text:#eef5ff;--muted:#9db0c9;--accent:#71d0ff;--ok:#5ce1a1;
+      --warn:#ffcc66;--bad:#ff7b8a;--shadow:0 18px 50px rgba(0,0,0,.28)
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+      background:radial-gradient(circle at 15% 0%,#163158 0,transparent 34%),var(--bg);color:var(--text)}
+    button,input,textarea,select{font:inherit} button{cursor:pointer}
+    .wrap{max-width:1480px;margin:auto;padding:22px}
+    header{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:clamp(25px,3vw,42px);margin:0 0 7px}.lead{color:var(--muted);margin:0;line-height:1.55}
+    .badge{border:1px solid #376287;background:#102c48;padding:9px 12px;border-radius:999px;color:#bce8ff;white-space:nowrap}
+    .toolbar,.card{background:rgba(16,28,45,.92);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px}
+    .toolbar{padding:12px;display:flex;flex-wrap:wrap;gap:8px;margin-bottom:15px;position:sticky;top:8px;z-index:5;backdrop-filter:blur(10px)}
+    button,.fileBtn{border:1px solid #355170;color:var(--text);background:#17304c;padding:9px 12px;border-radius:10px}
+    button:hover,.fileBtn:hover{background:#20405f} button.primary{background:#0b6b98;border-color:#1b99d0}
+    button.danger{background:#5b2431;border-color:#894050}.fileBtn input{display:none}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:15px}.card{padding:16px;min-width:0}
+    .span12{grid-column:span 12}.span8{grid-column:span 8}.span6{grid-column:span 6}.span4{grid-column:span 4}
+    h2{font-size:18px;margin:0 0 12px}.sub{font-size:13px;color:var(--muted);margin:-5px 0 12px;line-height:1.45}
+    .clients{display:grid;grid-template-columns:1fr 1fr;gap:14px}.client{padding:14px;background:var(--panel2);border:1px solid var(--line);border-radius:14px}
+    .clientHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:7px}
+    textarea{width:100%;min-height:145px;resize:vertical;background:#081422;border:1px solid #344a65;color:var(--text);border-radius:11px;padding:12px;line-height:1.55}
+    input,select{background:#081422;border:1px solid #344a65;color:var(--text);border-radius:9px;padding:9px;width:100%}
+    .row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row button{flex:0 0 auto}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{background:#0a1727;border:1px solid #263b55;border-radius:11px;padding:10px}
+    .stat b{display:block;font-size:19px;color:var(--accent)}.stat span{font-size:12px;color:var(--muted)}
+    pre{margin:0;background:#07121f;border:1px solid #263b55;border-radius:11px;padding:11px;overflow:auto;max-height:260px;color:#cfe6ff;font-size:12px;line-height:1.5}
+    .list{display:grid;gap:7px}.item{display:flex;gap:8px;align-items:center;background:#0a1727;border:1px solid #263b55;border-radius:10px;padding:8px}
+    .item .grow{flex:1}.pill{font-size:12px;border:1px solid #3a5d7b;border-radius:999px;padding:3px 8px;color:#b8d8f0}
+    .presence{display:flex;gap:8px;flex-wrap:wrap}.person{display:flex;gap:8px;align-items:center;border:1px solid #34506c;background:#0b1929;padding:7px 10px;border-radius:999px}
+    .log{height:250px;overflow:auto;font-family:ui-monospace,monospace;font-size:12px;background:#06101b;border:1px solid #263b55;border-radius:11px;padding:10px}
+    .log div{padding:4px 0;border-bottom:1px dashed #1f3147}.muted{color:var(--muted)} .ok{color:var(--ok)} .warn{color:var(--warn)}
+    .check{display:flex;gap:8px;align-items:center}.check input{width:auto}.mini{font-size:12px;color:var(--muted)}
+    details{border:1px solid #2b415b;border-radius:10px;padding:10px;background:#0a1727}summary{cursor:pointer;font-weight:700}
+    @media(max-width:960px){.span8,.span6,.span4{grid-column:span 12}.clients{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}header{display:block}.badge{display:inline-block;margin-top:10px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Yjs 종합 기능 실험실</h1>
+      <p class="lead">한 브라우저 안의 두 클라이언트로 CRDT 동기화, 충돌 병합, 공유 타입, Awareness, Undo/Redo, 상태 벡터, 업데이트 파일, IndexedDB, 서브도큐먼트를 실험한다.</p>
+    </div><span class="badge">서버 없이 로컬 시뮬레이션</span>
+  </header>
+
+  <div class="toolbar">
+    <button class="primary" id="syncNow">양방향 동기화</button>
+    <button id="toggleAuto">자동 동기화: 켜짐</button>
+    <button id="makeConflict">동시 충돌 생성</button>
+    <button id="undoA">A 실행취소</button><button id="redoA">A 다시실행</button>
+    <button id="exportUpdate">업데이트 내보내기</button>
+    <label class="fileBtn">업데이트 가져오기<input id="importUpdate" type="file" accept=".bin,.yjs,application/octet-stream"></label>
+    <button class="danger" id="resetAll">전체 초기화</button>
+  </div>
+
+  <main class="grid">
+    <section class="card span12">
+      <h2>1. Y.Text 공동 편집</h2>
+      <p class="sub">입력 변화는 각 Y.Doc에 트랜잭션으로 반영된다. 자동 동기화를 끄면 양쪽에서 독립 편집 후 CRDT 병합 결과를 확인할 수 있다.</p>
+      <div class="clients">
+        <div class="client">
+          <div class="clientHead"><b><span class="dot" style="background:#48b8ff"></span>클라이언트 A</b><span id="idA" class="pill"></span></div>
+          <textarea id="textA"></textarea>
+          <div class="row" style="margin-top:8px"><input id="originA" value="사용자-A" aria-label="트랜잭션 origin"><button id="appendA">문장 추가</button></div>
+        </div>
+        <div class="client">
+          <div class="clientHead"><b><span class="dot" style="background:#ff9f68"></span>클라이언트 B</b><span id="idB" class="pill"></span></div>
+          <textarea id="textB"></textarea>
+          <div class="row" style="margin-top:8px"><input id="originB" value="사용자-B" aria-label="트랜잭션 origin"><button id="appendB">문장 추가</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card span4">
+      <h2>2. Awareness / Presence</h2>
+      <p class="sub">문서 내용과 별개인 접속자 상태, 이름, 색상, 커서 위치 등의 임시 정보.</p>
+      <div class="row"><input id="nameA" value="민수"><input id="colorA" type="color" value="#48b8ff"></div>
+      <div class="row" style="margin-top:8px"><select id="statusA"><option>온라인</option><option>자리 비움</option><option>집중 중</option></select><input id="cursorA" type="number" min="0" value="0" title="커서 위치"></div>
+      <button id="applyPresence" style="margin-top:8px;width:100%">A Presence 갱신·전파</button>
+      <div id="presenceList" class="presence" style="margin-top:12px"></div>
+    </section>
+
+    <section class="card span4">
+      <h2>3. Y.Array 작업 목록</h2>
+      <div class="row"><input id="taskInput" placeholder="새 작업"><button id="addTask">추가</button></div>
+      <div id="taskList" class="list" style="margin-top:10px"></div>
+    </section>
+
+    <section class="card span4">
+      <h2>4. Y.Map 공유 설정</h2>
+      <div class="row"><input id="mapKey" placeholder="키" value="theme"><input id="mapValue" placeholder="값" value="dark"><button id="setMap">저장</button></div>
+      <pre id="mapView" style="margin-top:10px"></pre>
+    </section>
+
+    <section class="card span6">
+      <h2>5. 상태 벡터·업데이트 인코딩</h2>
+      <p class="sub">전체 업데이트, 상태 벡터 기반 차등 업데이트, 업데이트 병합 크기를 비교한다.</p>
+      <div class="stats">
+        <div class="stat"><b id="fullBytes">0</b><span>전체 업데이트 bytes</span></div>
+        <div class="stat"><b id="vectorBytes">0</b><span>상태 벡터 bytes</span></div>
+        <div class="stat"><b id="diffBytes">0</b><span>A→B 차등 bytes</span></div>
+        <div class="stat"><b id="updateCount">0</b><span>관측 업데이트 수</span></div>
+      </div>
+      <div class="row" style="margin-top:10px"><button id="inspectUpdate">업데이트 메타 확인</button><button id="mergeHistory">기록 업데이트 병합</button></div>
+      <pre id="updateInfo" style="margin-top:10px"></pre>
+    </section>
+
+    <section class="card span6">
+      <h2>6. 이벤트·트랜잭션 로그</h2>
+      <div class="check"><input id="deepObserve" type="checkbox" checked><label for="deepObserve">observeDeep 로그 포함</label></div>
+      <div id="eventLog" class="log" style="margin-top:9px"></div>
+    </section>
+
+    <section class="card span4">
+      <h2>7. RelativePosition</h2>
+      <p class="sub">문자 삽입·삭제 뒤에도 논리적 위치를 추적하는 상대 위치.</p>
+      <div class="row"><input id="anchorIndex" type="number" min="0" value="3"><button id="saveAnchor">앵커 저장</button></div>
+      <button id="resolveAnchor" style="margin-top:8px;width:100%">현재 절대 위치로 해석</button>
+      <pre id="anchorView" style="margin-top:9px">저장된 앵커 없음</pre>
+    </section>
+
+    <section class="card span4">
+      <h2>8. Y.XmlFragment</h2>
+      <p class="sub">구조화된 XML 기반 공유 콘텐츠 생성 예제.</p>
+      <div class="row"><input id="xmlText" value="Yjs XML 단락"><button id="addXml">단락 추가</button></div>
+      <button id="clearXml" style="margin-top:8px;width:100%">XML 비우기</button>
+      <pre id="xmlView" style="margin-top:9px"></pre>
+    </section>
+
+    <section class="card span4">
+      <h2>9. Subdocument</h2>
+      <p class="sub">루트 문서의 공유 타입 안에 별도 Y.Doc을 삽입.</p>
+      <button id="createSubdoc" style="width:100%">서브도큐먼트 생성</button>
+      <button id="loadSubdoc" style="margin-top:8px;width:100%">첫 서브도큐먼트 load()</button>
+      <pre id="subdocView" style="margin-top:9px"></pre>
+    </section>
+
+    <section class="card span6">
+      <h2>10. IndexedDB 오프라인 영속화</h2>
+      <p class="sub">현재 문서를 브라우저 IndexedDB에 저장한다. 페이지 새로고침 뒤에도 복원 가능하다.</p>
+      <div class="row"><button id="enablePersistence">영속화 연결</button><button id="clearPersistence">저장 DB 삭제</button></div>
+      <pre id="persistenceState" style="margin-top:9px">연결 안 됨</pre>
+    </section>
+
+    <section class="card span6">
+      <h2>11. 진단 및 문서 상태</h2>
+      <div class="row"><button id="validateSync">A/B 동등성 검사</button><button id="cloneDoc">업데이트로 복제 검증</button></div>
+      <pre id="diagnostics" style="margin-top:9px"></pre>
+    </section>
+
+    <section class="card span12">
+      <details open><summary>포함 기능</summary>
+        <p class="mini">Y.Doc · Y.Text · Y.Array · Y.Map · Y.XmlFragment · 트랜잭션 origin · observe / observeDeep · update 이벤트 · 수동/자동 동기화 · CRDT 충돌 병합 · UndoManager · Awareness 인코딩/적용 · 상태 벡터 · 전체/차등 업데이트 · mergeUpdates · parseUpdateMeta · 업데이트 파일 입출력 · RelativePosition · Subdocument · IndexedDB Persistence · 문서 복제 및 동등성 검증</p>
+      </details>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+import * as Y from 'https://esm.sh/yjs@13.6.27';
+import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate } from 'https://esm.sh/y-protocols@1.0.6/awareness.js';
+import { IndexeddbPersistence } from 'https://esm.sh/y-indexeddb@9.0.12';
+
+const $ = s => document.querySelector(s);
+const enc = new TextEncoder();
+const docs = { A:new Y.Doc(), B:new Y.Doc() };
+const text = { A:docs.A.getText('sharedText'), B:docs.B.getText('sharedText') };
+const tasks = { A:docs.A.getArray('tasks'), B:docs.B.getArray('tasks') };
+const settings = { A:docs.A.getMap('settings'), B:docs.B.getMap('settings') };
+const xml = { A:docs.A.getXmlFragment('content'), B:docs.B.getXmlFragment('content') };
+const root = { A:docs.A.getMap('root'), B:docs.B.getMap('root') };
+const awareness = { A:new Awareness(docs.A), B:new Awareness(docs.B) };
+const undo = new Y.UndoManager([text.A,tasks.A,settings.A,xml.A], {captureTimeout:500});
+let autoSync = true, applyingInput=false, updateCounter=0, persistence=null, anchor=null;
+const history = [];
+
+$('#idA').textContent='clientID '+docs.A.clientID;
+$('#idB').textContent='clientID '+docs.B.clientID;
+
+function log(msg, cls=''){
+  const d=document.createElement('div'); d.className=cls;
+  d.textContent=`${new Date().toLocaleTimeString()}  ${msg}`;
+  $('#eventLog').prepend(d);
+}
+function syncUpdate(from,to,update,origin){
+  if(origin==='network') return;
+  Y.applyUpdate(docs[to],update,'network');
+  log(`${from} → ${to} 업데이트 ${update.byteLength} bytes`, 'ok');
+}
+for(const side of ['A','B']){
+  docs[side].on('update',(u,origin)=>{
+    updateCounter++; history.push(u);
+    log(`${side} update · origin=${String(origin)} · ${u.byteLength} bytes`);
+    if(autoSync) syncUpdate(side,side==='A'?'B':'A',u,origin);
+    renderStats();
+  });
+  docs[side].on('afterTransaction',tr=>{
+    log(`${side} transaction · local=${tr.local} · origin=${String(tr.origin)} · changed=${tr.changed.size}`);
+  });
+  docs[side].on('subdocs',e=>log(`${side} subdocs · added=${e.added.size}, loaded=${e.loaded.size}, removed=${e.removed.size}`,'warn'));
+}
+[text.A,text.B].forEach((t,i)=>t.observe(e=>{log(`${i?'B':'A'} Y.Text delta ${JSON.stringify(e.delta)}`);render()}));
+tasks.A.observe(e=>{log(`Y.Array delta ${JSON.stringify(e.changes.delta)}`);render()});
+settings.A.observe(e=>{log(`Y.Map keys ${[...e.keysChanged].join(', ')}`);render()});
+xml.A.observeDeep(events=>{if($('#deepObserve').checked) log(`Y.Xml observeDeep · events=${events.length}`);render()});
+root.A.observeDeep(events=>{if($('#deepObserve').checked) log(`root observeDeep · events=${events.length}`);render()});
+
+function replaceText(side,value,origin){
+  docs[side].transact(()=>{
+    const y=text[side]; y.delete(0,y.length); y.insert(0,value);
+  }, origin);
+}
+function render(){
+  applyingInput=true;
+  if(document.activeElement!==$('#textA')) $('#textA').value=text.A.toString();
+  if(document.activeElement!==$('#textB')) $('#textB').value=text.B.toString();
+  applyingInput=false;
+  $('#mapView').textContent=JSON.stringify(settings.A.toJSON(),null,2);
+  $('#xmlView').textContent=xml.A.toString() || '(비어 있음)';
+  $('#taskList').innerHTML='';
+  tasks.A.toArray().forEach((task,i)=>{
+    const row=document.createElement('div'); row.className='item';
+    row.innerHTML=`<span class="grow">${escapeHtml(String(task))}</span><span class="pill">#${i}</span>`;
+    const b=document.createElement('button'); b.textContent='삭제'; b.onclick=()=>tasks.A.delete(i,1); row.appendChild(b);
+    $('#taskList').appendChild(row);
+  });
+  renderSubdocs(); renderStats();
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderStats(){
+  const full=Y.encodeStateAsUpdate(docs.A), vector=Y.encodeStateVector(docs.B), diff=Y.encodeStateAsUpdate(docs.A,vector);
+  $('#fullBytes').textContent=full.byteLength; $('#vectorBytes').textContent=vector.byteLength;
+  $('#diffBytes').textContent=diff.byteLength; $('#updateCount').textContent=updateCounter;
+}
+function manualSync(){
+  const aToB=Y.encodeStateAsUpdate(docs.A,Y.encodeStateVector(docs.B));
+  const bToA=Y.encodeStateAsUpdate(docs.B,Y.encodeStateVector(docs.A));
+  Y.applyUpdate(docs.B,aToB,'network'); Y.applyUpdate(docs.A,bToA,'network');
+  syncAwareness(); render(); log(`수동 양방향 동기화 · A→B ${aToB.byteLength}, B→A ${bToA.byteLength}`,'ok');
+}
+function syncAwareness(){
+  const ua=encodeAwarenessUpdate(awareness.A,[docs.A.clientID]);
+  const ub=encodeAwarenessUpdate(awareness.B,[docs.B.clientID]);
+  applyAwarenessUpdate(awareness.B,ua,'network');
+  applyAwarenessUpdate(awareness.A,ub,'network');
+  renderPresence();
+}
+function renderPresence(){
+  const all=new Map([...awareness.A.getStates(),...awareness.B.getStates()]);
+  $('#presenceList').innerHTML='';
+  for(const [id,state] of all){
+    const u=state.user||{name:'익명',color:'#778899',status:'상태 없음'};
+    const el=document.createElement('div');el.className='person';
+    el.innerHTML=`<span class="dot" style="background:${u.color}"></span><b>${escapeHtml(u.name)}</b><span class="mini">${escapeHtml(u.status||'')} · cursor ${state.cursor?.index??'-'} · ${id}</span>`;
+    $('#presenceList').appendChild(el);
+  }
+}
+awareness.A.on('change',({added,updated,removed})=>log(`Awareness A · +${added.length} ~${updated.length} -${removed.length}`));
+awareness.B.on('change',()=>renderPresence());
+
+$('#textA').addEventListener('input',e=>{if(!applyingInput)replaceText('A',e.target.value,$('#originA').value)});
+$('#textB').addEventListener('input',e=>{if(!applyingInput)replaceText('B',e.target.value,$('#originB').value)});
+$('#appendA').onclick=()=>text.A.insert(text.A.length,`\nA가 추가한 문장 ${Date.now()%10000}`);
+$('#appendB').onclick=()=>text.B.insert(text.B.length,`\nB가 추가한 문장 ${Date.now()%10000}`);
+$('#syncNow').onclick=manualSync;
+$('#toggleAuto').onclick=()=>{autoSync=!autoSync;$('#toggleAuto').textContent=`자동 동기화: ${autoSync?'켜짐':'꺼짐'}`;log(`자동 동기화 ${autoSync?'활성화':'비활성화'}`,'warn')};
+$('#makeConflict').onclick=()=>{
+  autoSync=false; $('#toggleAuto').textContent='자동 동기화: 꺼짐';
+  text.A.insert(0,'[A 동시편집] '); text.B.insert(0,'[B 동시편집] ');
+  setTimeout(manualSync,150);
+};
+$('#undoA').onclick=()=>undo.undo(); $('#redoA').onclick=()=>undo.redo();
+
+$('#addTask').onclick=()=>{const v=$('#taskInput').value.trim();if(v){tasks.A.push([v]);$('#taskInput').value=''}};
+$('#setMap').onclick=()=>settings.A.set($('#mapKey').value,$('#mapValue').value);
+$('#addXml').onclick=()=>{
+  const p=new Y.XmlElement('p'), node=new Y.XmlText(); node.insert(0,$('#xmlText').value); p.insert(0,[node]); xml.A.push([p]);
+};
+$('#clearXml').onclick=()=>xml.A.delete(0,xml.A.length);
+
+$('#applyPresence').onclick=()=>{
+  awareness.A.setLocalState({user:{name:$('#nameA').value,color:$('#colorA').value,status:$('#statusA').value},cursor:{index:+$('#cursorA').value}});
+  awareness.B.setLocalState({user:{name:'지연',color:'#ff9f68',status:'온라인'},cursor:{index:Math.min(5,text.B.length)}});
+  syncAwareness();
+};
+
+$('#inspectUpdate').onclick=()=>{
+  const u=Y.encodeStateAsUpdate(docs.A), meta=Y.parseUpdateMeta(u);
+  $('#updateInfo').textContent=JSON.stringify({
+    bytes:u.byteLength,
+    from:[...meta.from.entries()],
+    to:[...meta.to.entries()],
+    stateVector:[...Y.decodeStateVector(Y.encodeStateVector(docs.A)).entries()]
+  },null,2);
+};
+$('#mergeHistory').onclick=()=>{
+  if(!history.length)return;
+  const merged=Y.mergeUpdates(history);
+  $('#updateInfo').textContent=`개별 합계: ${history.reduce((a,u)=>a+u.byteLength,0)} bytes\n병합 결과: ${merged.byteLength} bytes\n업데이트 수: ${history.length}`;
+};
+$('#exportUpdate').onclick=()=>{
+  const blob=new Blob([Y.encodeStateAsUpdate(docs.A)],{type:'application/octet-stream'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='yjs-document-update.bin';a.click();URL.revokeObjectURL(a.href);
+};
+$('#importUpdate').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  Y.applyUpdate(docs.A,new Uint8Array(await f.arrayBuffer()),'file-import');manualSync();log(`파일 가져오기 ${f.name}`,'ok');
+};
+
+$('#saveAnchor').onclick=()=>{
+  const i=Math.max(0,Math.min(+$('#anchorIndex').value,text.A.length));
+  anchor=Y.createRelativePositionFromTypeIndex(text.A,i);
+  $('#anchorView').textContent=JSON.stringify(anchor,null,2); log(`RelativePosition 저장 index=${i}`);
+};
+$('#resolveAnchor').onclick=()=>{
+  if(!anchor)return;
+  const abs=Y.createAbsolutePositionFromRelativePosition(anchor,docs.A);
+  $('#anchorView').textContent=JSON.stringify(abs?{index:abs.index,assoc:abs.assoc,type:'sharedText'}:null,null,2);
+};
+
+function renderSubdocs(){
+  const arr=[]; root.A.forEach((v,k)=>{if(v instanceof Y.Doc)arr.push({key:k,guid:v.guid,loaded:v.shouldLoad,text:v.getText('body').toString()})});
+  $('#subdocView').textContent=JSON.stringify(arr,null,2);
+}
+$('#createSubdoc').onclick=()=>{
+  const d=new Y.Doc({autoLoad:false}); d.getText('body').insert(0,`서브 문서 ${new Date().toLocaleTimeString()}`);
+  root.A.set(`doc-${root.A.size+1}`,d); renderSubdocs();
+};
+$('#loadSubdoc').onclick=()=>{
+  for(const v of root.A.values()){if(v instanceof Y.Doc){v.load();break}} renderSubdocs();
+};
+
+$('#enablePersistence').onclick=async()=>{
+  if(persistence)return;
+  persistence=new IndexeddbPersistence('yjs-feature-lab-v1',docs.A);
+  persistence.on('synced',()=>{$('#persistenceState').textContent='IndexedDB 동기화 완료\nDB: yjs-feature-lab-v1';manualSync();render()});
+  $('#persistenceState').textContent='연결 중...';
+};
+$('#clearPersistence').onclick=async()=>{
+  if(persistence){await persistence.clearData();persistence.destroy();persistence=null}
+  else {const temp=new IndexeddbPersistence('yjs-feature-lab-v1',new Y.Doc());await temp.clearData();temp.destroy()}
+  $('#persistenceState').textContent='저장 DB 삭제 완료';
+};
+
+function docJSON(d){
+  return {text:d.getText('sharedText').toString(),tasks:d.getArray('tasks').toJSON(),settings:d.getMap('settings').toJSON(),xml:d.getXmlFragment('content').toString()};
+}
+$('#validateSync').onclick=()=>{
+  const a=docJSON(docs.A),b=docJSON(docs.B),same=JSON.stringify(a)===JSON.stringify(b);
+  $('#diagnostics').textContent=JSON.stringify({same,A:a,B:b},null,2);
+};
+$('#cloneDoc').onclick=()=>{
+  const clone=new Y.Doc();Y.applyUpdate(clone,Y.encodeStateAsUpdate(docs.A));
+  $('#diagnostics').textContent=JSON.stringify({cloneMatches:JSON.stringify(docJSON(clone))===JSON.stringify(docJSON(docs.A)),clone:docJSON(clone)},null,2);
+};
+$('#resetAll').onclick=()=>location.reload();
+
+docs.A.transact(()=>{
+  text.A.insert(0,'Yjs는 동시 편집을 위한 CRDT 라이브러리다.\n자동 동기화를 끄고 양쪽을 수정해 보자.');
+  tasks.A.push(['공유 텍스트 시험','충돌 병합 확인']);
+  settings.A.set('theme','dark');settings.A.set('language','ko');
+},'initial-data');
+awareness.A.setLocalState({user:{name:'민수',color:'#48b8ff',status:'온라인'},cursor:{index:0}});
+awareness.B.setLocalState({user:{name:'지연',color:'#ff9f68',status:'온라인'},cursor:{index:0}});
+manualSync();render();renderPresence();
+</script>
+</body>
+</html>
