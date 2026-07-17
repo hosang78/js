@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Compressor.js 종합 기능 샘플</title>
+  <script src="https://cdn.jsdelivr.net/npm/compressorjs@1.3.0/dist/compressor.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f7fb;--panel:#fff;--panel2:#f8fafc;--text:#172033;--muted:#657085;
+      --line:#dce2eb;--primary:#3563e9;--primary2:#244bc2;--danger:#d94242;
+      --good:#16865c;--warn:#b46b09;--shadow:0 12px 34px rgba(30,45,75,.09);
+      --radius:18px;
+    }
+    @media (prefers-color-scheme:dark){
+      :root{--bg:#0f1420;--panel:#171e2d;--panel2:#111827;--text:#edf2ff;--muted:#a6b0c3;
+        --line:#30394b;--primary:#6f94ff;--primary2:#91abff;--danger:#ff7373;
+        --good:#51d49e;--warn:#ffc267;--shadow:0 12px 34px rgba(0,0,0,.22)}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif}
+    button,input,select{font:inherit}
+    header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+    .head{max-width:1500px;margin:auto;padding:14px 22px;display:flex;gap:18px;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:3px}
+    .badge{padding:6px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}
+    main{max-width:1500px;margin:auto;padding:22px;display:grid;grid-template-columns:390px minmax(0,1fr);gap:20px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .settings{padding:18px;align-self:start;position:sticky;top:83px;max-height:calc(100vh - 105px);overflow:auto}
+    .section{padding:2px 0 18px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+    .section:last-child{border:0;margin:0}.section h2{font-size:14px;margin:0 0 12px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label.field{display:block;font-size:12px;color:var(--muted)}
+    label.field span{display:block;margin-bottom:5px}
+    input[type=text],input[type=number],select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text)}
+    input[type=range]{width:100%;accent-color:var(--primary)}
+    .range-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .checks{display:grid;grid-template-columns:1fr 1fr;gap:9px;font-size:12px}
+    .check{display:flex;gap:7px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+    .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    button{cursor:pointer;border:0;border-radius:11px;padding:10px 13px;font-weight:700}
+    .preset{border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:12px}
+    .preset:hover{border-color:var(--primary)}
+    .primary{background:var(--primary);color:white}.primary:hover{background:var(--primary2)}
+    .secondary{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+    .danger{background:color-mix(in srgb,var(--danger) 13%,var(--panel));color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 35%,var(--line))}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .content{display:flex;flex-direction:column;gap:18px}
+    .drop{min-height:190px;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:2px dashed var(--line);transition:.2s}
+    .drop.drag{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--panel))}
+    .drop .icon{font-size:42px}.drop h2{margin:10px 0 4px;font-size:20px}.drop p{margin:0 0 15px;color:var(--muted);font-size:13px}
+    #fileInput{display:none}
+    .toolbar{padding:14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .toolbar .grow{flex:1}.status{font-size:13px;color:var(--muted)}
+    progress{width:220px;height:10px;accent-color:var(--primary)}
+    .empty{padding:50px;text-align:center;color:var(--muted)}
+    .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(390px,1fr));gap:16px}
+    .card{overflow:hidden}.card-head{padding:13px 15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+    .filename{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pill{font-size:11px;padding:4px 7px;border-radius:999px;background:color-mix(in srgb,var(--good) 12%,var(--panel));color:var(--good);white-space:nowrap}
+    .previews{display:grid;grid-template-columns:1fr 1fr;min-height:220px;background:repeating-conic-gradient(#9991 0 25%,transparent 0 50%) 50%/20px 20px}
+    .preview{position:relative;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-right:1px solid var(--line)}
+    .preview:last-child{border:0}.preview img{width:100%;height:220px;object-fit:contain}
+    .preview b{position:absolute;left:8px;top:8px;background:#111b;color:#fff;padding:4px 7px;border-radius:7px;font-size:10px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .stat{padding:10px 8px;text-align:center;border-right:1px solid var(--line)}.stat:last-child{border:0}
+    .stat strong{display:block;font-size:13px}.stat span{font-size:10px;color:var(--muted)}
+    .card-actions{padding:11px;display:flex;gap:8px}.card-actions button{flex:1;font-size:12px;padding:8px}
+    .log{padding:14px 16px;max-height:210px;overflow:auto;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+    .log div{border-bottom:1px dashed var(--line);padding:3px 0}.log time{color:var(--muted);margin-right:8px}
+    details{font-size:12px;color:var(--muted)}summary{cursor:pointer;font-weight:700;color:var(--text);margin-bottom:7px}
+    code{background:var(--panel2);padding:2px 5px;border-radius:5px}
+    .note{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px}
+    .hidden{display:none!important}
+    @media(max-width:900px){
+      main{grid-template-columns:1fr;padding:12px}.settings{position:static;max-height:none}.head{padding:12px}
+      .results{grid-template-columns:1fr}.previews{min-height:180px}.preview img{height:180px}
+    }
+    @media(max-width:500px){.grid2,.checks,.presets{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <div><h1>Compressor.js 종합 기능 샘플</h1><div class="sub">브라우저에서 이미지 압축·리사이즈·형식 변환·Canvas 후처리</div></div>
+    <span class="badge">Compressor.js 1.3.0 · 단일 HTML</span>
+  </div>
+</header>
+
+<main>
+  <aside class="panel settings">
+    <section class="section">
+      <h2>빠른 프리셋</h2>
+      <div class="presets">
+        <button class="preset" data-preset="web">웹 최적화</button>
+        <button class="preset" data-preset="thumb">정사각 썸네일</button>
+        <button class="preset" data-preset="webp">WebP 변환</button>
+        <button class="preset" data-preset="original">원본 크기 유지</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>기본 옵션</h2>
+      <div class="range-head"><span>quality</span><b id="qualityValue">0.80</b></div>
+      <input id="quality" type="range" min="0.1" max="1" step="0.05" value="0.8">
+      <div class="grid2" style="margin-top:11px">
+        <label class="field"><span>mimeType</span>
+          <select id="mimeType"><option value="">자동</option><option>image/jpeg</option><option>image/png</option><option>image/webp</option></select>
+        </label>
+        <label class="field"><span>resize</span>
+          <select id="resize"><option value="none">none</option><option value="contain">contain</option><option value="cover">cover</option></select>
+        </label>
+      </div>
+      <div class="checks" style="margin-top:10px">
+        <label class="check"><input id="strict" type="checkbox" checked> strict</label>
+        <label class="check"><input id="checkOrientation" type="checkbox" checked> EXIF 방향</label>
+        <label class="check"><input id="retainExif" type="checkbox"> EXIF 보존</label>
+        <label class="check"><input id="targetEnabled" type="checkbox"> 목표 용량</label>
+      </div>
+      <label class="field" style="margin-top:10px"><span>목표 용량 KB · 품질을 반복 조정하는 확장 예제</span>
+        <input id="targetKB" type="number" min="20" value="300">
+      </label>
+    </section>
+
+    <section class="section">
+      <h2>크기 옵션</h2>
+      <div class="grid2">
+        <label class="field"><span>maxWidth</span><input id="maxWidth" type="number" min="1" placeholder="Infinity"></label>
+        <label class="field"><span>maxHeight</span><input id="maxHeight" type="number" min="1" placeholder="Infinity"></label>
+        <label class="field"><span>minWidth</span><input id="minWidth" type="number" min="0" placeholder="0"></label>
+        <label class="field"><span>minHeight</span><input id="minHeight" type="number" min="0" placeholder="0"></label>
+        <label class="field"><span>width</span><input id="width" type="number" min="1" placeholder="자동"></label>
+        <label class="field"><span>height</span><input id="height" type="number" min="1" placeholder="자동"></label>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>자동 형식 변환</h2>
+      <label class="field"><span>convertTypes · 쉼표 구분</span><input id="convertTypes" type="text" value="image/png"></label>
+      <label class="field" style="margin-top:9px"><span>convertSize · bytes</span><input id="convertSize" type="number" min="0" value="5000000"></label>
+      <div class="note">지정 형식의 파일이 기준 크기를 넘으면 JPEG로 변환하는 Compressor.js 옵션.</div>
+    </section>
+
+    <section class="section">
+      <h2>Canvas 훅 효과</h2>
+      <div class="checks">
+        <label class="check"><input id="grayscale" type="checkbox"> 흑백 필터</label>
+        <label class="check"><input id="warm" type="checkbox"> 따뜻한 톤</label>
+        <label class="check"><input id="watermark" type="checkbox"> 워터마크</label>
+        <label class="check"><input id="background" type="checkbox"> 흰 배경</label>
+      </div>
+      <label class="field" style="margin-top:9px"><span>워터마크 문구</span><input id="watermarkText" type="text" value="Compressor.js Demo"></label>
+      <div class="note"><code>beforeDraw</code>와 <code>drew</code> 콜백을 사용. 흰 배경은 투명 PNG를 JPEG로 바꿀 때 유용.</div>
+    </section>
+
+    <section class="section">
+      <h2>실행</h2>
+      <div class="actions">
+        <button id="compressBtn" class="primary">전체 압축</button>
+        <button id="abortBtn" class="danger">현재 작업 중단</button>
+        <button id="clearBtn" class="secondary">초기화</button>
+        <button id="downloadAllBtn" class="secondary">결과 모두 저장</button>
+      </div>
+    </section>
+
+    <details>
+      <summary>포함된 API와 기능</summary>
+      <div>strict, checkOrientation, retainExif, max/min width·height, width, height, resize, quality, mimeType, convertTypes, convertSize, beforeDraw, drew, success, error, abort.</div>
+    </details>
+  </aside>
+
+  <section class="content">
+    <div id="dropZone" class="panel drop">
+      <div class="icon">🗜️</div>
+      <h2>이미지를 끌어놓거나 선택</h2>
+      <p>JPG, PNG, WebP 등 여러 파일을 선택할 수 있으며 브라우저 안에서 처리됩니다.</p>
+      <button id="browseBtn" class="primary">이미지 선택</button>
+      <input id="fileInput" type="file" accept="image/*" multiple>
+    </div>
+
+    <div class="panel toolbar">
+      <div class="grow">
+        <div id="status" class="status">선택된 이미지 없음</div>
+        <progress id="progress" max="100" value="0"></progress>
+      </div>
+      <button id="addBtn" class="secondary">파일 추가</button>
+    </div>
+
+    <div id="resultArea">
+      <div class="panel empty">이미지를 추가하면 원본과 압축 결과가 나란히 표시됩니다.</div>
+    </div>
+
+    <div class="panel">
+      <div class="card-head"><strong>처리 로그</strong><button id="logClearBtn" class="secondary">로그 지우기</button></div>
+      <div id="log" class="log"><div><time>--:--:--</time>샘플 준비 완료</div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (s) => document.querySelector(s);
+  const state = { files: [], results: [], currentCompressor: null, aborted: false, objectUrls: new Set() };
+
+  const els = {
+    drop: $('#dropZone'), input: $('#fileInput'), browse: $('#browseBtn'), add: $('#addBtn'),
+    compress: $('#compressBtn'), abort: $('#abortBtn'), clear: $('#clearBtn'),
+    downloadAll: $('#downloadAllBtn'), area: $('#resultArea'), status: $('#status'),
+    progress: $('#progress'), log: $('#log')
+  };
+
+  const fmtBytes = n => {
+    if (!Number.isFinite(n)) return '-';
+    const units = ['B','KB','MB','GB']; let i = 0, v = n;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(v >= 100 || i === 0 ? 0 : v >= 10 ? 1 : 2)} ${units[i]}`;
+  };
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const log = (msg, type='') => {
+    const row = document.createElement('div');
+    row.innerHTML = `<time>${new Date().toLocaleTimeString('ko-KR')}</time>${type ? `[${type}] ` : ''}${esc(msg)}`;
+    els.log.prepend(row);
+  };
+  const nval = id => {
+    const v = Number($(id).value);
+    return $(id).value.trim() === '' || !Number.isFinite(v) ? undefined : v;
+  };
+  const urlFor = blob => { const u = URL.createObjectURL(blob); state.objectUrls.add(u); return u; };
+  const cleanupUrls = () => { state.objectUrls.forEach(URL.revokeObjectURL); state.objectUrls.clear(); };
+
+  function getOptions(qualityOverride) {
+    const convertTypes = $('#convertTypes').value.split(',').map(x => x.trim()).filter(Boolean);
+    const grayscale = $('#grayscale').checked;
+    const warm = $('#warm').checked;
+    const addBackground = $('#background').checked;
+    const addWatermark = $('#watermark').checked;
+    const watermarkText = $('#watermarkText').value || 'Compressor.js Demo';
+
+    return {
+      strict: $('#strict').checked,
+      checkOrientation: $('#checkOrientation').checked,
+      retainExif: $('#retainExif').checked,
+      maxWidth: nval('#maxWidth') ?? Infinity,
+      maxHeight: nval('#maxHeight') ?? Infinity,
+      minWidth: nval('#minWidth') ?? 0,
+      minHeight: nval('#minHeight') ?? 0,
+      width: nval('#width'),
+      height: nval('#height'),
+      resize: $('#resize').value,
+      quality: qualityOverride ?? Number($('#quality').value),
+      mimeType: $('#mimeType').value,
+      convertTypes,
+      convertSize: nval('#convertSize') ?? 5000000,
+      beforeDraw(ctx, canvas) {
+        if (addBackground) {
+          ctx.save();
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
+        const filters = [];
+        if (grayscale) filters.push('grayscale(1)');
+        if (warm) filters.push('sepia(.25) saturate(1.2)');
+        if (filters.length) ctx.filter = filters.join(' ');
+      },
+      drew(ctx, canvas) {
+        ctx.filter = 'none';
+        if (addWatermark) {
+          const fontSize = Math.max(14, Math.round(Math.min(canvas.width, canvas.height) * .035));
+          ctx.save();
+          ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          const x = canvas.width - fontSize * .55;
+          const y = canvas.height - fontSize * .45;
+          ctx.lineWidth = Math.max(2, fontSize * .12);
+          ctx.strokeStyle = 'rgba(0,0,0,.55)';
+          ctx.fillStyle = 'rgba(255,255,255,.88)';
+          ctx.strokeText(watermarkText, x, y);
+          ctx.fillText(watermarkText, x, y);
+          ctx.restore();
+        }
+      }
+    };
+  }
+
+  function compressOnce(file, quality) {
+    return new Promise((resolve, reject) => {
+      const options = getOptions(quality);
+      options.success = result => { state.currentCompressor = null; resolve(result); };
+      options.error = err => { state.currentCompressor = null; reject(err); };
+      state.currentCompressor = new Compressor(file, options);
+    });
+  }
+
+  async function compressToTarget(file) {
+    const target = Math.max(20, Number($('#targetKB').value) || 300) * 1024;
+    let high = Number($('#quality').value), low = 0.1, best = null;
+    for (let i = 0; i < 7; i++) {
+      if (state.aborted) throw new Error('사용자가 작업을 중단했습니다.');
+      const q = i === 0 ? high : (low + high) / 2;
+      const blob = await compressOnce(file, q);
+      log(`${file.name}: 품질 ${q.toFixed(3)} → ${fmtBytes(blob.size)}`, 'TARGET');
+      if (blob.size <= target) { best = { blob, quality: q }; low = q; }
+      else high = q;
+      if (Math.abs(high - low) < 0.015) break;
+    }
+    if (!best) {
+      const blob = await compressOnce(file, 0.1);
+      best = { blob, quality: 0.1 };
+    }
+    return best;
+  }
+
+  function readDimensions(blob) {
+    return new Promise(resolve => {
+      const img = new Image();
+      const u = URL.createObjectURL(blob);
+      img.onload = () => { resolve({width:img.naturalWidth,height:img.naturalHeight}); URL.revokeObjectURL(u); };
+      img.onerror = () => { resolve({width:0,height:0}); URL.revokeObjectURL(u); };
+      img.src = u;
+    });
+  }
+
+  function outputName(file, blob) {
+    const ext = blob.type === 'image/jpeg' ? 'jpg' : blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'bin';
+    return `${file.name.replace(/\.[^.]+$/, '')}-compressed.${ext}`;
+  }
+
+  async function runCompression() {
+    if (!state.files.length) { log('먼저 이미지를 선택하세요.', '안내'); return; }
+    if (typeof Compressor === 'undefined') {
+      log('Compressor.js를 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근을 확인하세요.', '오류');
+      alert('Compressor.js 로드 실패: CDN에 접근할 수 없습니다.');
+      return;
+    }
+    state.aborted = false;
+    state.results = [];
+    cleanupUrls();
+    els.area.innerHTML = '';
+    els.compress.disabled = true;
+    els.progress.value = 0;
+    const started = performance.now();
+
+    for (let i = 0; i < state.files.length; i++) {
+      if (state.aborted) break;
+      const file = state.files[i];
+      els.status.textContent = `${i+1}/${state.files.length} 처리 중 · ${file.name}`;
+      try {
+        const originalDim = await readDimensions(file);
+        const t0 = performance.now();
+        const targetMode = $('#targetEnabled').checked;
+        const packed = targetMode ? await compressToTarget(file) : { blob: await compressOnce(file), quality: Number($('#quality').value) };
+        const dim = await readDimensions(packed.blob);
+        const item = {
+          file, blob: packed.blob, quality: packed.quality, originalDim, dim,
+          elapsed: performance.now() - t0,
+          originalUrl: urlFor(file), resultUrl: urlFor(packed.blob),
+          name: outputName(file, packed.blob)
+        };
+        state.results.push(item);
+        renderCard(item, state.results.length - 1);
+        log(`${file.name} 완료: ${fmtBytes(file.size)} → ${fmtBytes(packed.blob.size)}`, '성공');
+      } catch (err) {
+        log(`${file.name}: ${err?.message || err}`, state.aborted ? '중단' : '오류');
+      }
+      els.progress.value = ((i + 1) / state.files.length) * 100;
+    }
+    const sec = ((performance.now() - started) / 1000).toFixed(2);
+    els.status.textContent = state.aborted ? `작업 중단 · ${state.results.length}개 완료` : `${state.results.length}개 완료 · ${sec}초`;
+    els.compress.disabled = false;
+  }
+
+  function renderCard(item, index) {
+    const ratio = item.file.size ? (1 - item.blob.size / item.file.size) * 100 : 0;
+    const card = document.createElement('article');
+    card.className = 'panel card';
+    card.innerHTML = `
+      <div class="card-head">
+        <div class="filename" title="${esc(item.file.name)}">${esc(item.file.name)}</div>
+        <span class="pill">${ratio >= 0 ? `${ratio.toFixed(1)}% 감소` : `${Math.abs(ratio).toFixed(1)}% 증가`}</span>
+      </div>
+      <div class="previews">
+        <div class="preview"><b>원본</b><img src="${item.originalUrl}" alt="원본 미리보기"></div>
+        <div class="preview"><b>결과</b><img src="${item.resultUrl}" alt="압축 결과 미리보기"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><strong>${fmtBytes(item.file.size)}</strong><span>원본</span></div>
+        <div class="stat"><strong>${fmtBytes(item.blob.size)}</strong><span>결과</span></div>
+        <div class="stat"><strong>${item.dim.width}×${item.dim.height}</strong><span>결과 크기</span></div>
+        <div class="stat"><strong>${item.elapsed.toFixed(0)}ms</strong><span>처리 시간</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="secondary" data-action="download" data-index="${index}">다운로드</button>
+        <button class="secondary" data-action="info" data-index="${index}">상세 정보</button>
+        <button class="danger" data-action="remove" data-index="${index}">제거</button>
+      </div>`;
+    els.area.appendChild(card);
+  }
+
+  function addFiles(fileList) {
+    const incoming = [...fileList].filter(f => f.type.startsWith('image/'));
+    if (!incoming.length) { log('지원되는 이미지 파일이 없습니다.', '안내'); return; }
+    state.files.push(...incoming);
+    els.status.textContent = `${state.files.length}개 이미지 선택 · ${fmtBytes(state.files.reduce((a,f)=>a+f.size,0))}`;
+    log(`${incoming.length}개 이미지 추가`, '파일');
+  }
+
+  function download(item) {
+    const a = document.createElement('a');
+    a.href = item.resultUrl; a.download = item.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function reset() {
+    if (state.currentCompressor) state.currentCompressor.abort();
+    cleanupUrls();
+    state.files = []; state.results = []; state.aborted = false; state.currentCompressor = null;
+    els.input.value = ''; els.progress.value = 0;
+    els.status.textContent = '선택된 이미지 없음';
+    els.area.innerHTML = '<div class="panel empty">이미지를 추가하면 원본과 압축 결과가 나란히 표시됩니다.</div>';
+    log('전체 상태 초기화', '초기화');
+  }
+
+  const presets = {
+    web:{quality:.8,maxWidth:1920,maxHeight:1080,width:'',height:'',resize:'none',mimeType:'',target:false},
+    thumb:{quality:.82,maxWidth:'',maxHeight:'',width:600,height:600,resize:'cover',mimeType:'image/jpeg',target:false},
+    webp:{quality:.78,maxWidth:1920,maxHeight:1920,width:'',height:'',resize:'none',mimeType:'image/webp',target:false},
+    original:{quality:.9,maxWidth:'',maxHeight:'',width:'',height:'',resize:'none',mimeType:'',target:false}
+  };
+  document.querySelectorAll('[data-preset]').forEach(btn => btn.onclick = () => {
+    const p = presets[btn.dataset.preset];
+    $('#quality').value = p.quality; $('#qualityValue').textContent = p.quality.toFixed(2);
+    $('#maxWidth').value = p.maxWidth; $('#maxHeight').value = p.maxHeight;
+    $('#width').value = p.width; $('#height').value = p.height;
+    $('#resize').value = p.resize; $('#mimeType').value = p.mimeType;
+    $('#targetEnabled').checked = p.target;
+    log(`${btn.textContent} 프리셋 적용`, '프리셋');
+  });
+
+  $('#quality').addEventListener('input', e => $('#qualityValue').textContent = Number(e.target.value).toFixed(2));
+  els.browse.onclick = () => els.input.click();
+  els.add.onclick = () => els.input.click();
+  els.input.onchange = e => addFiles(e.target.files);
+  els.compress.onclick = runCompression;
+  els.abort.onclick = () => {
+    state.aborted = true;
+    if (state.currentCompressor) state.currentCompressor.abort();
+    log('현재 Compressor 인스턴스에 abort() 호출', '중단');
+  };
+  els.clear.onclick = reset;
+  els.downloadAll.onclick = async () => {
+    if (!state.results.length) return log('저장할 결과가 없습니다.', '안내');
+    for (const item of state.results) { download(item); await new Promise(r => setTimeout(r, 180)); }
+    log(`${state.results.length}개 결과 다운로드 요청`, '저장');
+  };
+  $('#logClearBtn').onclick = () => els.log.innerHTML = '';
+  els.area.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-action]'); if (!btn) return;
+    const i = Number(btn.dataset.index), item = state.results[i]; if (!item) return;
+    if (btn.dataset.action === 'download') download(item);
+    if (btn.dataset.action === 'info') {
+      alert([
+        `파일: ${item.file.name}`,
+        `원본 형식: ${item.file.type || '알 수 없음'}`,
+        `결과 형식: ${item.blob.type || '알 수 없음'}`,
+        `원본 크기: ${fmtBytes(item.file.size)} / ${item.originalDim.width}×${item.originalDim.height}`,
+        `결과 크기: ${fmtBytes(item.blob.size)} / ${item.dim.width}×${item.dim.height}`,
+        `적용 품질: ${item.quality.toFixed(3)}`,
+        `처리 시간: ${item.elapsed.toFixed(1)}ms`
+      ].join('\n'));
+    }
+    if (btn.dataset.action === 'remove') {
+      const card = btn.closest('.card'); card.remove();
+      state.results[i] = null;
+      log(`${item.file.name} 결과 카드 제거`, '제거');
+    }
+  });
+
+  ['dragenter','dragover'].forEach(ev => els.drop.addEventListener(ev, e => { e.preventDefault(); els.drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => els.drop.addEventListener(ev, e => { e.preventDefault(); els.drop.classList.remove('drag'); }));
+  els.drop.addEventListener('drop', e => addFiles(e.dataTransfer.files));
+  window.addEventListener('beforeunload', cleanupUrls);
+
+  if (typeof Compressor === 'undefined') {
+    log('Compressor.js CDN 로드 실패', '오류');
+    els.status.textContent = '라이브러리 로드 실패 · 인터넷 연결 확인';
+  } else {
+    log(`Compressor.js 로드 성공`, '라이브러리');
+  }
+})();
+</script>
+</body>
+</html>
