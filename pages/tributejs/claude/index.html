@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Tribute.js</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.css" />
+<script src="https://cdn.jsdelivr.net/npm/tributejs@5.1.3/dist/tribute.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  textarea, .mock-editable {
+    width: 100%;
+    max-width: 480px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #d5d9e0;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  textarea:focus, .mock-editable:focus { outline: none; border-color: #4f7dff; }
+  .mock-editable { min-height: 70px; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+
+  /* ---- tribute 드롭다운 항목 스타일 ---- */
+  .tribute-container ul { max-height: 220px; overflow-y: auto; }
+  .mention-item { display: flex; flex-direction: column; padding: 2px 0; }
+  .mention-item .name { font-weight: 600; font-size: 13px; }
+  .mention-item .meta { font-size: 11px; color: #888; }
+  .mention-chip {
+    background: #eef2ff;
+    color: #3d55c9;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Tribute.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Tribute.js</strong>는 슬랙·깃허브 댓글창처럼 <code class="inline">@</code>를 입력하면
+    사람 이름이 자동완성되는 "멘션" 기능을 <code class="inline">textarea</code>·
+    <code class="inline">contentEditable</code> 요소에 붙여주는 라이브러리입니다.
+    <ul>
+      <li><code class="inline">@</code> 입력으로 뜨는 <strong>기본 멘션 자동완성</strong></li>
+      <li><code class="inline">collection</code>으로 <strong>여러 트리거 문자 동시 사용</strong>(@조합원, #위판장)</li>
+      <li><code class="inline">values</code>를 함수로 넘겨 흉내낸 <strong>비동기 검색</strong></li>
+      <li><code class="inline">contentEditable</code>에 붙여 만드는 <strong>스타일 있는 멘션 삽입</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 조합원·위판장 이름은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제
+      수협중앙회의 명부·조직과 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 멘션 자동완성</h2>
+    <div class="desc">
+      아래 댓글창에 <code class="inline">@</code>를 입력해보세요. 조합원 이름 목록이 뜨고, 화살표
+      키로 고른 뒤 Enter나 Tab을 누르면 선택한 이름이 삽입됩니다.
+    </div>
+    <textarea id="ta1" rows="3" placeholder="댓글을 입력하세요. @를 입력하면 조합원을 멘션할 수 있습니다."></textarea>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Tribute({
+  trigger: '@',
+  values: MEMBERS, // [{ key: '김민수', value: '김민수', region: '부산' }, ...]
+  selectTemplate: (item) => `@${item.original.value}`, // 뒤 공백은 replaceTextSuffix가 자동으로 붙여준다
+  menuItemTemplate: (item) =>
+    `&lt;span class="name"&gt;${item.original.value}&lt;/span&gt;&lt;span class="meta"&gt;${item.original.region}&lt;/span&gt;`,
+}).attach(document.getElementById('ta1'));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 여러 트리거 문자 동시 사용</h2>
+    <div class="desc">
+      한 입력창에서 <code class="inline">@</code>는 조합원을, <code class="inline">#</code>는
+      위판장을 서로 다른 목록으로 자동완성합니다. <code class="inline">collection</code> 옵션에
+      트리거별 설정을 배열로 넘기면 됩니다.
+    </div>
+    <textarea id="ta2" rows="3" placeholder="@조합원 또는 #위판장을 입력해보세요."></textarea>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Tribute({
+  collection: [
+    { trigger: '@', values: MEMBERS, selectTemplate: (item) => `@${item.original.value}` },
+    { trigger: '#', values: PORTS, selectTemplate: (item) => `#${item.original.value}` },
+  ],
+}).attach(document.getElementById('ta2'));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 비동기 검색</h2>
+    <div class="desc">
+      <code class="inline">values</code>에 배열 대신 함수를 넘기면 타이핑할 때마다 그 함수가
+      호출됩니다. 실제 서버 조회를 흉내내기 위해 일부러 400ms 지연을 넣었습니다.
+    </div>
+    <textarea id="ta3" rows="3" placeholder="@ 입력 후 이름을 이어서 타이핑해보세요 (검색에 400ms가 걸립니다)."></textarea>
+    <div class="stat-box" id="s3-stat">아직 검색한 적이 없습니다.</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Tribute({
+  trigger: '@',
+  values: (text, cb) => {
+    stat.textContent = '검색 중...';
+    setTimeout(() => {
+      const results = MEMBERS.filter((m) => m.value.includes(text));
+      stat.innerHTML = `${results.length}명 검색됨`;
+      cb(results); // 실제로는 fetch() 결과를 여기서 넘겨준다
+    }, 400);
+  },
+}).attach(document.getElementById('ta3'));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. contentEditable + 스타일 있는 멘션 삽입</h2>
+    <div class="desc">
+      일반 텍스트 입력창은 서식이 있는 텍스트를 넣을 수 없어서, 색이 들어간 멘션 칩을 넣으려면
+      <code class="inline">contentEditable</code> 요소에 붙여야 합니다.
+      <code class="inline">selectTemplate</code>이 HTML을 그대로 반환합니다.
+    </div>
+    <div class="mock-editable" id="ce4" contenteditable="true" data-placeholder="여기에 @를 입력해보세요"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre>new Tribute({
+  trigger: '@',
+  values: MEMBERS,
+  // contentEditable에서는 replaceTextSuffix 기본값이 알아서 nbsp를 붙여주므로 여기서는 안 넣는다
+  selectTemplate: (item) =>
+    `&lt;span class="mention-chip" contenteditable="false"&gt;@${item.original.value}&lt;/span&gt;`,
+}).attach(document.getElementById('ce4'));</pre>
+    </details>
+  </section>
+
+<script>
+  const MEMBERS = [
+    { key: '김민수', value: '김민수', region: '부산' },
+    { key: '이영희', value: '이영희', region: '포항' },
+    { key: '박지훈', value: '박지훈', region: '여수' },
+    { key: '최수정', value: '최수정', region: '속초' },
+    { key: '정다은', value: '정다은', region: '목포' },
+    { key: '강태우', value: '강태우', region: '통영' },
+  ];
+  const PORTS = [
+    { key: 'A위판장', value: 'A위판장', region: '부산' },
+    { key: 'B위판장', value: 'B위판장', region: '포항' },
+    { key: 'C위판장', value: 'C위판장', region: '여수' },
+    { key: 'D위판장', value: 'D위판장', region: '속초' },
+  ];
+
+  function itemTemplate(item) {
+    return `<span class="mention-item"><span class="name">${item.original.value}</span><span class="meta">${item.original.region}</span></span>`;
+  }
+
+  // ---- 섹션 1: 기본 멘션 자동완성 ----
+  (function section1() {
+    new Tribute({
+      trigger: '@',
+      values: MEMBERS,
+      selectTemplate: (item) => `@${item.original.value}`,
+      menuItemTemplate: itemTemplate,
+    }).attach(document.getElementById('ta1'));
+  })();
+
+  // ---- 섹션 2: 여러 트리거 문자 동시 사용 ----
+  (function section2() {
+    new Tribute({
+      collection: [
+        { trigger: '@', values: MEMBERS, selectTemplate: (item) => `@${item.original.value}`, menuItemTemplate: itemTemplate },
+        { trigger: '#', values: PORTS, selectTemplate: (item) => `#${item.original.value}`, menuItemTemplate: itemTemplate },
+      ],
+    }).attach(document.getElementById('ta2'));
+  })();
+
+  // ---- 섹션 3: 비동기 검색 ----
+  (function section3() {
+    const stat = document.getElementById('s3-stat');
+    new Tribute({
+      trigger: '@',
+      values: (text, cb) => {
+        stat.textContent = '검색 중...';
+        setTimeout(() => {
+          const results = MEMBERS.filter((m) => m.value.includes(text));
+          stat.innerHTML = `<strong>${results.length}</strong>명 검색됨`;
+          cb(results);
+        }, 400);
+      },
+      menuItemTemplate: itemTemplate,
+    }).attach(document.getElementById('ta3'));
+  })();
+
+  // ---- 섹션 4: contentEditable + 스타일 있는 멘션 삽입 ----
+  (function section4() {
+    new Tribute({
+      trigger: '@',
+      values: MEMBERS,
+      selectTemplate: (item) => `<span class="mention-chip" contenteditable="false">@${item.original.value}</span>`,
+      menuItemTemplate: itemTemplate,
+    }).attach(document.getElementById('ce4'));
+  })();
+</script>
+</body>
+</html>
