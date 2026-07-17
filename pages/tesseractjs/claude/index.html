@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Tesseract.js</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  .privacy {
+    font-size: 12.5px;
+    color: #1a6b3c;
+    background: #eafff2;
+    border: 1px solid #b7f0cf;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 6px;
+  }
+  button:hover { background: #3d67e0; }
+  button:disabled { background: #b7c3e0; cursor: default; }
+  input[type=file] { font-size: 13px; }
+  canvas.sample-img {
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    display: block;
+    margin-top: 8px;
+    max-width: 100%;
+  }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+    display: none;
+  }
+  .stat-box.show { display: block; }
+  .stat-box.error { background: #fff0f0; border-color: #ffc9c9; color: #a01818; }
+  .stat-box strong { color: #205fb0; }
+  .result-text {
+    margin-top: 8px;
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .result-text.show { display: block; }
+  .progress-log {
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    color: #555;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    max-height: 180px;
+    overflow-y: auto;
+    display: none;
+  }
+  .progress-log.show { display: block; }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>Tesseract.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Tesseract.js</strong>는 오픈소스 OCR 엔진 Tesseract를 WebAssembly로 포팅해서, 브라우저 안에서
+    이미지 속 글자를 텍스트로 인식해주는 라이브러리입니다.
+    <ul>
+      <li>이미지에서 <strong>영어 텍스트 인식</strong></li>
+      <li><code class="inline">worker.reinitialize()</code>로 하는 <strong>한국어 인식</strong></li>
+      <li><code class="inline">logger</code> 콜백으로 보는 <strong>엔진·언어 데이터 로딩 진행 상황</strong></li>
+      <li>인식된 <strong>단어 위치(바운딩 박스) 시각화</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ OCR 엔진(WASM)과 언어 데이터는 <strong>처음 실행할 때 수 MB를 내려받습니다</strong>(영어·한국어
+      합쳐 약 8MB). 버튼을 누른 뒤 처음 몇 초는 이 다운로드 때문에 걸리는 시간입니다. 아래 위판 안내문
+      이미지는 이 페이지를 위해 캔버스로 직접 그린 <strong>가상의 예시</strong>입니다.
+    </div>
+    <div class="privacy">
+      🔒 인식은 <strong>브라우저 안에서만</strong> 이루어집니다. 이미지가 서버로 전송되지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 텍스트 인식 (영어)</h2>
+    <div class="desc">
+      캔버스로 그린 샘플 이미지에서 텍스트를 인식합니다. <code class="inline">worker.recognize(image)</code>
+      한 번이면 됩니다.
+    </div>
+    <canvas class="sample-img" id="s1-canvas" width="560" height="90"></canvas>
+    <button id="s1-run">텍스트 인식하기</button>
+    <div class="stat-box" id="s1-stat"></div>
+    <div class="result-text" id="s1-result"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const worker = await Tesseract.createWorker('eng');
+const { data } = await worker.recognize(imageUrlOrFile);
+console.log(data.text, data.confidence);
+await worker.terminate();</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 한국어 인식 (언어 전환)</h2>
+    <div class="desc">
+      같은 워커를 <code class="inline">worker.reinitialize('kor')</code>로 재초기화하면, 워커를 새로
+      만들지 않고도 다른 언어를 인식할 수 있습니다. (워커를 새로 만들지 못하는 상황이 아니라면
+      <code class="inline">createWorker('kor')</code>로 바로 만드는 편이 더 간단합니다.)
+    </div>
+    <canvas class="sample-img" id="s2-canvas" width="560" height="90"></canvas>
+    <button id="s2-run">한국어로 전환 후 인식</button>
+    <div class="stat-box" id="s2-stat"></div>
+    <div class="result-text" id="s2-result"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>await worker.reinitialize('kor');
+const { data } = await worker.recognize(korImage);
+console.log(data.text); // "안녕하세요 위판" 등</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 로딩 진행 상황 표시 (logger)</h2>
+    <div class="desc">
+      <code class="inline">createWorker()</code>의 <code class="inline">logger</code> 옵션으로 WASM 엔진
+      로딩, 언어 데이터 다운로드, 인식 진행률 같은 단계별 상태를 실시간으로 받을 수 있습니다. 새 워커를
+      하나 만들면서 각 단계가 찍히는 것을 확인해 보세요.
+    </div>
+    <button id="s3-run">새 워커 만들면서 진행 상황 보기</button>
+    <div class="stat-box" id="s3-stat"></div>
+    <div class="progress-log" id="s3-log"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const worker = await Tesseract.createWorker('eng', 1, {
+  logger: (m) => console.log(m.status, Math.round(m.progress * 100) + '%'),
+  // 예: "loading tesseract core" 0%→100%, "loading language traineddata" 0%→100%,
+  //     "initializing tesseract" 0%→100%, "recognizing text" 0%→100% ...
+});</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 인식된 단어 위치 시각화</h2>
+    <div class="desc">
+      <code class="inline">recognize(image, {}, { blocks: true })</code>로 호출하면 문단·줄·단어 단위의
+      좌표(bbox)까지 받을 수 있습니다. 각 단어의 위치에 사각형을 그려서 어떤 글자를 어디서 인식했는지
+      확인합니다.
+    </div>
+    <canvas class="sample-img" id="s4-canvas" width="560" height="90"></canvas>
+    <button id="s4-run">인식 + 단어 위치 표시</button>
+    <div class="stat-box" id="s4-stat"></div>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const { data } = await worker.recognize(image, {}, { blocks: true });
+data.blocks.forEach((block) => {
+  block.paragraphs.forEach((para) => {
+    para.lines.forEach((line) => {
+      line.words.forEach((word) => {
+        const { x0, y0, x1, y1 } = word.bbox;
+        // 이 좌표에 사각형을 그리면 됨
+      });
+    });
+  });
+});</code></pre>
+    </details>
+  </section>
+
+<script>
+  function drawSampleText(canvasId, text, font) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.font = font;
+    ctx.fillText(text, 20, 55);
+    return canvas;
+  }
+
+  drawSampleText('s1-canvas', 'SUHYUP CATCH REPORT 2026', 'bold 32px sans-serif');
+  drawSampleText('s2-canvas', '위판 안내문 오전 6시 시작', 'bold 32px sans-serif');
+  drawSampleText('s4-canvas', 'SUHYUP CATCH 1240 KG', 'bold 32px sans-serif');
+
+  let sharedWorker = null;
+  let sharedWorkerLang = null;
+
+  async function getWorker(lang, logger) {
+    if (!sharedWorker) {
+      sharedWorker = await Tesseract.createWorker(lang, 1, logger ? { logger } : undefined);
+      sharedWorkerLang = lang;
+    } else if (sharedWorkerLang !== lang) {
+      await sharedWorker.reinitialize(lang);
+      sharedWorkerLang = lang;
+    }
+    return sharedWorker;
+  }
+
+  // ---- 섹션 1: 기본 인식 (영어) ----
+  (function section1() {
+    const btn = document.getElementById('s1-run');
+    const stat = document.getElementById('s1-stat');
+    const resultBox = document.getElementById('s1-result');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = 'OCR 엔진 준비 중... (처음 실행 시 몇 초 걸릴 수 있습니다)';
+      try {
+        const worker = await getWorker('eng');
+        const canvas = document.getElementById('s1-canvas');
+        stat.textContent = '인식 중...';
+        const { data } = await worker.recognize(canvas.toDataURL('image/png'));
+        stat.innerHTML = '신뢰도: <strong>' + Math.round(data.confidence) + '%</strong>';
+        resultBox.classList.add('show');
+        resultBox.textContent = data.text.trim();
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 2: 한국어 인식 ----
+  (function section2() {
+    const btn = document.getElementById('s2-run');
+    const stat = document.getElementById('s2-stat');
+    const resultBox = document.getElementById('s2-result');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '한국어 언어 데이터 준비 중... (처음 실행 시 몇 초 걸릴 수 있습니다)';
+      try {
+        const worker = await getWorker('kor');
+        const canvas = document.getElementById('s2-canvas');
+        stat.textContent = '인식 중...';
+        const { data } = await worker.recognize(canvas.toDataURL('image/png'));
+        stat.innerHTML = '신뢰도: <strong>' + Math.round(data.confidence) + '%</strong>';
+        resultBox.classList.add('show');
+        resultBox.textContent = data.text.trim();
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 3: 진행 상황 (별도의 새 워커로 시연) ----
+  (function section3() {
+    const btn = document.getElementById('s3-run');
+    const stat = document.getElementById('s3-stat');
+    const log = document.getElementById('s3-log');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = '새 워커 생성 중...';
+      log.classList.add('show');
+      log.textContent = '';
+      const lines = [];
+      try {
+        const demoWorker = await Tesseract.createWorker('eng', 1, {
+          logger: (m) => {
+            lines.push('[' + m.status + '] ' + Math.round(m.progress * 100) + '%');
+            log.textContent = lines.join('\n');
+            log.scrollTop = log.scrollHeight;
+          },
+        });
+        await demoWorker.terminate();
+        stat.innerHTML = '워커 생성부터 종료까지 <strong>' + lines.length + '개</strong>의 진행 상황 이벤트를 받았습니다.';
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---- 섹션 4: 단어 위치 시각화 ----
+  (function section4() {
+    const btn = document.getElementById('s4-run');
+    const stat = document.getElementById('s4-stat');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      stat.classList.remove('error');
+      stat.classList.add('show');
+      stat.textContent = 'OCR 엔진 준비 중...';
+      try {
+        const worker = await getWorker('eng');
+        const canvas = document.getElementById('s4-canvas');
+        stat.textContent = '인식 중...';
+        const { data } = await worker.recognize(canvas.toDataURL('image/png'), {}, { blocks: true });
+
+        const ctx = canvas.getContext('2d');
+        // 원본 다시 그리기 (이전 박스 지우기)
+        drawSampleText('s4-canvas', 'SUHYUP CATCH 1240 KG', 'bold 32px sans-serif');
+        let wordCount = 0;
+        (data.blocks || []).forEach((block) => {
+          block.paragraphs.forEach((para) => {
+            para.lines.forEach((line) => {
+              line.words.forEach((word) => {
+                wordCount += 1;
+                const { x0, y0, x1, y1 } = word.bbox;
+                ctx.strokeStyle = '#e0304f';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+              });
+            });
+          });
+        });
+        stat.innerHTML = '단어 <strong>' + wordCount + '개</strong>의 위치를 빨간 사각형으로 표시했습니다.';
+      } catch (e) {
+        stat.classList.add('error');
+        stat.textContent = '오류: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
