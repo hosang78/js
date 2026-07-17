@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Quill</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.bubble.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .editor-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 14px;
+    background: #fff;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Quill 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Quill</strong>은 웹페이지에 서식 있는 글쓰기(굵게, 목록, 링크 등)를 넣을 수 있게 해주는
+    리치 텍스트 에디터입니다. 게시판 글쓰기 화면, 메모 앱 등에 흔히 쓰입니다.
+    <ul>
+      <li>문서 내용과 서식을 <code>{ insert, attributes }</code> 형태의 <strong>Delta</strong>라는 자체 JSON으로 표현 (HTML을 직접 다루지 않음)</li>
+      <li><code>theme: 'snow'</code>(항상 보이는 툴바) / <code>theme: 'bubble'</code>(텍스트를 드래그해야 뜨는 인라인 툴바) 두 가지 기본 테마 제공</li>
+      <li><code>text-change</code> 이벤트로 내용이 바뀔 때마다 실시간 감지</li>
+      <li><code>history</code> 모듈이 기본 내장되어 있어 실행 취소/다시 실행이 바로 동작</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 공지·시세 문구는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      공지·자료가 아닙니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 에디터(Snow 테마) + 실시간 읽기</h2>
+    <div class="desc">항상 보이는 툴바로 서식을 적용할 수 있습니다. 글을 수정하면 <code>text-change</code> 이벤트가 실시간으로 감지되어 아래 텍스트/HTML이 갱신됩니다.</div>
+    <div class="editor-wrap" id="editor1" style="height:150px;"></div>
+    <div class="result-box" id="stats1">아직 입력 없음</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const quill = new Quill('#editor1', { theme: 'snow' });
+
+quill.on('text-change', () => {
+  const text = quill.getText();          // 순수 텍스트
+  const html = quill.getSemanticHTML();   // 서식이 반영된 HTML
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Delta 형식으로 콘텐츠 다루기</h2>
+    <div class="desc">버튼을 누르면 굵게·색상 서식이 섞인 공지를 <strong>Delta</strong>(JSON) 형태로 직접 만들어 삽입합니다. 아래에서 실제 Delta 구조를 확인할 수 있습니다.</div>
+    <div class="editor-wrap" id="editor2" style="height:120px;"></div>
+    <div class="controls"><button id="deltaBtn2">서식 있는 시세 공지 삽입</button></div>
+    <pre class="output" id="deltaOutput2">아직 삽입 안 함</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const Delta = Quill.import('delta');
+
+quill.setContents(new Delta()
+  .insert('금일 위판 시세: ')
+  .insert('고등어 4500원/kg', { bold: true, color: '#c0392b' })
+  .insert(' (전일 대비 인상)\n'));
+
+console.log(quill.getContents()); // { ops: [ {insert, attributes}, ... ] }</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Bubble 테마 (인라인 툴바)</h2>
+    <div class="desc">Snow와 달리 툴바가 평소엔 숨어 있다가, <strong>텍스트를 드래그해서 선택하면</strong> 그 자리에 작은 툴바가 떠오릅니다. 아래 글을 드래그해보세요.</div>
+    <div class="editor-wrap" id="editor3" style="height:100px;"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const quill = new Quill('#editor3', { theme: 'bubble' });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 읽기 전용 모드 토글</h2>
+    <div class="desc"><code>disable()</code> / <code>enable()</code>로 편집 가능 여부를 바로 전환합니다. 공지가 확정된 뒤 더 이상 수정 못 하게 잠그는 용도 등에 씁니다.</div>
+    <div class="editor-wrap" id="editor4" style="height:90px;"></div>
+    <div class="controls"><button class="ghost" id="readOnlyBtn4">읽기 전용 켜기</button></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">quill.disable();       // 편집 불가
+quill.enable();        // 다시 편집 가능
+quill.isEnabled();     // 현재 상태 확인</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>5. 실행 취소 / 다시 실행</h2>
+    <div class="desc">아래 에디터에 한 문장을 이어서 입력해보고, "실행 취소"를 눌러보세요. 짧은 시간(기본 1초) 안에 이어친 입력은 한 번에 묶여서 취소됩니다.</div>
+    <div class="editor-wrap" id="editor5" style="height:90px;"></div>
+    <div class="controls">
+      <button class="ghost" id="undoBtn5">실행 취소</button>
+      <button class="ghost" id="redoBtn5">다시 실행</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const quill = new Quill('#editor5', { theme: 'snow' });
+// history 모듈은 기본 내장 — 1초 안의 연속 입력을 한 단위로 묶어서 취소
+
+quill.history.undo();
+quill.history.redo();</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script>
+    // ---------- 1. 기본 에디터 + 실시간 읽기 ----------
+    const quill1 = new Quill('#editor1', { theme: 'snow' });
+    quill1.setText('금일 위판 공지: 부산공동어시장(가상) 05시 개장\n');
+    const stats1 = document.getElementById('stats1');
+    function updateStats1() {
+      stats1.textContent = `글자수: ${quill1.getText().trim().length} · HTML: ${quill1.getSemanticHTML()}`;
+    }
+    quill1.on('text-change', updateStats1);
+    updateStats1();
+
+    // ---------- 2. Delta 형식 ----------
+    const Delta = Quill.import('delta');
+    const quill2 = new Quill('#editor2', { theme: 'snow' });
+    document.getElementById('deltaBtn2').addEventListener('click', () => {
+      quill2.setContents(new Delta()
+        .insert('금일 위판 시세: ')
+        .insert('고등어 4500원/kg', { bold: true, color: '#c0392b' })
+        .insert(' (전일 대비 인상, 가상 예시)\n'));
+      document.getElementById('deltaOutput2').textContent = JSON.stringify(quill2.getContents().ops, null, 2);
+    });
+
+    // ---------- 3. Bubble 테마 ----------
+    const quill3 = new Quill('#editor3', { theme: 'bubble' });
+    quill3.setText('이 문장을 드래그해서 선택하면 인라인 툴바가 나타납니다.');
+
+    // ---------- 4. 읽기 전용 토글 ----------
+    const quill4 = new Quill('#editor4', { theme: 'snow' });
+    quill4.setText('이 공지는 확정 후 잠글 수 있습니다 (가상 예시).\n');
+    let readOnly4 = false;
+    document.getElementById('readOnlyBtn4').addEventListener('click', (e) => {
+      readOnly4 = !readOnly4;
+      readOnly4 ? quill4.disable() : quill4.enable();
+      e.target.textContent = readOnly4 ? '읽기 전용 끄기' : '읽기 전용 켜기';
+    });
+
+    // ---------- 5. 실행 취소 / 다시 실행 ----------
+    const quill5 = new Quill('#editor5', { theme: 'snow' });
+    quill5.setText('여기에 입력해보세요.\n');
+    quill5.history.clear(); // 초기 내용도 undo 스택에 쌓이므로, 지우지 않으면 이 문장까지 지워질 수 있음
+    document.getElementById('undoBtn5').addEventListener('click', () => quill5.history.undo());
+    document.getElementById('redoBtn5').addEventListener('click', () => quill5.history.redo());
+  </script>
+</body>
+</html>
