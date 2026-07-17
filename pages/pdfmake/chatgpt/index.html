@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pdfmake 종합 기능 샘플</title>
+
+  <!-- pdfmake 0.2.x 안정 계열 브라우저 빌드 -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/pdfmake.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/vfs_fonts.js"></script>
+
+  <!-- HTML 문자열 → pdfmake Document Definition 변환 보조 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/html-to-pdfmake@2.5.31/browser.js"></script>
+
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --line: #dbe3ef;
+      --text: #172033;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --accent: #0f766e;
+      --danger: #b91c1c;
+      --warning: #a16207;
+      --code: #0f172a;
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(15, 23, 42, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      font-family: Pretendard, "Noto Sans KR", Arial, sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      color: #fff;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      box-shadow: 0 6px 20px rgba(15,23,42,.22);
+    }
+    .brand { min-width: 230px; }
+    .brand h1 { margin: 0; font-size: 21px; letter-spacing: -.4px; }
+    .brand p { margin: 3px 0 0; color: #cbd5e1; font-size: 12px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 9px;
+      padding: 9px 12px;
+      color: #fff;
+      background: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      transition: .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+    .btn.secondary { background: #334155; }
+    .btn.green { background: #0f766e; }
+    .btn.orange { background: #b45309; }
+    .btn.red { background: #b91c1c; }
+    .btn.light { color: #1e293b; background: #fff; border-color: #cbd5e1; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 365px minmax(0, 1fr);
+      gap: 16px;
+      padding: 16px;
+    }
+    .sidebar {
+      align-self: start;
+      position: sticky;
+      top: 86px;
+      max-height: calc(100vh - 102px);
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .section { padding: 16px; margin-bottom: 14px; }
+    .section h2 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0 0 13px;
+      font-size: 15px;
+    }
+    .badge {
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: #1d4ed8;
+      background: #dbeafe;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .field { margin-bottom: 11px; }
+    .field:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    input[type="text"], input[type="password"], input[type="number"],
+    input[type="file"], select, textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      padding: 9px 10px;
+      color: #0f172a;
+      background: #fff;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
+    textarea { min-height: 100px; resize: vertical; line-height: 1.55; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .checkline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #334155;
+      font-size: 13px;
+      margin: 8px 0;
+    }
+    .checkline input { width: auto; }
+    .help {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .status {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #eff6ff;
+      color: #1e40af;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .status.warn { background: #fff7ed; color: #9a3412; }
+    .status.ok { background: #ecfdf5; color: #047857; }
+    .status.error { background: #fef2f2; color: #b91c1c; }
+
+    .workspace { min-width: 0; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+    }
+    .tab {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 13px;
+      color: #475569;
+      background: transparent;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .tab.active { color: #fff; background: var(--primary); }
+    .tabpane { display: none; }
+    .tabpane.active { display: block; }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .feature-card {
+      position: relative;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      box-shadow: 0 5px 15px rgba(15,23,42,.04);
+    }
+    .feature-card h3 { margin: 0 0 8px; font-size: 14px; }
+    .feature-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .feature-card code { color: #1d4ed8; font-size: 11px; }
+    .feature-card .mini-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      color: #166534;
+      background: #dcfce7;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .preview-wrap {
+      min-height: calc(100vh - 145px);
+      overflow: hidden;
+    }
+    .preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--line);
+    }
+    .preview-head strong { font-size: 14px; }
+    .preview-meta { color: var(--muted); font-size: 11px; }
+    iframe {
+      display: block;
+      width: 100%;
+      height: calc(100vh - 200px);
+      min-height: 620px;
+      border: 0;
+      background: #e2e8f0;
+    }
+    .empty-preview {
+      display: grid;
+      place-items: center;
+      min-height: 620px;
+      padding: 35px;
+      text-align: center;
+      color: var(--muted);
+      background:
+        linear-gradient(45deg, #f8fafc 25%, transparent 25%),
+        linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f8fafc 75%),
+        linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+    }
+    .empty-preview .icon { font-size: 56px; opacity: .35; }
+    .codebox {
+      margin: 0;
+      padding: 18px;
+      min-height: 650px;
+      overflow: auto;
+      color: #dbeafe;
+      background: var(--code);
+      border-radius: var(--radius);
+      font: 12px/1.55 Consolas, Monaco, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .editor-card { padding: 15px; }
+    .editor-card h3 { margin: 0 0 10px; font-size: 14px; }
+    .editor-card textarea { min-height: 410px; font-family: Consolas, monospace; font-size: 12px; }
+    .logbox {
+      height: 650px;
+      overflow: auto;
+      padding: 14px;
+      color: #cbd5e1;
+      background: #020617;
+      border-radius: var(--radius);
+      font: 12px/1.6 Consolas, monospace;
+    }
+    .log-entry { border-bottom: 1px solid #1e293b; padding: 5px 0; }
+    .log-time { color: #60a5fa; }
+    .log-error { color: #fca5a5; }
+    .log-ok { color: #86efac; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 320px minmax(0, 1fr); }
+      .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 820px) {
+      .topbar { position: static; align-items: flex-start; flex-direction: column; }
+      .toolbar { margin-left: 0; }
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+      .feature-grid, .editor-grid { grid-template-columns: 1fr; }
+      iframe { min-height: 520px; height: 70vh; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1>pdfmake 종합 기능 실험실</h1>
+      <p>Document Definition Object 기반 브라우저 PDF 생성</p>
+    </div>
+    <div class="toolbar">
+      <button class="btn green" id="btnPreview">미리보기 생성</button>
+      <button class="btn" id="btnOpen">새 창 열기</button>
+      <button class="btn" id="btnDownload">PDF 다운로드</button>
+      <button class="btn orange" id="btnPrint">인쇄</button>
+      <button class="btn secondary" id="btnBase64">Base64 복사</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="panel section">
+        <h2>문서 설정 <span class="badge">기본</span></h2>
+        <div class="row">
+          <div class="field">
+            <label for="pageSize">용지 크기</label>
+            <select id="pageSize">
+              <option value="A4">A4</option>
+              <option value="A3">A3</option>
+              <option value="A5">A5</option>
+              <option value="LETTER">LETTER</option>
+              <option value="LEGAL">LEGAL</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="orientation">방향</label>
+            <select id="orientation">
+              <option value="portrait">세로</option>
+              <option value="landscape">가로</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="margin">여백</label>
+            <select id="margin">
+              <option value="40">보통 40pt</option>
+              <option value="20">좁게 20pt</option>
+              <option value="60">넓게 60pt</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="theme">테마</label>
+            <select id="theme">
+              <option value="blue">블루</option>
+              <option value="teal">틸</option>
+              <option value="purple">퍼플</option>
+              <option value="mono">모노</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fileName">파일명</label>
+          <input id="fileName" type="text" value="pdfmake-feature-demo.pdf" />
+        </div>
+        <label class="checkline"><input id="useWatermark" type="checkbox" checked /> 워터마크 적용</label>
+        <label class="checkline"><input id="useBackground" type="checkbox" checked /> 페이지 배경 장식</label>
+        <label class="checkline"><input id="compress" type="checkbox" checked /> PDF 압축</label>
+      </section>
+
+      <section class="panel section">
+        <h2>사용자 데이터 <span class="badge">동적</span></h2>
+        <div class="field">
+          <label for="reportTitle">보고서 제목</label>
+          <input id="reportTitle" type="text" value="pdfmake 기능 종합 보고서" />
+        </div>
+        <div class="field">
+          <label for="author">작성자</label>
+          <input id="author" type="text" value="PDF Demo Lab" />
+        </div>
+        <div class="field">
+          <label for="summary">요약 문구</label>
+          <textarea id="summary">This PDF demonstrates text styles, columns, lists, tables, images, SVG, canvas vectors, QR codes, links, headers, footers, page breaks, metadata and security options.</textarea>
+        </div>
+        <div class="field">
+          <label for="userImage">이미지 삽입</label>
+          <input id="userImage" type="file" accept="image/png,image/jpeg" />
+          <div class="help">PNG/JPEG를 선택하면 이미지 섹션에 자동 삽입</div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <h2>한글 사용자 폰트 <span class="badge">TTF</span></h2>
+        <div class="field">
+          <label for="fontRegular">Regular TTF</label>
+          <input id="fontRegular" type="file" accept=".ttf,font/ttf" />
+        </div>
+        <div class="field">
+          <label for="fontBold">Bold TTF · 선택</label>
+          <input id="fontBold" type="file" accept=".ttf,font/ttf" />
+        </div>
+        <button class="btn light" id="btnLoadFont" style="width:100%">폰트 등록</button>
+        <div id="fontStatus" class="status warn" style="margin-top:10px">
+          기본 Roboto는 한글 글리프가 부족할 수 있음. 한글 TTF 등록 권장.
+        </div>
+      </section>
+
+      <section class="panel section">
+        <h2>보안 설정 <span class="badge">선택</span></h2>
+        <div class="field">
+          <label for="userPassword">열기 암호</label>
+          <input id="userPassword" type="password" placeholder="비워두면 암호 없음" />
+        </div>
+        <div class="field">
+          <label for="ownerPassword">소유자 암호</label>
+          <input id="ownerPassword" type="password" placeholder="권한 제한 시 권장" />
+        </div>
+        <label class="checkline"><input id="allowPrinting" type="checkbox" checked /> 인쇄 허용</label>
+        <label class="checkline"><input id="allowCopying" type="checkbox" /> 내용 복사 허용</label>
+        <label class="checkline"><input id="allowModifying" type="checkbox" /> 문서 수정 허용</label>
+        <div class="help">암호화 PDF는 브라우저 내장 뷰어에서 미리보기가 제한될 수 있음.</div>
+      </section>
+
+      <section class="panel section">
+        <h2>상태</h2>
+        <div id="status" class="status">라이브러리 로딩 확인 중…</div>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <nav class="panel tabs">
+        <button class="tab active" data-tab="features">기능 목록</button>
+        <button class="tab" data-tab="preview">PDF 미리보기</button>
+        <button class="tab" data-tab="editor">HTML·JSON 편집</button>
+        <button class="tab" data-tab="definition">Document Definition</button>
+        <button class="tab" data-tab="logs">실행 로그</button>
+      </nav>
+
+      <div id="features" class="tabpane active">
+        <div class="feature-grid">
+          <article class="feature-card"><span class="mini-badge">TEXT</span><h3>텍스트·스타일</h3><p>폰트 크기, 굵기, 색상, 배경색, 장식, 문자 간격, 정렬, 링크, 스타일 상속</p></article>
+          <article class="feature-card"><span class="mini-badge">LAYOUT</span><h3>열·스택</h3><p><code>columns</code>, 자동/고정/별표 너비, <code>columnGap</code>, <code>stack</code></p></article>
+          <article class="feature-card"><span class="mini-badge">LIST</span><h3>목록</h3><p>글머리표, 번호 목록, 중첩 목록, 시작 번호, 사용자 마커 색상</p></article>
+          <article class="feature-card"><span class="mini-badge">TABLE</span><h3>고급 표</h3><p>헤더 반복, colSpan, rowSpan, 사용자 레이아웃, 셀 색상, 정렬, 페이지 분할</p></article>
+          <article class="feature-card"><span class="mini-badge">MEDIA</span><h3>이미지·SVG</h3><p>Data URI 이미지, 비율 유지, fit/cover, SVG 문자열, 사용자 업로드 이미지</p></article>
+          <article class="feature-card"><span class="mini-badge">VECTOR</span><h3>Canvas 벡터</h3><p>선, 사각형, 원, 타원, 폴리라인, 채우기, 선 스타일, 대시 패턴</p></article>
+          <article class="feature-card"><span class="mini-badge">QR</span><h3>QR 코드</h3><p>QR 데이터, 크기, 전경·배경색, 오류 교정 수준</p></article>
+          <article class="feature-card"><span class="mini-badge">PAGE</span><h3>페이지 제어</h3><p>용지 크기·방향, 여백, 강제 페이지 나눔, pageBreakBefore, keepWithHeaderRows</p></article>
+          <article class="feature-card"><span class="mini-badge">REPEAT</span><h3>머리글·바닥글</h3><p>페이지별 동적 함수, 현재 페이지·전체 페이지, 홀짝 페이지 분기</p></article>
+          <article class="feature-card"><span class="mini-badge">DECOR</span><h3>배경·워터마크</h3><p>페이지 배경 함수, 투명 워터마크, 각도·색상·불투명도</p></article>
+          <article class="feature-card"><span class="mini-badge">META</span><h3>문서 메타데이터</h3><p>title, author, subject, keywords, creator, producer, creationDate</p></article>
+          <article class="feature-card"><span class="mini-badge">SECURITY</span><h3>암호화·권한</h3><p>사용자/소유자 암호와 인쇄·복사·수정 권한 지정</p></article>
+          <article class="feature-card"><span class="mini-badge">HTML</span><h3>HTML 변환</h3><p><code>html-to-pdfmake</code>로 기본 HTML을 Document Definition 노드로 변환</p></article>
+          <article class="feature-card"><span class="mini-badge">OUTPUT</span><h3>출력 API</h3><p>open, download, print, getBlob, getBase64, getDataUrl 등 브라우저 출력</p></article>
+          <article class="feature-card"><span class="mini-badge">FONT</span><h3>동적 TTF 등록</h3><p>FileReader로 TTF를 VFS에 추가하고 사용자 폰트 패밀리 적용</p></article>
+        </div>
+      </div>
+
+      <div id="preview" class="tabpane">
+        <div class="panel preview-wrap">
+          <div class="preview-head">
+            <strong>브라우저 PDF 미리보기</strong>
+            <span id="previewMeta" class="preview-meta">아직 생성되지 않음</span>
+          </div>
+          <div id="emptyPreview" class="empty-preview">
+            <div><div class="icon">▣</div><h3>미리보기 생성 버튼을 누르세요</h3><p>생성된 Blob URL을 iframe에 표시합니다.</p></div>
+          </div>
+          <iframe id="pdfFrame" title="PDF 미리보기" hidden></iframe>
+        </div>
+      </div>
+
+      <div id="editor" class="tabpane">
+        <div class="editor-grid">
+          <section class="panel editor-card">
+            <h3>HTML → pdfmake 변환 입력</h3>
+            <textarea id="htmlInput"><h2 style="color:#2563eb">HTML 변환 예제</h2>
+<p><strong>굵은 텍스트</strong>, <em>기울임 텍스트</em>, <u>밑줄</u>과 목록을 변환합니다.</p>
+<ul>
+  <li>HTML 문단</li>
+  <li>중첩 <span style="color:#dc2626">인라인 스타일</span></li>
+</ul>
+<table>
+  <tr><th>항목</th><th>값</th></tr>
+  <tr><td>변환기</td><td>html-to-pdfmake</td></tr>
+</table></textarea>
+            <button class="btn" id="btnApplyHtml" style="margin-top:10px">HTML 변환 내용 반영</button>
+          </section>
+          <section class="panel editor-card">
+            <h3>추가 JSON 콘텐츠 노드</h3>
+            <textarea id="jsonInput">[
+  {
+    "text": "사용자 JSON 노드",
+    "style": "sectionTitle",
+    "pageBreak": "before"
+  },
+  {
+    "text": "이 영역은 JSON으로 직접 추가한 pdfmake 콘텐츠입니다.",
+    "margin": [0, 0, 0, 12]
+  },
+  {
+    "columns": [
+      {"text": "왼쪽 사용자 열", "fillColor": "#eff6ff", "margin": 8},
+      {"text": "오른쪽 사용자 열", "fillColor": "#ecfdf5", "margin": 8}
+    ],
+    "columnGap": 10
+  }
+]</textarea>
+            <button class="btn green" id="btnApplyJson" style="margin-top:10px">JSON 검증·반영</button>
+          </section>
+        </div>
+      </div>
+
+      <div id="definition" class="tabpane">
+        <pre id="definitionCode" class="codebox">미리보기를 생성하면 최종 Document Definition Object가 표시됩니다.</pre>
+      </div>
+
+      <div id="logs" class="tabpane">
+        <div id="logBox" class="logbox"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    imageDataUrl: null,
+    customFontReady: false,
+    customFontName: 'UserFont',
+    htmlNodes: [],
+    jsonNodes: [],
+    blobUrl: null,
+    lastDefinition: null
+  };
+
+  const themes = {
+    blue:   { primary: '#1d4ed8', secondary: '#dbeafe', accent: '#0f766e', dark: '#172554' },
+    teal:   { primary: '#0f766e', secondary: '#ccfbf1', accent: '#2563eb', dark: '#134e4a' },
+    purple: { primary: '#7e22ce', secondary: '#f3e8ff', accent: '#db2777', dark: '#581c87' },
+    mono:   { primary: '#334155', secondary: '#e2e8f0', accent: '#0f172a', dark: '#020617' }
+  };
+
+  function log(message, type = '') {
+    const row = document.createElement('div');
+    row.className = 'log-entry ' + (type ? 'log-' + type : '');
+    const time = new Date().toLocaleTimeString('ko-KR');
+    row.innerHTML = `<span class="log-time">[${time}]</span> ${escapeHtml(message)}`;
+    $('logBox').prepend(row);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+    }[c]));
+  }
+
+  function setStatus(message, type = '') {
+    $('status').textContent = message;
+    $('status').className = 'status' + (type ? ' ' + type : '');
+  }
+
+  function activateTab(id) {
+    document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === id));
+    document.querySelectorAll('.tabpane').forEach(pane => pane.classList.toggle('active', pane.id === id));
+  }
+
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('파일 읽기 실패'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result);
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = () => reject(reader.error || new Error('폰트 읽기 실패'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('userImage').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      state.imageDataUrl = await fileToDataUrl(file);
+      setStatus(`이미지 등록 완료: ${file.name}`, 'ok');
+      log(`사용자 이미지 등록: ${file.name}`, 'ok');
+    } catch (err) {
+      setStatus(err.message, 'error');
+      log(err.message, 'error');
+    }
+  });
+
+  $('btnLoadFont').addEventListener('click', async () => {
+    const regular = $('fontRegular').files[0];
+    const bold = $('fontBold').files[0] || regular;
+    if (!regular) {
+      $('fontStatus').textContent = 'Regular TTF 파일을 먼저 선택하세요.';
+      $('fontStatus').className = 'status error';
+      return;
+    }
+    try {
+      const [regular64, bold64] = await Promise.all([fileToBase64(regular), fileToBase64(bold)]);
+      const regularKey = `UserFont-${Date.now()}-Regular.ttf`;
+      const boldKey = `UserFont-${Date.now()}-Bold.ttf`;
+
+      pdfMake.vfs[regularKey] = regular64;
+      pdfMake.vfs[boldKey] = bold64;
+      pdfMake.fonts = pdfMake.fonts || {};
+      pdfMake.fonts[state.customFontName] = {
+        normal: regularKey,
+        bold: boldKey,
+        italics: regularKey,
+        bolditalics: boldKey
+      };
+
+      state.customFontReady = true;
+      $('fontStatus').textContent = `등록 완료: ${regular.name}${$('fontBold').files[0] ? ' / ' + bold.name : ' (굵기도 동일 폰트 사용)'}`;
+      $('fontStatus').className = 'status ok';
+      setStatus('사용자 TTF 폰트가 등록되었습니다.', 'ok');
+      log(`사용자 폰트 등록 완료: ${regular.name}`, 'ok');
+    } catch (err) {
+      $('fontStatus').textContent = '폰트 등록 실패: ' + err.message;
+      $('fontStatus').className = 'status error';
+      log('폰트 등록 실패: ' + err.message, 'error');
+    }
+  });
+
+  $('btnApplyHtml').addEventListener('click', () => {
+    try {
+      if (typeof htmlToPdfmake !== 'function') throw new Error('html-to-pdfmake 로딩 실패');
+      state.htmlNodes = htmlToPdfmake($('htmlInput').value, {
+        defaultStyles: {
+          h2: { marginBottom: 8 },
+          p: { marginBottom: 7 },
+          table: { marginBottom: 10 }
+        }
+      });
+      setStatus('HTML 변환 내용을 반영했습니다.', 'ok');
+      log('HTML → pdfmake 콘텐츠 변환 완료', 'ok');
+    } catch (err) {
+      setStatus(err.message, 'error');
+      log(err.message, 'error');
+    }
+  });
+
+  $('btnApplyJson').addEventListener('click', () => {
+    try {
+      const parsed = JSON.parse($('jsonInput').value);
+      if (!Array.isArray(parsed)) throw new Error('최상위 JSON은 배열이어야 합니다.');
+      state.jsonNodes = parsed;
+      setStatus(`JSON 노드 ${parsed.length}개를 반영했습니다.`, 'ok');
+      log(`사용자 JSON 노드 ${parsed.length}개 반영`, 'ok');
+    } catch (err) {
+      setStatus('JSON 오류: ' + err.message, 'error');
+      log('JSON 오류: ' + err.message, 'error');
+    }
+  });
+
+  function svgBanner(theme) {
+    return `
+      <svg width="500" height="120" viewBox="0 0 500 120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g" x1="0" x2="1">
+            <stop offset="0" stop-color="${theme.primary}"/>
+            <stop offset="1" stop-color="${theme.accent}"/>
+          </linearGradient>
+        </defs>
+        <rect width="500" height="120" rx="18" fill="url(#g)"/>
+        <circle cx="430" cy="36" r="48" fill="white" opacity=".12"/>
+        <circle cx="465" cy="92" r="65" fill="white" opacity=".08"/>
+        <text x="28" y="52" font-family="Arial" font-size="27" font-weight="700" fill="white">pdfmake</text>
+        <text x="28" y="80" font-family="Arial" font-size="14" fill="white" opacity=".9">Declarative PDF generation in JavaScript</text>
+      </svg>`;
+  }
+
+  function chartCanvas(theme) {
+    const values = [38, 62, 49, 82, 71];
+    const labels = ['Text', 'Table', 'Image', 'Vector', 'Output'];
+    const canvas = [
+      { type: 'line', x1: 36, y1: 115, x2: 500, y2: 115, lineWidth: 1, lineColor: '#94a3b8' },
+      { type: 'line', x1: 36, y1: 15, x2: 36, y2: 115, lineWidth: 1, lineColor: '#94a3b8' }
+    ];
+    values.forEach((v, i) => {
+      const x = 62 + i * 88;
+      const h = v;
+      canvas.push({
+        type: 'rect', x, y: 115 - h, w: 48, h,
+        color: i % 2 ? theme.accent : theme.primary,
+        r: 3
+      });
+    });
+    return {
+      stack: [
+        { canvas, height: 125 },
+        {
+          columns: labels.map(label => ({ text: label, alignment: 'center', fontSize: 8, color: '#475569' })),
+          margin: [35, -5, 0, 0],
+          columnGap: 10
+        }
+      ]
+    };
+  }
+
+  function makeTableBody(theme) {
+    const body = [
+      [
+        { text: 'Feature', style: 'tableHeader' },
+        { text: 'API / Node', style: 'tableHeader' },
+        { text: 'Status', style: 'tableHeader' },
+        { text: 'Notes', style: 'tableHeader' }
+      ],
+      [
+        { text: 'Text & Styles', bold: true },
+        { text: 'text, styles, defaultStyle' },
+        { text: 'READY', color: '#15803d', bold: true },
+        { text: 'Alignment, decoration, links' }
+      ],
+      [
+        { text: 'Advanced table', bold: true, rowSpan: 2, fillColor: theme.secondary },
+        { text: 'table.body / widths' },
+        { text: 'READY', color: '#15803d', bold: true },
+        { text: 'Header repetition and layout' }
+      ],
+      [
+        {},
+        { text: 'colSpan / rowSpan' },
+        { text: 'READY', color: '#15803d', bold: true },
+        { text: 'Merged cells demonstrated' }
+      ],
+      [
+        { text: 'Vector & SVG', bold: true },
+        { text: 'canvas / svg' },
+        { text: 'READY', color: '#15803d', bold: true },
+        { text: 'No rasterization required' }
+      ],
+      [
+        { text: 'Output API', bold: true },
+        { text: 'open / download / print', colSpan: 2 },
+        {},
+        { text: 'Also Blob, Base64 and Data URL' }
+      ]
+    ];
+    return body;
+  }
+
+  function buildDocDefinition() {
+    if (!window.pdfMake) throw new Error('pdfmake가 로드되지 않았습니다.');
+
+    const theme = themes[$('theme').value];
+    const margin = Number($('margin').value);
+    const title = $('reportTitle').value.trim() || 'pdfmake Feature Report';
+    const author = $('author').value.trim() || 'PDF Demo Lab';
+    const summary = $('summary').value.trim();
+    const fontName = state.customFontReady ? state.customFontName : 'Roboto';
+    const hasPassword = Boolean($('userPassword').value);
+    const now = new Date();
+
+    const content = [
+      {
+        svg: svgBanner(theme),
+        width: 515,
+        alignment: 'center',
+        margin: [0, 0, 0, 18]
+      },
+      {
+        text: title,
+        style: 'title',
+        tocItem: true
+      },
+      {
+        columns: [
+          { text: `Author\n${author}`, style: 'metaBox' },
+          { text: `Generated\n${now.toLocaleString('en-GB')}`, style: 'metaBox' },
+          { text: `Page\n${$('pageSize').value} · ${$('orientation').value}`, style: 'metaBox' }
+        ],
+        columnGap: 8,
+        margin: [0, 0, 0, 16]
+      },
+      {
+        text: summary || 'A comprehensive browser-side pdfmake demonstration.',
+        style: 'lead'
+      },
+
+      { text: '1. Rich text and inline styles', style: 'sectionTitle', tocItem: true },
+      {
+        text: [
+          { text: 'Bold ', bold: true },
+          { text: 'Italic ', italics: true },
+          { text: 'Underline ', decoration: 'underline' },
+          { text: 'Strike-through ', decoration: 'lineThrough' },
+          { text: 'Colored ', color: theme.primary },
+          { text: 'Highlighted ', background: theme.secondary },
+          { text: 'Character spacing', characterSpacing: 2 }
+        ],
+        margin: [0, 0, 0, 8]
+      },
+      {
+        text: 'This paragraph is justified. pdfmake handles automatic line wrapping and document layout from a declarative JavaScript object, without manually calculating each x/y coordinate.',
+        alignment: 'justify',
+        lineHeight: 1.25,
+        margin: [0, 0, 0, 8]
+      },
+      {
+        text: 'Open the official pdfmake website',
+        link: 'https://pdfmake.org/',
+        color: theme.primary,
+        decoration: 'underline',
+        margin: [0, 0, 0, 14]
+      },
+
+      { text: '2. Columns, width strategies and stack', style: 'sectionTitle', tocItem: true },
+      {
+        columns: [
+          {
+            width: 'auto',
+            stack: [
+              { text: 'AUTO', style: 'columnHead' },
+              { text: 'Content-sized column', fontSize: 9 }
+            ],
+            style: 'columnBox'
+          },
+          {
+            width: '*',
+            stack: [
+              { text: 'STAR WIDTH', style: 'columnHead' },
+              { text: 'Takes the remaining available width.', fontSize: 9 }
+            ],
+            style: 'columnBox'
+          },
+          {
+            width: 120,
+            stack: [
+              { text: 'FIXED 120', style: 'columnHead' },
+              { text: 'Fixed point width', fontSize: 9 }
+            ],
+            style: 'columnBox'
+          }
+        ],
+        columnGap: 10,
+        margin: [0, 0, 0, 14]
+      },
+
+      { text: '3. Bulleted, numbered and nested lists', style: 'sectionTitle', tocItem: true },
+      {
+        columns: [
+          {
+            ul: [
+              'Bulleted list item',
+              { text: 'Styled bullet item', color: theme.primary, bold: true },
+              { ul: ['Nested item A', 'Nested item B'] }
+            ]
+          },
+          {
+            ol: [
+              'Numbered list item',
+              'Automatic numbering',
+              { ol: ['Nested number 1', 'Nested number 2'], type: 'lower-alpha' }
+            ]
+          }
+        ],
+        columnGap: 30,
+        margin: [0, 0, 0, 16]
+      },
+
+      { text: '4. Advanced table', style: 'sectionTitle', tocItem: true },
+      {
+        table: {
+          headerRows: 1,
+          keepWithHeaderRows: 1,
+          widths: ['*', 135, 65, '*'],
+          body: makeTableBody(theme)
+        },
+        layout: {
+          fillColor: (rowIndex) => rowIndex > 0 && rowIndex % 2 === 0 ? '#f8fafc' : null,
+          hLineWidth: (i, node) => (i === 0 || i === node.table.body.length) ? 1.2 : .5,
+          vLineWidth: () => .5,
+          hLineColor: () => '#94a3b8',
+          vLineColor: () => '#cbd5e1',
+          paddingLeft: () => 7,
+          paddingRight: () => 7,
+          paddingTop: () => 6,
+          paddingBottom: () => 6
+        },
+        margin: [0, 0, 0, 16]
+      },
+
+      { text: '5. Canvas vector graphics and chart', style: 'sectionTitle', tocItem: true },
+      {
+        columns: [
+          {
+            width: 190,
+            canvas: [
+              { type: 'rect', x: 5, y: 5, w: 165, h: 95, r: 8, color: theme.secondary, lineColor: theme.primary },
+              { type: 'ellipse', x: 46, y: 52, r1: 28, r2: 28, color: theme.primary },
+              { type: 'ellipse', x: 115, y: 52, r1: 28, r2: 28, color: theme.accent, fillOpacity: .75 },
+              { type: 'line', x1: 20, y1: 85, x2: 150, y2: 18, lineWidth: 2, lineColor: theme.dark, dash: { length: 5, space: 3 } },
+              { type: 'polyline', points: [{x:20,y:92},{x:55,y:72},{x:90,y:88},{x:145,y:52}], lineColor: '#dc2626', lineWidth: 2 }
+            ]
+          },
+          { width: '*', ...chartCanvas(theme) }
+        ],
+        columnGap: 15,
+        margin: [0, 0, 0, 15]
+      },
+
+      { text: '6. QR code and SVG', style: 'sectionTitle', tocItem: true },
+      {
+        columns: [
+          {
+            width: 115,
+            qr: 'https://pdfmake.org/',
+            fit: 95,
+            foreground: theme.dark,
+            background: '#ffffff',
+            eccLevel: 'M'
+          },
+          {
+            width: '*',
+            stack: [
+              { text: 'QR code node', bold: true, color: theme.primary, margin: [0, 0, 0, 5] },
+              { text: 'The QR node can encode URLs or plain text directly in the PDF definition.' },
+              { text: 'SVG content remains vector-based and scales cleanly.', margin: [0, 8, 0, 0] }
+            ],
+            margin: [0, 12, 0, 0]
+          }
+        ],
+        columnGap: 15,
+        margin: [0, 0, 0, 18]
+      }
+    ];
+
+    if (state.imageDataUrl) {
+      content.push(
+        { text: '7. User-uploaded image', style: 'sectionTitle', tocItem: true },
+        {
+          columns: [
+            { image: state.imageDataUrl, fit: [250, 180], alignment: 'center' },
+            {
+              stack: [
+                { text: 'Image options', bold: true, color: theme.primary },
+                { ul: ['PNG/JPEG Data URI', 'fit: [250, 180]', 'Proportional scaling', 'Browser FileReader input'] }
+              ],
+              margin: [0, 20, 0, 0]
+            }
+          ],
+          columnGap: 20,
+          margin: [0, 0, 0, 18]
+        }
+      );
+    }
+
+    if (state.htmlNodes.length) {
+      content.push(
+        { text: 'HTML conversion result', style: 'sectionTitle', pageBreak: 'before', tocItem: true },
+        ...state.htmlNodes
+      );
+    }
+
+    if (state.jsonNodes.length) {
+      content.push(...state.jsonNodes);
+    }
+
+    content.push(
+      { text: 'Table of contents', style: 'sectionTitle', pageBreak: 'before' },
+      {
+        toc: {
+          title: { text: 'Contents', style: 'tocTitle' },
+          textMargin: [0, 3, 0, 3],
+          numberStyle: { color: theme.primary }
+        }
+      },
+      { text: 'Page break and orientation demo', style: 'sectionTitle', pageBreak: 'before' },
+      {
+        text: 'This page is created after an explicit pageBreak. The page size, orientation and margins are controlled from the left panel.',
+        margin: [0, 0, 0, 12]
+      },
+      {
+        table: {
+          widths: ['*', '*', '*'],
+          body: [
+            [
+              { text: 'Reusable styles', style: 'summaryCell' },
+              { text: 'Dynamic header/footer', style: 'summaryCell' },
+              { text: 'Metadata & security', style: 'summaryCell' }
+            ],
+            [
+              { text: 'Named style dictionary and defaultStyle inheritance', fontSize: 9 },
+              { text: 'Current page, page count and odd/even page variations', fontSize: 9 },
+              { text: 'Title, author, subject, passwords and access privileges', fontSize: 9 }
+            ]
+          ]
+        },
+        layout: 'lightHorizontalLines'
+      }
+    );
+
+    const doc = {
+      pageSize: $('pageSize').value,
+      pageOrientation: $('orientation').value,
+      pageMargins: [margin, 62, margin, 52],
+      compress: $('compress').checked,
+      info: {
+        title,
+        author,
+        subject: 'pdfmake comprehensive feature demonstration',
+        keywords: 'pdfmake, javascript, pdf, demo, document definition',
+        creator: 'pdfmake Feature Lab',
+        producer: 'pdfmake',
+        creationDate: now,
+        modDate: now
+      },
+      defaultStyle: {
+        font: fontName,
+        fontSize: 10,
+        color: '#1e293b',
+        lineHeight: 1.15
+      },
+      styles: {
+        title: {
+          fontSize: 25, bold: true, color: theme.dark,
+          margin: [0, 0, 0, 12]
+        },
+        lead: {
+          fontSize: 11, color: '#475569', lineHeight: 1.35,
+          fillColor: '#f8fafc', margin: [10, 10, 10, 18]
+        },
+        sectionTitle: {
+          fontSize: 15, bold: true, color: theme.primary,
+          margin: [0, 13, 0, 9]
+        },
+        tocTitle: { fontSize: 22, bold: true, color: theme.dark, margin: [0, 0, 0, 15] },
+        metaBox: {
+          fontSize: 8, color: '#475569', fillColor: '#f8fafc',
+          margin: [8, 7, 8, 7]
+        },
+        columnBox: {
+          fillColor: '#f8fafc', margin: [8, 8, 8, 8]
+        },
+        columnHead: { bold: true, color: theme.primary, fontSize: 10, margin: [0, 0, 0, 4] },
+        tableHeader: { bold: true, color: '#ffffff', fillColor: theme.primary, alignment: 'center' },
+        summaryCell: { bold: true, color: theme.primary, alignment: 'center', margin: [0, 7, 0, 7] }
+      },
+      header: (currentPage, pageCount, pageSize) => ({
+        columns: [
+          { text: currentPage % 2 ? title : author, color: theme.primary, bold: true, fontSize: 8 },
+          { text: `pdfmake · ${pageSize.width.toFixed(0)}×${pageSize.height.toFixed(0)}pt`, alignment: 'right', color: '#64748b', fontSize: 8 }
+        ],
+        margin: [margin, 25, margin, 0]
+      }),
+      footer: (currentPage, pageCount) => ({
+        columns: [
+          { text: 'Generated in browser', color: '#64748b', fontSize: 8 },
+          { text: `${currentPage} / ${pageCount}`, alignment: 'center', color: theme.primary, bold: true, fontSize: 8 },
+          { text: now.toISOString().slice(0, 10), alignment: 'right', color: '#64748b', fontSize: 8 }
+        ],
+        margin: [margin, 0, margin, 20]
+      }),
+      content,
+      pageBreakBefore: (currentNode, followingNodesOnPage) => {
+        return currentNode.headlineLevel === 1 && followingNodesOnPage.length === 0;
+      }
+    };
+
+    if ($('useBackground').checked) {
+      doc.background = (currentPage, pageSize) => ({
+        canvas: [
+          { type: 'rect', x: 0, y: 0, w: pageSize.width, h: 7, color: theme.primary },
+          { type: 'rect', x: pageSize.width - 42, y: pageSize.height - 42, w: 42, h: 42, color: theme.secondary }
+        ]
+      });
+    }
+
+    if ($('useWatermark').checked) {
+      doc.watermark = {
+        text: 'PDFMAKE DEMO',
+        color: theme.primary,
+        opacity: 0.055,
+        bold: true,
+        italics: false,
+        angle: -35,
+        fontSize: 52
+      };
+    }
+
+    if (hasPassword) {
+      doc.userPassword = $('userPassword').value;
+      doc.ownerPassword = $('ownerPassword').value || $('userPassword').value + '-owner';
+      doc.permissions = {
+        printing: $('allowPrinting').checked ? 'highResolution' : 'none',
+        modifying: $('allowModifying').checked,
+        copying: $('allowCopying').checked,
+        annotating: false,
+        fillingForms: false,
+        contentAccessibility: true,
+        documentAssembly: false
+      };
+    }
+
+    state.lastDefinition = doc;
+    $('definitionCode').textContent = JSON.stringify(doc, (key, value) => {
+      if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
+      if (typeof value === 'string' && value.startsWith('data:image/') && value.length > 120) {
+        return value.slice(0, 90) + `... [${value.length} chars]`;
+      }
+      return value;
+    }, 2);
+
+    return doc;
+  }
+
+  function getPdf() {
+    const doc = buildDocDefinition();
+    return pdfMake.createPdf(doc);
+  }
+
+  async function createPreview() {
+    setStatus('PDF Blob 생성 중…');
+    log('미리보기 생성 시작');
+    try {
+      const pdf = getPdf();
+      const blob = await new Promise((resolve) => pdf.getBlob(resolve));
+      if (state.blobUrl) URL.revokeObjectURL(state.blobUrl);
+      state.blobUrl = URL.createObjectURL(blob);
+      $('pdfFrame').src = state.blobUrl;
+      $('pdfFrame').hidden = false;
+      $('emptyPreview').hidden = true;
+      $('previewMeta').textContent = `${(blob.size / 1024).toFixed(1)} KB · ${new Date().toLocaleTimeString('ko-KR')}`;
+      setStatus('PDF 미리보기 생성 완료', 'ok');
+      log(`PDF Blob 생성 완료: ${(blob.size / 1024).toFixed(1)} KB`, 'ok');
+      activateTab('preview');
+    } catch (err) {
+      setStatus('생성 실패: ' + err.message, 'error');
+      log('생성 실패: ' + err.message, 'error');
+      console.error(err);
+    }
+  }
+
+  $('btnPreview').addEventListener('click', createPreview);
+
+  $('btnOpen').addEventListener('click', () => {
+    try {
+      getPdf().open();
+      log('새 창 열기 요청', 'ok');
+    } catch (err) {
+      setStatus(err.message, 'error');
+      log(err.message, 'error');
+    }
+  });
+
+  $('btnDownload').addEventListener('click', () => {
+    try {
+      const fileName = $('fileName').value.trim() || 'pdfmake-demo.pdf';
+      getPdf().download(fileName);
+      log(`다운로드 요청: ${fileName}`, 'ok');
+    } catch (err) {
+      setStatus(err.message, 'error');
+      log(err.message, 'error');
+    }
+  });
+
+  $('btnPrint').addEventListener('click', () => {
+    try {
+      getPdf().print();
+      log('인쇄 요청', 'ok');
+    } catch (err) {
+      setStatus(err.message, 'error');
+      log(err.message, 'error');
+    }
+  });
+
+  $('btnBase64').addEventListener('click', () => {
+    try {
+      setStatus('Base64 생성 중…');
+      getPdf().getBase64(async (data) => {
+        try {
+          await navigator.clipboard.writeText(data);
+          setStatus(`Base64 ${data.length.toLocaleString()}자 복사 완료`, 'ok');
+          log(`Base64 복사 완료: ${data.length.toLocaleString()} chars`, 'ok');
+        } catch {
+          const popup = window.open('', '_blank');
+          if (popup) popup.document.write(`<textarea style="width:100%;height:95vh">${data}</textarea>`);
+          setStatus('클립보드 권한이 없어 새 창에 Base64를 표시했습니다.', 'warn');
+          log('Base64 새 창 표시');
+        }
+      });
+    } catch (err) {
+      setStatus(err.message, 'error');
+      log(err.message, 'error');
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (state.blobUrl) URL.revokeObjectURL(state.blobUrl);
+  });
+
+  if (window.pdfMake) {
+    setStatus('pdfmake 0.2.20 로딩 완료. 미리보기를 생성할 수 있습니다.', 'ok');
+    log('pdfmake 라이브러리 로딩 완료', 'ok');
+  } else {
+    setStatus('pdfmake 로딩 실패. 인터넷 연결 또는 CDN 접근을 확인하세요.', 'error');
+    log('pdfmake CDN 로딩 실패', 'error');
+  }
+
+  if (typeof htmlToPdfmake === 'function') {
+    log('html-to-pdfmake 로딩 완료', 'ok');
+  } else {
+    log('html-to-pdfmake 로딩 실패', 'error');
+  }
+})();
+</script>
+</body>
+</html>
