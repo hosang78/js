@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor.js 종합 기능 샘플</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--line:#dfe3e8;--text:#18212f;--muted:#667085;--accent:#2563eb;--danger:#dc2626;--shadow:0 8px 24px rgba(16,24,40,.08)}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.header-inner{max-width:1500px;margin:auto;padding:14px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between}.title h1{font-size:20px;margin:0}.title p{font-size:12px;color:var(--muted);margin:3px 0 0}
+.toolbar{display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}button,select,input[type=file]{font:inherit}button{border:1px solid var(--line);background:#fff;padding:8px 11px;border-radius:9px;cursor:pointer;font-size:13px}button:hover{border-color:#9ca3af;background:#f8fafc}button.primary{background:var(--accent);border-color:var(--accent);color:#fff}button.danger{color:var(--danger)}
+.layout{max-width:1500px;margin:18px auto;padding:0 18px;display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}.card-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.card-head h2{font-size:15px;margin:0}.badge{font-size:11px;padding:4px 7px;border-radius:999px;background:#eef2ff;color:#3730a3}.editor-wrap{padding:22px;min-height:690px}.ce-block__content,.ce-toolbar__content{max-width:760px}.side{display:grid;gap:16px;align-content:start}.tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;border:0;border-radius:0;padding:10px;background:#fff}.tab.active{color:var(--accent);border-bottom:2px solid var(--accent);font-weight:700}.pane{display:none}.pane.active{display:block}.codebox{margin:0;padding:14px;min-height:270px;max-height:430px;overflow:auto;background:#101828;color:#d1e9ff;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}.preview{padding:16px;max-height:430px;overflow:auto;line-height:1.65}.preview img{max-width:100%;border-radius:8px}.preview table{border-collapse:collapse;width:100%}.preview td,.preview th{border:1px solid #ccc;padding:6px}.preview blockquote{border-left:4px solid #94a3b8;margin-left:0;padding-left:12px;color:#475569}
+.info{padding:14px;font-size:13px;line-height:1.55}.info dl{display:grid;grid-template-columns:120px 1fr;gap:7px;margin:0}.info dt{color:var(--muted)}.info dd{margin:0}.log{padding:10px 14px;max-height:180px;overflow:auto;font:12px/1.5 ui-monospace,monospace}.log div{border-bottom:1px dashed #e5e7eb;padding:4px 0}.status{font-size:12px;color:var(--muted)}
+.custom-alert{padding:14px 16px;border-left:5px solid #f59e0b;background:#fffbeb;border-radius:8px}.custom-alert strong{display:block;margin-bottom:4px}.custom-alert[data-type=success]{border-color:#10b981;background:#ecfdf5}.custom-alert[data-type=danger]{border-color:#ef4444;background:#fef2f2}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.header-inner{align-items:flex-start;flex-direction:column}.toolbar{justify-content:flex-start}.side{grid-template-columns:1fr}.editor-wrap{padding:12px}.ce-toolbar__actions{right:0}}
+</style>
+</head>
+<body>
+<header><div class="header-inner"><div class="title"><h1>Editor.js 종합 기능 샘플</h1><p>블록 편집 · JSON 저장 · HTML 변환 · API 제어 · 커스텀 Tool · 로컬 이미지</p></div><div class="toolbar">
+<button id="saveBtn" class="primary">저장 / JSON</button><button id="renderBtn">HTML 미리보기</button><button id="addBtn">샘플 블록 추가</button><button id="readonlyBtn">읽기 전용</button><button id="clearBtn" class="danger">전체 삭제</button><button id="downloadBtn">JSON 다운로드</button><button id="loadBtn">JSON 불러오기</button><input id="jsonFile" type="file" accept="application/json" hidden>
+</div></div></header>
+<main class="layout">
+<section class="card"><div class="card-head"><h2>편집 영역</h2><span class="badge">Tab 또는 + 버튼으로 블록 추가</span></div><div class="editor-wrap"><div id="editorjs"></div></div></section>
+<aside class="side">
+<section class="card"><div class="tabs"><button class="tab active" data-tab="json">JSON</button><button class="tab" data-tab="html">HTML</button></div><div id="json" class="pane active"><pre id="output" class="codebox">편집기 초기화 중…</pre></div><div id="html" class="pane"><div id="preview" class="preview">HTML 미리보기가 여기에 표시된다.</div></div></section>
+<section class="card"><div class="card-head"><h2>상태 및 API 정보</h2><span id="state" class="status">초기화 중</span></div><div class="info"><dl><dt>Core</dt><dd>@editorjs/editorjs 2.31.6</dd><dt>출력 형식</dt><dd>구조화 JSON</dd><dt>이미지</dt><dd>FileReader 기반 로컬 Data URL</dd><dt>저장 위치</dt><dd>localStorage 자동 저장</dd><dt>단축키</dt><dd>Ctrl/Cmd+S 저장, Ctrl/Cmd+Shift+P 미리보기</dd></dl></div></section>
+<section class="card"><div class="card-head"><h2>이벤트 로그</h2><button id="logClear">지우기</button></div><div id="log" class="log"></div></section>
+</aside></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.31.6"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@2.0.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.6"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.4"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.4.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@1.5.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.4.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@1.2.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.5"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/warning@1.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@2.5.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.6"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/image@2.10.3"></script>
+<script>
+class AlertTool{
+ static get toolbox(){return {title:'알림 상자',icon:'<svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3zm0 6v5m0 3v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>'}}
+ static get sanitize(){return {title:{},message:{},type:false}}
+ constructor({data,api,readOnly}){this.api=api;this.readOnly=readOnly;this.data={type:data.type||'info',title:data.title||'알림',message:data.message||'내용을 입력하세요.'}}
+ render(){const root=document.createElement('div');root.className='custom-alert';root.dataset.type=this.data.type;root.innerHTML=`<strong contenteditable="${!this.readOnly}">${this.data.title}</strong><div contenteditable="${!this.readOnly}">${this.data.message}</div><select ${this.readOnly?'disabled':''} style="margin-top:8px"><option value="info">정보</option><option value="success">성공</option><option value="danger">위험</option></select>`;root.querySelector('select').value=this.data.type;root.querySelector('select').onchange=e=>root.dataset.type=e.target.value;return this.wrapper=root}
+ save(el){return {title:el.querySelector('strong').innerHTML,message:el.querySelector('div').innerHTML,type:el.querySelector('select').value}}
+ validate(d){return d.title.trim().length>0}
+}
+const sampleData={time:Date.now(),version:'2.31.6',blocks:[
+{type:'header',data:{text:'Editor.js 기능 실험실',level:2}},{type:'paragraph',data:{text:'Editor.js는 문서를 <b>블록 단위</b>로 편집하고 결과를 깨끗한 JSON으로 저장한다. 텍스트를 선택해 <mark class="cdx-marker">인라인 도구</mark>도 시험해 보자.'}},
+{type:'header',data:{text:'지원 블록 예시',level:3}},{type:'list',data:{style:'unordered',meta:{},items:[{content:'헤더·문단·목록',meta:{},items:[]},{content:'체크리스트·인용문·경고',meta:{},items:[]},{content:'코드·표·구분선·임베드',meta:{},items:[]}]}},
+{type:'checklist',data:{items:[{text:'블록 추가 메뉴 열기',checked:true},{text:'블록 순서 이동하기',checked:false},{text:'JSON 저장하기',checked:false}]}},
+{type:'quote',data:{text:'블록 구조는 콘텐츠 재사용과 다양한 출력 형식 변환에 유리하다.',caption:'Editor.js 데모',alignment:'left'}},
+{type:'warning',data:{title:'주의',message:'이미지와 링크 미리보기는 실제 서비스에서 업로드 API와 메타데이터 API를 연결하는 것이 일반적이다.'}},
+{type:'alert',data:{type:'success',title:'커스텀 Tool',message:'이 블록은 샘플 페이지에서 직접 구현한 사용자 정의 블록이다.'}},
+{type:'table',data:{withHeadings:true,stretched:false,content:[['기능','설명'],['save()','전체 문서를 JSON으로 반환'],['render()','새 데이터로 문서 교체'],['readOnly.toggle()','편집/조회 모드 전환']]}},
+{type:'code',data:{code:"const data = await editor.save();\nconsole.log(data.blocks);"}},{type:'delimiter',data:{}}
+]};
+let editor;let isReadOnly=false;const $=s=>document.querySelector(s);const log=(m)=>{const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+' · '+m;$('#log').prepend(d)};
+function safeText(v=''){return String(v)}
+function blocksToHtml(data){return data.blocks.map(b=>{const d=b.data||{};switch(b.type){case'header':return `<h${d.level||2}>${d.text||''}</h${d.level||2}>`;case'paragraph':return `<p>${d.text||''}</p>`;case'list':{const tag=d.style==='ordered'?'ol':'ul';const walk=items=>`<${tag}>${(items||[]).map(i=>`<li>${i.content||i}<span>${i.items?.length?walk(i.items):''}</span></li>`).join('')}</${tag}>`;return walk(d.items)}case'checklist':return `<ul>${(d.items||[]).map(i=>`<li>${i.checked?'☑':'☐'} ${i.text}</li>`).join('')}</ul>`;case'quote':return `<blockquote>${d.text||''}<footer>${d.caption||''}</footer></blockquote>`;case'warning':return `<aside><strong>${d.title||''}</strong><p>${d.message||''}</p></aside>`;case'alert':return `<div class="custom-alert" data-type="${d.type}"><strong>${d.title}</strong><div>${d.message}</div></div>`;case'code':return `<pre><code>${safeText(d.code).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</code></pre>`;case'delimiter':return '<hr>';case'table':return `<table><tbody>${(d.content||[]).map((r,ri)=>`<tr>${r.map(c=>ri===0&&d.withHeadings?`<th>${c}</th>`:`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;case'image':return `<figure><img src="${d.file?.url||''}" alt=""><figcaption>${d.caption||''}</figcaption></figure>`;case'embed':return `<p><a href="${d.source||d.embed}" target="_blank">${d.caption||d.source||'임베드 콘텐츠'}</a></p>`;case'raw':return d.html||'';default:return `<pre>${JSON.stringify(b,null,2)}</pre>`}}).join('\n')}
+const saved=localStorage.getItem('editorjs-demo-data');let initial=sampleData;try{if(saved)initial=JSON.parse(saved)}catch(e){}
+editor=new EditorJS({holder:'editorjs',autofocus:true,readOnly:false,placeholder:'내용을 입력하거나 Tab 키를 눌러 블록을 선택하세요.',minHeight:500,logLevel:'ERROR',data:initial,
+ tools:{header:{class:Header,inlineToolbar:true,config:{levels:[2,3,4],defaultLevel:2},shortcut:'CMD+SHIFT+H'},list:{class:EditorjsList,inlineToolbar:true,config:{defaultStyle:'unordered'}},checklist:{class:Checklist,inlineToolbar:true},quote:{class:Quote,inlineToolbar:true,config:{quotePlaceholder:'인용문',captionPlaceholder:'출처'}},warning:{class:Warning,inlineToolbar:true},code:{class:CodeTool,shortcut:'CMD+SHIFT+C'},delimiter:Delimiter,inlineCode:{class:InlineCode,shortcut:'CMD+SHIFT+M'},marker:{class:Marker,shortcut:'CMD+SHIFT+Y'},underline:Underline,table:{class:Table,inlineToolbar:true,config:{rows:3,cols:3}},raw:RawTool,embed:{class:Embed,config:{services:{youtube:true,vimeo:true,coub:true,codepen:true}}},image:{class:ImageTool,config:{uploader:{uploadByFile(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({success:1,file:{url:r.result,name:file.name,size:file.size}});r.onerror=reject;r.readAsDataURL(file)})}}}},alert:AlertTool},
+ onReady(){state('편집 가능');log('Editor.js 초기화 완료');save(false)},onChange(api,event){state('변경됨');log('변경 이벤트: '+(event?.type||'unknown'));clearTimeout(window.autoSaveTimer);window.autoSaveTimer=setTimeout(()=>save(false),500)}});
+function state(t){$('#state').textContent=t}
+async function save(showTab=true){try{const data=await editor.save();$('#output').textContent=JSON.stringify(data,null,2);localStorage.setItem('editorjs-demo-data',JSON.stringify(data));state('자동 저장됨');if(showTab)activate('json');return data}catch(e){state('저장 오류');log('저장 실패: '+e.message);throw e}}
+function activate(name){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===name));document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('active',x.id===name))}
+document.querySelectorAll('.tab').forEach(x=>x.onclick=()=>activate(x.dataset.tab));
+$('#saveBtn').onclick=()=>save(true);$('#renderBtn').onclick=async()=>{const d=await save(false);$('#preview').innerHTML=blocksToHtml(d);activate('html');log('HTML 미리보기 생성')};
+$('#readonlyBtn').onclick=async()=>{isReadOnly=await editor.readOnly.toggle();$('#readonlyBtn').textContent=isReadOnly?'편집 모드':'읽기 전용';state(isReadOnly?'읽기 전용':'편집 가능');log('읽기 전용 토글: '+isReadOnly)};
+$('#clearBtn').onclick=async()=>{if(confirm('모든 블록을 삭제할까?')){await editor.clear();localStorage.removeItem('editorjs-demo-data');log('전체 블록 삭제')}};
+$('#addBtn').onclick=()=>{editor.blocks.insert('header',{text:'API로 추가한 블록',level:3});editor.blocks.insert('paragraph',{text:'blocks.insert() 메서드로 동적으로 삽입되었다.'});editor.caret.setToLastBlock('end');log('API로 블록 2개 추가')};
+$('#downloadBtn').onclick=async()=>{const d=await save(false);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));a.download='editorjs-data.json';a.click();URL.revokeObjectURL(a.href);log('JSON 파일 다운로드')};
+$('#loadBtn').onclick=()=>$('#jsonFile').click();$('#jsonFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.blocks))throw new Error('blocks 배열이 없음');await editor.render(d);await save(false);log('JSON 파일 불러오기 완료')}catch(err){alert('올바른 Editor.js JSON이 아니다.\n'+err.message)}e.target.value=''};
+$('#logClear').onclick=()=>$('#log').innerHTML='';
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save(true)}if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='p'){e.preventDefault();$('#renderBtn').click()}});
+window.addEventListener('error',e=>{state('스크립트 오류');log('오류: '+e.message)});
+</script>
+</body></html>
