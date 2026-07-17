@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Yjs</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    resize: vertical;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .col h3 {
+    font-size: 13px;
+    margin: 0 0 6px;
+    color: #4f7dff;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.sync { background: #1baf7a; }
+  button.sync:hover { background: #159163; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  .result-box.matched { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  pre.output {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Yjs 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Yjs</strong>는 완성된 에디터가 아니라, 여러 사람이 같은 문서를 동시에 편집해도
+    <strong>충돌 없이 자동으로 합쳐지는</strong> 데이터 구조를 제공하는 CRDT
+    (Conflict-free Replicated Data Type) 라이브러리입니다. Google Docs류 실시간 공동
+    편집 기능의 "하부 엔진" 역할을 합니다.
+    <ul>
+      <li><code>Y.Text</code>, <code>Y.Array</code>, <code>Y.Map</code> 같은 공유 데이터 타입에 변경을 가하면 <code>observe()</code>로 실시간 감지</li>
+      <li>서버 없이도 <code>Y.encodeStateAsUpdate()</code> / <code>Y.applyUpdate()</code>로 두 문서의 상태를 교환·병합 가능</li>
+      <li>같은 문서를 두 곳에서 <strong>동시에, 서로 다른 위치를</strong> 수정해도 병합 시 둘 다 자동으로 반영됨 (충돌 해결 로직을 직접 짤 필요 없음)</li>
+      <li><code>Y.UndoManager</code>로 트랜잭션 단위 실행 취소/다시 실행 지원</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 실제 서비스에서는 y-websocket·y-webrtc 같은 <em>provider</em> 패키지가 네트워크로 이 업데이트를
+      자동 교환해주지만, 이 페이지는 Yjs 자체의 동작만 보여주기 위해 provider 없이 버튼을 눌러 수동으로
+      상태를 교환합니다. 이 페이지의 위판 공지 내용은 모두 <strong>가상의 예시</strong>이며 실제
+      수협중앙회의 공지·자료가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. Y.Text 공유 텍스트 + 실시간 변경 감지</h2>
+    <div class="desc">아래에 자유롭게 입력해보세요. <code>observe()</code>로 등록한 콜백이 변경될 때마다 호출되어 감지 횟수가 올라갑니다.</div>
+    <textarea id="editor1" rows="3">금일 위판 공지: 부산공동어시장(가상) 05시 개장</textarea>
+    <div class="result-box" id="stats1">변경 감지: 0회</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const doc = new Y.Doc();
+const ytext = doc.getText('notice');
+ytext.insert(0, '금일 위판 공지: ...');
+
+ytext.observe(() => {
+  console.log(ytext.toString()); // 현재 값
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 두 문서의 독립 수정 → 충돌 없는 자동 병합</h2>
+    <div class="desc">문서 A, B는 각자 따로 떨어진(오프라인) 상태라고 가정합니다. 양쪽에서 서로 다른 부분을 수정한 뒤 "동기화" 버튼을 눌러, 둘 다 하나로 자동 합쳐지는 것을 확인하세요.</div>
+    <div class="two-col">
+      <div class="col">
+        <h3>문서 A</h3>
+        <textarea id="editorA" rows="2" readonly></textarea>
+        <div class="controls"><button class="ghost" id="editABtn">A에서 끝에 "(인상)" 추가</button></div>
+      </div>
+      <div class="col">
+        <h3>문서 B</h3>
+        <textarea id="editorB" rows="2" readonly></textarea>
+        <div class="controls"><button class="ghost" id="editBBtn">B에서 앞에 "[속보]" 추가</button></div>
+      </div>
+    </div>
+    <div class="controls"><button class="sync" id="syncBtn">두 문서 동기화</button></div>
+    <div class="result-box" id="syncResult">아직 동기화 안 함 — 두 문서가 다른 상태입니다</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// A, B가 서로 다르게 수정한 뒤
+const updateFromA = Y.encodeStateAsUpdate(docA, Y.encodeStateVector(docB));
+const updateFromB = Y.encodeStateAsUpdate(docB, Y.encodeStateVector(docA));
+Y.applyUpdate(docB, updateFromA);
+Y.applyUpdate(docA, updateFromB);
+// 이제 docA와 docB의 텍스트가 완전히 동일해짐</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Y.Array / Y.Map 공유 데이터 구조</h2>
+    <div class="desc">텍스트뿐 아니라 배열·맵 형태의 데이터도 같은 방식으로 다룰 수 있습니다.</div>
+    <div class="controls"><button id="addSpeciesBtn">어종 추가</button></div>
+    <pre class="output" id="arrayOutput3"></pre>
+    <div class="controls"><button id="updatePriceBtn">시세 갱신</button></div>
+    <pre class="output" id="mapOutput3"></pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const yarray = doc.getArray('species');
+yarray.push(['고등어', '갈치']);
+
+const ymap = doc.getMap('priceInfo');
+ymap.set('species', '고등어');
+ymap.set('price', 4200);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. Y.UndoManager — 실행 취소/다시 실행</h2>
+    <div class="desc">아래에 문장을 이어서 입력해보고 버튼으로 실행 취소/다시 실행을 확인하세요. 짧은 시간 안에 이어친 입력은 한 번에 묶여서 취소됩니다.</div>
+    <textarea id="editor4" rows="2">여기에 입력해보세요.</textarea>
+    <div class="controls">
+      <button class="ghost" id="undoBtn4">실행 취소</button>
+      <button class="ghost" id="redoBtn4">다시 실행</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const ytext = doc.getText('notice');
+const undoManager = new Y.UndoManager(ytext);
+
+undoManager.undo();
+undoManager.redo();</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.31/+esm';
+
+    // ---------- 1. Y.Text + 실시간 변경 감지 ----------
+    const doc1 = new Y.Doc();
+    const ytext1 = doc1.getText('notice');
+    ytext1.insert(0, '금일 위판 공지: 부산공동어시장(가상) 05시 개장');
+    const editor1 = document.getElementById('editor1');
+    const stats1 = document.getElementById('stats1');
+    let observeCount1 = 0;
+    let syncingFromY1 = false;
+    ytext1.observe(() => {
+      observeCount1++;
+      stats1.textContent = `변경 감지: ${observeCount1}회`;
+      if (!syncingFromY1) {
+        syncingFromY1 = true;
+        editor1.value = ytext1.toString();
+        syncingFromY1 = false;
+      }
+    });
+    editor1.addEventListener('input', () => {
+      syncingFromY1 = true;
+      ytext1.delete(0, ytext1.length);
+      ytext1.insert(0, editor1.value);
+      syncingFromY1 = false;
+    });
+
+    // ---------- 2. 두 문서 동기화 ----------
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+    const textA = docA.getText('notice');
+    textA.insert(0, '금일 위판 시세: 고등어 4200원');
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA)); // 최초 동기화
+    const textB = docB.getText('notice');
+    const editorA = document.getElementById('editorA');
+    const editorB = document.getElementById('editorB');
+    const syncResult = document.getElementById('syncResult');
+    function renderAB() {
+      editorA.value = textA.toString();
+      editorB.value = textB.toString();
+    }
+    renderAB();
+    document.getElementById('editABtn').addEventListener('click', (e) => {
+      textA.insert(textA.length, ' (인상)');
+      renderAB();
+      e.target.disabled = true;
+    });
+    document.getElementById('editBBtn').addEventListener('click', (e) => {
+      textB.insert(0, '[속보] ');
+      renderAB();
+      e.target.disabled = true;
+    });
+    document.getElementById('syncBtn').addEventListener('click', () => {
+      const updateFromA = Y.encodeStateAsUpdate(docA, Y.encodeStateVector(docB));
+      const updateFromB = Y.encodeStateAsUpdate(docB, Y.encodeStateVector(docA));
+      Y.applyUpdate(docB, updateFromA);
+      Y.applyUpdate(docA, updateFromB);
+      renderAB();
+      const matched = textA.toString() === textB.toString();
+      syncResult.textContent = matched
+        ? `동기화 완료 — 두 문서가 동일해짐: "${textA.toString()}"`
+        : '동기화했지만 내용이 다릅니다 (예상치 못한 상태)';
+      syncResult.classList.toggle('matched', matched);
+    });
+
+    // ---------- 3. Y.Array / Y.Map ----------
+    const doc3 = new Y.Doc();
+    const yarray = doc3.getArray('species');
+    yarray.push(['고등어', '갈치']);
+    const ymap = doc3.getMap('priceInfo');
+    ymap.set('species', '고등어');
+    ymap.set('price', 4200);
+    const arrayOutput3 = document.getElementById('arrayOutput3');
+    const mapOutput3 = document.getElementById('mapOutput3');
+    function renderArrayMap() {
+      arrayOutput3.textContent = 'Y.Array: ' + JSON.stringify(yarray.toArray());
+      mapOutput3.textContent = 'Y.Map: ' + JSON.stringify(Object.fromEntries(ymap.entries()));
+    }
+    renderArrayMap();
+    const EXTRA_SPECIES = ['전복', '멸치', '오징어'];
+    let speciesIdx = 0;
+    document.getElementById('addSpeciesBtn').addEventListener('click', () => {
+      yarray.push([EXTRA_SPECIES[speciesIdx % EXTRA_SPECIES.length]]);
+      speciesIdx++;
+      renderArrayMap();
+    });
+    document.getElementById('updatePriceBtn').addEventListener('click', () => {
+      ymap.set('price', ymap.get('price') + 100);
+      renderArrayMap();
+    });
+
+    // ---------- 4. Y.UndoManager ----------
+    const doc4 = new Y.Doc();
+    const ytext4 = doc4.getText('notice');
+    ytext4.insert(0, '여기에 입력해보세요.');
+    const undoManager4 = new Y.UndoManager(ytext4);
+    const editor4 = document.getElementById('editor4');
+    let syncingFromY4 = false;
+    ytext4.observe(() => {
+      if (!syncingFromY4) {
+        syncingFromY4 = true;
+        editor4.value = ytext4.toString();
+        syncingFromY4 = false;
+      }
+    });
+    editor4.addEventListener('input', () => {
+      syncingFromY4 = true;
+      ytext4.delete(0, ytext4.length);
+      ytext4.insert(0, editor4.value);
+      syncingFromY4 = false;
+    });
+    document.getElementById('undoBtn4').addEventListener('click', () => undoManager4.undo());
+    document.getElementById('redoBtn4').addEventListener('click', () => undoManager4.redo());
+  </script>
+</body>
+</html>
