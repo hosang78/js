@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>CesiumJS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.143.0/Build/Cesium/Widgets/widgets.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .map-wrap {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 380px;
+    position: relative;
+    background: #000;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.active { background: #1baf7a; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>CesiumJS 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>CesiumJS</strong>는 지금까지 살펴본 MapLibre·OpenLayers·deck.gl과 달리, 평면 지도가
+    아니라 실제 지구 곡률을 가진 <strong>회전하는 3D 지구본</strong>을 다루는 라이브러리입니다.
+    항공·해양·위성 같은 3D 공간 시각화에 특화되어 있습니다.
+    <ul>
+      <li><code>Cesium.Viewer</code>로 3D 지구본 생성, <code>camera.flyTo()</code>로 부드러운 카메라 이동 애니메이션</li>
+      <li><code>viewer.entities.add()</code>로 지구본 위 어느 위치에나 포인트·라벨·모델 등을 3D로 배치</li>
+      <li>폴리곤·폴리라인 엔티티로 3D 공간에 영역·경로 표시</li>
+      <li><code>scene.morphTo2D()</code> / <code>morphTo3D()</code>로 3D 지구본과 평면 지도(2D), 그 중간 형태(Columbus View) 사이를 애니메이션과 함께 전환</li>
+    </ul>
+    <div class="disclaimer">
+      ※ CesiumJS는 기본 설정으로 쓰면 지형·베이스 이미지에 Cesium ion API 키가 필요합니다. 이 페이지는
+      API 키 없이도 쓸 수 있는 <code>OpenStreetMapImageryProvider</code>(이미지)와
+      <code>EllipsoidTerrainProvider</code>(고도 없는 매끈한 타원체 지형)로 구성해 별도 키 없이 동작합니다.
+      또한 검증 중 폴리곤을 지형에 딱 붙이면(clamp) 외곽선이 자동으로 꺼지는 것을 실제로 확인했고,
+      3번 섹션에서 <code>height: 0</code>을 지정해 이를 우회했습니다. 위판장 위치는 모두
+      <strong>가상의 예시</strong>이며 실제 수협중앙회의 자료가 아닙니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 3D 지구본 + 카메라 이동</h2>
+    <div class="desc">마우스로 드래그해 지구본을 돌려보세요. 버튼을 누르면 부산 인근(가상 좌표)으로 카메라가 부드럽게 이동합니다.</div>
+    <div class="controls"><button id="flyToBtn1">부산 인근으로 이동</button></div>
+    <div class="map-wrap" id="map1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const viewer = new Cesium.Viewer('map1', {
+  imageryProvider: new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }),
+  terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+});
+
+viewer.camera.flyTo({
+  destination: Cesium.Cartesian3.fromDegrees(129.0756, 35.0951, 15000),
+  duration: 2,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Entity API — 3D 포인트/라벨 마커</h2>
+    <div class="desc">지구본 위 특정 좌표에 점과 라벨을 3D 공간 좌표로 배치합니다.</div>
+    <div class="map-wrap" id="map2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">viewer.entities.add({
+  position: Cesium.Cartesian3.fromDegrees(129.0756, 35.0951),
+  point: { pixelSize: 12, color: Cesium.Color.fromCssColorString('#4f7dff') },
+  label: { text: '부산공동어시장(가상)', pixelOffset: new Cesium.Cartesian2(0, -20) },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 폴리곤 엔티티 — 조업 구역 표시</h2>
+    <div class="desc">여러 좌표를 이어 3D 공간에 영역을 그립니다.</div>
+    <div class="map-wrap" id="map3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">viewer.entities.add({
+  polygon: {
+    hierarchy: Cesium.Cartesian3.fromDegreesArray([129.05, 35.08, 129.10, 35.08, 129.10, 35.12, 129.05, 35.12]),
+    material: Cesium.Color.fromCssColorString('#1baf7a').withAlpha(0.4),
+    outline: true,
+    outlineColor: Cesium.Color.fromCssColorString('#1baf7a'),
+    height: 0, // 지형에 클램핑하면 외곽선이 자동으로 꺼지므로 명시적으로 고도 지정
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. Scene Mode 전환 (3D ↔ 2D ↔ Columbus View)</h2>
+    <div class="desc">같은 지구본을 3D, 평면(2D), 그 중간 형태(Columbus View)로 애니메이션과 함께 전환합니다.</div>
+    <div class="controls">
+      <button class="mode-btn active" data-mode="3D">3D</button>
+      <button class="mode-btn ghost" data-mode="2D">2D</button>
+      <button class="mode-btn ghost" data-mode="Columbus">Columbus View</button>
+    </div>
+    <div class="map-wrap" id="map4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">viewer.scene.morphTo3D(1.0);
+viewer.scene.morphTo2D(1.0);
+viewer.scene.morphToColumbusView(1.0);</pre>
+    </details>
+  </section>
+
+  <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.143.0/Build/Cesium/';</script>
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.143.0/Build/Cesium/Cesium.js"></script>
+  <script>
+    const BUSAN = [129.0756, 35.0951];
+
+    function makeViewer(containerId) {
+      return new Cesium.Viewer(containerId, {
+        imageryProvider: new Cesium.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/' }),
+        terrainProvider: new Cesium.EllipsoidTerrainProvider(),
+        baseLayerPicker: false,
+        geocoder: false,
+        timeline: false,
+        animation: false,
+        homeButton: false,
+        fullscreenButton: false,
+        navigationHelpButton: false,
+      });
+    }
+
+    // ---------- 1. 기본 지구본 + flyTo ----------
+    const viewer1 = makeViewer('map1');
+    viewer1.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(BUSAN[0], BUSAN[1], 3000000) });
+    document.getElementById('flyToBtn1').addEventListener('click', () => {
+      viewer1.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(BUSAN[0], BUSAN[1], 15000),
+        duration: 2,
+      });
+    });
+
+    // ---------- 2. Entity 마커 ----------
+    const viewer2 = makeViewer('map2');
+    viewer2.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(BUSAN[0], BUSAN[1], 20000) });
+    viewer2.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(BUSAN[0], BUSAN[1]),
+      point: { pixelSize: 12, color: Cesium.Color.fromCssColorString('#4f7dff') },
+      label: {
+        text: '부산공동어시장(가상)',
+        font: '14px sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        pixelOffset: new Cesium.Cartesian2(0, -20),
+      },
+    });
+
+    // ---------- 3. 폴리곤 엔티티 ----------
+    const viewer3 = makeViewer('map3');
+    viewer3.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(129.075, 35.1, 30000) });
+    viewer3.entities.add({
+      polygon: {
+        hierarchy: Cesium.Cartesian3.fromDegreesArray([129.05, 35.08, 129.10, 35.08, 129.10, 35.12, 129.05, 35.12]),
+        material: Cesium.Color.fromCssColorString('#1baf7a').withAlpha(0.4),
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString('#1baf7a'),
+        height: 0,
+      },
+    });
+
+    // ---------- 4. Scene Mode 전환 ----------
+    const viewer4 = makeViewer('map4');
+    viewer4.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(BUSAN[0], BUSAN[1], 3000000) });
+    document.querySelectorAll('.mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach((b) => { b.classList.remove('active'); b.classList.add('ghost'); });
+        btn.classList.add('active');
+        btn.classList.remove('ghost');
+        const mode = btn.dataset.mode;
+        if (mode === '3D') viewer4.scene.morphTo3D(1.0);
+        else if (mode === '2D') viewer4.scene.morphTo2D(1.0);
+        else viewer4.scene.morphToColumbusView(1.0);
+      });
+    });
+  </script>
+</body>
+</html>
