@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>proj4js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  label { font-size: 12.5px; color: #555; }
+  input[type="number"] {
+    width: 110px;
+    padding: 7px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  .result-box.matched { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-top: 8px;
+  }
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+  }
+  th { color: #555; font-weight: 600; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>proj4js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>proj4js</strong>는 지도를 그리지 않고, 서로 다른 <strong>좌표계</strong> 사이에서
+    좌표값 자체를 순수하게 변환해주는 라이브러리입니다. OpenLayers·CesiumJS 같은 지도
+    라이브러리가 내부적으로 쓰는 것과 같은 종류의 변환 계산을 직접 다룰 수 있습니다.
+    <ul>
+      <li><code>proj4(fromEPSG, toEPSG, [x, y])</code> 한 줄로 두 좌표계 사이를 즉시 변환</li>
+      <li><code>proj4.defs()</code>로 라이브러리에 기본 내장되지 않은 좌표계를 직접 정의(국가별 측량 좌표계 등)</li>
+      <li><code>.forward()</code> / <code>.inverse()</code>로 정변환·역변환, 원래 좌표로 돌아오는지 검증 가능</li>
+      <li>변환기(converter) 객체를 한 번 만들어두고 여러 점에 재사용 — 매번 좌표계 문자열을 다시 넘길 필요 없음</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 좌표계는 <code>EPSG:5179</code>(Korea 2000 / Unified CS, 국토지리정보원이 실제 사용하는
+      국내 좌표계 정의)를 사용했습니다 — 좌표계 정의 자체는 실제 표준이지만, 입력하는 위경도 값은
+      모두 <strong>가상의 예시</strong>이며 실제 위판장 위치가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 좌표 변환 (WGS84 → Web Mercator)</h2>
+    <div class="desc">위경도(EPSG:4326)를 웹 지도에서 흔히 쓰는 Web Mercator(EPSG:3857)로 변환합니다.</div>
+    <div class="controls">
+      <label>경도 <input type="number" id="lon1" value="129.0756" step="0.0001" /></label>
+      <label>위도 <input type="number" id="lat1" value="35.0951" step="0.0001" /></label>
+      <button id="convertBtn1">변환</button>
+    </div>
+    <div class="result-box" id="output1">아직 변환 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">proj4('EPSG:4326', 'EPSG:3857', [129.0756, 35.0951]);
+// => [14368630.07, 4176812.38]</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 커스텀 좌표계 정의 (EPSG:5179)</h2>
+    <div class="desc">proj4js에 기본 내장되지 않은 국내 좌표계를 <code>proj4.defs()</code>로 직접 정의한 뒤 변환합니다.</div>
+    <div class="controls">
+      <label>경도 <input type="number" id="lon2" value="129.0756" step="0.0001" /></label>
+      <label>위도 <input type="number" id="lat2" value="35.0951" step="0.0001" /></label>
+      <button id="convertBtn2">EPSG:5179로 변환</button>
+    </div>
+    <div class="result-box" id="output2">아직 변환 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">proj4.defs(
+  'EPSG:5179',
+  '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs'
+);
+proj4('EPSG:4326', 'EPSG:5179', [129.0756, 35.0951]);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 역변환(inverse) — 라운드트립 확인</h2>
+    <div class="desc">2번에서 변환한 EPSG:5179 좌표를 다시 위경도로 되돌려, 원래 값과 일치하는지 확인합니다.</div>
+    <div class="controls"><button id="inverseBtn3">역변환 실행</button></div>
+    <div class="result-box" id="output3">먼저 2번에서 변환을 실행해주세요</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const converter = proj4('EPSG:4326', 'EPSG:5179');
+const forward = converter.forward([129.0756, 35.0951]);
+const back = converter.inverse(forward);
+// back은 원래 [129.0756, 35.0951]과 (부동소수점 오차 범위 내에서) 동일</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 변환기 재사용 — 여러 점 일괄 변환</h2>
+    <div class="desc">변환기 객체를 한 번만 만들어두고, 위판장 3곳의 좌표를 한 번에 변환합니다.</div>
+    <div class="controls"><button id="batchBtn4">3개 지점 일괄 변환</button></div>
+    <table id="table4" style="display:none;">
+      <thead><tr><th>지점(가상)</th><th>경도</th><th>위도</th><th>Web Mercator X</th><th>Web Mercator Y</th></tr></thead>
+      <tbody id="tableBody4"></tbody>
+    </table>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const converter = proj4('EPSG:4326', 'EPSG:3857'); // 한 번만 생성
+const results = points.map((p) => converter.forward(p)); // 여러 점에 재사용</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.20.9/dist/proj4.js"></script>
+  <script>
+    proj4.defs('EPSG:5179', '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=0.9996 +x_0=1000000 +y_0=2000000 +ellps=GRS80 +units=m +no_defs');
+
+    // ---------- 1. 기본 좌표 변환 ----------
+    document.getElementById('convertBtn1').addEventListener('click', () => {
+      const lon = Number(document.getElementById('lon1').value);
+      const lat = Number(document.getElementById('lat1').value);
+      const result = proj4('EPSG:4326', 'EPSG:3857', [lon, lat]);
+      document.getElementById('output1').textContent =
+        `Web Mercator: X ${result[0].toFixed(2)}, Y ${result[1].toFixed(2)}`;
+    });
+
+    // ---------- 2. 커스텀 좌표계 정의 ----------
+    let lastEpsg5179 = null;
+    document.getElementById('convertBtn2').addEventListener('click', () => {
+      const lon = Number(document.getElementById('lon2').value);
+      const lat = Number(document.getElementById('lat2').value);
+      lastEpsg5179 = proj4('EPSG:4326', 'EPSG:5179', [lon, lat]);
+      document.getElementById('output2').textContent =
+        `EPSG:5179: X ${lastEpsg5179[0].toFixed(2)}, Y ${lastEpsg5179[1].toFixed(2)}`;
+    });
+
+    // ---------- 3. 역변환 ----------
+    document.getElementById('inverseBtn3').addEventListener('click', () => {
+      const output3 = document.getElementById('output3');
+      if (!lastEpsg5179) {
+        output3.textContent = '먼저 2번에서 변환을 실행해주세요';
+        output3.classList.remove('matched');
+        return;
+      }
+      const converter = proj4('EPSG:4326', 'EPSG:5179');
+      const back = converter.inverse(lastEpsg5179);
+      const originalLon = Number(document.getElementById('lon2').value);
+      const originalLat = Number(document.getElementById('lat2').value);
+      const matched = Math.abs(back[0] - originalLon) < 0.000001 && Math.abs(back[1] - originalLat) < 0.000001;
+      output3.textContent = `역변환 결과: 경도 ${back[0].toFixed(6)}, 위도 ${back[1].toFixed(6)} — 원래 값과 ${matched ? '일치' : '불일치'}`;
+      output3.classList.toggle('matched', matched);
+    });
+
+    // ---------- 4. 변환기 재사용 ----------
+    document.getElementById('batchBtn4').addEventListener('click', () => {
+      const converter = proj4('EPSG:4326', 'EPSG:3857');
+      const points = [
+        { name: '부산공동어시장(가상)', lon: 129.0756, lat: 35.0951 },
+        { name: '기장 유통거점(가상)', lon: 129.09, lat: 35.10 },
+        { name: '영도 유통거점(가상)', lon: 129.06, lat: 35.08 },
+      ];
+      const tbody = document.getElementById('tableBody4');
+      tbody.innerHTML = '';
+      points.forEach((p) => {
+        const [x, y] = converter.forward([p.lon, p.lat]);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${p.name}</td><td>${p.lon}</td><td>${p.lat}</td><td>${x.toFixed(2)}</td><td>${y.toFixed(2)}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('table4').style.display = 'table';
+    });
+  </script>
+</body>
+</html>
