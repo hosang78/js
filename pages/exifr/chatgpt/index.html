@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>exifr 종합 기능 실험실</title>
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+  <style>
+    :root{
+      --bg:#f3f6fb;--panel:#fff;--ink:#172033;--muted:#667085;--line:#dfe5ee;
+      --brand:#3457d5;--brand2:#4f78ff;--soft:#eef2ff;--ok:#16865a;--warn:#b7791f;--bad:#c53b3b;
+      --shadow:0 12px 32px rgba(25,35,58,.08);--radius:16px
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg)}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh}
+    header{background:linear-gradient(135deg,#172554,#334fd6 60%,#5477ff);color:#fff;padding:26px 28px 52px}
+    .header-inner{max-width:1440px;margin:auto;display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
+    h1{margin:0 0 8px;font-size:clamp(26px,4vw,42px);letter-spacing:-.03em}
+    .subtitle{margin:0;color:#dbe4ff;max-width:760px;line-height:1.65}
+    .badge{padding:8px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);white-space:nowrap}
+    main{max-width:1440px;margin:-30px auto 40px;padding:0 20px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .upload{padding:22px;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:20px}
+    .dropzone{min-height:210px;border:2px dashed #aab8df;border-radius:14px;background:#f8faff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;transition:.2s}
+    .dropzone.drag{border-color:var(--brand);background:#edf2ff;transform:translateY(-2px)}
+    .dropzone .icon{font-size:42px}
+    .dropzone strong{font-size:19px;margin-top:8px}
+    .dropzone p{color:var(--muted);margin:8px 0 14px}
+    .btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;background:#e9edf5;color:#26324a}
+    .btn.primary{background:var(--brand);color:#fff}.btn.primary:hover{background:#2948bc}
+    .btn.danger{background:#fff0f0;color:var(--bad)}.btn.small{padding:7px 10px;font-size:13px}
+    .urlbox{border-left:1px solid var(--line);padding-left:20px}
+    .urlbox h3{margin:0 0 10px}.hint{font-size:12px;color:var(--muted);line-height:1.5}
+    .row{display:flex;gap:8px}.row>*{min-width:0}
+    input[type=text],input[type=search],select,textarea{width:100%;border:1px solid #cfd7e5;border-radius:9px;padding:9px 11px;background:#fff;color:var(--ink)}
+    textarea{min-height:115px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+    .toolbar{margin-top:16px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .toolbar .spacer{flex:1}.status{font-size:13px;color:var(--muted)}
+    .layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;margin-top:16px}
+    aside{padding:16px;align-self:start;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+    .section-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b7893;margin:4px 0 10px;font-weight:800}
+    .file-list{display:grid;gap:8px}
+    .file-item{border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;grid-template-columns:44px 1fr;gap:10px;background:#fff}
+    .file-item.active{border-color:var(--brand);box-shadow:0 0 0 2px #e8edff}
+    .thumb{width:44px;height:44px;object-fit:cover;background:#eef1f6;border-radius:8px}
+    .file-name{font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{font-size:12px;color:var(--muted);margin-top:3px}
+    .options{margin-top:18px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    label.check{font-size:13px;display:flex;gap:7px;align-items:center;padding:7px;border-radius:8px;background:#f7f8fb}
+    .content{display:grid;gap:16px}
+    .empty{padding:70px 30px;text-align:center;color:var(--muted)}
+    .summary{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px}
+    .stat{padding:15px}.stat .label{font-size:12px;color:var(--muted)}.stat .value{font-size:19px;font-weight:800;margin-top:5px;word-break:break-word}
+    .viewer{padding:16px}
+    .preview-grid{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:18px}
+    .preview-wrap{background:#101727;border-radius:14px;min-height:300px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+    .preview-wrap img{max-width:100%;max-height:480px;object-fit:contain}.privacy{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.65);color:#fff;padding:6px 9px;border-radius:8px;font-size:11px}
+    .quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quick div{padding:10px;border:1px solid var(--line);border-radius:10px}.quick b{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}.quick span{word-break:break-word}
+    .tabs{display:flex;gap:5px;overflow:auto;border-bottom:1px solid var(--line);margin:18px -16px 0;padding:0 16px}
+    .tab{border:0;background:transparent;padding:11px 13px;font-weight:750;color:#67728b;border-bottom:3px solid transparent;white-space:nowrap}
+    .tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+    .tabpane{display:none;padding-top:16px}.tabpane.active{display:block}
+    .pane-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.pane-toolbar input{max-width:330px}
+    table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{position:sticky;top:0;background:#f8f9fc;color:#4f5c75;z-index:1}
+    td.key{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#304eb5;width:28%}td.value{word-break:break-word}
+    .table-wrap{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+    pre{margin:0;background:#111827;color:#d9e2f2;padding:15px;border-radius:11px;max-height:540px;overflow:auto;font-size:12px;line-height:1.55}
+    .mapbox{padding:18px;background:linear-gradient(135deg,#eaf8f1,#edf4ff);border-radius:12px;border:1px solid #cfe5da}.coord{font-size:28px;font-weight:850;margin:8px 0}
+    .notice{padding:11px 13px;border-radius:10px;background:#fff8e8;color:#7a5718;border:1px solid #f2d894;font-size:13px;line-height:1.55}
+    .error{background:#fff0f0;color:#a32929;border-color:#efb8b8}.success{background:#eaf8f1;color:#126a49;border-color:#b9e3cf}
+    .batch{padding:16px;margin-top:16px}.progress{height:8px;background:#e8ebf2;border-radius:99px;overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),#74a0ff);transition:.2s}
+    .hidden{display:none!important}.split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    footer{max-width:1440px;margin:0 auto 30px;padding:0 20px;color:var(--muted);font-size:12px;line-height:1.6}
+    @media(max-width:1050px){.summary{grid-template-columns:repeat(3,1fr)}.layout{grid-template-columns:1fr}aside{position:static;max-height:none}.upload{grid-template-columns:1fr}.urlbox{border-left:0;border-top:1px solid var(--line);padding:16px 0 0}.preview-grid{grid-template-columns:1fr}}
+    @media(max-width:620px){header{padding:20px 16px 44px}.header-inner{display:block}.badge{display:inline-block;margin-top:12px}.summary{grid-template-columns:1fr 1fr}.quick,.split{grid-template-columns:1fr}.toolbar{align-items:stretch}.toolbar .spacer{display:none}.btn{flex:1}}
+  </style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>exifr 종합 기능 실험실</h1>
+      <p class="subtitle">사진을 외부 서버로 전송하지 않고 브라우저에서 EXIF, GPS, XMP, IPTC, ICC, JFIF, PNG IHDR, 방향 정보와 내장 썸네일을 분석한다.</p>
+    </div>
+    <div class="badge">exifr 7.1.3 · Full UMD</div>
+  </div>
+</header>
+
+<main>
+  <section class="panel upload">
+    <div id="dropzone" class="dropzone">
+      <div class="icon">📷</div>
+      <strong>이미지를 놓거나 파일을 선택</strong>
+      <p>JPG, TIFF, PNG, HEIC, AVIF, IIQ 등 · 여러 파일 선택 가능</p>
+      <button id="pickBtn" class="btn primary">파일 선택</button>
+      <input id="fileInput" type="file" accept="image/*,.tif,.tiff,.heic,.heif,.avif,.iiq,.xmp" multiple hidden>
+    </div>
+    <div class="urlbox">
+      <h3>URL 또는 이미지 요소 분석</h3>
+      <div class="row">
+        <input id="urlInput" type="text" placeholder="https://example.com/photo.jpg">
+        <button id="urlBtn" class="btn">URL 분석</button>
+      </div>
+      <p class="hint">원격 서버가 CORS를 허용해야 한다. URL 실패 시 파일로 내려받아 직접 선택한다.</p>
+      <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+      <div class="section-title">입력 형식 테스트</div>
+      <div class="row">
+        <button id="arrayBufferBtn" class="btn small">ArrayBuffer</button>
+        <button id="imgElementBtn" class="btn small">&lt;img&gt; 요소</button>
+      </div>
+      <p class="hint">현재 선택 파일을 각각 ArrayBuffer와 HTMLImageElement 입력으로 다시 파싱한다.</p>
+    </div>
+  </section>
+
+  <section class="panel toolbar">
+    <button id="analyzeBtn" class="btn primary">선택 파일 분석</button>
+    <button id="analyzeAllBtn" class="btn">전체 일괄 분석</button>
+    <button id="clearBtn" class="btn danger">초기화</button>
+    <div class="spacer"></div>
+    <span id="status" class="status">파일을 선택해 주세요.</span>
+  </section>
+
+  <div class="layout">
+    <aside class="panel">
+      <div class="section-title">선택 파일</div>
+      <div id="fileList" class="file-list"><div class="hint">아직 파일이 없습니다.</div></div>
+
+      <div class="options">
+        <div class="section-title">세그먼트</div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" data-opt="tiff" checked> TIFF/EXIF</label>
+          <label class="check"><input type="checkbox" data-opt="xmp" checked> XMP</label>
+          <label class="check"><input type="checkbox" data-opt="iptc" checked> IPTC</label>
+          <label class="check"><input type="checkbox" data-opt="icc" checked> ICC</label>
+          <label class="check"><input type="checkbox" data-opt="jfif" checked> JFIF</label>
+          <label class="check"><input type="checkbox" data-opt="ihdr" checked> PNG IHDR</label>
+        </div>
+        <div class="section-title" style="margin-top:14px">TIFF 블록</div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" data-opt="ifd0" checked> IFD0</label>
+          <label class="check"><input type="checkbox" data-opt="ifd1" checked> IFD1</label>
+          <label class="check"><input type="checkbox" data-opt="exif" checked> EXIF</label>
+          <label class="check"><input type="checkbox" data-opt="gps" checked> GPS</label>
+          <label class="check"><input type="checkbox" data-opt="interop" checked> Interop</label>
+          <label class="check"><input type="checkbox" data-opt="thumbnail" checked> Thumbnail</label>
+        </div>
+        <div class="section-title" style="margin-top:14px">출력 옵션</div>
+        <div class="checks">
+          <label class="check"><input type="checkbox" data-opt="mergeOutput" checked> 출력 병합</label>
+          <label class="check"><input type="checkbox" data-opt="translateKeys" checked> 키 번역</label>
+          <label class="check"><input type="checkbox" data-opt="translateValues" checked> 값 번역</label>
+          <label class="check"><input type="checkbox" data-opt="reviveValues" checked> 날짜 복원</label>
+          <label class="check"><input type="checkbox" data-opt="sanitize" checked> 문자열 정리</label>
+        </div>
+        <div class="section-title" style="margin-top:14px">선택 태그</div>
+        <input id="pickTags" type="text" value="Make, Model, LensModel, DateTimeOriginal, ISO, FNumber, ExposureTime, FocalLength, Orientation, GPSLatitude, GPSLongitude" placeholder="쉼표 구분">
+        <div class="row" style="margin-top:8px">
+          <button id="pickedBtn" class="btn small">선택 태그만</button>
+          <button id="defaultBtn" class="btn small">기본 파싱</button>
+        </div>
+        <div class="section-title" style="margin-top:14px">고급 옵션 JSON</div>
+        <textarea id="customOptions" spellcheck="false">{
+  "chunked": true,
+  "firstChunkSize": 65536,
+  "firstChunkSizeNode": 65536
+}</textarea>
+        <button id="customBtn" class="btn small" style="width:100%;margin-top:8px">사용자 옵션으로 파싱</button>
+      </div>
+    </aside>
+
+    <div class="content">
+      <section id="emptyState" class="panel empty">
+        <div style="font-size:46px">🧭</div>
+        <h2>분석할 이미지를 선택하세요</h2>
+        <p>사진의 메타데이터 유무에 따라 표시되는 항목은 달라집니다.</p>
+      </section>
+
+      <section id="resultArea" class="hidden">
+        <div class="summary">
+          <div class="panel stat"><div class="label">파싱 시간</div><div id="sTime" class="value">-</div></div>
+          <div class="panel stat"><div class="label">태그 수</div><div id="sTags" class="value">-</div></div>
+          <div class="panel stat"><div class="label">카메라</div><div id="sCamera" class="value">-</div></div>
+          <div class="panel stat"><div class="label">촬영 시각</div><div id="sDate" class="value">-</div></div>
+          <div class="panel stat"><div class="label">GPS</div><div id="sGps" class="value">-</div></div>
+          <div class="panel stat"><div class="label">방향</div><div id="sOrientation" class="value">-</div></div>
+        </div>
+
+        <section class="panel viewer">
+          <div class="preview-grid">
+            <div class="preview-wrap">
+              <img id="preview" alt="선택 이미지 미리보기">
+              <div class="privacy">로컬 브라우저 처리</div>
+            </div>
+            <div>
+              <h2 id="currentName" style="margin-top:0">-</h2>
+              <div id="quickInfo" class="quick"></div>
+              <div id="message" style="margin-top:10px"></div>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="metadata">메타데이터</button>
+            <button class="tab" data-tab="json">JSON</button>
+            <button class="tab" data-tab="gps">GPS</button>
+            <button class="tab" data-tab="orientation">방향·회전</button>
+            <button class="tab" data-tab="thumbnail">내장 썸네일</button>
+            <button class="tab" data-tab="segments">세그먼트 비교</button>
+            <button class="tab" data-tab="special">전용 API</button>
+          </div>
+
+          <div id="tab-metadata" class="tabpane active">
+            <div class="pane-toolbar">
+              <input id="filterInput" type="search" placeholder="태그 이름 또는 값 검색">
+              <button id="copyTableBtn" class="btn small">표 복사</button>
+              <button id="csvBtn" class="btn small">CSV 저장</button>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>태그</th><th>값</th><th>형식</th></tr></thead><tbody id="metaBody"></tbody></table></div>
+          </div>
+
+          <div id="tab-json" class="tabpane">
+            <div class="pane-toolbar"><button id="copyJsonBtn" class="btn small">JSON 복사</button><button id="jsonBtn" class="btn small">JSON 저장</button></div>
+            <pre id="jsonOutput">{}</pre>
+          </div>
+
+          <div id="tab-gps" class="tabpane"><div id="gpsContent"></div></div>
+          <div id="tab-orientation" class="tabpane"><div id="orientationContent"></div></div>
+          <div id="tab-thumbnail" class="tabpane"><div id="thumbContent"></div></div>
+          <div id="tab-segments" class="tabpane"><div id="segmentsContent"></div></div>
+          <div id="tab-special" class="tabpane"><div id="specialContent"></div></div>
+        </section>
+      </section>
+    </div>
+  </div>
+
+  <section id="batchPanel" class="panel batch hidden">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px">
+      <div><h2 style="margin:0">일괄 분석 결과</h2><div class="hint">공통 촬영 정보와 처리 시간을 비교합니다.</div></div>
+      <div class="row"><button id="batchCsvBtn" class="btn small">CSV 저장</button><button id="batchJsonBtn" class="btn small">JSON 저장</button></div>
+    </div>
+    <div class="progress"><div id="progressBar" class="bar"></div></div>
+    <div class="table-wrap" style="margin-top:12px;max-height:420px"><table><thead><tr><th>파일</th><th>형식</th><th>크기</th><th>카메라</th><th>촬영시각</th><th>GPS</th><th>태그</th><th>ms</th><th>상태</th></tr></thead><tbody id="batchBody"></tbody></table></div>
+  </section>
+</main>
+
+<footer>
+  지원 여부는 파일 형식과 실제 포함 메타데이터에 따라 달라진다. 브라우저 미리보기는 HEIC·일부 TIFF를 표시하지 못해도 exifr 파싱은 성공할 수 있다. GPS 정보가 있는 사진을 공유할 때는 위치 노출에 주의한다.
+</footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const state = {items:[], selected:-1, result:null, flat:[], batch:[], previewUrls:[], thumbUrl:null};
+
+  const els = {
+    fileInput:$('#fileInput'), drop:$('#dropzone'), list:$('#fileList'), status:$('#status'),
+    empty:$('#emptyState'), area:$('#resultArea'), preview:$('#preview'), metaBody:$('#metaBody'),
+    json:$('#jsonOutput'), filter:$('#filterInput'), batch:$('#batchPanel'), batchBody:$('#batchBody'),
+    progress:$('#progressBar'), message:$('#message')
+  };
+
+  function setStatus(text, kind='') {
+    els.status.textContent = text;
+    els.status.style.color = kind==='error' ? 'var(--bad)' : kind==='ok' ? 'var(--ok)' : '';
+  }
+  function escapeHtml(v='') { return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function size(n){if(!Number.isFinite(n))return '-';const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(i?2:0)} ${u[i]}`;}
+  function fmt(v){
+    if(v == null) return '—';
+    if(v instanceof Date) return v.toLocaleString('ko-KR');
+    if(v instanceof Uint8Array || v instanceof ArrayBuffer) return `[Binary ${v.byteLength} bytes]`;
+    if(Array.isArray(v)) return v.map(fmt).join(', ');
+    if(typeof v === 'object') return JSON.stringify(v, jsonReplacer);
+    return String(v);
+  }
+  function jsonReplacer(k,v){
+    if(v instanceof Date) return v.toISOString();
+    if(v instanceof Uint8Array) return `[Uint8Array ${v.byteLength} bytes]`;
+    if(v instanceof ArrayBuffer) return `[ArrayBuffer ${v.byteLength} bytes]`;
+    return v;
+  }
+  function flatten(obj, prefix='', out=[]){
+    if(obj == null){out.push([prefix,obj]);return out}
+    if(obj instanceof Date || obj instanceof Uint8Array || obj instanceof ArrayBuffer){out.push([prefix,obj]);return out}
+    if(Array.isArray(obj)){out.push([prefix,obj]);return out}
+    if(typeof obj === 'object'){
+      const keys=Object.keys(obj);
+      if(!keys.length) out.push([prefix,'{}']);
+      keys.forEach(k=>flatten(obj[k],prefix?`${prefix}.${k}`:k,out));
+    } else out.push([prefix,obj]);
+    return out;
+  }
+  function typeOf(v){
+    if(v instanceof Date)return 'Date';if(v instanceof Uint8Array)return 'Uint8Array';if(v instanceof ArrayBuffer)return 'ArrayBuffer';
+    if(Array.isArray(v))return 'Array';if(v===null)return 'null';return typeof v;
+  }
+  function download(name, data, type='application/octet-stream'){
+    const blob = data instanceof Blob ? data : new Blob([data],{type});
+    const u=URL.createObjectURL(blob); const a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);
+  }
+  async function copy(text){ try{await navigator.clipboard.writeText(text);setStatus('클립보드에 복사했습니다.','ok')}catch{setStatus('클립보드 복사 권한이 없습니다.','error')} }
+  function csvCell(v){return `"${String(v??'').replace(/"/g,'""')}"`}
+
+  function addFiles(files){
+    const accepted=[...files].filter(f=>f && (f.type.startsWith('image/') || /\.(jpe?g|tiff?|png|heic|heif|avif|iiq|xmp)$/i.test(f.name)));
+    accepted.forEach(file=>{
+      const url=file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+      if(url) state.previewUrls.push(url);
+      state.items.push({file,url});
+    });
+    if(state.selected<0 && state.items.length) state.selected=0;
+    renderFileList();
+    if(state.items.length){setStatus(`${state.items.length}개 파일 준비됨`);showSelectedPreview();}
+  }
+  function renderFileList(){
+    if(!state.items.length){els.list.innerHTML='<div class="hint">아직 파일이 없습니다.</div>';return}
+    els.list.innerHTML=state.items.map((it,i)=>`
+      <div class="file-item ${i===state.selected?'active':''}" data-index="${i}">
+        ${it.url?`<img class="thumb" src="${it.url}" alt="">`:`<div class="thumb"></div>`}
+        <div style="min-width:0"><div class="file-name" title="${escapeHtml(it.file.name)}">${escapeHtml(it.file.name)}</div>
+        <div class="meta">${size(it.file.size)} · ${escapeHtml(it.file.type||'unknown')}</div></div>
+      </div>`).join('');
+    $$('.file-item').forEach(el=>el.onclick=()=>{state.selected=Number(el.dataset.index);renderFileList();showSelectedPreview();});
+  }
+  function current(){return state.items[state.selected];}
+  function showSelectedPreview(){
+    const it=current(); if(!it)return;
+    $('#currentName').textContent=it.file.name; els.preview.src=it.url||''; els.preview.alt=it.file.name;
+  }
+  function buildOptions(){
+    const o={};
+    $$('[data-opt]').forEach(c=>o[c.dataset.opt]=c.checked);
+    return o;
+  }
+  async function parseInput(input, options=buildOptions(), label='파일'){
+    if(!window.exifr) throw new Error('exifr 라이브러리를 불러오지 못했습니다. 인터넷 연결 또는 CDN 접근을 확인하세요.');
+    const t=performance.now(); const data=await exifr.parse(input,options); const ms=performance.now()-t;
+    return {data:data||{},ms,label,options};
+  }
+  async function analyze(mode='options', customInput=null){
+    const it=current(); if(!it && !customInput){setStatus('먼저 파일을 선택하세요.','error');return}
+    setStatus('메타데이터 분석 중…'); $('#analyzeBtn').disabled=true;
+    try{
+      let input=customInput || it.file, options, label=mode;
+      if(mode==='picked'){
+        const tags=$('#pickTags').value.split(',').map(s=>s.trim()).filter(Boolean);
+        options=tags;
+      } else if(mode==='default') options=undefined;
+      else if(mode==='custom'){
+        try{options=JSON.parse($('#customOptions').value)}catch(e){throw new Error('고급 옵션 JSON 문법 오류: '+e.message)}
+      } else options=buildOptions();
+      const result=await parseInput(input,options,label);
+      state.result=result; renderResult(result.data,result.ms);
+      setStatus(`분석 완료 · ${result.ms.toFixed(2)} ms`,'ok');
+    }catch(e){showError(e);setStatus('분석 실패','error')}
+    finally{$('#analyzeBtn').disabled=false}
+  }
+  function showError(e){els.message.innerHTML=`<div class="notice error"><b>오류</b><br>${escapeHtml(e?.message||e)}</div>`;}
+  function renderResult(data,ms){
+    els.empty.classList.add('hidden');els.area.classList.remove('hidden');showSelectedPreview();els.message.innerHTML='';
+    state.flat=flatten(data).filter(([k])=>k);
+    $('#sTime').textContent=`${ms.toFixed(2)} ms`;$('#sTags').textContent=state.flat.length;
+    $('#sCamera').textContent=[data.Make,data.Model].filter(Boolean).join(' ')||'없음';
+    $('#sDate').textContent=fmt(data.DateTimeOriginal||data.CreateDate||data.ModifyDate);
+    const lat=data.latitude ?? data.GPSLatitude, lon=data.longitude ?? data.GPSLongitude;
+    $('#sGps').textContent=(lat!=null&&lon!=null)?'있음':'없음';$('#sOrientation').textContent=fmt(data.Orientation);
+    els.json.textContent=JSON.stringify(data,jsonReplacer,2); renderTable(); renderQuick(data); renderGps(current()?.file,data); renderOrientation(current()?.file,data);
+    renderThumbnail(current()?.file); renderSegments(current()?.file); renderSpecial(current()?.file);
+  }
+  function renderTable(){
+    const q=els.filter.value.toLowerCase();
+    const rows=state.flat.filter(([k,v])=>(k+' '+fmt(v)).toLowerCase().includes(q));
+    els.metaBody.innerHTML=rows.map(([k,v])=>`<tr><td class="key">${escapeHtml(k)}</td><td class="value">${escapeHtml(fmt(v))}</td><td>${escapeHtml(typeOf(v))}</td></tr>`).join('');
+  }
+  function renderQuick(d){
+    const values=[
+      ['제조사',d.Make],['모델',d.Model],['렌즈',d.LensModel],['ISO',d.ISO],
+      ['조리개',d.FNumber?`f/${d.FNumber}`:''],['노출시간',d.ExposureTime],['초점거리',d.FocalLength],['소프트웨어',d.Software],
+      ['가로×세로',d.ExifImageWidth&&d.ExifImageHeight?`${d.ExifImageWidth} × ${d.ExifImageHeight}`:''],['저작권',d.Copyright]
+    ];
+    $('#quickInfo').innerHTML=values.map(([k,v])=>`<div><b>${k}</b><span>${escapeHtml(fmt(v))}</span></div>`).join('');
+  }
+  async function renderGps(file,data){
+    const box=$('#gpsContent'); if(!file){box.innerHTML='<div class="notice">파일 없음</div>';return}
+    try{
+      const t=performance.now(); const gps=await exifr.gps(file); const ms=performance.now()-t;
+      if(!gps || gps.latitude==null){box.innerHTML='<div class="notice">GPS 좌표가 없습니다. 위치 서비스가 꺼져 있었거나 공유 과정에서 위치 정보가 제거된 사진일 수 있습니다.</div>';return}
+      const {latitude,longitude}=gps; const osm=`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
+      box.innerHTML=`<div class="mapbox"><div class="hint">exifr.gps() · ${ms.toFixed(2)} ms</div><div class="coord">${latitude.toFixed(6)}, ${longitude.toFixed(6)}</div>
+      <div class="row"><a class="btn primary" href="${osm}" target="_blank" rel="noopener" style="text-decoration:none">OpenStreetMap 열기</a><button class="btn" id="copyGps">좌표 복사</button></div></div>
+      <div class="notice" style="margin-top:12px">GPS 좌표는 촬영 위치를 노출할 수 있으므로 외부 공유 전 제거 여부를 확인하세요.</div>`;
+      $('#copyGps').onclick=()=>copy(`${latitude}, ${longitude}`);
+    }catch(e){box.innerHTML=`<div class="notice error">${escapeHtml(e.message)}</div>`}
+  }
+  async function renderOrientation(file,data){
+    const box=$('#orientationContent'); if(!file)return;
+    try{
+      const [orientation,rotation]=await Promise.all([exifr.orientation(file),exifr.rotation(file)]);
+      box.innerHTML=`<div class="split">
+        <div class="mapbox"><div class="hint">exifr.orientation()</div><div class="coord">${escapeHtml(fmt(orientation))}</div><div>원본 Orientation 태그</div></div>
+        <div><div class="section-title">exifr.rotation()</div><pre>${escapeHtml(JSON.stringify(rotation,jsonReplacer,2))}</pre></div>
+      </div><div class="notice" style="margin-top:12px">브라우저는 이미지 방향을 자동 보정하는 경우가 있어 화면 표시와 원본 픽셀 방향이 다를 수 있습니다.</div>`;
+    }catch(e){box.innerHTML=`<div class="notice error">${escapeHtml(e.message)}</div>`}
+  }
+  async function renderThumbnail(file){
+    const box=$('#thumbContent'); if(!file)return;
+    if(state.thumbUrl){URL.revokeObjectURL(state.thumbUrl);state.thumbUrl=null}
+    box.innerHTML='<div class="hint">내장 썸네일 추출 중…</div>';
+    try{
+      const t=performance.now(); const bin=await exifr.thumbnail(file); const ms=performance.now()-t;
+      if(!bin){box.innerHTML='<div class="notice">내장 썸네일이 없습니다. exifr의 썸네일 추출은 주로 JPEG의 IFD1 썸네일에 적용됩니다.</div>';return}
+      const blob=new Blob([bin],{type:'image/jpeg'});state.thumbUrl=URL.createObjectURL(blob);
+      box.innerHTML=`<div class="split"><div class="preview-wrap"><img src="${state.thumbUrl}" alt="내장 썸네일"></div>
+      <div><div class="section-title">추출 결과</div><div class="quick"><div><b>바이트</b><span>${size(bin.byteLength)}</span></div><div><b>처리 시간</b><span>${ms.toFixed(2)} ms</span></div></div>
+      <button id="saveThumb" class="btn primary" style="margin-top:10px">썸네일 저장</button></div></div>`;
+      $('#saveThumb').onclick=()=>download(`thumbnail-${file.name.replace(/\.[^.]+$/,'')}.jpg`,blob,'image/jpeg');
+    }catch(e){box.innerHTML=`<div class="notice error">${escapeHtml(e.message)}</div>`}
+  }
+  async function renderSegments(file){
+    const box=$('#segmentsContent'); if(!file)return;
+    box.innerHTML='<div class="hint">세그먼트별 독립 파싱 중…</div>';
+    const tests=[
+      ['기본 TIFF/EXIF/GPS',undefined],
+      ['전체 세그먼트',true],
+      ['XMP만',{tiff:false,xmp:true}],
+      ['IPTC만',{tiff:false,iptc:true}],
+      ['ICC만',{tiff:false,icc:true}],
+      ['JFIF만',{tiff:false,jfif:true}],
+      ['PNG IHDR만',{tiff:false,ihdr:true}],
+      ['EXIF 블록만',{ifd0:false,exif:true,gps:false}],
+      ['GPS 블록만',{ifd0:false,exif:false,gps:true}]
+    ];
+    const rows=[];
+    for(const [name,opt] of tests){
+      try{const t=performance.now();const d=await exifr.parse(file,opt);const ms=performance.now()-t;rows.push([name,d?flatten(d).length:0,ms.toFixed(2),'성공']);}
+      catch(e){rows.push([name,0,'-',e.message]);}
+    }
+    box.innerHTML=`<div class="table-wrap"><table><thead><tr><th>파싱 방식</th><th>태그 수</th><th>ms</th><th>결과</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${escapeHtml(r[0])}</td><td>${r[1]}</td><td>${r[2]}</td><td>${escapeHtml(r[3])}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  async function renderSpecial(file){
+    const box=$('#specialContent'); if(!file)return;
+    const tests=[
+      ['parse(file)',()=>exifr.parse(file)],
+      ['parse(file, true)',()=>exifr.parse(file,true)],
+      ['parse(file, [태그])',()=>exifr.parse(file,['Make','Model','ISO','FNumber','Orientation'])],
+      ['gps(file)',()=>exifr.gps(file)],
+      ['orientation(file)',()=>exifr.orientation(file)],
+      ['rotation(file)',()=>exifr.rotation(file)],
+      ['thumbnail(file)',async()=>{const x=await exifr.thumbnail(file);return x?`Binary ${x.byteLength} bytes`:undefined;}],
+      ['thumbnailUrl(file)',async()=>{const u=await exifr.thumbnailUrl(file);if(u)URL.revokeObjectURL(u);return u?'Object URL 생성 성공':undefined;}]
+    ];
+    const rows=[];
+    for(const [api,fn] of tests){
+      try{const t=performance.now();const v=await fn();rows.push([api,(performance.now()-t).toFixed(2),fmt(v)]);}
+      catch(e){rows.push([api,'-',`오류: ${e.message}`]);}
+    }
+    box.innerHTML=`<div class="table-wrap"><table><thead><tr><th>API</th><th>ms</th><th>반환값 요약</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td class="key">${escapeHtml(r[0])}</td><td>${r[1]}</td><td class="value">${escapeHtml(r[2])}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  async function analyzeAll(){
+    if(!state.items.length){setStatus('분석할 파일이 없습니다.','error');return}
+    state.batch=[];els.batch.classList.remove('hidden');els.batchBody.innerHTML='';els.progress.style.width='0%';
+    const options=buildOptions();
+    for(let i=0;i<state.items.length;i++){
+      const f=state.items[i].file; let row;
+      try{
+        const {data,ms}=await parseInput(f,options,'batch');const lat=data.latitude,lon=data.longitude;
+        row={name:f.name,type:f.type||'',size:f.size,camera:[data.Make,data.Model].filter(Boolean).join(' '),date:fmt(data.DateTimeOriginal||data.CreateDate),gps:lat!=null&&lon!=null?`${lat.toFixed(5)}, ${lon.toFixed(5)}`:'',tags:flatten(data).length,ms:+ms.toFixed(2),status:'성공'};
+      }catch(e){row={name:f.name,type:f.type||'',size:f.size,camera:'',date:'',gps:'',tags:0,ms:'',status:e.message}}
+      state.batch.push(row);els.progress.style.width=`${((i+1)/state.items.length)*100}%`;renderBatch();setStatus(`일괄 분석 ${i+1}/${state.items.length}`);
+    }
+    setStatus(`일괄 분석 완료 · ${state.batch.length}개`,'ok');
+  }
+  function renderBatch(){
+    els.batchBody.innerHTML=state.batch.map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.type)}</td><td>${size(r.size)}</td><td>${escapeHtml(r.camera)}</td><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.gps)}</td><td>${r.tags}</td><td>${r.ms}</td><td>${escapeHtml(r.status)}</td></tr>`).join('');
+  }
+  function exportMetaCsv(){
+    const rows=[['tag','value','type'],...state.flat.map(([k,v])=>[k,fmt(v),typeOf(v)])];
+    download('exifr-metadata.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv;charset=utf-8');
+  }
+  function exportBatchCsv(){
+    const h=['name','type','size','camera','date','gps','tags','ms','status'];
+    download('exifr-batch.csv','\ufeff'+[h,...state.batch.map(r=>h.map(k=>r[k]))].map(r=>r.map(csvCell).join(',')).join('\n'),'text/csv;charset=utf-8');
+  }
+
+  $('#pickBtn').onclick=()=>els.fileInput.click();els.fileInput.onchange=e=>addFiles(e.target.files);
+  ['dragenter','dragover'].forEach(ev=>els.drop.addEventListener(ev,e=>{e.preventDefault();els.drop.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>els.drop.addEventListener(ev,e=>{e.preventDefault();els.drop.classList.remove('drag')}));
+  els.drop.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
+  $('#analyzeBtn').onclick=()=>analyze('options');$('#pickedBtn').onclick=()=>analyze('picked');$('#defaultBtn').onclick=()=>analyze('default');$('#customBtn').onclick=()=>analyze('custom');
+  $('#analyzeAllBtn').onclick=analyzeAll;
+  $('#clearBtn').onclick=()=>{state.previewUrls.forEach(URL.revokeObjectURL);if(state.thumbUrl)URL.revokeObjectURL(state.thumbUrl);state.items=[];state.selected=-1;state.result=null;state.flat=[];state.batch=[];renderFileList();els.area.classList.add('hidden');els.empty.classList.remove('hidden');els.batch.classList.add('hidden');setStatus('초기화했습니다.');};
+  $('#urlBtn').onclick=async()=>{const u=$('#urlInput').value.trim();if(!u)return setStatus('URL을 입력하세요.','error');try{const r=await parseInput(u,buildOptions(),'URL');state.result=r;$('#currentName').textContent=u;els.preview.src=u;renderResult(r.data,r.ms);setStatus('URL 분석 완료','ok')}catch(e){showError(e);setStatus('URL 분석 실패 · CORS 확인','error')}};
+  $('#arrayBufferBtn').onclick=async()=>{const it=current();if(!it)return setStatus('파일을 선택하세요.','error');analyze('ArrayBuffer',await it.file.arrayBuffer())};
+  $('#imgElementBtn').onclick=async()=>{const it=current();if(!it||!it.url)return setStatus('미리보기 가능한 이미지 파일을 선택하세요.','error');const img=new Image();img.onload=()=>analyze('HTMLImageElement',img);img.onerror=()=>setStatus('브라우저가 이 이미지를 표시하지 못합니다.','error');img.src=it.url};
+  els.filter.oninput=renderTable;
+  $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.tabpane').forEach(p=>p.classList.toggle('active',p.id===`tab-${t.dataset.tab}`));});
+  $('#copyJsonBtn').onclick=()=>copy(els.json.textContent);$('#jsonBtn').onclick=()=>download('exifr-result.json',els.json.textContent,'application/json');
+  $('#copyTableBtn').onclick=()=>copy(state.flat.map(([k,v])=>`${k}\t${fmt(v)}`).join('\n'));$('#csvBtn').onclick=exportMetaCsv;
+  $('#batchCsvBtn').onclick=exportBatchCsv;$('#batchJsonBtn').onclick=()=>download('exifr-batch.json',JSON.stringify(state.batch,null,2),'application/json');
+
+  window.addEventListener('unhandledrejection',e=>setStatus(`오류: ${e.reason?.message||e.reason}`,'error'));
+  if(!window.exifr)setStatus('exifr CDN 로드 실패. 인터넷 연결을 확인하세요.','error');
+})();
+</script>
+</body>
+</html>
