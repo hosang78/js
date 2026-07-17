@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>FlexSearch</title>
+<script src="https://cdn.jsdelivr.net/npm/flexsearch@0.8.212/dist/flexsearch.bundle.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  input[type=text] {
+    font-size: 13px;
+    padding: 7px 10px;
+    border: 1px solid #dbdfe6;
+    border-radius: 6px;
+    width: 220px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 6px;
+  }
+  button.tag-btn {
+    background: #edf0f5;
+    color: #333;
+    margin-left: 0;
+    margin-right: 6px;
+    margin-top: 8px;
+  }
+  button.tag-btn.active { background: #4f7dff; color: #fff; }
+  .stat-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stat-box strong { color: #205fb0; }
+  .result-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 13px;
+  }
+  .result-list li {
+    padding: 8px 10px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: #fafbfc;
+  }
+  .result-list li .meta {
+    display: block;
+    color: #777;
+    font-size: 12px;
+    margin-top: 3px;
+  }
+  .result-list mark {
+    background: #fff1a8;
+    padding: 0 1px;
+    border-radius: 2px;
+  }
+  .empty-msg {
+    font-size: 12.5px;
+    color: #999;
+    margin-top: 10px;
+  }
+  details { margin-top: 12px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre {
+    background: #1e1e2e;
+    color: #d9dce8;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 320px;
+  }
+  code.inline { background: #f0f0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+  <h1>FlexSearch 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>FlexSearch</strong>는 매우 빠른 전문(full-text) 검색 라이브러리입니다. 한글을 포함한 여러
+    문자셋을 지원하고, 완전 일치가 아니어도 결과를 찾아주는 기능이 특징입니다.
+    <ul>
+      <li><code class="inline">Index</code>로 하는 <strong>부분 일치 실시간 검색</strong></li>
+      <li><code class="inline">Document</code>로 하는 <strong>여러 필드 검색 + 하이라이트</strong></li>
+      <li><code class="inline">tag</code> 옵션으로 하는 <strong>카테고리 필터</strong></li>
+      <li><code class="inline">suggest</code> 옵션으로 하는 <strong>제안 검색</strong></li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 위판 물품 목록은 이 페이지를 위해 만든 <strong>가상의 예시</strong>이며, 실제 수협중앙회의
+      물품·통계와 무관합니다. 다른 외부 라이브러리나 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 부분 일치 실시간 검색</h2>
+    <div class="desc">
+      <code class="inline">tokenize: 'forward'</code>로 만든 인덱스는 단어 앞부분만 입력해도 찾아줍니다.
+      타이핑할 때마다 바로 검색됩니다.
+    </div>
+    <input type="text" id="s1-query" placeholder="예: 위판, 경매, 조합" value="위판" />
+    <div class="stat-box" id="s1-stat"></div>
+    <ul class="result-list" id="s1-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const index = new FlexSearch.Index({ tokenize: 'forward' });
+index.add(0, '고등어 위판 안내');
+index.add(1, '가상 수협중앙회 위판장');
+
+index.search('위판'); // → [0, 1] ('forward' 토크나이저라 일부만 입력해도 매칭)</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 여러 필드를 가진 문서 검색 + 하이라이트</h2>
+    <div class="desc">
+      <code class="inline">Document</code>는 이름·설명처럼 <strong>여러 필드</strong>를 한 번에 색인하고
+      검색할 수 있습니다. <code class="inline">highlight</code> 옵션으로 일치한 부분을 표시합니다.
+    </div>
+    <input type="text" id="s2-query" placeholder="예: 위판장, 자연산" value="위판장" />
+    <div class="stat-box" id="s2-stat"></div>
+    <ul class="result-list" id="s2-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const doc = new FlexSearch.Document({
+  document: {
+    id: 'id',
+    index: ['name', 'description'], // 검색 대상 필드
+    tag: 'category',
+    store: true, // 원본 문서를 결과에 포함
+  },
+  tokenize: 'forward',
+});
+doc.add({ id: 1, name: '고등어', description: '가상 위판장에서 오늘 낙찰된 고등어', category: '어류' });
+
+await doc.search('위판장', {
+  enrich: true,
+  highlight: '&lt;mark&gt;$1&lt;/mark&gt;',
+});</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 태그(카테고리)로 걸러보기</h2>
+    <div class="desc">
+      <code class="inline">tag</code> 옵션에 <code class="inline">{ 필드명: 태그값 }</code> 형태로 넘기면
+      검색어 없이도 해당 카테고리만 걸러볼 수 있습니다.
+    </div>
+    <div id="s3-tags"></div>
+    <div class="stat-box" id="s3-stat"></div>
+    <ul class="result-list" id="s3-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>// 주의: tag 값은 문자열이 아니라 { 필드명: 태그값 } 객체로 줘야 한다.
+// 문자열을 그대로 주면 글자 단위로 쪼개져서 잘못 매칭된다 (실제로 겪은 실수).
+await doc.search('', {
+  tag: { category: '어류' },
+  enrich: true,
+});</code></pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 제안 검색 (suggest)</h2>
+    <div class="desc">
+      기본 검색은 입력한 단어가 <strong>전부</strong> 포함돼야 결과가 나옵니다.
+      <code class="inline">suggest: true</code>를 켜면 일부만 일치해도 가까운 결과를 보여줍니다.
+    </div>
+    <input type="text" id="s4-query" placeholder="예: 고등어 상어 (상어는 없는 단어)" value="고등어 상어" />
+    <div class="stat-box" id="s4-stat"></div>
+    <ul class="result-list" id="s4-results"></ul>
+    <details>
+      <summary>소스 코드 보기</summary>
+      <pre><code>const index = new FlexSearch.Index({ tokenize: 'forward' });
+index.add(0, '고등어 갈치 오징어');
+
+index.search('고등어 상어');                    // → [] ('상어'가 없어서 실패)
+index.search('고등어 상어', { suggest: true });  // → [0] ('고등어'만 일치해도 제안)</code></pre>
+    </details>
+  </section>
+
+<script>
+  const PRODUCTS = [
+    { id: 1, name: '고등어', description: '가상 위판장에서 오늘 낙찰된 싱싱한 고등어', category: '어류' },
+    { id: 2, name: '갈치', description: '가상 위판장 은빛 갈치, 경매 인기 품목', category: '어류' },
+    { id: 3, name: '전복', description: '가상 위판장의 자연산 전복', category: '패류' },
+    { id: 4, name: '홍합', description: '가상 위판장 조합원이 채취한 홍합', category: '패류' },
+    { id: 5, name: '오징어', description: '가상 위판장 야간 조업으로 들어온 오징어', category: '연체류' },
+    { id: 6, name: '멸치', description: '가상 위판장 죽방렴 멸치, 조합원 직판', category: '어류' },
+  ];
+
+  // ---- 섹션 1: 기본 인덱스 실시간 검색 ----
+  (function section1() {
+    const index = new FlexSearch.Index({ tokenize: 'forward' });
+    PRODUCTS.forEach((p) => index.add(p.id, p.name + ' ' + p.description));
+
+    const queryInput = document.getElementById('s1-query');
+    const stat = document.getElementById('s1-stat');
+    const resultsList = document.getElementById('s1-results');
+
+    function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) {
+        stat.innerHTML = '검색어를 입력해 보세요.';
+        resultsList.innerHTML = '';
+        return;
+      }
+      const ids = index.search(query);
+      stat.innerHTML = '<strong>"' + query + '"</strong> → <strong>' + ids.length + '건</strong> 일치';
+      resultsList.innerHTML = ids.map((id) => {
+        const p = PRODUCTS.find((x) => x.id === id);
+        return '<li>' + p.name + '<span class="meta">' + p.description + '</span></li>';
+      }).join('') || '<div class="empty-msg">일치하는 결과가 없습니다.</div>';
+    }
+    queryInput.addEventListener('input', runSearch);
+    runSearch();
+  })();
+
+  // ---- 섹션 2: Document 검색 + 하이라이트 ----
+  (function section2() {
+    const doc = new FlexSearch.Document({
+      document: { id: 'id', index: ['name', 'description'], tag: 'category', store: true },
+      tokenize: 'forward',
+    });
+    PRODUCTS.forEach((p) => doc.add(p));
+
+    const queryInput = document.getElementById('s2-query');
+    const stat = document.getElementById('s2-stat');
+    const resultsList = document.getElementById('s2-results');
+
+    async function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) {
+        stat.innerHTML = '검색어를 입력해 보세요.';
+        resultsList.innerHTML = '';
+        return;
+      }
+      const fieldResults = await doc.search(query, { enrich: true, highlight: '<mark>$1</mark>' });
+      const seen = new Set();
+      const rows = [];
+      fieldResults.forEach((fr) => {
+        fr.result.forEach((r) => {
+          if (seen.has(r.id)) return;
+          seen.add(r.id);
+          rows.push('<li>' + (r.highlight || r.doc.name) + '<span class="meta">일치한 필드: ' + fr.field + '</span></li>');
+        });
+      });
+      stat.innerHTML = '<strong>"' + query + '"</strong> → <strong>' + rows.length + '건</strong> 일치 (이름/설명 필드 통틀어)';
+      resultsList.innerHTML = rows.join('') || '<div class="empty-msg">일치하는 결과가 없습니다.</div>';
+    }
+    queryInput.addEventListener('input', runSearch);
+    runSearch();
+  })();
+
+  // ---- 섹션 3: 태그 필터 ----
+  (function section3() {
+    const doc = new FlexSearch.Document({
+      document: { id: 'id', index: ['name', 'description'], tag: 'category', store: true },
+      tokenize: 'forward',
+    });
+    PRODUCTS.forEach((p) => doc.add(p));
+
+    const tagsWrap = document.getElementById('s3-tags');
+    const stat = document.getElementById('s3-stat');
+    const resultsList = document.getElementById('s3-results');
+    const categories = [...new Set(PRODUCTS.map((p) => p.category))];
+
+    async function runFilter(category) {
+      document.querySelectorAll('.tag-btn').forEach((b) => b.classList.toggle('active', b.dataset.cat === category));
+      const tagResults = await doc.search('', { tag: { category }, enrich: true });
+      const rows = tagResults.length
+        ? tagResults[0].result.map((r) => '<li>' + r.doc.name + '<span class="meta">' + r.doc.description + '</span></li>')
+        : [];
+      stat.innerHTML = '카테고리 <strong>"' + category + '"</strong> → <strong>' + rows.length + '건</strong>';
+      resultsList.innerHTML = rows.join('') || '<div class="empty-msg">해당 카테고리 항목이 없습니다.</div>';
+    }
+
+    categories.forEach((cat) => {
+      const btn = document.createElement('button');
+      btn.className = 'tag-btn';
+      btn.dataset.cat = cat;
+      btn.textContent = cat;
+      btn.addEventListener('click', () => runFilter(cat));
+      tagsWrap.appendChild(btn);
+    });
+    runFilter(categories[0]);
+  })();
+
+  // ---- 섹션 4: 제안 검색 ----
+  (function section4() {
+    const index = new FlexSearch.Index({ tokenize: 'forward' });
+    PRODUCTS.forEach((p) => index.add(p.id, p.name + ' ' + p.description));
+
+    const queryInput = document.getElementById('s4-query');
+    const stat = document.getElementById('s4-stat');
+    const resultsList = document.getElementById('s4-results');
+
+    function runSearch() {
+      const query = queryInput.value.trim();
+      if (!query) {
+        stat.innerHTML = '검색어를 입력해 보세요.';
+        resultsList.innerHTML = '';
+        return;
+      }
+      const strictIds = index.search(query);
+      const suggestIds = index.search(query, { suggest: true });
+      stat.innerHTML =
+        '일반 검색: <strong>' + strictIds.length + '건</strong> · 제안 검색(suggest): <strong>' + suggestIds.length + '건</strong>';
+      resultsList.innerHTML = suggestIds.map((id) => {
+        const p = PRODUCTS.find((x) => x.id === id);
+        const isStrict = strictIds.includes(id);
+        return '<li>' + p.name + (isStrict ? '' : ' <span class="meta">(제안 검색으로만 찾음)</span>') + '</li>';
+      }).join('') || '<div class="empty-msg">일치하는 결과가 없습니다.</div>';
+    }
+    queryInput.addEventListener('input', runSearch);
+    runSearch();
+  })();
+</script>
+</body>
+</html>
