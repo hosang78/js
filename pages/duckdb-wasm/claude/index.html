@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>DuckDB-Wasm</title>
+<script type="importmap">
+{ "imports": { "apache-arrow": "https://cdn.jsdelivr.net/npm/apache-arrow@17.0.0/+esm" } }
+</script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  #init-banner {
+    font-size: 13px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #dbe4ff;
+    background: #f0f4ff;
+    color: #33418a;
+  }
+  #init-banner.ready { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  #init-banner.error { background: #ffeceb; border-color: #ffc9c5; color: #c0392b; }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  textarea.sql-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafbfc;
+    resize: vertical;
+  }
+  input[type="range"] { width: 200px; }
+  select { padding: 5px 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
+  .result-box {
+    background: #f0f4ff; border: 1px solid #dbe4ff; border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; color: #333; margin-top: 8px;
+    white-space: pre-wrap; word-break: break-all; font-family: monospace;
+  }
+  .result-box.error { background: #ffeceb; border-color: #ffc9c5; color: #c0392b; }
+  .log-box {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444;
+    margin-top: 8px; max-height: 140px; overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 10px; }
+  table.data-table th, table.data-table td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: right; }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table th { background: #f5f6f8; }
+  table.data-table tr:nth-child(1) td.rank-1 { font-weight: 700; color: #b8860b; }
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .stat-box { flex: 1; min-width: 150px; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px 14px; background: #fafbfc; }
+  .stat-box .label { font-size: 11.5px; color: #888; margin-bottom: 4px; }
+  .stat-box .value { font-size: 16px; font-weight: 600; color: #333; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>DuckDB-Wasm</h1>
+  <p>
+    DuckDB-Wasm은 분석용 데이터베이스 <b>DuckDB</b> 전체를 WebAssembly로 컴파일해 브라우저 안에서
+    그대로 돌리는 라이브러리입니다. 서버로 데이터를 보내지 않고, 페이지를 연 브라우저 탭 안(Web Worker)에서
+    진짜 SQL 엔진이 CSV/JSON을 읽고, JOIN·GROUP BY·윈도우 함수 같은 본격적인 분석 쿼리를 실행합니다.
+  </p>
+  <ul>
+    <li>표준 SQL 그대로 사용 (CREATE TABLE, JOIN, GROUP BY, 윈도우 함수, CTE 등)</li>
+    <li><code>read_csv_auto()</code> 등으로 CSV/JSON 텍스트를 파일처럼 등록해서 바로 쿼리</li>
+    <li>쿼리 결과는 <b>Apache Arrow</b> 컬럼형 포맷으로 반환 — 대용량도 빠르게 JS로 변환</li>
+    <li>컬럼형 OLAP 엔진이라 대량 데이터 집계가 일반 JS 반복문보다 훨씬 빠름</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 위판·조업 데이터는 DuckDB-Wasm 기능 설명을 위한 <b>가상의 예시</b>이며, 실제
+    수협중앙회의 통계·조직·절차와 무관합니다. Apache Arrow(결과 포맷 변환)를 함께 사용하며, 다른 외부
+    API는 사용하지 않았습니다 (DuckDB-Wasm 1.32.0, apache-arrow 17.0.0 — CDN에서 로드).
+    <br />첫 로딩 시 WASM 엔진 파일을(약 30MB) 내려받기 때문에 초기화에 몇 초 걸릴 수 있습니다
+    (이후에는 브라우저 캐시로 빨라집니다).
+  </div>
+</div>
+
+<div id="init-banner">⏳ DuckDB-Wasm 엔진 초기화 중... (WASM 다운로드 + Worker 기동)</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 기본 SQL 실행 — 브라우저 안 인메모리 DB</h2>
+  <p class="desc">
+    <code>CREATE TABLE</code> / <code>INSERT</code> / <code>SELECT</code>를 그대로 실행합니다. 아래
+    SQL을 자유롭게 수정하고 "실행"을 눌러보세요. 세미콜론(<code>;</code>)으로 여러 문장을 이어서 실행할 수 있습니다.
+  </p>
+  <textarea class="sql-input" id="s1-sql" rows="6">CREATE TABLE IF NOT EXISTS auction (id INTEGER, species VARCHAR, weight_kg DOUBLE);
+DELETE FROM auction;
+INSERT INTO auction VALUES
+  (1, '고등어', 120.5),
+  (2, '갈치', 85.2),
+  (3, '오징어', 60.0),
+  (4, '전갱이', 45.8);
+SELECT * FROM auction ORDER BY weight_kg DESC;</textarea>
+  <div class="controls">
+    <button class="action" id="s1-run" disabled>▶ 실행</button>
+  </div>
+  <div id="s1-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const conn = await db.connect();
+for (const statement of sql.split(';').filter((s) => s.trim())) {
+  const result = await conn.query(statement);
+  // result.toArray().map(row => row.toJSON()) 로 일반 JS 객체 배열로 변환
+}</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. CSV 텍스트를 파일처럼 등록 — <code>registerFileText</code> + <code>read_csv_auto</code></h2>
+  <p class="desc">
+    실제 파일 업로드 없이도 문자열을 가상 파일로 등록하면 <code>read_csv_auto('파일명')</code>으로 바로
+    쿼리할 수 있습니다. 아래 CSV를 수정하고 다시 실행해보세요.
+  </p>
+  <textarea class="sql-input" id="s2-csv" rows="6">species,weight_kg,region
+고등어,120.5,부산
+갈치,85.2,여수
+오징어,60.0,통영
+고등어,95.0,부산
+전갱이,45.8,여수
+갈치,70.3,통영</textarea>
+  <div class="controls">
+    <button class="action" id="s2-run" disabled>▶ CSV 등록 후 쿼리</button>
+  </div>
+  <div id="s2-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">await db.registerFileText('catch.csv', csvText);
+await conn.query(`CREATE OR REPLACE TABLE catch_log AS SELECT * FROM read_csv_auto('catch.csv')`);
+const summary = await conn.query(`SELECT COUNT(*) AS cnt, SUM(weight_kg) AS total FROM catch_log`);</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. Prepared Statement — 매개변수화된 쿼리</h2>
+  <p class="desc">
+    <code>conn.prepare(sql)</code>로 <code>?</code> 자리표시자가 있는 쿼리를 준비해두고, 값만 바꿔가며
+    안전하게(SQL 인젝션 없이) 재실행할 수 있습니다. 슬라이더로 최소 중량을 바꿔보세요.
+  </p>
+  <div class="controls">
+    <input type="range" id="s3-slider" min="0" max="130" value="80" />
+    <span id="s3-slider-val">최소 중량: 80kg 이상</span>
+    <button class="action" id="s3-run" disabled>▶ 조회</button>
+  </div>
+  <div class="result-box" id="s3-sql-preview">SELECT * FROM auction WHERE weight_kg &gt;= ?</div>
+  <div id="s3-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const stmt = await conn.prepare('SELECT * FROM auction WHERE weight_kg >= ?');
+const result = await stmt.query(threshold);
+await stmt.close();</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. 집계 + 윈도우 함수 — <code>GROUP BY</code> / <code>RANK() OVER</code></h2>
+  <p class="desc">
+    지역별 총 위판량을 집계하고, <code>RANK() OVER (ORDER BY ... DESC)</code>로 순위를 함께 매깁니다.
+    JOIN·서브쿼리·CTE 등 표준 분석 SQL을 그대로 쓸 수 있다는 게 DuckDB-Wasm의 핵심입니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s4-run" disabled>▶ 지역별 순위 집계</button>
+  </div>
+  <div id="s4-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const result = await conn.query(`
+  SELECT region, SUM(weight_kg) AS total_weight,
+         RANK() OVER (ORDER BY SUM(weight_kg) DESC) AS rnk
+  FROM catch_log
+  GROUP BY region
+  ORDER BY rnk
+`);</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. 대량 데이터 집계 성능 — <code>generate_series</code></h2>
+  <p class="desc">
+    <code>generate_series()</code>로 가상의 조업 데이터를 대량 생성한 뒤 바로 집계해서, 컬럼형 OLAP
+    엔진이 브라우저 안에서 얼마나 빠른지 체감해봅니다. (실제 소요 시간은 기기 성능에 따라 달라집니다.)
+  </p>
+  <div class="controls">
+    <select id="s5-rows">
+      <option value="100000">10만 행</option>
+      <option value="500000" selected>50만 행</option>
+      <option value="1000000">100만 행</option>
+    </select>
+    <button class="action" id="s5-run" disabled>▶ 생성 + 집계 실행</button>
+  </div>
+  <div class="stat-row" id="s5-stats" style="display:none;">
+    <div class="stat-box"><div class="label">생성된 행 수</div><div class="value" id="s5-cnt">-</div></div>
+    <div class="stat-box"><div class="label">평균값</div><div class="value" id="s5-avg">-</div></div>
+    <div class="stat-box"><div class="label">합계</div><div class="value" id="s5-sum">-</div></div>
+    <div class="stat-box"><div class="label">소요 시간</div><div class="value" id="s5-elapsed">-</div></div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const t0 = performance.now();
+const result = await conn.query(`
+  SELECT COUNT(*) AS cnt, AVG(v) AS avg_v, SUM(v) AS sum_v
+  FROM (SELECT (random() * 1000)::DOUBLE AS v FROM generate_series(1, ${'${n}'}))
+`);
+const elapsedMs = performance.now() - t0;</pre>
+  </details>
+</section>
+
+<script type="module">
+  import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.32.0/dist/duckdb-browser.mjs';
+
+  const banner = document.getElementById('init-banner');
+  let db = null;
+  let conn = null;
+
+  function toDisplay(v) {
+    if (typeof v === 'bigint') return Number(v);
+    return v;
+  }
+
+  function rowsToObjects(arrowTable) {
+    return arrowTable.toArray().map((row) => {
+      const obj = row.toJSON();
+      const out = {};
+      for (const k of Object.keys(obj)) out[k] = toDisplay(obj[k]);
+      return out;
+    });
+  }
+
+  function renderTable(rows, opts) {
+    opts = opts || {};
+    if (!rows.length) return '<div class="result-box">결과 없음</div>';
+    const cols = Object.keys(rows[0]);
+    let html = '<table class="data-table"><thead><tr>' + cols.map((c) => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+    rows.forEach((row, i) => {
+      html += '<tr>' + cols.map((c) => {
+        const cls = opts.rankCol && c === opts.rankCol && Number(row[c]) === 1 ? ' class="rank-1"' : '';
+        let val = row[c];
+        if (typeof val === 'number' && !Number.isInteger(val)) val = val.toFixed(1);
+        return `<td${cls}>${val}</td>`;
+      }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function enableButtons() {
+    document.querySelectorAll('button.action').forEach((btn) => { btn.disabled = false; });
+  }
+
+  async function initDuckDB() {
+    try {
+      const bundles = duckdb.getJsDelivrBundles();
+      const bundle = await duckdb.selectBundle(bundles);
+      const worker_url = URL.createObjectURL(
+        new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' })
+      );
+      const worker = new Worker(worker_url);
+      const logger = new duckdb.VoidLogger();
+      db = new duckdb.AsyncDuckDB(logger, worker);
+      await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      URL.revokeObjectURL(worker_url);
+      conn = await db.connect();
+
+      banner.textContent = '✅ DuckDB-Wasm 엔진 준비 완료 — 아래 버튼을 눌러 실행해보세요.';
+      banner.className = 'ready';
+      enableButtons();
+    } catch (e) {
+      banner.textContent = '❌ 초기화 실패: ' + e.message;
+      banner.className = 'error';
+    }
+  }
+
+  // ---------- Section 1 ----------
+  document.getElementById('s1-run').addEventListener('click', async () => {
+    const resultEl = document.getElementById('s1-result');
+    const sql = document.getElementById('s1-sql').value;
+    const statements = sql.split(';').map((s) => s.trim()).filter(Boolean);
+    let lastResult = null;
+    let log = [];
+    try {
+      for (const stmt of statements) {
+        lastResult = await conn.query(stmt);
+        log.push(`✓ ${stmt.slice(0, 40).replace(/\s+/g, ' ')}${stmt.length > 40 ? '...' : ''} (${lastResult.numRows}행)`);
+      }
+      const rows = rowsToObjects(lastResult);
+      resultEl.innerHTML = `<div class="log-box">${log.map((l) => `<div>${l}</div>`).join('')}</div>` + renderTable(rows);
+    } catch (e) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${e.message}</div>`;
+    }
+  });
+
+  // ---------- Section 2 ----------
+  document.getElementById('s2-run').addEventListener('click', async () => {
+    const resultEl = document.getElementById('s2-result');
+    const csvText = document.getElementById('s2-csv').value;
+    try {
+      await db.registerFileText('catch.csv', csvText);
+      await conn.query(`CREATE OR REPLACE TABLE catch_log AS SELECT * FROM read_csv_auto('catch.csv')`);
+      const summaryResult = await conn.query(`SELECT COUNT(*) AS 행수, SUM(weight_kg) AS 총중량_kg, ROUND(AVG(weight_kg), 1) AS 평균중량_kg FROM catch_log`);
+      const fullResult = await conn.query(`SELECT * FROM catch_log ORDER BY weight_kg DESC`);
+      resultEl.innerHTML =
+        '<div class="desc" style="margin-top:10px;">요약</div>' + renderTable(rowsToObjects(summaryResult)) +
+        '<div class="desc" style="margin-top:10px;">전체 데이터</div>' + renderTable(rowsToObjects(fullResult));
+    } catch (e) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${e.message}</div>`;
+    }
+  });
+
+  // ---------- Section 3 ----------
+  const s3Slider = document.getElementById('s3-slider');
+  const s3SliderVal = document.getElementById('s3-slider-val');
+  s3Slider.addEventListener('input', () => {
+    s3SliderVal.textContent = `최소 중량: ${s3Slider.value}kg 이상`;
+  });
+  document.getElementById('s3-run').addEventListener('click', async () => {
+    const resultEl = document.getElementById('s3-result');
+    const threshold = Number(s3Slider.value);
+    try {
+      const stmt = await conn.prepare('SELECT * FROM auction WHERE weight_kg >= ? ORDER BY weight_kg DESC');
+      const result = await stmt.query(threshold);
+      await stmt.close();
+      const rows = rowsToObjects(result);
+      resultEl.innerHTML = rows.length
+        ? renderTable(rows)
+        : '<div class="result-box">조건에 맞는 데이터가 없습니다.</div>';
+    } catch (e) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${e.message} (섹션 1을 먼저 실행해주세요)</div>`;
+    }
+  });
+
+  // ---------- Section 4 ----------
+  document.getElementById('s4-run').addEventListener('click', async () => {
+    const resultEl = document.getElementById('s4-result');
+    try {
+      const result = await conn.query(`
+        SELECT region AS 지역, SUM(weight_kg) AS 총중량_kg, RANK() OVER (ORDER BY SUM(weight_kg) DESC) AS 순위
+        FROM catch_log
+        GROUP BY region
+        ORDER BY 순위
+      `);
+      resultEl.innerHTML = renderTable(rowsToObjects(result), { rankCol: '순위' });
+    } catch (e) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${e.message} (섹션 2를 먼저 실행해주세요)</div>`;
+    }
+  });
+
+  // ---------- Section 5 ----------
+  document.getElementById('s5-run').addEventListener('click', async () => {
+    const n = Number(document.getElementById('s5-rows').value);
+    const statsEl = document.getElementById('s5-stats');
+    const btn = document.getElementById('s5-run');
+    btn.disabled = true;
+    try {
+      const t0 = performance.now();
+      const result = await conn.query(`
+        SELECT COUNT(*) AS cnt, AVG(v) AS avg_v, SUM(v) AS sum_v
+        FROM (SELECT (random() * 1000)::DOUBLE AS v FROM generate_series(1, ${n}))
+      `);
+      const elapsedMs = Math.round(performance.now() - t0);
+      const row = rowsToObjects(result)[0];
+      document.getElementById('s5-cnt').textContent = row.cnt.toLocaleString('ko-KR') + '행';
+      document.getElementById('s5-avg').textContent = row.avg_v.toFixed(2);
+      document.getElementById('s5-sum').textContent = Math.round(row.sum_v).toLocaleString('ko-KR');
+      document.getElementById('s5-elapsed').textContent = elapsedMs + 'ms';
+      statsEl.style.display = 'flex';
+    } catch (e) {
+      alert('오류: ' + e.message);
+    }
+    btn.disabled = false;
+  });
+
+  initDuckDB();
+</script>
+</body>
+</html>
