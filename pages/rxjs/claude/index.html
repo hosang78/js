@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>RxJS</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  .form-row label { width: 90px; color: #555; flex-shrink: 0; }
+  .form-row input, .form-row select {
+    flex: 1;
+    min-width: 140px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .subscriber-box {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .subscriber-card {
+    flex: 1;
+    min-width: 160px;
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .subscriber-card h4 { margin: 0 0 6px; font-size: 12.5px; color: #4f7dff; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .result-box.pending { background: #fff6e5; border-color: #ffe0a3; color: #a15c00; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>RxJS 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>RxJS</strong>는 이벤트·타이머·비동기 요청 같은 것들을 <strong>스트림(Observable)</strong>으로
+    다뤄, 콜백을 겹겹이 쌓지 않고도 조합·타이밍 제어·취소 로직을 선언적으로 짤 수 있게 해줍니다.
+    <ul>
+      <li><code>source$.pipe(filter(...), map(...))</code>로 스트림을 변환</li>
+      <li><code>Subject</code>는 여러 구독자에게 같은 값을 동시에 방송(멀티캐스트)</li>
+      <li><code>fromEvent(el, 'input').pipe(debounceTime(300))</code>로 타이핑이 멈춘 뒤에만 반응</li>
+      <li><code>combineLatest([a$, b$])</code>로 여러 스트림의 최신값을 조합</li>
+      <li><code>switchMap</code>은 새 값이 오면 이전 내부 요청을 자동으로 취소</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 시세·검색 결과는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 다른 외부 API는 사용하지 않습니다. 검증 중 실제로 확인한 점: switchMap은
+      새 검색어가 들어오면 이전에 진행 중이던(아직 응답 안 온) 가짜 API 호출을 실제로 취소해서,
+      느리게 도착할 예정이던 이전 결과는 화면에 아예 나타나지 않고 마지막 요청 결과만 남습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 Observable + pipe(filter, map)</h2>
+    <div class="desc">1~10 숫자 스트림에서 짝수만 걸러(filter)낸 뒤 10배로 변환(map)합니다.</div>
+    <div class="controls"><button class="action" id="runBtn1">스트림 실행</button></div>
+    <div class="result-box" id="output1">아직 실행 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">rxjs.of(1,2,3,4,5,6,7,8,9,10).pipe(
+  rxjs.filter(x => x % 2 === 0),
+  rxjs.map(x => x * 10)
+).subscribe(v => console.log(v)); // 20, 40, 60, 80, 100</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Subject 멀티캐스트</h2>
+    <div class="desc">시세를 발행하면 두 "화면"(구독자)이 동시에 같은 값을 받습니다. 일반 함수 호출이 아니라 진짜 구독/발행 구조입니다.</div>
+    <div class="controls"><button class="action" id="publishBtn2">시세 발행</button></div>
+    <div class="subscriber-box">
+      <div class="subscriber-card"><h4>화면 A (모바일)</h4><div id="subscriberA2">대기 중</div></div>
+      <div class="subscriber-card"><h4>화면 B (전광판)</h4><div id="subscriberB2">대기 중</div></div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const priceSubject = new rxjs.Subject();
+priceSubject.subscribe(v => updateScreenA(v));
+priceSubject.subscribe(v => updateScreenB(v));
+priceSubject.next(4200); // 두 구독자 모두에게 즉시 전달됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. fromEvent + debounceTime</h2>
+    <div class="desc">아래 입력창에 빠르게 타이핑해보세요. 타이핑을 멈추고 300ms가 지나야만 아래 결과가 갱신됩니다.</div>
+    <div class="form-row"><label>어종 검색</label><input id="searchInput3" placeholder="예: 고등어" /></div>
+    <div class="result-box" id="output3">아직 입력 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">rxjs.fromEvent(input, 'input').pipe(
+  rxjs.map(e => e.target.value),
+  rxjs.debounceTime(300)
+).subscribe(v => search(v)); // 타이핑 도중엔 발행 안 됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. combineLatest — 여러 스트림 결합</h2>
+    <div class="desc">어종과 구역을 각각 바꿔보세요. 두 값 중 하나만 바뀌어도 최신 조합이 즉시 다시 계산됩니다.</div>
+    <div class="form-row">
+      <label>어종</label>
+      <select id="speciesSelect4">
+        <option>고등어</option><option>갈치</option><option>오징어</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>구역</label>
+      <select id="zoneSelect4">
+        <option>1구역</option><option>2구역</option><option>3구역</option>
+      </select>
+    </div>
+    <div class="result-box" id="output4">아직 조합 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">rxjs.combineLatest([species$, zone$]).subscribe(([species, zone]) => {
+  render(`${zone} · ${species}`); // 둘 중 하나라도 바뀌면 즉시 재계산
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>5. switchMap — 이전 요청 자동 취소</h2>
+    <div class="desc">검색어를 빠르게 여러 번 바꿔보세요(예: "가" → "갈" → "갈치"). 각 검색은 700ms 걸리는 가짜 API를 흉내내는데, 이전 검색 결과는 취소되고 <strong>마지막 검색 결과만</strong> 화면에 남습니다.</div>
+    <div class="form-row"><label>어종 검색</label><input id="searchInput5" placeholder="빠르게 여러 번 입력해보세요" /></div>
+    <div class="result-box" id="output5">아직 검색 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">query$.pipe(
+  rxjs.switchMap(q => fakeApiCall(q, 700)) // 새 q가 오면 이전 fakeApiCall 자동 취소
+).subscribe(result => render(result));</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/rxjs@7.8.2/dist/bundles/rxjs.umd.min.js"></script>
+  <script>
+    const { of, fromEvent, Subject, combineLatest, Observable } = rxjs;
+    const { map, filter, debounceTime, switchMap } = rxjs;
+
+    // ---------- 1. 기본 Observable + pipe ----------
+    document.getElementById('runBtn1').addEventListener('click', () => {
+      const results = [];
+      of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).pipe(
+        filter((x) => x % 2 === 0),
+        map((x) => x * 10)
+      ).subscribe((v) => results.push(v));
+      const output1 = document.getElementById('output1');
+      output1.textContent = `filter(짝수만) → map(×10) 결과: [${results.join(', ')}]`;
+      output1.classList.add('ok');
+    });
+
+    // ---------- 2. Subject 멀티캐스트 ----------
+    const priceSubject = new Subject();
+    const subA = document.getElementById('subscriberA2');
+    const subB = document.getElementById('subscriberB2');
+    priceSubject.subscribe((v) => { subA.textContent = `수신: ${v.toLocaleString('ko-KR')}원`; });
+    priceSubject.subscribe((v) => { subB.textContent = `수신: ${v.toLocaleString('ko-KR')}원`; });
+    document.getElementById('publishBtn2').addEventListener('click', () => {
+      const price = 3800 + Math.floor(Math.random() * 1000);
+      priceSubject.next(price);
+    });
+
+    // ---------- 3. fromEvent + debounceTime ----------
+    const searchInput3 = document.getElementById('searchInput3');
+    const output3 = document.getElementById('output3');
+    fromEvent(searchInput3, 'input').pipe(
+      map((e) => e.target.value),
+      debounceTime(300)
+    ).subscribe((value) => {
+      output3.textContent = value
+        ? `디바운스 후 반영된 검색어: "${value}" (타이핑 멈추고 300ms 경과)`
+        : '검색어가 비었습니다.';
+      output3.classList.add('ok');
+    });
+    searchInput3.addEventListener('input', () => {
+      output3.classList.remove('ok');
+    });
+
+    // ---------- 4. combineLatest ----------
+    const speciesSelect4 = document.getElementById('speciesSelect4');
+    const zoneSelect4 = document.getElementById('zoneSelect4');
+    const species$ = new Subject();
+    const zone$ = new Subject();
+    const output4 = document.getElementById('output4');
+    combineLatest([species$, zone$]).subscribe(([species, zone]) => {
+      output4.textContent = `현재 조합: ${zone} · ${species}`;
+      output4.classList.add('ok');
+    });
+    speciesSelect4.addEventListener('change', () => species$.next(speciesSelect4.value));
+    zoneSelect4.addEventListener('change', () => zone$.next(zoneSelect4.value));
+    // 초기값 발행
+    species$.next(speciesSelect4.value);
+    zone$.next(zoneSelect4.value);
+
+    // ---------- 5. switchMap ----------
+    function fakeApiCall(query, delay) {
+      return new Observable((subscriber) => {
+        const id = setTimeout(() => {
+          subscriber.next(`"${query}" 검색 결과: 가상 위판 기록 ${query.length * 3}건`);
+          subscriber.complete();
+        }, delay);
+        return () => clearTimeout(id); // switchMap이 이 취소 함수를 호출함
+      });
+    }
+    const query5$ = new Subject();
+    const searchInput5 = document.getElementById('searchInput5');
+    const output5 = document.getElementById('output5');
+    let requestCount = 0;
+    let resultCount = 0;
+    query5$.pipe(switchMap((q) => fakeApiCall(q, 700))).subscribe((result) => {
+      resultCount++;
+      output5.textContent = `${result}\n(요청 ${requestCount}건 중 ${resultCount}건만 결과로 도착 — 나머지는 switchMap이 취소함)`;
+      output5.classList.remove('pending');
+      output5.classList.add('ok');
+    });
+    searchInput5.addEventListener('input', () => {
+      requestCount++;
+      output5.textContent = `"${searchInput5.value}" 검색 중... (이전 요청이 있었다면 자동 취소됨)`;
+      output5.classList.remove('ok');
+      output5.classList.add('pending');
+      query5$.next(searchInput5.value);
+    });
+  </script>
+</body>
+</html>
