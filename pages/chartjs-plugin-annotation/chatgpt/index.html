@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>chartjs-plugin-annotation 종합 기능 데모</title>
+  <style>
+    :root{
+      --bg:#f4f7fb; --panel:#fff; --line:#dce4ef; --text:#172033; --muted:#667085;
+      --primary:#2563eb; --primary2:#1d4ed8; --good:#15803d; --warn:#b45309; --bad:#b91c1c;
+      --shadow:0 10px 30px rgba(15,23,42,.08); --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text)}
+    button,input,select{font:inherit}
+    .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+    .top-inner{max-width:1500px;margin:auto;padding:14px 20px;display:flex;gap:14px;align-items:center;justify-content:space-between}
+    h1{font-size:21px;margin:0}.subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+    .status{display:flex;gap:8px;align-items:center;font-size:13px}
+    .dot{width:10px;height:10px;border-radius:50%;background:#94a3b8}.dot.ok{background:#22c55e}.dot.err{background:#ef4444}
+    main{max-width:1500px;margin:auto;padding:20px}
+    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:16px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .intro{padding:22px}.intro h2{margin:0 0 10px;font-size:25px}.intro p{margin:6px 0;color:var(--muted);line-height:1.7}
+    .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}.chip{padding:6px 9px;border-radius:999px;background:#eef4ff;color:#1e40af;font-size:12px;font-weight:700}
+    .global-controls{padding:18px}.global-controls h3{margin:0 0 12px;font-size:15px}
+    .control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    button,.btn{border:1px solid #cbd5e1;background:#fff;color:#25324a;padding:9px 11px;border-radius:10px;cursor:pointer;font-weight:700}
+    button:hover{border-color:#93c5fd;background:#eff6ff}button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    button.primary:hover{background:var(--primary2)}button.danger{color:#b91c1c}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .card{padding:16px;min-width:0}.card-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:9px}
+    .card h3{margin:0;font-size:17px}.desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+    .badge{font-size:11px;padding:5px 7px;background:#f1f5f9;border-radius:7px;white-space:nowrap}
+    .canvas-wrap{height:310px;position:relative}.canvas-wrap.tall{height:360px}
+    .toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.toolbar button{padding:7px 9px;font-size:12px}
+    .toolbar label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+    input[type=range]{width:130px}input[type=color]{width:38px;height:30px;border:0;background:none;padding:0}
+    .event-log{height:115px;overflow:auto;background:#0f172a;color:#cbd5e1;border-radius:10px;padding:9px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:10px}
+    .feature-table{width:100%;border-collapse:collapse;font-size:13px}.feature-table th,.feature-table td{border-bottom:1px solid var(--line);padding:9px;text-align:left}
+    .feature-table th{background:#f8fafc}.yes{color:var(--good);font-weight:800}
+    details{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+    summary{cursor:pointer;padding:10px;font-weight:700;font-size:12px}
+    pre{margin:0;padding:10px;overflow:auto;max-height:220px;font-size:11px;background:#111827;color:#d1d5db;border-radius:0 0 10px 10px}
+    .foot{padding:18px;color:var(--muted);font-size:12px;line-height:1.6;margin-top:16px}
+    .toast{position:fixed;right:18px;bottom:18px;z-index:50;background:#111827;color:white;padding:11px 14px;border-radius:10px;box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:.2s;pointer-events:none}
+    .toast.show{opacity:1;transform:none}
+    @media(max-width:950px){.hero,.grid{grid-template-columns:1fr}.top-inner{align-items:flex-start}.canvas-wrap{height:290px}}
+    @media(max-width:560px){main{padding:12px}.top-inner{padding:11px 12px;flex-direction:column}.control-grid{grid-template-columns:1fr 1fr}.canvas-wrap{height:260px}.intro h2{font-size:21px}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="top-inner">
+    <div>
+      <h1>chartjs-plugin-annotation 종합 기능 데모</h1>
+      <div class="subtitle">Chart.js 4.5.1 · chartjs-plugin-annotation 3.1.0 · 단일 HTML</div>
+    </div>
+    <div class="status"><span id="libDot" class="dot"></span><span id="libStatus">라이브러리 로딩 중</span></div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="panel intro">
+      <h2>차트 위에 의미 있는 영역과 이벤트를 표시</h2>
+      <p>임계선, 목표 구간, 주석 라벨, 특정 좌표, 타원·다각형 강조, 클릭·호버·드래그 및 런타임 갱신을 직접 시험하는 페이지야.</p>
+      <div class="chips">
+        <span class="chip">Line</span><span class="chip">Box</span><span class="chip">Label</span>
+        <span class="chip">Point</span><span class="chip">Ellipse</span><span class="chip">Polygon</span>
+        <span class="chip">Arrow</span><span class="chip">Curve</span><span class="chip">Scriptable</span>
+        <span class="chip">Events</span><span class="chip">Dragging</span><span class="chip">Dynamic Update</span>
+      </div>
+    </div>
+    <div class="panel global-controls">
+      <h3>전체 제어</h3>
+      <div class="control-grid">
+        <button class="primary" onclick="randomizeAll()">전체 데이터 갱신</button>
+        <button onclick="toggleAnimations()">애니메이션 전환</button>
+        <button onclick="toggleAnnotations()">주석 전체 표시/숨김</button>
+        <button onclick="resetAll()">초기 상태 복원</button>
+      </div>
+      <div id="globalLog" class="event-log">[시스템] 초기화 대기 중...</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="panel card">
+      <div class="card-head"><div><h3>1. 선 주석 종합</h3><div class="desc">수평/수직/대각선, 곡선, 화살표, 다중 라벨, 점선 및 런타임 임계값</div></div><span class="badge">LINE</span></div>
+      <div class="canvas-wrap"><canvas id="lineChart"></canvas></div>
+      <div class="toolbar">
+        <label>임계값 <input id="threshold" type="range" min="20" max="90" value="60"><b id="thresholdValue">60</b></label>
+        <button onclick="toggleLineCurve()">곡선 전환</button>
+        <button onclick="toggleArrow()">화살표 전환</button>
+      </div>
+      <details><summary>구현 포인트 보기</summary><pre>scaleID + value / xMin·xMax·yMin·yMax
+curve, controlPoint, arrowHeads
+label.display, label.position, borderDash</pre></details>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>2. 박스 주석 종합</h3><div class="desc">목표 구간, 경고 구간, 둥근 테두리, 회전 라벨, drawTime과 z 순서</div></div><span class="badge">BOX</span></div>
+      <div class="canvas-wrap"><canvas id="boxChart"></canvas></div>
+      <div class="toolbar">
+        <button onclick="moveTargetBox(-1)">← 구간 이동</button><button onclick="moveTargetBox(1)">구간 이동 →</button>
+        <button onclick="cycleDrawTime()">drawTime 전환</button>
+      </div>
+      <details><summary>구현 포인트 보기</summary><pre>xMin, xMax, yMin, yMax
+backgroundColor, borderRadius, borderDash
+drawTime, z, label.rotation</pre></details>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>3. 라벨·포인트·타원·다각형</h3><div class="desc">독립 라벨, 콜아웃, 포인트 스타일, 타원, 삼각형·육각형 강조</div></div><span class="badge">SHAPES</span></div>
+      <div class="canvas-wrap tall"><canvas id="shapeChart"></canvas></div>
+      <div class="toolbar">
+        <button onclick="cyclePointStyle()">포인트 모양 전환</button>
+        <button onclick="rotatePolygon()">다각형 회전</button>
+        <button onclick="toggleCallout()">콜아웃 전환</button>
+      </div>
+      <details><summary>구현 포인트 보기</summary><pre>type: label / point / ellipse / polygon
+pointStyle, radius, sides, rotation
+label.callout, content 배열(여러 줄)</pre></details>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>4. 클릭·호버·드래그 상호작용</h3><div class="desc">주석 이벤트 콜백, 커서 변경, 직접 드래그, 이벤트 로그</div></div><span class="badge">INTERACTION</span></div>
+      <div class="canvas-wrap"><canvas id="eventChart"></canvas></div>
+      <div class="toolbar"><button onclick="clearEventLog()">로그 지우기</button><button onclick="resetDraggable()">위치 복원</button></div>
+      <div id="eventLog" class="event-log">주석 위로 마우스를 이동하거나, 박스를 드래그해 봐.</div>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>5. 스크립터블 옵션·컨텍스트</h3><div class="desc">데이터 상태에 따라 색상·표시 여부·텍스트를 함수로 동적 결정</div></div><span class="badge">SCRIPTABLE</span></div>
+      <div class="canvas-wrap"><canvas id="scriptChart"></canvas></div>
+      <div class="toolbar"><button onclick="randomizeScriptChart()">값 무작위 변경</button><label>기준색 <input id="accentColor" type="color" value="#7c3aed"></label></div>
+      <details><summary>구현 포인트 보기</summary><pre>borderColor: (ctx) => ...
+display: (ctx) => ...
+label.content: (ctx) => ...
+옵션 resolver를 통한 다른 옵션 참조</pre></details>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>6. 동적 생성·삭제·수정</h3><div class="desc">런타임에 주석 객체 추가, 선택 삭제, 전체 삭제, JSON 상태 확인</div></div><span class="badge">RUNTIME</span></div>
+      <div class="canvas-wrap"><canvas id="dynamicChart"></canvas></div>
+      <div class="toolbar">
+        <button onclick="addDynamicLine()">선 추가</button><button onclick="addDynamicBox()">박스 추가</button>
+        <button onclick="removeLastAnnotation()">마지막 삭제</button><button class="danger" onclick="clearDynamicAnnotations()">전체 삭제</button>
+      </div>
+      <div id="dynamicInfo" class="event-log"></div>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>7. 카테고리 축·로그 축</h3><div class="desc">카테고리 값 지정과 로그 스케일 구간 표시 예시</div></div><span class="badge">SCALES</span></div>
+      <div class="canvas-wrap"><canvas id="scaleChart"></canvas></div>
+      <div class="toolbar"><button onclick="toggleLogScale()">선형/로그 축 전환</button><button onclick="highlightCategory()">강조 월 변경</button></div>
+    </article>
+
+    <article class="panel card">
+      <div class="card-head"><div><h3>8. 기능 체크리스트</h3><div class="desc">이 페이지에 포함된 주요 기능 확인</div></div><span class="badge">SUMMARY</span></div>
+      <table class="feature-table">
+        <tr><th>분류</th><th>포함 기능</th><th>상태</th></tr>
+        <tr><td>기본 타입</td><td>선, 박스, 라벨, 포인트, 타원, 다각형</td><td class="yes">포함</td></tr>
+        <tr><td>선 확장</td><td>곡선, 제어점, 화살표, 점선, 대각선</td><td class="yes">포함</td></tr>
+        <tr><td>라벨</td><td>위치, 회전, 다중 줄, 콜아웃, 스타일</td><td class="yes">포함</td></tr>
+        <tr><td>렌더링</td><td>drawTime, z-order, animation</td><td class="yes">포함</td></tr>
+        <tr><td>상호작용</td><td>enter, leave, click, drag</td><td class="yes">포함</td></tr>
+        <tr><td>고급 옵션</td><td>scriptable, context, dynamic CRUD</td><td class="yes">포함</td></tr>
+        <tr><td>축</td><td>linear, category, logarithmic</td><td class="yes">포함</td></tr>
+      </table>
+      <div class="event-log">주의: 플러그인은 정확히 2개의 축을 갖는 차트에 적합하며, pie/radar/polarArea 같은 차트에는 일반 주석이 적용되지 않는다.</div>
+    </article>
+  </section>
+
+  <footer class="panel foot">
+    CDN 연결이 필요해. 내부망에서 사용할 경우 Chart.js UMD 파일과 chartjs-plugin-annotation 배포 파일을 내려받아 script 경로만 로컬 파일로 바꾸면 된다.
+  </footer>
+</main>
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+'use strict';
+const charts = {};
+let animationsEnabled = true, annotationsVisible = true;
+const palette = {blue:'#2563eb',red:'#dc2626',green:'#16a34a',amber:'#d97706',purple:'#7c3aed',slate:'#475569'};
+const labels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const rand = (min,max)=>Math.round(min+Math.random()*(max-min));
+const data12 = ()=>labels.map(()=>rand(25,85));
+const toast = msg => { const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1500); };
+const logGlobal = msg => { const el=document.getElementById('globalLog'); el.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`+el.textContent; };
+const commonOptions = (title)=>({
+  responsive:true, maintainAspectRatio:false,
+  animation:{duration:700},
+  interaction:{mode:'nearest',intersect:false},
+  plugins:{legend:{display:true,position:'bottom'},title:{display:true,text:title},tooltip:{enabled:true}},
+  scales:{x:{grid:{color:'rgba(148,163,184,.15)'}},y:{beginAtZero:true,max:100,grid:{color:'rgba(148,163,184,.18)'}}}
+});
+function mkLineData(){return {labels,datasets:[{label:'실적',data:data12(),borderColor:palette.blue,backgroundColor:'rgba(37,99,235,.12)',fill:true,tension:.3,pointRadius:3}]};}
+
+function init(){
+  if(!window.Chart || !window['chartjs-plugin-annotation']){
+    document.getElementById('libDot').className='dot err';
+    document.getElementById('libStatus').textContent='CDN 로딩 실패';
+    document.getElementById('globalLog').textContent='Chart.js 또는 annotation 플러그인을 불러오지 못했어. 인터넷 연결이나 CDN 차단 여부를 확인해.';
+    return;
+  }
+  Chart.register(window['chartjs-plugin-annotation']);
+  document.getElementById('libDot').className='dot ok';
+  document.getElementById('libStatus').textContent='라이브러리 정상';
+  createLineChart(); createBoxChart(); createShapeChart(); createEventChart(); createScriptChart(); createDynamicChart(); createScaleChart();
+  logGlobal('7개 데모 차트 초기화 완료');
+}
+
+function createLineChart(){
+  const o=commonOptions('선 주석: 임계선·대각선·곡선·화살표');
+  o.plugins.annotation={clip:false,annotations:{
+    threshold:{type:'line',scaleID:'y',value:60,borderColor:palette.red,borderWidth:3,borderDash:[8,5],
+      label:{display:true,content:'임계값 60',position:'end',backgroundColor:'rgba(220,38,38,.9)',font:{weight:'bold'}}},
+    vertical:{type:'line',scaleID:'x',value:'6월',borderColor:palette.green,borderWidth:2,
+      label:{display:true,content:['중간 점검','6월'],position:'start',rotation:'auto',backgroundColor:'rgba(22,163,74,.9)'}},
+    diagonal:{type:'line',xMin:'2월',xMax:'10월',yMin:25,yMax:82,borderColor:palette.purple,borderWidth:3,curve:true,
+      controlPoint:'25%',arrowHeads:{end:{display:true,fill:true}},label:{display:true,content:'성장 경로',position:'center',backgroundColor:palette.purple}}
+  }};
+  charts.line=new Chart(document.getElementById('lineChart'),{type:'line',data:mkLineData(),options:o});
+}
+document.getElementById('threshold').addEventListener('input',e=>{
+  if(!charts.line)return; const v=+e.target.value; document.getElementById('thresholdValue').textContent=v;
+  const a=charts.line.options.plugins.annotation.annotations.threshold; a.value=v;a.label.content='임계값 '+v;charts.line.update('none');
+});
+function toggleLineCurve(){let a=charts.line.options.plugins.annotation.annotations.diagonal;a.curve=!a.curve;charts.line.update();toast('곡선: '+(a.curve?'ON':'OFF'))}
+function toggleArrow(){let e=charts.line.options.plugins.annotation.annotations.diagonal.arrowHeads.end;e.display=!e.display;charts.line.update();toast('화살표: '+(e.display?'ON':'OFF'))}
+
+let boxStart=2, drawTimeIndex=1; const drawTimes=['beforeDraw','beforeDatasetsDraw','afterDatasetsDraw','afterDraw'];
+function createBoxChart(){
+  const o=commonOptions('박스 주석: 구간·레이어·둥근 테두리');
+  o.plugins.annotation={annotations:{
+    safe:{type:'box',xMin:'3월',xMax:'6월',yMin:40,yMax:75,backgroundColor:'rgba(34,197,94,.16)',borderColor:'#16a34a',borderWidth:2,borderRadius:12,
+      label:{display:true,content:'목표 구간',position:{x:'center',y:'start'},backgroundColor:'#15803d'}},
+    warning:{type:'box',xMin:'8월',xMax:'11월',yMin:0,yMax:35,backgroundColor:'rgba(245,158,11,.18)',borderColor:'#d97706',borderWidth:2,borderDash:[6,4],drawTime:'beforeDatasetsDraw',z:-1,
+      label:{display:true,content:'주의 영역',rotation:-8,position:'center',backgroundColor:'#b45309'}}
+  }};
+  charts.box=new Chart(document.getElementById('boxChart'),{type:'bar',data:{labels,datasets:[{label:'월별 점수',data:data12(),backgroundColor:'rgba(37,99,235,.65)',borderRadius:5}]},options:o});
+}
+function moveTargetBox(d){boxStart=Math.max(0,Math.min(7,boxStart+d));let a=charts.box.options.plugins.annotation.annotations.safe;a.xMin=labels[boxStart];a.xMax=labels[boxStart+3];charts.box.update();toast(`${a.xMin}~${a.xMax}`)}
+function cycleDrawTime(){drawTimeIndex=(drawTimeIndex+1)%drawTimes.length;let a=charts.box.options.plugins.annotation.annotations.warning;a.drawTime=drawTimes[drawTimeIndex];charts.box.update();toast('drawTime: '+a.drawTime)}
+
+let pointStyles=['circle','triangle','rectRot','star','crossRot'], pointStyleIndex=0, polyRotation=0;
+function createShapeChart(){
+  const o=commonOptions('도형 주석: Label·Point·Ellipse·Polygon'); o.scales.x.type='linear';o.scales.x.min=0;o.scales.x.max=100;o.scales.y.max=100;
+  o.plugins.annotation={annotations:{
+    note:{type:'label',xValue:18,yValue:82,content:['독립 라벨','여러 줄 지원'],backgroundColor:'rgba(15,23,42,.9)',color:'#fff',font:{size:13,weight:'bold'},padding:10,borderRadius:8,
+      callout:{display:true,side:10,borderColor:'#0f172a'},xAdjust:20,yAdjust:-5},
+    point:{type:'point',xValue:30,yValue:35,radius:11,backgroundColor:'#dc2626',borderColor:'#fff',borderWidth:3,pointStyle:'circle',
+      label:{display:true,content:'관심 지점',position:'bottom',backgroundColor:'#dc2626'}},
+    ellipse:{type:'ellipse',xMin:45,xMax:72,yMin:55,yMax:85,backgroundColor:'rgba(14,165,233,.14)',borderColor:'#0284c7',borderWidth:3,
+      label:{display:true,content:'타원 강조',backgroundColor:'#0284c7'}},
+    triangle:{type:'polygon',xValue:76,yValue:28,radius:25,sides:3,rotation:0,backgroundColor:'rgba(124,58,237,.16)',borderColor:'#7c3aed',borderWidth:3,
+      label:{display:true,content:'삼각형',backgroundColor:'#7c3aed'}},
+    hex:{type:'polygon',xValue:53,yValue:25,radius:18,sides:6,rotation:30,backgroundColor:'rgba(22,163,74,.15)',borderColor:'#16a34a',borderWidth:2}
+  }};
+  charts.shape=new Chart(document.getElementById('shapeChart'),{type:'scatter',data:{datasets:[{label:'관측값',data:Array.from({length:20},()=>({x:rand(5,95),y:rand(5,95)})),backgroundColor:'rgba(71,85,105,.55)',pointRadius:4}]},options:o});
+}
+function cyclePointStyle(){pointStyleIndex=(pointStyleIndex+1)%pointStyles.length;let a=charts.shape.options.plugins.annotation.annotations.point;a.pointStyle=pointStyles[pointStyleIndex];charts.shape.update();toast(a.pointStyle)}
+function rotatePolygon(){polyRotation=(polyRotation+30)%360;charts.shape.options.plugins.annotation.annotations.triangle.rotation=polyRotation;charts.shape.update()}
+function toggleCallout(){let c=charts.shape.options.plugins.annotation.annotations.note.callout;c.display=!c.display;charts.shape.update();toast('콜아웃: '+(c.display?'ON':'OFF'))}
+
+let dragState={active:false,lastX:0,lastY:0};
+const dragPlugin={
+  id:'customAnnotationDrag',
+  beforeEvent(chart,args){
+    const e=args.event, ann=chart.options.plugins.annotation.annotations.draggable;
+    if(!ann)return;
+    if(e.type==='mousedown'){
+      const els=window['chartjs-plugin-annotation'].getAnnotations(chart);
+      const hit=els.find(el=>el.options && el.options.id==='draggable' && e.x>=el.x && e.x<=el.x2 && e.y>=el.y && e.y<=el.y2);
+      if(hit){dragState={active:true,lastX:e.x,lastY:e.y};args.changed=true;}
+    } else if(e.type==='mousemove' && dragState.active){
+      const sx=chart.scales.x, sy=chart.scales.y;
+      const dx=sx.getValueForPixel(e.x)-sx.getValueForPixel(dragState.lastX);
+      const dy=sy.getValueForPixel(e.y)-sy.getValueForPixel(dragState.lastY);
+      ann.xMin+=dx;ann.xMax+=dx;ann.yMin+=dy;ann.yMax+=dy;
+      dragState.lastX=e.x;dragState.lastY=e.y;chart.update('none');eventLog(`drag → x:${ann.xMin.toFixed(1)}, y:${ann.yMin.toFixed(1)}`);args.changed=true;
+    } else if(e.type==='mouseup'||e.type==='mouseout'){dragState.active=false;}
+  }
+};
+function eventLog(msg){const el=document.getElementById('eventLog');el.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`+el.textContent}
+function createEventChart(){
+  const o=commonOptions('상호작용: 주석 클릭·호버·드래그');o.scales.x.type='linear';o.scales.x.min=0;o.scales.x.max=100;
+  const handlers={enter:ctx=>{ctx.chart.canvas.style.cursor='pointer';eventLog(ctx.element.options.id+' enter')},leave:ctx=>{ctx.chart.canvas.style.cursor='default';eventLog(ctx.element.options.id+' leave')},click:ctx=>{eventLog(ctx.element.options.id+' click');toast('주석 클릭: '+ctx.element.options.id)}};
+  o.plugins.annotation={common:{...handlers},annotations:{
+    clickable:{type:'line',xMin:10,xMax:90,yMin:75,yMax:75,borderColor:'#dc2626',borderWidth:6,label:{display:true,content:'클릭·호버',backgroundColor:'#dc2626'}},
+    draggable:{type:'box',xMin:30,xMax:55,yMin:25,yMax:55,backgroundColor:'rgba(37,99,235,.18)',borderColor:'#2563eb',borderWidth:3,label:{display:true,content:'드래그',backgroundColor:'#2563eb'}}
+  }};
+  charts.event=new Chart(document.getElementById('eventChart'),{type:'scatter',plugins:[dragPlugin],data:{datasets:[{label:'배경 데이터',data:Array.from({length:16},()=>({x:rand(5,95),y:rand(5,95)})),backgroundColor:'rgba(71,85,105,.45)'}]},options:o});
+}
+function clearEventLog(){document.getElementById('eventLog').textContent='로그를 지웠어.'}
+function resetDraggable(){Object.assign(charts.event.options.plugins.annotation.annotations.draggable,{xMin:30,xMax:55,yMin:25,yMax:55});charts.event.update()}
+
+function createScriptChart(){
+  const data=mkLineData(), o=commonOptions('스크립터블 옵션: 데이터 기반 스타일');
+  o.plugins.annotation={annotations:{
+    avg:{type:'line',scaleID:'y',
+      value:ctx=>ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0)/ctx.chart.data.datasets[0].data.length,
+      borderColor:ctx=>document.getElementById('accentColor').value,borderWidth:3,
+      label:{display:true,content:ctx=>'평균 '+Math.round(ctx.element.$context.chart.data.datasets[0].data.reduce((a,b)=>a+b,0)/12),backgroundColor:ctx=>document.getElementById('accentColor').value}},
+    high:{type:'box',yMin:75,yMax:100,backgroundColor:ctx=>ctx.chart.data.datasets[0].data.some(v=>v>85)?'rgba(220,38,38,.18)':'rgba(245,158,11,.10)',
+      borderColor:ctx=>ctx.chart.data.datasets[0].data.some(v=>v>85)?'#dc2626':'#d97706',borderWidth:2,
+      label:{display:ctx=>ctx.chart.data.datasets[0].data.some(v=>v>75),content:ctx=>'고점 '+Math.max(...ctx.chart.data.datasets[0].data),backgroundColor:'#b45309'}}
+  }};
+  charts.script=new Chart(document.getElementById('scriptChart'),{type:'line',data,options:o});
+}
+function randomizeScriptChart(){charts.script.data.datasets[0].data=data12();charts.script.update();toast('스크립터블 옵션 재평가')}
+document.getElementById('accentColor').addEventListener('input',()=>charts.script&&charts.script.update('none'));
+
+let dynamicCounter=0;
+function createDynamicChart(){
+  const o=commonOptions('런타임 Annotation CRUD');o.plugins.annotation={annotations:{}};
+  charts.dynamic=new Chart(document.getElementById('dynamicChart'),{type:'line',data:mkLineData(),options:o});updateDynamicInfo();
+}
+function addDynamicLine(){const id='line'+(++dynamicCounter);charts.dynamic.options.plugins.annotation.annotations[id]={type:'line',scaleID:'y',value:rand(20,85),borderColor:`hsl(${rand(0,359)} 70% 45%)`,borderWidth:2,label:{display:true,content:id}};charts.dynamic.update();updateDynamicInfo()}
+function addDynamicBox(){const id='box'+(++dynamicCounter),x=rand(0,8),y=rand(10,65);charts.dynamic.options.plugins.annotation.annotations[id]={type:'box',xMin:labels[x],xMax:labels[x+2],yMin:y,yMax:y+20,backgroundColor:'rgba(124,58,237,.13)',borderColor:'#7c3aed',borderWidth:2,label:{display:true,content:id,backgroundColor:'#7c3aed'}};charts.dynamic.update();updateDynamicInfo()}
+function removeLastAnnotation(){const a=charts.dynamic.options.plugins.annotation.annotations,k=Object.keys(a).pop();if(k)delete a[k];charts.dynamic.update();updateDynamicInfo()}
+function clearDynamicAnnotations(){charts.dynamic.options.plugins.annotation.annotations={};charts.dynamic.update();updateDynamicInfo()}
+function updateDynamicInfo(){if(!charts.dynamic)return;const ks=Object.keys(charts.dynamic.options.plugins.annotation.annotations);document.getElementById('dynamicInfo').textContent=`주석 수: ${ks.length}\nID: ${ks.join(', ')||'(없음)'}`}
+
+let isLog=false, categoryIndex=3;
+function createScaleChart(){
+  const o=commonOptions('카테고리 축과 로그 스케일');o.scales.y.max=undefined;o.plugins.annotation={annotations:{
+    category:{type:'box',xMin:'4월',xMax:'5월',backgroundColor:'rgba(14,165,233,.14)',borderColor:'#0284c7',borderWidth:2,label:{display:true,content:'카테고리 강조',backgroundColor:'#0284c7'}},
+    range:{type:'box',yMin:20,yMax:60,backgroundColor:'rgba(245,158,11,.10)',borderColor:'#d97706',borderWidth:2,label:{display:true,content:'값 구간'}}
+  }};
+  charts.scale=new Chart(document.getElementById('scaleChart'),{type:'bar',data:{labels,datasets:[{label:'측정값',data:[2,5,9,18,35,70,140,280,520,240,90,25],backgroundColor:'rgba(37,99,235,.65)'}]},options:o});
+}
+function toggleLogScale(){isLog=!isLog;charts.scale.options.scales.y.type=isLog?'logarithmic':'linear';charts.scale.options.scales.y.beginAtZero=!isLog;charts.scale.update();toast(isLog?'로그 축':'선형 축')}
+function highlightCategory(){categoryIndex=(categoryIndex+1)%10;let a=charts.scale.options.plugins.annotation.annotations.category;a.xMin=labels[categoryIndex];a.xMax=labels[categoryIndex+1];charts.scale.update()}
+
+function randomizeAll(){Object.values(charts).forEach(c=>{c.data.datasets.forEach(ds=>{if(Array.isArray(ds.data)&&typeof ds.data[0]==='number')ds.data=ds.data.map(()=>rand(20,90));});c.update()});logGlobal('전체 데이터 무작위 갱신')}
+function toggleAnimations(){animationsEnabled=!animationsEnabled;Object.values(charts).forEach(c=>{c.options.animation=animationsEnabled?{duration:700}:false;c.update()});logGlobal('애니메이션 '+(animationsEnabled?'활성':'비활성'))}
+function toggleAnnotations(){annotationsVisible=!annotationsVisible;Object.values(charts).forEach(c=>{const a=c.options.plugins.annotation?.annotations||{};Object.values(a).forEach(v=>v.display=annotationsVisible);c.update()});logGlobal('주석 '+(annotationsVisible?'표시':'숨김'))}
+function resetAll(){location.reload()}
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
