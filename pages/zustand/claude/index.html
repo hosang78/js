@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Zustand</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px; font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px; color: #a15c00; background: #fff6e5;
+    border: 1px solid #ffe0a3; border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .state-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .state-box {
+    flex: 1; min-width: 150px; border: 1px solid #e5e5e5; border-radius: 10px;
+    padding: 12px 14px; background: #fafbfc;
+  }
+  .state-box .label { font-size: 11.5px; color: #888; margin-bottom: 4px; }
+  .state-box .value { font-size: 16px; font-weight: 600; color: #333; }
+  .panel-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0; }
+  .panel {
+    flex: 1; min-width: 240px; border: 2px solid #dbe4ff; border-radius: 10px;
+    padding: 14px 16px; background: #f8faff;
+  }
+  .panel h3 { margin: 0 0 8px; font-size: 13px; color: #4f7dff; }
+  .panel ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .panel li { margin-bottom: 3px; }
+  .log-box {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444;
+    margin-top: 8px; max-height: 140px; overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  .fav-item {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+    border-radius: 999px; background: #eef0f3; font-size: 12.5px; margin: 3px 4px 3px 0;
+  }
+  .fav-item.on { background: #fff6e5; color: #a15c00; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 8px; }
+  table.data-table th, table.data-table td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: right; }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table th { background: #f5f6f8; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Zustand</h1>
+  <p>
+    Zustand는 아주 작고(약 1KB) 프레임워크에 얽매이지 않는 상태 관리 라이브러리입니다.
+    "하나의 스토어를 여러 곳에서 구독하면 어디서 상태를 바꾸든 구독하는 모든 곳이 자동으로
+    동기화된다"는 것이 핵심 아이디어입니다. 보통 React 훅과 함께 쓰이지만, 이 페이지는
+    <code>zustand/vanilla</code> API로 React 없이 순수 JS에서 사용하는 방법을 보여줍니다.
+  </p>
+  <ul>
+    <li><code>createStore()</code>로 상태 + 액션을 한 곳에 정의</li>
+    <li><code>subscribe()</code>로 상태 변경을 구독 — 여러 UI가 같은 스토어를 보면 항상 동기화됨</li>
+    <li><code>subscribeWithSelector</code> 미들웨어로 특정 필드만 골라 구독해 불필요한 갱신 방지</li>
+    <li><code>persist</code> 미들웨어로 상태를 자동으로 localStorage에 저장·복원</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 위판·즐겨찾기 데이터는 Zustand 기능 설명을 위한 <b>가상의 예시</b>이며, 실제
+    수협중앙회의 통계·조직·절차와 무관합니다. 다른 외부 API는 사용하지 않았습니다
+    (Zustand 5.0.14를 CDN에서 로드).
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 기본 스토어 — <code>createStore</code> + <code>setState</code>/<code>getState</code>/<code>subscribe</code></h2>
+  <p class="desc">
+    스토어를 만들 때 상태와 액션(상태를 바꾸는 함수)을 같은 객체 안에 정의합니다. 액션 안에서
+    <code>set()</code>을 호출하면 구독 중인 모든 리스너에게 알림이 갑니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box">
+      <div class="label">현재 입찰가 (store.getState().count)</div>
+      <div class="value" id="s1-count">0</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s1-inc">+1,000원</button>
+    <button class="ghost" id="s1-reset">초기화</button>
+  </div>
+  <div class="log-box" id="s1-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { createStore } from 'zustand/vanilla';
+
+const store = createStore((set, get) => ({
+  count: 0,
+  inc: () => set((s) => ({ count: s.count + 1000 })),
+  reset: () => set({ count: 0 }),
+}));
+
+store.subscribe((state, prevState) => {
+  console.log(`count: ${prevState.count} -> ${state.count}`);
+});
+
+store.getState().inc(); // 액션 호출
+store.getState().count; // 현재 값 읽기</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. 여러 UI가 하나의 스토어 공유 — 자동 동기화</h2>
+  <p class="desc">
+    아래 두 패널은 서로 다른 위치에 있지만 <b>같은 스토어</b>를 구독합니다. 어느 패널에서 항목을
+    추가하든 두 패널이 동시에 갱신됩니다 — 이것이 Zustand가 "전역 상태 공유"에 쓰이는 이유입니다.
+  </p>
+  <div class="panel-row">
+    <div class="panel">
+      <h3>📋 패널 A — 위판 목록에 추가</h3>
+      <div class="controls">
+        <button class="action" data-add="고등어">고등어 추가</button>
+        <button class="action" data-add="갈치">갈치 추가</button>
+      </div>
+      <ul id="s2-list-a"></ul>
+    </div>
+    <div class="panel">
+      <h3>📋 패널 B — 같은 스토어를 보는 중</h3>
+      <div class="controls">
+        <button class="action" data-add="오징어">오징어 추가</button>
+        <button class="ghost" id="s2-clear">전체 비우기</button>
+      </div>
+      <ul id="s2-list-b"></ul>
+    </div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const listStore = createStore((set) => ({
+  items: [],
+  addItem: (name) => set((s) => ({ items: [...s.items, { id: Date.now(), name }] })),
+  clear: () => set({ items: [] }),
+}));
+
+// 패널 A, 패널 B 각각 독립적으로 구독하지만 같은 스토어를 봄
+listStore.subscribe((s) => renderPanelA(s.items));
+listStore.subscribe((s) => renderPanelB(s.items));</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. 선택적 구독 — <code>subscribeWithSelector</code></h2>
+  <p class="desc">
+    기본 <code>subscribe</code>는 스토어의 아무 필드나 바뀌면 호출됩니다. <code>subscribeWithSelector</code>
+    미들웨어를 쓰면 <code>subscribe(selector, listener)</code> 형태로 "이 값이 바뀔 때만" 반응하게 만들
+    수 있습니다. 아래에서 B값만 여러 번 바꿔도 A 리스너는 반응하지 않는 걸 확인해보세요.
+  </p>
+  <div class="state-row">
+    <div class="state-box">
+      <div class="label">A 값</div>
+      <div class="value" id="s3-a">0</div>
+    </div>
+    <div class="state-box">
+      <div class="label">B 값</div>
+      <div class="value" id="s3-b">0</div>
+    </div>
+    <div class="state-box">
+      <div class="label">"A만 구독"한 리스너 호출 횟수</div>
+      <div class="value" id="s3-a-listener-count">0</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s3-inc-a">A값 +1</button>
+    <button class="ghost" id="s3-inc-b">B값 +1 (A 리스너는 반응 안 함)</button>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { subscribeWithSelector } from 'zustand/middleware';
+
+const store = createStore(subscribeWithSelector((set) => ({
+  a: 0, b: 0,
+  incA: () => set((s) => ({ a: s.a + 1 })),
+  incB: () => set((s) => ({ b: s.b + 1 })),
+})));
+
+// a 값만 선택해서 구독 — b가 바뀌어도 이 리스너는 호출되지 않음
+store.subscribe(
+  (state) => state.a,
+  (a, prevA) => console.log('a changed:', prevA, '->', a),
+  { fireImmediately: true }
+);</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. <code>persist</code> 미들웨어 — localStorage 자동 저장</h2>
+  <p class="desc">
+    <code>persist()</code>로 스토어를 감싸면 상태가 바뀔 때마다 자동으로 localStorage에 저장되고,
+    스토어를 새로 만들 때 저장된 값으로 복원됩니다. 즐겨찾기를 토글한 뒤 <b>이 페이지를
+    새로고침</b>해도 그대로 남아있는지 확인해보세요.
+  </p>
+  <div class="controls">
+    <button class="action" data-fav="고등어">고등어</button>
+    <button class="action" data-fav="갈치">갈치</button>
+    <button class="action" data-fav="오징어">오징어</button>
+    <button class="action" data-fav="전갱이">전갱이</button>
+  </div>
+  <div id="s4-favorites"></div>
+  <div class="result-box" style="background:#f0f4ff;border:1px solid #dbe4ff;border-radius:8px;padding:10px 12px;font-size:12px;color:#333;margin-top:8px;font-family:monospace;white-space:pre-wrap;" id="s4-storage"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { persist, createJSONStorage } from 'zustand/middleware';
+
+const store = createStore(persist(
+  (set) => ({
+    favorites: [],
+    toggleFavorite: (name) => set((s) => ({
+      favorites: s.favorites.includes(name)
+        ? s.favorites.filter((f) => f !== name)
+        : [...s.favorites, name],
+    })),
+  }),
+  { name: 'lit-zustand-demo-favorites', storage: createJSONStorage(() => localStorage) }
+));
+// localStorage['lit-zustand-demo-favorites'] = '{"state":{"favorites":[...]},"version":0}'</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. 파생 값(Derived State) 계산</h2>
+  <p class="desc">
+    Zustand는 별도의 "computed" 문법이 없습니다. 대신 <code>getState()</code>로 읽은 원본 데이터에서
+    필요할 때마다 파생 값을 계산하는 함수를 따로 두는 게 일반적인 패턴입니다. 항목을 추가하면 합계가
+    자동으로 다시 계산됩니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s5-add">위판 항목 추가 (랜덤)</button>
+    <button class="ghost" id="s5-reset">초기화</button>
+  </div>
+  <table class="data-table" id="s5-table">
+    <thead><tr><th>품목</th><th>중량(kg)</th><th>kg당 단가</th><th>금액</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="state-row">
+    <div class="state-box">
+      <div class="label">총 위판 금액 (파생 값)</div>
+      <div class="value" id="s5-total">0원</div>
+    </div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const store = createStore((set) => ({
+  items: [{ name: '고등어', weight: 120, price: 8000 }],
+  addItem: (item) => set((s) => ({ items: [...s.items, item] })),
+}));
+
+// 파생 값은 필요할 때 직접 계산하는 함수로
+function getTotalValue(state) {
+  return state.items.reduce((sum, i) => sum + i.weight * i.price, 0);
+}
+
+store.subscribe((state) => {
+  renderTotal(getTotalValue(state)); // 상태가 바뀔 때마다 다시 계산
+});</pre>
+  </details>
+</section>
+
+<script type="module">
+  import { createStore } from 'https://cdn.jsdelivr.net/npm/zustand@5.0.14/esm/vanilla.mjs';
+  import { subscribeWithSelector, persist, createJSONStorage } from 'https://cdn.jsdelivr.net/npm/zustand@5.0.14/esm/middleware.mjs';
+
+  function nowStr() {
+    return new Date().toLocaleTimeString('ko-KR', { hour12: false });
+  }
+
+  // ---------- Section 1 ----------
+  (function () {
+    const countEl = document.getElementById('s1-count');
+    const logEl = document.getElementById('s1-log');
+
+    const store = createStore((set) => ({
+      count: 0,
+      inc: () => set((s) => ({ count: s.count + 1000 })),
+      reset: () => set({ count: 0 }),
+    }));
+
+    store.subscribe((state, prevState) => {
+      countEl.textContent = state.count.toLocaleString();
+      const row = document.createElement('div');
+      row.textContent = `[${nowStr()}] count: ${prevState.count.toLocaleString()} -> ${state.count.toLocaleString()}`;
+      logEl.prepend(row);
+    });
+
+    document.getElementById('s1-inc').addEventListener('click', () => store.getState().inc());
+    document.getElementById('s1-reset').addEventListener('click', () => store.getState().reset());
+  })();
+
+  // ---------- Section 2 ----------
+  (function () {
+    const listStore = createStore((set) => ({
+      items: [],
+      addItem: (name) => set((s) => ({ items: [...s.items, { id: Date.now() + Math.random(), name }] })),
+      clear: () => set({ items: [] }),
+    }));
+
+    const listA = document.getElementById('s2-list-a');
+    const listB = document.getElementById('s2-list-b');
+
+    function render(ul, items) {
+      ul.innerHTML = items.length
+        ? items.map((i) => `<li>${i.name}</li>`).join('')
+        : '<li style="color:#aaa;">(비어있음)</li>';
+    }
+
+    listStore.subscribe((s) => render(listA, s.items));
+    listStore.subscribe((s) => render(listB, s.items));
+    render(listA, listStore.getState().items);
+    render(listB, listStore.getState().items);
+
+    document.querySelectorAll('button[data-add]').forEach((btn) => {
+      btn.addEventListener('click', () => listStore.getState().addItem(btn.dataset.add));
+    });
+    document.getElementById('s2-clear').addEventListener('click', () => listStore.getState().clear());
+  })();
+
+  // ---------- Section 3 ----------
+  (function () {
+    const aEl = document.getElementById('s3-a');
+    const bEl = document.getElementById('s3-b');
+    const aListenerCountEl = document.getElementById('s3-a-listener-count');
+
+    const store = createStore(subscribeWithSelector((set) => ({
+      a: 0,
+      b: 0,
+      incA: () => set((s) => ({ a: s.a + 1 })),
+      incB: () => set((s) => ({ b: s.b + 1 })),
+    })));
+
+    let aListenerCalls = 0;
+    store.subscribe(
+      (s) => s.a,
+      (a) => {
+        aListenerCalls++;
+        aListenerCountEl.textContent = aListenerCalls;
+      },
+      { fireImmediately: true }
+    );
+
+    store.subscribe((s) => {
+      aEl.textContent = s.a;
+      bEl.textContent = s.b;
+    });
+
+    document.getElementById('s3-inc-a').addEventListener('click', () => store.getState().incA());
+    document.getElementById('s3-inc-b').addEventListener('click', () => store.getState().incB());
+  })();
+
+  // ---------- Section 4 ----------
+  (function () {
+    const favEl = document.getElementById('s4-favorites');
+    const storageEl = document.getElementById('s4-storage');
+
+    const store = createStore(persist(
+      (set) => ({
+        favorites: [],
+        toggleFavorite: (name) => set((s) => ({
+          favorites: s.favorites.includes(name)
+            ? s.favorites.filter((f) => f !== name)
+            : [...s.favorites, name],
+        })),
+      }),
+      { name: 'js-dashboard-zustand-favorites', storage: createJSONStorage(() => localStorage) }
+    ));
+
+    function render(state) {
+      const names = ['고등어', '갈치', '오징어', '전갱이'];
+      favEl.innerHTML = names.map((n) => {
+        const on = state.favorites.includes(n);
+        return `<span class="fav-item ${on ? 'on' : ''}">${on ? '★' : '☆'} ${n}</span>`;
+      }).join('');
+      storageEl.textContent = 'localStorage["js-dashboard-zustand-favorites"] =\n' + (localStorage.getItem('js-dashboard-zustand-favorites') || '(아직 없음)');
+    }
+
+    store.subscribe(render);
+    render(store.getState());
+
+    document.querySelectorAll('button[data-fav]').forEach((btn) => {
+      btn.addEventListener('click', () => store.getState().toggleFavorite(btn.dataset.fav));
+    });
+  })();
+
+  // ---------- Section 5 ----------
+  (function () {
+    const tbody = document.querySelector('#s5-table tbody');
+    const totalEl = document.getElementById('s5-total');
+    const initialItems = [
+      { name: '고등어', weight: 120, price: 8000 },
+      { name: '갈치', weight: 85, price: 12000 },
+    ];
+    const store = createStore((set) => ({
+      items: initialItems,
+      addItem: (item) => set((s) => ({ items: [...s.items, item] })),
+      reset: () => set({ items: initialItems }),
+    }));
+
+    const pool = [
+      { name: '오징어', weight: 60, price: 15000 },
+      { name: '전갱이', weight: 45, price: 6000 },
+      { name: '문어', weight: 30, price: 22000 },
+      { name: '광어', weight: 25, price: 28000 },
+    ];
+
+    function getTotalValue(state) {
+      return state.items.reduce((sum, i) => sum + i.weight * i.price, 0);
+    }
+
+    function render(state) {
+      tbody.innerHTML = state.items.map((i) => `
+        <tr><td>${i.name}</td><td>${i.weight}</td><td>${i.price.toLocaleString()}원</td><td>${(i.weight * i.price).toLocaleString()}원</td></tr>
+      `).join('');
+      totalEl.textContent = getTotalValue(state).toLocaleString() + '원';
+    }
+
+    store.subscribe(render);
+    render(store.getState());
+
+    document.getElementById('s5-add').addEventListener('click', () => {
+      const item = pool[Math.floor(Math.random() * pool.length)];
+      store.getState().addItem({ ...item });
+    });
+    document.getElementById('s5-reset').addEventListener('click', () => store.getState().reset());
+  })();
+</script>
+</body>
+</html>
