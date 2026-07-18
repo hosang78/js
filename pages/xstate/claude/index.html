@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>XState</title>
+<script src="https://cdn.jsdelivr.net/npm/xstate@5.32.5/dist/xstate.umd.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  h3 { font-size: 14px; margin: 14px 0 6px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .finding {
+    font-size: 12.5px;
+    color: #0a5ea8;
+    background: #eaf4ff;
+    border: 1px solid #cfe6ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 10px 0;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button.ghost:disabled { color: #bbb; cursor: not-allowed; }
+  .state-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .state-box {
+    flex: 1;
+    min-width: 160px;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fafbfc;
+  }
+  .state-box .label { font-size: 11.5px; color: #888; margin-bottom: 4px; }
+  .state-box .value { font-size: 15px; font-weight: 600; }
+  .state-box.normal .value { color: #0a7a4c; }
+  .state-box.warn .value { color: #b8860b; }
+  .state-box.danger .value { color: #c0392b; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: monospace;
+  }
+  .log-box {
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: monospace;
+    color: #444;
+    margin-top: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  .child-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .child-card {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fafbfc;
+  }
+  .child-card .title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .child-card .status { font-size: 12.5px; color: #555; margin-bottom: 8px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: #eef0f3;
+    color: #555;
+  }
+  .badge.on { background: #eafff3; color: #0a7a4c; }
+  .badge.off { background: #ffeceb; color: #c0392b; }
+  input[type="range"] { width: 160px; }
+  input[type="checkbox"] { width: 16px; height: 16px; }
+  label.chk { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 8px; }
+  th, td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: left; }
+  th { background: #f5f6f8; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>XState</h1>
+  <p>
+    XState는 앱의 상태를 <b>유한 상태 머신(finite state machine)</b>과 <b>스테이트차트(statechart)</b>로
+    선언적으로 정의하는 라이브러리입니다. "지금 어떤 상태인가"와 "이 상태에서 어떤 이벤트가 어떤 상태로
+    바뀌는가"를 명시적으로 그려두기 때문에, 조건문이 뒤엉킨 로직보다 버그를 추적하고 예측하기가 훨씬 쉬워집니다.
+  </p>
+  <ul>
+    <li>계층형(nested) + 병렬(parallel) 상태로 복잡한 시스템을 여러 하위 상태로 쪼개서 표현</li>
+    <li>가드(guard)로 조건부 전이, <code>after</code>로 시간 기반(지연) 전이</li>
+    <li><code>invoke</code>로 Promise 등 비동기 작업을 상태 머신 안에 내장 (로딩/성공/실패가 자연스럽게 상태가 됨)</li>
+    <li>액터(actor) 모델 기반 — 부모-자식 액터를 스폰하고 서로 메시지(이벤트)를 주고받음</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 어선·위판·냉동창고·선단 관련 예시는 XState 기능 설명을 위한 <b>가상의 데이터</b>이며,
+    실제 수협중앙회의 통계·조직·업무 절차와 무관합니다. 다른 외부 라이브러리/API는 사용하지 않았습니다
+    (XState v5.32.5 UMD 빌드만 CDN에서 로드).
+  </div>
+</div>
+
+<!-- Section 1: 기본 상태 머신 -->
+<section class="block">
+  <h2>1. 기본 상태 머신 — 어선 조업 상태</h2>
+  <p class="desc">
+    <code>createMachine()</code>으로 상태와 전이를 정의하고 <code>createActor()</code>로 실행합니다.
+    <code>context</code>는 머신이 들고 다니는 데이터이고, <code>assign()</code> 액션으로 갱신합니다.
+    각 상태에는 진입/이탈 시 실행되는 <code>entry</code>/<code>exit</code> 액션을 붙일 수 있습니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box normal">
+      <div class="label">현재 상태</div>
+      <div class="value" id="s1-state">docked</div>
+    </div>
+    <div class="state-box">
+      <div class="label">누적 출항 횟수 (context.trips)</div>
+      <div class="value" id="s1-trips">0</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s1-depart">🚢 출항 (DEPART)</button>
+    <button class="ghost" id="s1-return">⚓ 귀항 (RETURN)</button>
+  </div>
+  <div class="log-box" id="s1-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const boatMachine = XState.createMachine({
+  id: 'boat',
+  initial: 'docked',
+  context: { trips: 0 },
+  states: {
+    docked: {
+      entry: () => log('입항 상태 진입'),
+      exit: () => log('입항 상태 이탈'),
+      on: { DEPART: 'fishing' }
+    },
+    fishing: {
+      entry: XState.assign({ trips: ({ context }) => context.trips + 1 }),
+      on: { RETURN: 'docked' }
+    }
+  }
+});
+const boatActor = XState.createActor(boatMachine);
+boatActor.subscribe((snapshot) => log('상태 변경: ' + snapshot.value));
+boatActor.start();
+boatActor.send({ type: 'DEPART' });</pre>
+  </details>
+</section>
+
+<!-- Section 2: 계층적 + 병렬 상태 -->
+<section class="block">
+  <h2>2. 계층적 + 병렬(parallel) 상태 — 냉동창고 시스템</h2>
+  <p class="desc">
+    <code>type: 'parallel'</code>로 정의하면 여러 하위 영역이 <b>동시에 독립적으로</b> 각자의 상태를 가집니다.
+    냉동창고 예제는 "냉동실 상태"와 "전력 공급" 두 영역이 서로 영향 없이 각각 전이합니다.
+    <code>snapshot.matches({ freezer: 'inspecting', power: 'backup' })</code>처럼 객체 형태로 정확한 조합을 검사할 수 있습니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box" id="s2-freezer-box">
+      <div class="label">freezer 영역</div>
+      <div class="value" id="s2-freezer">normal</div>
+    </div>
+    <div class="state-box" id="s2-power-box">
+      <div class="label">power 영역</div>
+      <div class="value" id="s2-power">main</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s2-inspect">🔍 점검 시작</button>
+    <button class="ghost" id="s2-fix">✅ 점검 완료</button>
+    <button class="ghost" id="s2-break">💥 고장 판정</button>
+  </div>
+  <div class="controls">
+    <button class="action" id="s2-outage">⚡ 정전 발생</button>
+    <button class="ghost" id="s2-restore">🔌 전력 복구</button>
+  </div>
+  <div class="result-box" id="s2-value"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const coldStorageMachine = XState.createMachine({
+  id: 'coldStorage',
+  type: 'parallel',
+  states: {
+    freezer: {
+      initial: 'normal',
+      states: {
+        normal: { on: { INSPECT: 'inspecting' } },
+        inspecting: { on: { DONE: 'normal', FAIL: 'broken' } },
+        broken: { type: 'final' }
+      }
+    },
+    power: {
+      initial: 'main',
+      states: {
+        main: { on: { OUTAGE: 'backup' } },
+        backup: { on: { RESTORE: 'main' } }
+      }
+    }
+  }
+});
+// snapshot.value === { freezer: 'inspecting', power: 'backup' }
+// snapshot.matches({ freezer: 'inspecting', power: 'backup' }) === true</pre>
+  </details>
+</section>
+
+<!-- Section 3: 가드 + 지연 전이 -->
+<section class="block">
+  <h2>3. 가드(guard) + 지연 전이(<code>after</code>) — 품질 신호등</h2>
+  <p class="desc">
+    <code>after: { 3000: [...] }</code>는 그 상태에 3초간 머무르면 자동으로 다음 전이를 시도합니다.
+    배열로 여러 후보를 주면 <code>guard</code>가 <code>true</code>인 첫 번째로 전이합니다.
+    아래 슬라이더로 재고를 조절하면서, 신호등이 3초마다 재고를 확인해 초록불로 바뀌는지 확인해보세요.
+  </p>
+  <div class="finding">
+    💡 <b>확인된 동작 (v5):</b> 같은 상태로 돌아가는 self-transition(예: <code>red</code> → <code>red</code>)은
+    XState v5에서 기본적으로 <b>internal transition</b>이라 <code>entry</code>/<code>exit</code>가 재실행되지
+    않고 <code>after</code> 타이머도 재시작되지 않습니다. 아래처럼 <code>reenter: true</code>를 명시해야
+    실제로 상태를 다시 진입한 것처럼 타이머가 재가동됩니다. (v4와 달라진 부분이라 마이그레이션 시 특히 주의)
+  </div>
+  <div class="state-row">
+    <div class="state-box" id="s3-signal-box">
+      <div class="label">신호등 상태 (3초마다 재확인)</div>
+      <div class="value" id="s3-state">red</div>
+    </div>
+    <div class="state-box">
+      <div class="label">현재 재고 (context.stock)</div>
+      <div class="value" id="s3-stock">0</div>
+    </div>
+  </div>
+  <div class="controls">
+    <input type="range" id="s3-slider" min="0" max="10" value="0" />
+    <span id="s3-slider-val">재고: 0</span>
+  </div>
+  <div class="log-box" id="s3-log"></div>
+
+  <h3>가드 조합자 — and() / or() / not()</h3>
+  <p class="desc">체크박스로 조건 A/B를 켜고 끄면서, <code>and(['isA','isB'])</code> 와 <code>or(['isA','isB'])</code> 가드로 어떤 전이가 선택되는지 확인합니다.</p>
+  <div class="controls">
+    <label class="chk"><input type="checkbox" id="s3-condA" /> 조건 A</label>
+    <label class="chk"><input type="checkbox" id="s3-condB" /> 조건 B</label>
+    <button class="action" id="s3-and-check">AND 검사 (GO_AND)</button>
+    <button class="action" id="s3-or-check">OR 검사 (GO_OR)</button>
+    <button class="ghost" id="s3-reset">초기화</button>
+  </div>
+  <div class="result-box" id="s3-guard-result">대기 중</div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const signalMachine = XState.createMachine({
+  id: 'signal',
+  initial: 'red',
+  context: { stock: 0 },
+  on: { SET_STOCK: { actions: XState.assign({ stock: ({ event }) => event.stock }) } },
+  states: {
+    red: {
+      after: {
+        3000: [
+          { target: 'green', guard: 'hasStock' },
+          { target: 'red', reenter: true } // reenter 없으면 3초 재검사가 멈춤
+        ]
+      }
+    },
+    green: { after: { 3000: { target: 'red', reenter: true } } }
+  }
+}, {
+  guards: { hasStock: ({ context }) => context.stock > 0 }
+});
+
+// and/or/not 조합자
+const guardMachine = XState.createMachine({
+  initial: 'start',
+  states: {
+    start: {
+      on: {
+        GO_AND: { target: 'passed', guard: XState.and(['isA', 'isB']) },
+        GO_OR:  { target: 'passed', guard: XState.or(['isA', 'isB']) }
+      }
+    },
+    passed: {}
+  }
+});</pre>
+  </details>
+</section>
+
+<!-- Section 4: invoke + fromPromise -->
+<section class="block">
+  <h2>4. 비동기 액터 (<code>invoke</code> + <code>fromPromise</code>) — 위판 시세 조회 재시도</h2>
+  <p class="desc">
+    <code>invoke.src: fromPromise(...)</code>로 Promise를 상태 머신에 내장하면, 로딩/성공/실패가
+    각각 자연스러운 <b>상태</b>가 됩니다. 이 예제는 매 시도마다 50% 확률로 실패하는 가상 API를
+    흉내내고, 실패 시 최대 3번까지 <code>guard</code>로 재시도합니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box" id="s4-state-box">
+      <div class="label">현재 상태</div>
+      <div class="value" id="s4-state">idle</div>
+    </div>
+    <div class="state-box">
+      <div class="label">시도 횟수</div>
+      <div class="value" id="s4-attempt">0</div>
+    </div>
+    <div class="state-box">
+      <div class="label">조회된 시세</div>
+      <div class="value" id="s4-price">-</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s4-start">📡 시세 조회 시작</button>
+  </div>
+  <div class="log-box" id="s4-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const priceMachine = XState.createMachine({
+  id: 'price',
+  initial: 'idle',
+  context: { attempt: 0, price: null },
+  states: {
+    idle: { on: { START: 'loading' } },
+    loading: {
+      entry: XState.assign({ attempt: ({ context }) => context.attempt + 1 }),
+      invoke: {
+        src: XState.fromPromise(fetchAuctionPrice), // 50% 확률로 reject
+        onDone: {
+          target: 'success',
+          actions: XState.assign({ price: ({ event }) => event.output.price })
+        },
+        onError: [
+          { target: 'loading', reenter: true, guard: ({ context }) => context.attempt < 3 },
+          { target: 'failure' }
+        ]
+      }
+    },
+    success: { type: 'final' },
+    failure: { type: 'final' }
+  }
+});
+// UI에서 완료를 기다릴 때는 waitFor(actor, snap => snap.matches('success') || snap.matches('failure'))</pre>
+  </details>
+</section>
+
+<!-- Section 5: 액터 통신 (spawnChild + sendTo/sendParent) -->
+<section class="block">
+  <h2>5. 액터 통신 — 선단 관제 (모선 → 자선)</h2>
+  <p class="desc">
+    XState의 모든 실행 단위는 "액터"입니다. <code>spawnChild()</code>로 자식 액터를 만들고,
+    부모는 <code>sendTo(childId, event)</code>로 명령을 보내고, 자식은 <code>sendParent(event)</code>로
+    보고합니다. 아래는 모선(부모) 액터가 자선 3척(자식)을 스폰해서 각각 출항 명령을 내리는 예제입니다.
+  </p>
+  <div class="controls">
+    <button class="ghost" id="s5-init">🏗️ 선단 구성 (자선 3척 스폰)</button>
+  </div>
+  <div class="child-row" id="s5-children"></div>
+  <div class="log-box" id="s5-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const shipMachine = XState.createMachine({
+  id: 'ship',
+  initial: 'docked',
+  states: {
+    docked: { on: { DEPART_ORDER: { target: 'fishing', actions: XState.sendParent(({ self }) => ({ type: 'REPORT', from: self.id, status: 'fishing' })) } } },
+    fishing: { on: { RETURN_ORDER: { target: 'docked', actions: XState.sendParent(({ self }) => ({ type: 'REPORT', from: self.id, status: 'docked' })) } } }
+  }
+});
+
+const fleetMachine = XState.createMachine({
+  id: 'fleet',
+  entry: [
+    XState.spawnChild(shipMachine, { id: 'ship-1' }),
+    XState.spawnChild(shipMachine, { id: 'ship-2' }),
+    XState.spawnChild(shipMachine, { id: 'ship-3' }),
+  ],
+  on: {
+    COMMAND_DEPART: { actions: XState.sendTo(({ event }) => event.shipId, { type: 'DEPART_ORDER' }) },
+    COMMAND_RETURN: { actions: XState.sendTo(({ event }) => event.shipId, { type: 'RETURN_ORDER' }) },
+    REPORT: { actions: ({ event }) => log(event.from + ' 보고: ' + event.status) }
+  }
+});</pre>
+  </details>
+</section>
+
+<!-- Section 6: 실시간 인스펙터 -->
+<section class="block">
+  <h2>6. 실시간 상태 인스펙터 — <code>matches()</code> / <code>can()</code></h2>
+  <p class="desc">
+    <code>snapshot.matches(state)</code>로 현재 상태를 확인하고, <code>snapshot.can(event)</code>으로
+    "지금 이 이벤트를 보내면 실제로 전이가 일어나는지"를 미리 알 수 있습니다. 버튼 활성/비활성을
+    <code>can()</code> 결과에 그대로 연결해서, 의미 없는 이벤트를 아예 보낼 수 없게 만든 예제입니다.
+    검수 과정(대기 → 검수중 → 합격/불합격)을 표현했습니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box" id="s6-state-box">
+      <div class="label">현재 상태 (matches)</div>
+      <div class="value" id="s6-state">waiting</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s6-start">🔍 검수 시작 (START)</button>
+    <button class="action" id="s6-pass">✅ 합격 (PASS)</button>
+    <button class="action" id="s6-fail">❌ 불합격 (FAIL)</button>
+    <button class="ghost" id="s6-reset">↩️ 초기화 (RESET)</button>
+  </div>
+  <div class="result-box" id="s6-context"></div>
+  <table>
+    <thead><tr><th>시간</th><th>이벤트</th><th>결과 상태</th></tr></thead>
+    <tbody id="s6-timeline"></tbody>
+  </table>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const inspectMachine = XState.createMachine({
+  id: 'inspect',
+  initial: 'waiting',
+  states: {
+    waiting: { on: { START: 'checking' } },
+    checking: { on: { PASS: 'passed', FAIL: 'failed' } },
+    passed: { on: { RESET: 'waiting' } },
+    failed: { on: { RESET: 'waiting' } }
+  }
+});
+const actor = XState.createActor(inspectMachine).start();
+
+// 버튼 활성화 여부를 can()으로 결정
+startBtn.disabled = !actor.getSnapshot().can({ type: 'START' });
+passBtn.disabled = !actor.getSnapshot().can({ type: 'PASS' });
+
+actor.subscribe((snapshot) => {
+  console.log(snapshot.matches('checking')); // true / false
+});</pre>
+  </details>
+</section>
+
+<script>
+(function () {
+  const { createMachine, createActor, assign, and, or, fromPromise, sendTo, sendParent, spawnChild, waitFor } = XState;
+
+  function nowStr() {
+    const d = new Date();
+    return d.toLocaleTimeString('ko-KR', { hour12: false });
+  }
+
+  // ---------- Section 1 ----------
+  (function () {
+    const stateEl = document.getElementById('s1-state');
+    const tripsEl = document.getElementById('s1-trips');
+    const logEl = document.getElementById('s1-log');
+
+    function log(msg) {
+      const row = document.createElement('div');
+      row.textContent = '[' + nowStr() + '] ' + msg;
+      logEl.prepend(row);
+    }
+
+    const boatMachine = createMachine({
+      id: 'boat',
+      initial: 'docked',
+      context: { trips: 0 },
+      states: {
+        docked: {
+          entry: () => log('입항 상태 진입'),
+          exit: () => log('입항 상태 이탈'),
+          on: { DEPART: 'fishing' }
+        },
+        fishing: {
+          entry: assign({ trips: ({ context }) => context.trips + 1 }),
+          on: { RETURN: 'docked' }
+        }
+      }
+    });
+    const boatActor = createActor(boatMachine);
+    boatActor.subscribe((snapshot) => {
+      stateEl.textContent = snapshot.value;
+      tripsEl.textContent = snapshot.context.trips;
+      log('상태 변경: ' + snapshot.value);
+    });
+    boatActor.start();
+
+    document.getElementById('s1-depart').addEventListener('click', () => boatActor.send({ type: 'DEPART' }));
+    document.getElementById('s1-return').addEventListener('click', () => boatActor.send({ type: 'RETURN' }));
+  })();
+
+  // ---------- Section 2 ----------
+  (function () {
+    const freezerEl = document.getElementById('s2-freezer');
+    const powerEl = document.getElementById('s2-power');
+    const freezerBox = document.getElementById('s2-freezer-box');
+    const powerBox = document.getElementById('s2-power-box');
+    const valueEl = document.getElementById('s2-value');
+
+    const coldStorageMachine = createMachine({
+      id: 'coldStorage',
+      type: 'parallel',
+      states: {
+        freezer: {
+          initial: 'normal',
+          states: {
+            normal: { on: { INSPECT: 'inspecting' } },
+            inspecting: { on: { DONE: 'normal', FAIL: 'broken' } },
+            broken: { type: 'final' }
+          }
+        },
+        power: {
+          initial: 'main',
+          states: {
+            main: { on: { OUTAGE: 'backup' } },
+            backup: { on: { RESTORE: 'main' } }
+          }
+        }
+      }
+    });
+    const coldActor = createActor(coldStorageMachine);
+    coldActor.subscribe((snapshot) => {
+      freezerEl.textContent = snapshot.value.freezer;
+      powerEl.textContent = snapshot.value.power;
+      freezerBox.className = 'state-box ' + (snapshot.value.freezer === 'broken' ? 'danger' : snapshot.value.freezer === 'inspecting' ? 'warn' : 'normal');
+      powerBox.className = 'state-box ' + (snapshot.value.power === 'backup' ? 'warn' : 'normal');
+      valueEl.textContent =
+        'snapshot.value = ' + JSON.stringify(snapshot.value) + '\n' +
+        "matches({freezer:'inspecting', power:'backup'}) = " + snapshot.matches({ freezer: 'inspecting', power: 'backup' });
+    });
+    coldActor.start();
+
+    document.getElementById('s2-inspect').addEventListener('click', () => coldActor.send({ type: 'INSPECT' }));
+    document.getElementById('s2-fix').addEventListener('click', () => coldActor.send({ type: 'DONE' }));
+    document.getElementById('s2-break').addEventListener('click', () => coldActor.send({ type: 'FAIL' }));
+    document.getElementById('s2-outage').addEventListener('click', () => coldActor.send({ type: 'OUTAGE' }));
+    document.getElementById('s2-restore').addEventListener('click', () => coldActor.send({ type: 'RESTORE' }));
+  })();
+
+  // ---------- Section 3 ----------
+  (function () {
+    const stateEl = document.getElementById('s3-state');
+    const stockEl = document.getElementById('s3-stock');
+    const signalBox = document.getElementById('s3-signal-box');
+    const logEl = document.getElementById('s3-log');
+    const slider = document.getElementById('s3-slider');
+    const sliderVal = document.getElementById('s3-slider-val');
+
+    function log(msg) {
+      const row = document.createElement('div');
+      row.textContent = '[' + nowStr() + '] ' + msg;
+      logEl.prepend(row);
+    }
+
+    const signalMachine = createMachine({
+      id: 'signal',
+      initial: 'red',
+      context: { stock: 0 },
+      on: {
+        SET_STOCK: { actions: assign({ stock: ({ event }) => event.stock }) }
+      },
+      states: {
+        red: {
+          entry: () => log('빨간불 진입 — 3초 후 재고 재확인'),
+          after: {
+            3000: [
+              { target: 'green', guard: 'hasStock' },
+              { target: 'red', reenter: true }
+            ]
+          }
+        },
+        green: {
+          entry: () => log('초록불 진입! (재고 있음 확인됨)'),
+          after: { 3000: { target: 'red', reenter: true } }
+        }
+      }
+    }, {
+      guards: { hasStock: ({ context }) => context.stock > 0 }
+    });
+    const signalActor = createActor(signalMachine);
+    signalActor.subscribe((snapshot) => {
+      stateEl.textContent = snapshot.value;
+      stockEl.textContent = snapshot.context.stock;
+      signalBox.className = 'state-box ' + (snapshot.value === 'green' ? 'normal' : 'danger');
+    });
+    signalActor.start();
+
+    slider.addEventListener('input', () => {
+      sliderVal.textContent = '재고: ' + slider.value;
+      signalActor.send({ type: 'SET_STOCK', stock: Number(slider.value) });
+    });
+  })();
+
+  // ---------- Section 3b: guard 조합자 ----------
+  (function () {
+    const condA = document.getElementById('s3-condA');
+    const condB = document.getElementById('s3-condB');
+    const resultEl = document.getElementById('s3-guard-result');
+
+    const guardMachine = createMachine({
+      id: 'guardDemo',
+      initial: 'start',
+      states: {
+        start: {
+          on: {
+            GO_AND: { target: 'passedAnd', guard: and(['isA', 'isB']) },
+            GO_OR: { target: 'passedOr', guard: or(['isA', 'isB']) }
+          }
+        },
+        passedAnd: { on: { RESET: 'start' } },
+        passedOr: { on: { RESET: 'start' } }
+      }
+    }, {
+      guards: {
+        isA: () => condA.checked,
+        isB: () => condB.checked
+      }
+    });
+    const guardActor = createActor(guardMachine).start();
+
+    function render() {
+      resultEl.textContent =
+        '조건 A=' + condA.checked + ', 조건 B=' + condB.checked + '\n' +
+        '현재 결과 상태: ' + guardActor.getSnapshot().value;
+    }
+    render();
+
+    document.getElementById('s3-and-check').addEventListener('click', () => { guardActor.send({ type: 'GO_AND' }); render(); });
+    document.getElementById('s3-or-check').addEventListener('click', () => { guardActor.send({ type: 'GO_OR' }); render(); });
+    document.getElementById('s3-reset').addEventListener('click', () => { guardActor.send({ type: 'RESET' }); render(); });
+  })();
+
+  // ---------- Section 4 ----------
+  (function () {
+    const stateEl = document.getElementById('s4-state');
+    const attemptEl = document.getElementById('s4-attempt');
+    const priceEl = document.getElementById('s4-price');
+    const stateBox = document.getElementById('s4-state-box');
+    const logEl = document.getElementById('s4-log');
+    const startBtn = document.getElementById('s4-start');
+
+    function log(msg) {
+      const row = document.createElement('div');
+      row.textContent = '[' + nowStr() + '] ' + msg;
+      logEl.prepend(row);
+    }
+
+    function fetchAuctionPrice() {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (Math.random() < 0.5) {
+            reject(new Error('네트워크 지연으로 시세 조회 실패'));
+          } else {
+            resolve({ price: 8000 + Math.floor(Math.random() * 4000) });
+          }
+        }, 500);
+      });
+    }
+
+    const priceMachine = createMachine({
+      id: 'price',
+      initial: 'idle',
+      context: { attempt: 0, price: null },
+      states: {
+        idle: { on: { START: 'loading' } },
+        loading: {
+          entry: assign({ attempt: ({ context }) => context.attempt + 1 }),
+          invoke: {
+            src: fromPromise(fetchAuctionPrice),
+            onDone: {
+              target: 'success',
+              actions: assign({ price: ({ event }) => event.output.price })
+            },
+            onError: [
+              { target: 'loading', reenter: true, guard: ({ context }) => context.attempt < 3 },
+              { target: 'failure' }
+            ]
+          }
+        },
+        success: { type: 'final' },
+        failure: { type: 'final' }
+      }
+    });
+
+    let priceActor = createActor(priceMachine);
+    function bindPriceActor() {
+      priceActor.subscribe((snapshot) => {
+        stateEl.textContent = snapshot.value;
+        attemptEl.textContent = snapshot.context.attempt;
+        priceEl.textContent = snapshot.context.price !== null ? snapshot.context.price.toLocaleString() + '원/kg' : '-';
+        stateBox.className = 'state-box ' + (snapshot.matches('success') ? 'normal' : snapshot.matches('failure') ? 'danger' : snapshot.matches('loading') ? 'warn' : '');
+        if (snapshot.matches('loading')) log('시도 ' + snapshot.context.attempt + ' — 조회 중...');
+      });
+      priceActor.start();
+    }
+    bindPriceActor();
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      priceActor.stop();
+      priceActor = createActor(priceMachine);
+      bindPriceActor();
+      priceActor.send({ type: 'START' });
+      const finalSnap = await waitFor(priceActor, (snap) => snap.matches('success') || snap.matches('failure'), { timeout: 10000 });
+      log(finalSnap.matches('success') ? '✅ 최종 성공: ' + finalSnap.context.price + '원/kg (총 ' + finalSnap.context.attempt + '회 시도)' : '❌ 최종 실패 (3회 재시도 소진)');
+      startBtn.disabled = false;
+    });
+  })();
+
+  // ---------- Section 5 ----------
+  (function () {
+    const childrenEl = document.getElementById('s5-children');
+    const logEl = document.getElementById('s5-log');
+    const initBtn = document.getElementById('s5-init');
+
+    function log(msg) {
+      const row = document.createElement('div');
+      row.textContent = '[' + nowStr() + '] ' + msg;
+      logEl.prepend(row);
+    }
+
+    const shipMachine = createMachine({
+      id: 'ship',
+      initial: 'docked',
+      states: {
+        docked: {
+          on: {
+            DEPART_ORDER: {
+              target: 'fishing',
+              actions: sendParent(({ self }) => ({ type: 'REPORT', from: self.id, status: 'fishing' }))
+            }
+          }
+        },
+        fishing: {
+          on: {
+            RETURN_ORDER: {
+              target: 'docked',
+              actions: sendParent(({ self }) => ({ type: 'REPORT', from: self.id, status: 'docked' }))
+            }
+          }
+        }
+      }
+    });
+
+    const shipIds = ['ship-1', 'ship-2', 'ship-3'];
+    const fleetMachine = createMachine({
+      id: 'fleet',
+      entry: shipIds.map((id) => spawnChild(shipMachine, { id })),
+      on: {
+        COMMAND_DEPART: { actions: sendTo(({ event }) => event.shipId, { type: 'DEPART_ORDER' }) },
+        COMMAND_RETURN: { actions: sendTo(({ event }) => event.shipId, { type: 'RETURN_ORDER' }) },
+        REPORT: { actions: ({ event }) => { log(event.from + ' 보고: ' + event.status); updateChildStatus(event.from, event.status); } }
+      }
+    });
+
+    let fleetActor = null;
+    const statusMap = {};
+
+    function updateChildStatus(id, status) {
+      statusMap[id] = status;
+      const card = document.getElementById('child-' + id);
+      if (!card) return;
+      const statusText = card.querySelector('.status');
+      statusText.innerHTML = '상태: <span class="badge ' + (status === 'fishing' ? 'on' : 'off') + '">' + status + '</span>';
+    }
+
+    initBtn.addEventListener('click', () => {
+      if (fleetActor) fleetActor.stop();
+      childrenEl.innerHTML = '';
+      fleetActor = createActor(fleetMachine).start();
+      log('선단 구성 완료 — 자선 3척 스폰됨 (spawnChild)');
+
+      shipIds.forEach((id) => {
+        statusMap[id] = 'docked';
+        const card = document.createElement('div');
+        card.className = 'child-card';
+        card.id = 'child-' + id;
+        card.innerHTML =
+          '<div class="title">🚤 ' + id + '</div>' +
+          '<div class="status">상태: <span class="badge off">docked</span></div>' +
+          '<div class="controls">' +
+          '<button class="action" data-cmd="depart" data-id="' + id + '">출항 명령</button>' +
+          '<button class="ghost" data-cmd="return" data-id="' + id + '">귀항 명령</button>' +
+          '</div>';
+        childrenEl.appendChild(card);
+      });
+
+      childrenEl.querySelectorAll('button[data-cmd]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          const cmd = btn.getAttribute('data-cmd');
+          if (cmd === 'depart') {
+            fleetActor.send({ type: 'COMMAND_DEPART', shipId: id });
+            log('모선 → ' + id + ' : 출항 명령 전송 (sendTo)');
+          } else {
+            fleetActor.send({ type: 'COMMAND_RETURN', shipId: id });
+            log('모선 → ' + id + ' : 귀항 명령 전송 (sendTo)');
+          }
+        });
+      });
+    });
+  })();
+
+  // ---------- Section 6 ----------
+  (function () {
+    const stateEl = document.getElementById('s6-state');
+    const stateBox = document.getElementById('s6-state-box');
+    const contextEl = document.getElementById('s6-context');
+    const timelineEl = document.getElementById('s6-timeline');
+    const startBtn = document.getElementById('s6-start');
+    const passBtn = document.getElementById('s6-pass');
+    const failBtn = document.getElementById('s6-fail');
+    const resetBtn = document.getElementById('s6-reset');
+
+    const inspectMachine = createMachine({
+      id: 'inspect',
+      initial: 'waiting',
+      context: { checkedCount: 0 },
+      states: {
+        waiting: { on: { START: { target: 'checking', actions: assign({ checkedCount: ({ context }) => context.checkedCount + 1 }) } } },
+        checking: { on: { PASS: 'passed', FAIL: 'failed' } },
+        passed: { on: { RESET: 'waiting' } },
+        failed: { on: { RESET: 'waiting' } }
+      }
+    });
+    const inspectActor = createActor(inspectMachine).start();
+
+    function addTimelineRow(eventType, value) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + nowStr() + '</td><td>' + eventType + '</td><td>' + value + '</td>';
+      timelineEl.prepend(tr);
+    }
+
+    function render() {
+      const snap = inspectActor.getSnapshot();
+      stateEl.textContent = snap.value;
+      stateBox.className = 'state-box ' + (snap.matches('passed') ? 'normal' : snap.matches('failed') ? 'danger' : snap.matches('checking') ? 'warn' : '');
+      contextEl.textContent =
+        'snapshot.matches(\'checking\') = ' + snap.matches('checking') + '\n' +
+        'context = ' + JSON.stringify(snap.context);
+      startBtn.disabled = !snap.can({ type: 'START' });
+      passBtn.disabled = !snap.can({ type: 'PASS' });
+      failBtn.disabled = !snap.can({ type: 'FAIL' });
+      resetBtn.disabled = !snap.can({ type: 'RESET' });
+    }
+
+    function sendAndRender(evt) {
+      inspectActor.send(evt);
+      addTimelineRow(evt.type, inspectActor.getSnapshot().value);
+      render();
+    }
+
+    startBtn.addEventListener('click', () => sendAndRender({ type: 'START' }));
+    passBtn.addEventListener('click', () => sendAndRender({ type: 'PASS' }));
+    failBtn.addEventListener('click', () => sendAndRender({ type: 'FAIL' }));
+    resetBtn.addEventListener('click', () => sendAndRender({ type: 'RESET' }));
+
+    render();
+  })();
+})();
+</script>
+</body>
+</html>
