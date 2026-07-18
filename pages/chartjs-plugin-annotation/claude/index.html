@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>chartjs-plugin-annotation</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap {
+    width: 100%;
+    height: 320px;
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>chartjs-plugin-annotation 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>chartjs-plugin-annotation</strong>은 <strong>Chart.js</strong> 위에 선·박스·점·텍스트·
+    도형 등을 겹쳐 그려주는 공식 주석(annotation) 플러그인입니다. 목표선, 임계 구간, 특이 지점 설명
+    같은 것을 차트 데이터와 별개로 얹을 수 있습니다.
+    <ul>
+      <li><code>Chart.register(window['chartjs-plugin-annotation'])</code>로 등록 (반드시 등록해야 동작)</li>
+      <li><code>type: 'line' | 'box' | 'point' | 'label' | 'polygon' | 'ellipse' | 'doughnutLabel'</code>로 종류 지정</li>
+      <li>각 주석에 <code>click/enter/leave</code> 콜백을 걸어 마우스 상호작용 가능</li>
+      <li>좌표는 <code>xMin/xMax/yMin/yMax</code>(선/박스) 또는 <code>xValue/yValue</code>(점/라벨)로 지정</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 실적 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 차트 렌더링을 위해 <strong>Chart.js</strong>를 함께 사용했습니다 (CDN).
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기준선(line) + 구간 강조(box)</h2>
+    <div class="desc">목표 위판량 100kg 지점에 빨간 점선 기준선을 긋고, 4~5월 성수기 구간을 초록 배경 박스로 강조합니다.</div>
+    <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">annotation: {
+  annotations: {
+    targetLine: {
+      type: 'line',
+      yMin: 100, yMax: 100,
+      borderColor: '#e0524a',
+      borderDash: [6, 6],
+      label: { display: true, content: '목표 100kg', position: 'end' },
+    },
+    peakSeason: {
+      type: 'box',
+      xMin: 2.5, xMax: 4.5, // 4월~5월 구간
+      backgroundColor: 'rgba(34,192,122,0.15)',
+    },
+  },
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 특정 지점 강조 + 클릭 상호작용</h2>
+    <div class="desc">주간 위판량 중 최고치 지점에 point 주석을 찍었습니다. 빨간 점을 클릭해보세요.</div>
+    <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+    <div class="result-box" id="output2">아직 클릭 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">annotation: {
+  annotations: {
+    peakPoint: {
+      type: 'point',
+      xValue: '3주', yValue: 80,
+      backgroundColor: '#e0524a',
+      radius: 8,
+      click(ctx) { showPeakInfo(); },
+    },
+  },
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 화살표 콜아웃 텍스트 (label)</h2>
+    <div class="desc">이상치로 보이는 지점을 화살표가 달린 텍스트 박스로 설명합니다. (검증 중 발견: label 주석은 기본적으로 차트 영역 밖으로 나가면 잘려 보이지 않아, y축에 여유 공간을 미리 확보해야 했습니다.)</div>
+    <div class="chart-wrap"><canvas id="chart3"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">annotation: {
+  annotations: {
+    callout: {
+      type: 'label',
+      xValue: '수요일', yValue: 40,
+      content: ['평소 대비 급증'],
+      callout: { display: true, side: 10 },
+      yAdjust: -30, // 차트 영역 밖으로 나가지 않도록 y축에 여유(suggestedMax) 확보 필요
+    },
+  },
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 도넛 차트 중앙 라벨 (doughnutLabel)</h2>
+    <div class="desc">도넛 차트 가운데 빈 공간에 합계 텍스트를 표시합니다. 일반 도넛 차트로는 캔버스에 직접 텍스트를 그리는 코드가 필요하지만, 이 주석 타입 하나로 해결됩니다.</div>
+    <div class="chart-wrap"><canvas id="chart4"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">annotation: {
+  annotations: {
+    centerLabel: {
+      type: 'doughnutLabel',
+      content: ['2,830kg', '이번 달 총 위판량'],
+      font: [{ size: 22, weight: 'bold' }, { size: 12 }],
+    },
+  },
+}</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <script>
+    Chart.register(window['chartjs-plugin-annotation']);
+
+    // ---------- 1. 기준선 + 구간 강조 ----------
+    new Chart(document.getElementById('chart1').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['1월', '2월', '3월', '4월', '5월'],
+        datasets: [{ label: '위판량(kg)', data: [80, 95, 60, 110, 90], backgroundColor: '#4f7dff' }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          annotation: {
+            annotations: {
+              targetLine: {
+                type: 'line',
+                yMin: 100,
+                yMax: 100,
+                borderColor: '#e0524a',
+                borderWidth: 2,
+                borderDash: [6, 6],
+                label: {
+                  display: true,
+                  content: '목표 100kg',
+                  position: 'end',
+                  backgroundColor: '#e0524a',
+                },
+              },
+              peakSeason: {
+                type: 'box',
+                xMin: 2.5,
+                xMax: 4.5,
+                backgroundColor: 'rgba(34,192,122,0.15)',
+                borderColor: 'rgba(34,192,122,0.6)',
+                label: { display: true, content: '성수기', position: { x: 'center', y: 'start' }, color: '#0a7a4c' },
+              },
+            },
+          },
+        },
+        scales: { y: { beginAtZero: true, suggestedMax: 120 } },
+      },
+    });
+
+    // ---------- 2. 특정 지점 강조 + 클릭 ----------
+    new Chart(document.getElementById('chart2').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: ['1주', '2주', '3주', '4주', '5주'],
+        datasets: [{ label: '위판량(kg)', data: [30, 45, 80, 50, 40], borderColor: '#4f7dff', tension: 0.2 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          annotation: {
+            annotations: {
+              peakPoint: {
+                type: 'point',
+                xValue: '3주',
+                yValue: 80,
+                backgroundColor: '#e0524a',
+                radius: 8,
+                click(ctx) {
+                  const output2 = document.getElementById('output2');
+                  output2.textContent = '3주차 최고 위판량 80kg 지점 클릭됨 — 전주 대비 +78% 증가';
+                  output2.classList.add('ok');
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // ---------- 3. 화살표 콜아웃 텍스트 ----------
+    new Chart(document.getElementById('chart3').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: ['월', '화', '수', '목', '금'],
+        datasets: [{ label: '위판량(kg)', data: [10, 25, 40, 15, 20], borderColor: '#4f7dff', tension: 0.2 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { suggestedMax: 55 } },
+        plugins: {
+          annotation: {
+            annotations: {
+              callout: {
+                type: 'label',
+                xValue: '수',
+                yValue: 40,
+                content: ['평소 대비 급증'],
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                borderColor: '#e0524a',
+                borderWidth: 1,
+                borderRadius: 4,
+                color: '#e0524a',
+                font: { size: 12, weight: 'bold' },
+                callout: { display: true, side: 10 },
+                yAdjust: -30,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // ---------- 4. 도넛 중앙 라벨 ----------
+    new Chart(document.getElementById('chart4').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['고등어', '갈치', '오징어'],
+        datasets: [{ data: [1280, 640, 910], backgroundColor: ['#4f7dff', '#22c07a', '#e08a2e'] }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          annotation: {
+            annotations: {
+              centerLabel: {
+                type: 'doughnutLabel',
+                content: ['2,830kg', '이번 달 총 위판량'],
+                font: [{ size: 22, weight: 'bold' }, { size: 12 }],
+                color: ['#222', '#888'],
+              },
+            },
+          },
+        },
+      },
+    });
+  </script>
+</body>
+</html>
