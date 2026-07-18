@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GeoTIFF.js 종합 기능 샘플</title>
+  <script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
+  <style>
+    :root{
+      --bg:#0f172a;--panel:#111827;--panel2:#1f2937;--text:#e5e7eb;--muted:#9ca3af;
+      --accent:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--line:#334155;
+      --chip:#0b1220;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#0f172a,#111827 55%,#0b1120);color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45}
+    header{padding:24px 28px;border-bottom:1px solid var(--line);background:rgba(15,23,42,.92);position:sticky;top:0;z-index:5}
+    h1{margin:0 0 8px;font-size:26px}
+    h2{font-size:18px;margin:0 0 14px}
+    h3{font-size:15px;margin:16px 0 8px;color:#bae6fd}
+    .sub{color:var(--muted);font-size:14px}
+    .wrap{display:grid;grid-template-columns:380px 1fr;gap:18px;padding:18px}
+    .card{background:rgba(17,24,39,.92);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+    .grid{display:grid;gap:12px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    input,select,button,textarea{width:100%;border:1px solid #475569;background:#0b1220;color:var(--text);border-radius:10px;padding:10px;font:inherit}
+    input[type=file]{padding:8px}
+    button{cursor:pointer;background:#075985;border-color:#0ea5e9;font-weight:700}
+    button.secondary{background:#1f2937;border-color:#64748b}
+    button.danger{background:#7f1d1d;border-color:#ef4444}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .tab{width:auto;padding:8px 11px;background:#111827;border:1px solid #334155;border-radius:999px;color:#cbd5e1}
+    .tab.active{background:#0369a1;color:white;border-color:#38bdf8}
+    .pillbox{display:flex;flex-wrap:wrap;gap:6px}
+    .pill{display:inline-flex;gap:5px;align-items:center;padding:5px 8px;border:1px solid #334155;background:var(--chip);border-radius:999px;font-size:12px;color:#cbd5e1}
+    .pill.ok{border-color:#16a34a;color:#bbf7d0}.pill.warn{border-color:#f59e0b;color:#fde68a}
+    .main{display:grid;grid-template-rows:auto 1fr;gap:18px}
+    .viewer{display:grid;grid-template-columns:minmax(320px,1fr) 360px;gap:18px}
+    canvas{width:100%;max-height:70vh;background:#020617;border:1px solid #334155;border-radius:12px;image-rendering:auto}
+    .canvasWrap{position:relative}
+    .cross{position:absolute;pointer-events:none;border:1px solid #facc15;border-radius:50%;width:16px;height:16px;margin:-8px 0 0 -8px;display:none}
+    pre{white-space:pre-wrap;word-break:break-word;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;max-height:360px;overflow:auto;font-size:12px;color:#d1d5db}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border-bottom:1px solid #334155;padding:7px;text-align:left;vertical-align:top}
+    th{color:#bae6fd}
+    .muted{color:var(--muted)}
+    .status{min-height:42px;padding:10px;border:1px dashed #475569;border-radius:12px;color:#cbd5e1;background:#0b1220}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .small{font-size:12px}
+    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .kpi div{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:10px}
+    .kpi strong{display:block;font-size:18px;color:white}
+    .log{max-height:160px;overflow:auto}
+    .notice{border-left:4px solid var(--warn);padding:10px 12px;background:#1f2937;border-radius:10px;color:#fde68a;font-size:13px}
+    @media(max-width:1050px){.wrap,.viewer{grid-template-columns:1fr}.kpi{grid-template-columns:repeat(2,1fr)}header{position:static}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>GeoTIFF.js 종합 기능 샘플</h1>
+  <div class="sub">로컬/URL GeoTIFF 읽기 · IFD 선택 · 메타데이터 · GeoKey · BBOX/해상도 · 밴드/윈도우/리샘플링 · RGB 변환 · 픽셀 조회 · 히스토그램 · 좌표 변환</div>
+</header>
+
+<div class="wrap">
+  <aside class="grid">
+    <section class="card">
+      <h2>1. 데이터 불러오기</h2>
+      <div class="grid">
+        <div>
+          <label>로컬 GeoTIFF/TIFF 파일</label>
+          <input id="fileInput" type="file" accept=".tif,.tiff,image/tiff" />
+        </div>
+        <div>
+          <label>원격 URL, CORS 허용 필요</label>
+          <input id="urlInput" value="https://geotiffjs.github.io/geotiff.js/examples/data/geotiff_file.tif" />
+        </div>
+        <div class="row">
+          <button id="loadUrlBtn">URL에서 읽기</button>
+          <button id="clearBtn" class="secondary">초기화</button>
+        </div>
+        <div class="notice">주의: 원격 TIFF는 서버가 CORS를 허용해야 브라우저에서 읽을 수 있다. 실패하면 로컬 파일 업로드로 테스트해라.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. 읽기 옵션</h2>
+      <div class="grid">
+        <div class="row">
+          <div>
+            <label>IFD / Image 선택</label>
+            <select id="imageSelect"></select>
+          </div>
+          <div>
+            <label>표시 모드</label>
+            <select id="renderMode">
+              <option value="single">단일 밴드 컬러맵</option>
+              <option value="gray">단일 밴드 Gray</option>
+              <option value="rgb">readRGB() 자동 RGB</option>
+              <option value="ndvi">NDVI 유사 계산, NIR/Red 필요</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>밴드 index, 쉼표 구분</label>
+            <input id="samplesInput" value="0" placeholder="예: 0 또는 0,1,2" />
+          </div>
+          <div>
+            <label>리샘플링</label>
+            <select id="resampleMethod">
+              <option value="nearest">nearest</option>
+              <option value="bilinear">bilinear</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>미리보기 폭</label>
+            <input id="previewWidth" type="number" value="900" min="16" max="4096" />
+          </div>
+          <div>
+            <label>미리보기 높이</label>
+            <input id="previewHeight" type="number" value="0" min="0" max="4096" />
+          </div>
+        </div>
+
+        <div>
+          <label>픽셀 window [left, top, right, bottom], 비우면 전체</label>
+          <input id="windowInput" placeholder="예: 0,0,512,512" />
+        </div>
+
+        <div>
+          <label>지리 bbox [minX, minY, maxX, maxY], tiff.readRasters 지원 파일용</label>
+          <input id="bboxInput" placeholder="예: 126.8,37.4,127.2,37.7" />
+        </div>
+
+        <div class="row">
+          <button id="renderBtn">래스터 읽고 렌더링</button>
+          <button id="statsBtn" class="secondary">통계만 계산</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3. 빠른 기능</h2>
+      <div class="grid">
+        <button id="metadataBtn" class="secondary">메타데이터 새로고침</button>
+        <button id="thumbBtn" class="secondary">저해상도 썸네일 읽기</button>
+        <button id="exportPngBtn" class="secondary">현재 화면 PNG 저장</button>
+        <button id="copyMetaBtn" class="secondary">메타데이터 JSON 복사</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>4. 상태</h2>
+      <div id="status" class="status">GeoTIFF 파일을 업로드하거나 URL에서 읽어라.</div>
+      <h3>로그</h3>
+      <pre id="log" class="log"></pre>
+    </section>
+  </aside>
+
+  <main class="main">
+    <section class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="view">뷰어</button>
+        <button class="tab" data-tab="meta">메타데이터</button>
+        <button class="tab" data-tab="bands">밴드/통계</button>
+        <button class="tab" data-tab="code">핵심 코드</button>
+      </div>
+
+      <div id="tab-view" class="tabPanel">
+        <div class="kpi" id="kpi"></div>
+      </div>
+
+      <div id="tab-meta" class="tabPanel" style="display:none">
+        <div class="split">
+          <div>
+            <h3>GeoKey / FileDirectory 요약</h3>
+            <pre id="metaPre"></pre>
+          </div>
+          <div>
+            <h3>좌표 관련 유틸리티</h3>
+            <table id="geoTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-bands" class="tabPanel" style="display:none">
+        <h3>밴드별 통계</h3>
+        <table id="statsTable"></table>
+        <h3>히스토그램</h3>
+        <canvas id="histCanvas" width="900" height="220"></canvas>
+      </div>
+
+      <div id="tab-code" class="tabPanel" style="display:none">
+        <h3>이 샘플에서 쓰는 대표 API</h3>
+        <pre id="codePre"></pre>
+      </div>
+    </section>
+
+    <section class="viewer">
+      <div class="card canvasWrap">
+        <h2>래스터 캔버스</h2>
+        <canvas id="canvas" width="900" height="600"></canvas>
+        <div id="cross" class="cross"></div>
+        <div class="muted small">캔버스를 클릭하면 픽셀 좌표, 추정 지리좌표, 밴드 값을 조회한다.</div>
+      </div>
+
+      <div class="card">
+        <h2>픽셀 조회</h2>
+        <div id="pixelInfo" class="status">아직 선택된 픽셀이 없다.</div>
+        <h3>파일 기능 체크</h3>
+        <div id="featurePills" class="pillbox"></div>
+        <h3>현재 readRasters 결과</h3>
+        <pre id="rasterInfo"></pre>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const state = {
+    tiff:null, image:null, imageIndex:0, imageCount:0,
+    metadata:null, rasters:null, rasterOptions:null,
+    display:{width:0,height:0,min:0,max:1,samples:[],mode:'single'},
+    lastStats:null
+  };
+
+  const log = (msg) => {
+    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    $('log').textContent = line + "\n" + $('log').textContent;
+  };
+  const setStatus = (msg) => $('status').textContent = msg;
+  const fmt = (v) => {
+    if (v == null) return '없음';
+    if (Array.isArray(v)) return v.map(x => typeof x === 'number' ? Number(x.toFixed(6)) : x).join(', ');
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(6);
+    return String(v);
+  };
+
+  function updateCodePanel(){
+    $('codePre').textContent =
+`// CDN 사용
+<script src="https://cdn.jsdelivr.net/npm/geotiff"><\/script>
+
+// 1) URL / Blob / ArrayBuffer에서 열기
+const tiff1 = await GeoTIFF.fromUrl(url);
+const tiff2 = await GeoTIFF.fromBlob(file);
+const tiff3 = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+
+// 2) 이미지/IFD 선택
+const count = await tiff.getImageCount();
+const image = await tiff.getImage(0);
+
+// 3) 메타데이터
+const width = image.getWidth();
+const height = image.getHeight();
+const bbox = image.getBoundingBox();       // GeoTIFF 좌표가 있을 때
+const origin = image.getOrigin();
+const resolution = image.getResolution();
+const geoKeys = image.getGeoKeys();
+const fileDirectory = image.fileDirectory;
+
+// 4) 래스터 읽기
+const rasters = await image.readRasters({
+  samples: [0],
+  width: 900,
+  height: 600,
+  resampleMethod: 'bilinear',
+  interleave: false
+});
+
+// 5) RGB 자동 변환
+const rgb = await image.readRGB({ width: 900, height: 600 });
+
+// 6) 일부 영역만 읽기
+const part = await image.readRasters({
+  window: [left, top, right, bottom],
+  samples: [0, 1, 2]
+});
+
+// 7) 워커 Pool
+const pool = new GeoTIFF.Pool(Math.min(4, navigator.hardwareConcurrency || 2));
+const fast = await image.readRasters({ pool, width: 1024, height: 1024 });`;
+  }
+
+  function parseNums(text){
+    if (!text || !text.trim()) return null;
+    const arr = text.split(',').map(s => Number(s.trim()));
+    if (arr.some(Number.isNaN)) throw new Error('숫자 배열 형식이 잘못됐다: ' + text);
+    return arr;
+  }
+
+  function getSamples(){
+    const arr = parseNums($('samplesInput').value);
+    if (!arr || arr.length === 0) return [0];
+    return arr.map(x => Math.max(0, Math.floor(x)));
+  }
+
+  async function loadFromFile(file){
+    setStatus('로컬 파일을 읽는 중...');
+    log(`로컬 파일 선택: ${file.name}, ${(file.size/1024/1024).toFixed(2)} MB`);
+    state.tiff = await GeoTIFF.fromBlob(file);
+    await afterTiffLoaded('로컬 Blob');
+  }
+
+  async function loadFromUrl(){
+    const url = $('urlInput').value.trim();
+    if (!url) return alert('URL을 입력해라.');
+    setStatus('URL에서 GeoTIFF를 읽는 중...');
+    log(`URL 로드 시도: ${url}`);
+    state.tiff = await GeoTIFF.fromUrl(url);
+    await afterTiffLoaded('URL');
+  }
+
+  async function afterTiffLoaded(source){
+    state.imageCount = await state.tiff.getImageCount();
+    $('imageSelect').innerHTML = '';
+    for (let i=0; i<state.imageCount; i++){
+      const opt = document.createElement('option');
+      opt.value = i; opt.textContent = `IFD ${i}`;
+      $('imageSelect').appendChild(opt);
+    }
+    state.imageIndex = 0;
+    await selectImage(0);
+    setStatus(`${source} GeoTIFF 로드 완료. IFD ${state.imageCount}개 감지.`);
+    log(`로드 완료: imageCount=${state.imageCount}`);
+    await renderRaster();
+  }
+
+  async function selectImage(index){
+    state.imageIndex = Number(index);
+    state.image = await state.tiff.getImage(state.imageIndex);
+    updateMetadata();
+  }
+
+  function safeCall(fn){
+    try { return fn(); } catch(e) { return null; }
+  }
+
+  function updateMetadata(){
+    const image = state.image;
+    if (!image) return;
+    const fd = image.fileDirectory || {};
+    const geo = safeCall(() => image.getGeoKeys()) || {};
+    const bbox = safeCall(() => image.getBoundingBox());
+    const origin = safeCall(() => image.getOrigin());
+    const res = safeCall(() => image.getResolution());
+    const tie = fd.ModelTiepoint;
+    const scale = fd.ModelPixelScale;
+
+    state.metadata = {
+      imageIndex: state.imageIndex,
+      imageCount: state.imageCount,
+      width: image.getWidth(),
+      height: image.getHeight(),
+      samplesPerPixel: fd.SamplesPerPixel,
+      bitsPerSample: fd.BitsPerSample,
+      sampleFormat: fd.SampleFormat,
+      photometricInterpretation: fd.PhotometricInterpretation,
+      compression: fd.Compression,
+      planarConfiguration: fd.PlanarConfiguration,
+      tileWidth: fd.TileWidth,
+      tileLength: fd.TileLength,
+      rowsPerStrip: fd.RowsPerStrip,
+      noData: fd.GDAL_NODATA,
+      bbox, origin, resolution: res,
+      modelTiepoint: tie,
+      modelPixelScale: scale,
+      geoKeys: geo
+    };
+
+    $('metaPre').textContent = JSON.stringify({
+      summary: state.metadata,
+      geoKeys: geo,
+      selectedFileDirectory: pick(fd, [
+        'ImageWidth','ImageLength','BitsPerSample','Compression','PhotometricInterpretation',
+        'SamplesPerPixel','PlanarConfiguration','TileWidth','TileLength','RowsPerStrip',
+        'ModelPixelScale','ModelTiepoint','ModelTransformation','GeoKeyDirectory',
+        'GDAL_NODATA','SampleFormat','ExtraSamples'
+      ])
+    }, null, 2);
+
+    $('geoTable').innerHTML = rows([
+      ['Bounding Box', fmt(bbox)],
+      ['Origin', fmt(origin)],
+      ['Resolution', fmt(res)],
+      ['ModelTiepoint', fmt(tie)],
+      ['ModelPixelScale', fmt(scale)],
+      ['ProjectedCSTypeGeoKey', fmt(geo.ProjectedCSTypeGeoKey)],
+      ['GeographicTypeGeoKey', fmt(geo.GeographicTypeGeoKey)],
+      ['GTRasterTypeGeoKey', fmt(geo.GTRasterTypeGeoKey)],
+      ['GTModelTypeGeoKey', fmt(geo.GTModelTypeGeoKey)]
+    ]);
+
+    updateKpi();
+    updateFeaturePills();
+  }
+
+  function pick(obj, keys){
+    const out = {};
+    keys.forEach(k => { if (obj && obj[k] !== undefined) out[k] = obj[k]; });
+    return out;
+  }
+
+  function rows(items){
+    return '<tbody>' + items.map(([k,v]) => `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(v)}</td></tr>`).join('') + '</tbody>';
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function updateKpi(){
+    const m = state.metadata || {};
+    $('kpi').innerHTML = [
+      ['폭', m.width],
+      ['높이', m.height],
+      ['밴드 수', m.samplesPerPixel || '미확인'],
+      ['IFD 수', state.imageCount || 0],
+      ['압축', m.compression || '미확인'],
+      ['NoData', m.noData || '미기록'],
+      ['타일', m.tileWidth ? `${m.tileWidth} × ${m.tileLength}` : 'strip/미확인'],
+      ['좌표', m.bbox ? 'GeoTIFF 태그 있음' : '없거나 미지원']
+    ].map(([k,v]) => `<div><span class="muted small">${k}</span><strong>${escapeHtml(fmt(v))}</strong></div>`).join('');
+  }
+
+  function updateFeaturePills(){
+    const m = state.metadata || {};
+    const pills = [
+      ['fromUrl/fromBlob', !!state.tiff, 'ok'],
+      ['다중 IFD', state.imageCount > 1, state.imageCount > 1 ? 'ok':'warn'],
+      ['GeoKey', m.geoKeys && Object.keys(m.geoKeys).length > 0, 'ok'],
+      ['BBOX', !!m.bbox, 'ok'],
+      ['타일 TIFF', !!m.tileWidth, 'ok'],
+      ['NoData', m.noData != null, 'ok'],
+      ['RGB 변환', true, 'ok'],
+      ['윈도우 읽기', true, 'ok'],
+      ['리샘플링', true, 'ok'],
+      ['워커 Pool', !!GeoTIFF.Pool, 'ok']
+    ];
+    $('featurePills').innerHTML = pills.map(([name,on,cls]) =>
+      `<span class="pill ${on ? cls : 'warn'}">${on ? '●' : '○'} ${escapeHtml(name)}</span>`).join('');
+  }
+
+  async function buildReadOptions(){
+    const image = state.image;
+    const naturalW = image.getWidth(), naturalH = image.getHeight();
+    const maxW = Number($('previewWidth').value || 900);
+    let outW = Math.min(maxW, naturalW);
+    let outH = Number($('previewHeight').value || 0);
+    if (!outH) outH = Math.max(1, Math.round(outW * naturalH / naturalW));
+    outH = Math.min(outH, 4096);
+
+    const opt = {
+      width: outW,
+      height: outH,
+      resampleMethod: $('resampleMethod').value,
+      interleave: false
+    };
+    const samples = getSamples();
+    if ($('renderMode').value !== 'rgb') opt.samples = samples;
+
+    const win = parseNums($('windowInput').value);
+    if (win && win.length === 4) opt.window = win.map(Math.round);
+
+    // image.readRasters에는 bbox가 아니라 window 중심 사용. bbox는 tiff.readRasters 계열에서 의미가 있으므로
+    // 여기서는 표시와 실험 입력 용도로 보관하고, window가 비어 있을 때만 옵션에 넣지 않는다.
+    const bbox = parseNums($('bboxInput').value);
+    if (bbox && bbox.length === 4) opt._bboxForNote = bbox;
+
+    if (GeoTIFF.Pool) opt.pool = new GeoTIFF.Pool(Math.min(4, navigator.hardwareConcurrency || 2));
+    return opt;
+  }
+
+  async function renderRaster(){
+    if (!state.image) return alert('먼저 GeoTIFF를 불러와라.');
+    const mode = $('renderMode').value;
+    const canvas = $('canvas');
+    const ctx = canvas.getContext('2d');
+    setStatus('래스터 데이터를 읽는 중...');
+    const t0 = performance.now();
+
+    const options = await buildReadOptions();
+    let rasters, width, height, samples = options.samples || [0];
+
+    if (mode === 'rgb') {
+      const rgb = await state.image.readRGB({
+        width: options.width, height: options.height,
+        window: options.window, resampleMethod: options.resampleMethod,
+        pool: options.pool
+      });
+      width = rgb.width || options.width;
+      height = rgb.height || options.height;
+      drawRGB(rgb, width, height);
+      state.rasters = rgb;
+      state.display = {width,height,min:0,max:255,samples:[0,1,2],mode};
+      $('rasterInfo').textContent = JSON.stringify({mode, width, height, arrayLength: rgb.length, options: cleanOptions(options)}, null, 2);
+    } else {
+      rasters = await state.image.readRasters(options);
+      width = rasters.width || options.width;
+      height = rasters.height || options.height;
+      state.rasters = rasters;
+      const bands = Array.isArray(rasters) ? rasters : [rasters[0] || rasters];
+      if (mode === 'ndvi') {
+        drawNDVI(bands, width, height);
+        state.display = {width,height,min:-1,max:1,samples,mode};
+      } else {
+        const band0 = bands[0];
+        const stats = calcStats(band0, state.metadata?.noData);
+        drawSingleBand(band0, width, height, stats.min, stats.max, mode === 'gray');
+        state.display = {width,height,min:stats.min,max:stats.max,samples,mode};
+      }
+      $('rasterInfo').textContent = JSON.stringify({
+        mode, width, height,
+        bands: bands.length,
+        sampleTypes: bands.map(b => b?.constructor?.name),
+        options: cleanOptions(options)
+      }, null, 2);
+      await computeStats(false);
+    }
+
+    const ms = Math.round(performance.now() - t0);
+    setStatus(`렌더링 완료: ${width}×${height}, ${ms}ms`);
+    log(`readRasters/render 완료: ${width}x${height}, ${ms}ms, mode=${mode}`);
+  }
+
+  function cleanOptions(opt){
+    const o = {...opt};
+    delete o.pool;
+    return o;
+  }
+
+  function drawRGB(rgb, width, height){
+    const canvas = $('canvas'), ctx = canvas.getContext('2d');
+    canvas.width = width; canvas.height = height;
+    const img = ctx.createImageData(width, height);
+    const isInterleaved = rgb.length === width * height * 3 || rgb.length === width * height * 4;
+    for (let i=0, p=0; i<width*height; i++, p+=4){
+      if (isInterleaved) {
+        img.data[p] = clamp8(rgb[i*3]);
+        img.data[p+1] = clamp8(rgb[i*3+1]);
+        img.data[p+2] = clamp8(rgb[i*3+2]);
+      } else {
+        img.data[p] = clamp8(rgb[0][i]);
+        img.data[p+1] = clamp8(rgb[1][i]);
+        img.data[p+2] = clamp8(rgb[2][i]);
+      }
+      img.data[p+3] = 255;
+    }
+    ctx.putImageData(img,0,0);
+  }
+
+  function drawSingleBand(band, width, height, min, max, gray=false){
+    const canvas = $('canvas'), ctx = canvas.getContext('2d');
+    canvas.width = width; canvas.height = height;
+    const img = ctx.createImageData(width, height);
+    const range = max - min || 1;
+    for (let i=0, p=0; i<width*height; i++, p+=4){
+      const t = Math.max(0, Math.min(1, (Number(band[i])-min)/range));
+      const c = gray ? [t*255,t*255,t*255] : colorRamp(t);
+      img.data[p] = c[0]; img.data[p+1] = c[1]; img.data[p+2] = c[2]; img.data[p+3] = 255;
+    }
+    ctx.putImageData(img,0,0);
+  }
+
+  function drawNDVI(bands, width, height){
+    const canvas = $('canvas'), ctx = canvas.getContext('2d');
+    canvas.width = width; canvas.height = height;
+    const red = bands[0], nir = bands[1] || bands[0];
+    const img = ctx.createImageData(width, height);
+    for (let i=0, p=0; i<width*height; i++, p+=4){
+      const r = Number(red[i]), n = Number(nir[i]);
+      const ndvi = (n - r) / ((n + r) || 1);
+      const t = Math.max(0, Math.min(1, (ndvi + 1) / 2));
+      const c = ndviRamp(t);
+      img.data[p] = c[0]; img.data[p+1] = c[1]; img.data[p+2] = c[2]; img.data[p+3] = 255;
+    }
+    ctx.putImageData(img,0,0);
+  }
+
+  function clamp8(v){ return Math.max(0, Math.min(255, Math.round(Number(v)||0))); }
+
+  function colorRamp(t){
+    // 단순 turbo 유사 팔레트
+    const r = 255*Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 3)));
+    const g = 255*Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 2)));
+    const b = 255*Math.min(1, Math.max(0, 1.5 - Math.abs(4*t - 1)));
+    return [r,g,b].map(clamp8);
+  }
+  function ndviRamp(t){
+    if (t < .5) return [180 + 75*t*2, 120*t*2, 40];
+    return [180*(1-(t-.5)*2), 120 + 120*(t-.5)*2, 40];
+  }
+
+  function calcStats(arr, noData){
+    const nd = noData != null ? Number(noData) : null;
+    let min=Infinity,max=-Infinity,sum=0,count=0;
+    const histBins = 64;
+    for (let i=0; i<arr.length; i++){
+      const v = Number(arr[i]);
+      if (!Number.isFinite(v)) continue;
+      if (nd != null && v === nd) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+      sum += v; count++;
+    }
+    const mean = count ? sum/count : NaN;
+    let ss=0;
+    for (let i=0; i<arr.length; i++){
+      const v = Number(arr[i]);
+      if (!Number.isFinite(v)) continue;
+      if (nd != null && v === nd) continue;
+      ss += (v-mean)*(v-mean);
+    }
+    return {min,max,mean,count,std: count ? Math.sqrt(ss/count) : NaN, noData:nd, histBins};
+  }
+
+  async function computeStats(showStatus=true){
+    if (!state.rasters || $('renderMode').value === 'rgb') {
+      if (showStatus) alert('단일 밴드/다중 밴드 readRasters 결과가 있을 때 통계를 계산할 수 있다.');
+      return;
+    }
+    const bands = Array.isArray(state.rasters) ? state.rasters.filter(x => x && x.length) : [state.rasters];
+    const stats = bands.map((b,i) => ({band:i, type:b.constructor.name, ...calcStats(b, state.metadata?.noData)}));
+    state.lastStats = stats;
+    $('statsTable').innerHTML =
+      '<thead><tr><th>Band</th><th>Type</th><th>Count</th><th>Min</th><th>Max</th><th>Mean</th><th>Std</th></tr></thead><tbody>' +
+      stats.map(s => `<tr><td>${s.band}</td><td>${s.type}</td><td>${s.count}</td><td>${fmt(s.min)}</td><td>${fmt(s.max)}</td><td>${fmt(s.mean)}</td><td>${fmt(s.std)}</td></tr>`).join('') +
+      '</tbody>';
+    drawHistogram(bands[0], stats[0].min, stats[0].max, state.metadata?.noData);
+    if (showStatus) setStatus('통계 계산 완료.');
+  }
+
+  function drawHistogram(arr, min, max, noData){
+    const canvas = $('histCanvas'), ctx = canvas.getContext('2d');
+    const w=canvas.width,h=canvas.height,bins=64;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='#020617'; ctx.fillRect(0,0,w,h);
+    const hist = new Array(bins).fill(0);
+    const nd = noData != null ? Number(noData) : null;
+    const range = max-min || 1;
+    for (let i=0;i<arr.length;i++){
+      const v = Number(arr[i]);
+      if (!Number.isFinite(v)) continue;
+      if (nd != null && v === nd) continue;
+      const bi = Math.max(0,Math.min(bins-1,Math.floor((v-min)/range*bins)));
+      hist[bi]++;
+    }
+    const m = Math.max(...hist,1);
+    ctx.fillStyle='#38bdf8';
+    hist.forEach((v,i)=>{
+      const bh = Math.round((v/m)*(h-24));
+      ctx.fillRect(i*w/bins, h-bh-18, Math.ceil(w/bins)-1, bh);
+    });
+    ctx.fillStyle='#cbd5e1'; ctx.font='12px system-ui';
+    ctx.fillText(`min ${fmt(min)}     max ${fmt(max)}`, 10, h-6);
+  }
+
+  function pixelToGeo(px, py){
+    const img = state.image;
+    if (!img) return null;
+    const fd = img.fileDirectory || {};
+    const scale = fd.ModelPixelScale;
+    const tie = fd.ModelTiepoint;
+    if (scale && tie && scale.length >= 2 && tie.length >= 6) {
+      const sx = Number(scale[0]);
+      const sy = -Math.abs(Number(scale[1]));
+      const gx = Number(tie[3]);
+      const gy = Number(tie[4]);
+      return [gx + px * sx, gy + py * sy];
+    }
+    const bbox = safeCall(() => img.getBoundingBox());
+    if (bbox) {
+      const [minX,minY,maxX,maxY] = bbox;
+      return [minX + (px / img.getWidth()) * (maxX-minX), maxY - (py / img.getHeight()) * (maxY-minY)];
+    }
+    return null;
+  }
+
+  function displayToSourcePixel(dx, dy){
+    const opt = state.rasterOptions || {};
+    const img = state.image;
+    const fullW = img.getWidth(), fullH = img.getHeight();
+    const displayW = state.display.width || $('canvas').width;
+    const displayH = state.display.height || $('canvas').height;
+    const win = opt.window || [0,0,fullW,fullH];
+    const sx = Math.floor(win[0] + dx / displayW * (win[2]-win[0]));
+    const sy = Math.floor(win[1] + dy / displayH * (win[3]-win[1]));
+    return [sx,sy];
+  }
+
+  async function onCanvasClick(ev){
+    if (!state.rasters) return;
+    const rect = $('canvas').getBoundingClientRect();
+    const x = Math.floor((ev.clientX - rect.left) * $('canvas').width / rect.width);
+    const y = Math.floor((ev.clientY - rect.top) * $('canvas').height / rect.height);
+    $('cross').style.display = 'block';
+    $('cross').style.left = `${ev.clientX - rect.left}px`;
+    $('cross').style.top = `${ev.clientY - rect.top}px`;
+
+    const [sx,sy] = displayToSourcePixel(x,y);
+    const geo = pixelToGeo(sx,sy);
+    const bands = Array.isArray(state.rasters) ? state.rasters.filter(b => b && b.length) : [state.rasters];
+    const idx = x + y * $('canvas').width;
+    const vals = bands.slice(0,8).map((b,i) => `Band ${i}: ${fmt(b[idx])}`).join('<br>');
+    $('pixelInfo').innerHTML =
+      `<b>표시 픽셀</b>: ${x}, ${y}<br>` +
+      `<b>원본 추정 픽셀</b>: ${sx}, ${sy}<br>` +
+      `<b>추정 지리좌표</b>: ${geo ? fmt(geo) : '좌표 태그 없음'}<br>` +
+      `<b>값</b><br>${vals || 'RGB/interleaved 모드에서는 직접 밴드값 표시가 제한됨'}`;
+  }
+
+  async function thumb(){
+    if (!state.image) return alert('먼저 파일을 불러와라.');
+    $('previewWidth').value = 256;
+    $('previewHeight').value = 0;
+    await renderRaster();
+  }
+
+  function exportPng(){
+    const a = document.createElement('a');
+    a.href = $('canvas').toDataURL('image/png');
+    a.download = 'geotiffjs-render.png';
+    a.click();
+  }
+
+  async function copyMeta(){
+    if (!state.metadata) return;
+    await navigator.clipboard.writeText(JSON.stringify(state.metadata, null, 2));
+    setStatus('메타데이터 JSON을 클립보드에 복사했다.');
+  }
+
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tabPanel').forEach(p=>p.style.display='none');
+      $('tab-' + btn.dataset.tab).style.display = '';
+    });
+  });
+
+  $('fileInput').addEventListener('change', e => e.target.files[0] && loadFromFile(e.target.files[0]).catch(handleError));
+  $('loadUrlBtn').addEventListener('click', () => loadFromUrl().catch(handleError));
+  $('imageSelect').addEventListener('change', e => selectImage(e.target.value).then(renderRaster).catch(handleError));
+  $('renderBtn').addEventListener('click', async () => {
+    state.rasterOptions = await buildReadOptions();
+    await renderRaster();
+  });
+  $('statsBtn').addEventListener('click', () => computeStats(true).catch(handleError));
+  $('metadataBtn').addEventListener('click', () => { updateMetadata(); setStatus('메타데이터 갱신 완료.'); });
+  $('thumbBtn').addEventListener('click', () => thumb().catch(handleError));
+  $('exportPngBtn').addEventListener('click', exportPng);
+  $('copyMetaBtn').addEventListener('click', () => copyMeta().catch(handleError));
+  $('clearBtn').addEventListener('click', () => location.reload());
+  $('canvas').addEventListener('click', onCanvasClick);
+
+  function handleError(err){
+    console.error(err);
+    setStatus('오류: ' + (err.message || err));
+    log('오류: ' + (err.stack || err.message || err));
+    alert('오류가 발생했다. 로그를 확인해라.\n\n' + (err.message || err));
+  }
+
+  updateCodePanel();
+  updateKpi();
+  updateFeaturePills();
+})();
+</script>
+</body>
+</html>
