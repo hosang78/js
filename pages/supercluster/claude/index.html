@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Supercluster</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  canvas {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #eef2f8;
+    cursor: pointer;
+  }
+  input[type="range"] { width: 220px; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  ul.leaf-list {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    font-size: 12.5px;
+    color: #333;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Supercluster 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Supercluster</strong>는 지도를 그리지 않는 순수 알고리즘 라이브러리로, 수만 개의
+    지점을 빠르게 <strong>클러스터</strong>(뭉치)로 묶어주는 데 특화되어 있습니다. 지도를
+    확대할수록 클러스터가 점점 개별 지점으로 흩어지는, 지도 앱에서 흔히 보는 마커 뭉침 효과의
+    계산 엔진입니다.
+    <ul>
+      <li><code>index.load(points)</code>로 GeoJSON 포인트들을 한 번에 인덱싱</li>
+      <li><code>index.getClusters(bbox, zoom)</code>으로 특정 영역·줌 레벨에서의 클러스터 결과 조회</li>
+      <li><code>getClusterExpansionZoom(clusterId)</code>로 그 클러스터가 펼쳐지기 시작하는 줌 레벨 계산</li>
+      <li><code>getLeaves(clusterId)</code>로 클러스터 안에 실제로 포함된 개별 지점의 원본 데이터 조회</li>
+    </ul>
+    <div class="disclaimer">
+      ※ Supercluster는 결과(클러스터 좌표·개수)만 계산해줄 뿐 화면에 그리지는 않습니다. 이 페이지는
+      결과를 눈으로 확인하기 위해 위경도를 canvas 좌표로 단순 매핑해 직접 그렸습니다(실제 서비스에서는
+      MapLibre·Leaflet 같은 지도 라이브러리 위에 얹어 씁니다). 위판 물량 지점은 모두
+      <strong>가상의 예시</strong>이며 실제 수협중앙회의 조업 데이터가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 클러스터링</h2>
+    <div class="desc">가상 위판 물량 60개 지점을 낮은 줌 레벨(넓은 범위)로 조회하면, 대부분 큰 클러스터 하나로 뭉칩니다. 원 안의 숫자는 그 클러스터에 포함된 지점 수입니다.</div>
+    <canvas id="canvas1" width="500" height="300"></canvas>
+    <div class="result-box" id="output1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const index = new Supercluster({ radius: 60, maxZoom: 16 });
+index.load(points); // GeoJSON Feature 배열
+
+const clusters = index.getClusters([west, south, east, north], zoom);
+// cluster.properties.cluster === true 면 클러스터, 아니면 개별 지점
+// cluster.properties.point_count 로 포함된 지점 수 확인</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Zoom 레벨에 따른 클러스터링 변화</h2>
+    <div class="desc">슬라이더로 줌 레벨을 올려보세요. 줌이 높아질수록(지도를 확대할수록) 클러스터가 점점 개별 지점으로 흩어집니다.</div>
+    <div class="controls">
+      <label>Zoom: <span id="zoomLabel2">6</span></label>
+      <input type="range" id="zoomSlider2" min="0" max="16" value="6" />
+    </div>
+    <canvas id="canvas2" width="500" height="300"></canvas>
+    <div class="result-box" id="output2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// 같은 index, 같은 bbox라도 zoom 값에 따라 결과가 달라짐
+index.getClusters(bbox, 3);  // 클러스터 1~2개로 뭉침
+index.getClusters(bbox, 16); // 거의 모든 지점이 개별로 분리</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 클러스터 상세 정보 — 확장 줌 &amp; 포함된 지점</h2>
+    <div class="desc">위 2번 캔버스에서 <strong>숫자가 적힌 원(클러스터)</strong>을 클릭해보세요. 그 클러스터가 몇 번째 줌부터 펼쳐지기 시작하는지, 그리고 안에 어떤 지점들이 포함되어 있는지 확인합니다.</div>
+    <div class="result-box" id="output3">클러스터를 클릭해보세요</div>
+    <ul class="leaf-list" id="leafList3"></ul>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const expansionZoom = index.getClusterExpansionZoom(cluster.properties.cluster_id);
+// 이 줌 레벨부터 클러스터가 갈라지기 시작함
+
+const leaves = index.getLeaves(cluster.properties.cluster_id, 10); // 최대 10개
+leaves.forEach((leaf) => console.log(leaf.properties)); // 원본 지점 데이터</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/supercluster@8.0.1/dist/supercluster.min.js"></script>
+  <script>
+    // 가상 위판 물량 데이터 60개 (부산 인근 좌표 주변에 무작위 분포, 가상의 예시)
+    const BBOX = [128.9, 34.9, 129.25, 35.25];
+    const SPECIES = ['고등어', '갈치', '전복'];
+    const points = [];
+    for (let i = 0; i < 60; i++) {
+      points.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [129.0756 + (Math.random() - 0.5) * 0.3, 35.0951 + (Math.random() - 0.5) * 0.3],
+        },
+        properties: { species: SPECIES[i % 3], weight: Math.round(Math.random() * 300) },
+      });
+    }
+
+    const index = new Supercluster({ radius: 60, maxZoom: 16 });
+    index.load(points);
+
+    function lonLatToXY(lon, lat, canvas) {
+      const x = ((lon - BBOX[0]) / (BBOX[2] - BBOX[0])) * canvas.width;
+      const y = ((BBOX[3] - lat) / (BBOX[3] - BBOX[1])) * canvas.height;
+      return [x, y];
+    }
+
+    function drawClusters(canvas, clusters) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      clusters.forEach((c) => {
+        const [x, y] = lonLatToXY(c.geometry.coordinates[0], c.geometry.coordinates[1], canvas);
+        if (c.properties.cluster) {
+          const count = c.properties.point_count;
+          const r = Math.min(28, 10 + Math.sqrt(count) * 3);
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(79, 125, 255, 0.75)';
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(count, x, y);
+        } else {
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#1baf7a';
+          ctx.fill();
+        }
+      });
+    }
+
+    // ---------- 1. 기본 클러스터링 ----------
+    const canvas1 = document.getElementById('canvas1');
+    const clusters1 = index.getClusters(BBOX, 5);
+    drawClusters(canvas1, clusters1);
+    document.getElementById('output1').textContent =
+      `줌 5 기준: 전체 ${points.length}개 지점 → ${clusters1.length}개로 표시됨` +
+      (clusters1[0] && clusters1[0].properties.cluster ? ` (가장 큰 클러스터: ${Math.max(...clusters1.filter(c=>c.properties.cluster).map(c=>c.properties.point_count))}개 포함)` : '');
+
+    // ---------- 2 & 3. Zoom 슬라이더 + 클러스터 상세 ----------
+    const canvas2 = document.getElementById('canvas2');
+    const zoomSlider2 = document.getElementById('zoomSlider2');
+    const zoomLabel2 = document.getElementById('zoomLabel2');
+    const output2 = document.getElementById('output2');
+    const output3 = document.getElementById('output3');
+    const leafList3 = document.getElementById('leafList3');
+    let currentClusters2 = [];
+
+    function renderZoom() {
+      const zoom = Number(zoomSlider2.value);
+      zoomLabel2.textContent = zoom;
+      currentClusters2 = index.getClusters(BBOX, zoom);
+      drawClusters(canvas2, currentClusters2);
+      const clusterCount = currentClusters2.filter((c) => c.properties.cluster).length;
+      const singleCount = currentClusters2.length - clusterCount;
+      output2.textContent = `줌 ${zoom}: 클러스터 ${clusterCount}개 + 개별 지점 ${singleCount}개 = 총 ${currentClusters2.length}개 표시`;
+    }
+    zoomSlider2.addEventListener('input', renderZoom);
+    renderZoom();
+
+    canvas2.addEventListener('click', (e) => {
+      const rect = canvas2.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      let closest = null;
+      let closestDist = Infinity;
+      currentClusters2.forEach((c) => {
+        const [x, y] = lonLatToXY(c.geometry.coordinates[0], c.geometry.coordinates[1], canvas2);
+        const dist = Math.hypot(x - clickX, y - clickY);
+        if (dist < closestDist) { closestDist = dist; closest = c; }
+      });
+      if (!closest || closestDist > 30 || !closest.properties.cluster) {
+        output3.textContent = '클러스터(숫자 적힌 원)를 클릭해주세요';
+        leafList3.innerHTML = '';
+        return;
+      }
+      const clusterId = closest.properties.cluster_id;
+      const expansionZoom = index.getClusterExpansionZoom(clusterId);
+      const leaves = index.getLeaves(clusterId, 8);
+      output3.textContent =
+        `클러스터 ID ${clusterId}: ${closest.properties.point_count}개 포함 · ` +
+        `줌 ${expansionZoom}부터 펼쳐지기 시작 · 아래는 포함된 지점 예시(최대 8개)`;
+      leafList3.innerHTML = leaves
+        .map((l) => `<li>${l.properties.species} — ${l.properties.weight}kg (가상)</li>`)
+        .join('');
+    });
+  </script>
+</body>
+</html>
