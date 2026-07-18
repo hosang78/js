@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Zod 4 Feature Lab</title>
+  <style>
+    :root {
+      --bg: #080a12;
+      --panel: rgba(18, 21, 35, .88);
+      --panel-2: rgba(25, 29, 47, .76);
+      --line: rgba(255,255,255,.10);
+      --line-strong: rgba(255,255,255,.18);
+      --text: #f5f7ff;
+      --muted: #aeb5cd;
+      --purple: #8b5cf6;
+      --violet: #6d5dfc;
+      --pink: #d946ef;
+      --cyan: #22d3ee;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --red: #fb7185;
+      --shadow: 0 24px 80px rgba(0,0,0,.42);
+      --radius: 20px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(139,92,246,.20), transparent 30%),
+        radial-gradient(circle at 100% 18%, rgba(34,211,238,.10), transparent 26%),
+        linear-gradient(180deg, #0a0c16 0%, var(--bg) 46%, #06070c 100%);
+      font-family: Inter, Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+
+    .noise {
+      position: fixed; inset: 0; pointer-events: none; opacity: .035; z-index: -1;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+    }
+
+    .app { max-width: 1640px; margin: 0 auto; padding: 24px; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      min-height: 330px;
+      padding: 36px;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background:
+        linear-gradient(135deg, rgba(139,92,246,.18), rgba(14,18,31,.88) 46%, rgba(34,211,238,.08)),
+        var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "";
+      position: absolute; right: -90px; top: -120px; width: 430px; height: 430px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(139,92,246,.26), rgba(217,70,239,.05) 52%, transparent 68%);
+      filter: blur(10px);
+    }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); gap: 28px; align-items: end; position: relative; z-index: 1; }
+    .brand-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .logo {
+      width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;
+      background: linear-gradient(145deg, #7c3aed, #4f46e5 58%, #0ea5e9);
+      box-shadow: 0 16px 44px rgba(109,93,252,.38), inset 0 1px rgba(255,255,255,.28);
+    }
+    .logo svg { width: 38px; height: 38px; }
+    .eyebrow { color: #c4b5fd; font-size: 12px; letter-spacing: .18em; font-weight: 800; text-transform: uppercase; }
+    h1 { margin: 8px 0 12px; font-size: clamp(38px, 6vw, 76px); line-height: .92; letter-spacing: -.055em; }
+    .gradient-text { background: linear-gradient(100deg, #fff 5%, #c4b5fd 45%, #67e8f9 95%); -webkit-background-clip: text; color: transparent; }
+    .hero p { max-width: 860px; margin: 0; color: var(--muted); font-size: 17px; line-height: 1.75; }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+
+    .btn {
+      border: 1px solid var(--line-strong); color: var(--text); background: rgba(255,255,255,.055);
+      border-radius: 12px; padding: 10px 14px; font-weight: 760; transition: .18s ease;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(196,181,253,.55); background: rgba(139,92,246,.13); }
+    .btn.primary { border-color: transparent; background: linear-gradient(135deg, #8b5cf6, #5b5cf0); box-shadow: 0 12px 30px rgba(109,93,252,.25); }
+    .btn.ghost { background: transparent; }
+    .btn.small { padding: 8px 10px; font-size: 12px; border-radius: 10px; }
+    .btn[disabled] { opacity: .45; pointer-events: none; }
+
+    .runtime-card {
+      padding: 20px;
+      background: rgba(7,9,17,.62);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      backdrop-filter: blur(14px);
+    }
+    .runtime-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .runtime-head strong { font-size: 14px; }
+    .status { display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; font-weight:700; }
+    .dot { width:9px; height:9px; border-radius:50%; background: var(--amber); box-shadow:0 0 0 5px rgba(251,191,36,.10); }
+    .status.ready .dot { background:var(--green); box-shadow:0 0 0 5px rgba(52,211,153,.10); }
+    .status.error .dot { background:var(--red); box-shadow:0 0 0 5px rgba(251,113,133,.10); }
+    .runtime-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+    .metric { padding:12px; border:1px solid var(--line); background:rgba(255,255,255,.035); border-radius:14px; }
+    .metric span { display:block; color:var(--muted); font-size:11px; margin-bottom:4px; }
+    .metric strong { font-size:18px; }
+    .load-detail { margin-top:12px; min-height:20px; color:var(--muted); font-family:var(--mono); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+
+    .main-layout { display:grid; grid-template-columns: 270px minmax(0,1fr); gap:22px; margin-top:24px; align-items:start; }
+    .sidebar {
+      position: sticky; top: 16px; padding: 18px; border:1px solid var(--line); border-radius:22px;
+      background: rgba(14,17,29,.82); backdrop-filter:blur(16px); box-shadow: 0 16px 50px rgba(0,0,0,.24);
+    }
+    .sidebar h3 { margin:0 0 12px; font-size:13px; color:#ddd6fe; }
+    .nav-list { display:flex; flex-direction:column; gap:6px; }
+    .nav-btn { width:100%; text-align:left; padding:10px 12px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--muted); font-weight:700; }
+    .nav-btn:hover, .nav-btn.active { color:#fff; background:rgba(139,92,246,.12); border-color:rgba(139,92,246,.22); }
+    .nav-btn span { float:right; color:#8f97b0; font-size:11px; }
+    .sidebar-note { margin-top:16px; padding:13px; border-radius:14px; background:rgba(34,211,238,.055); border:1px solid rgba(34,211,238,.12); color:var(--muted); font-size:12px; line-height:1.6; }
+
+    .content { min-width:0; }
+    .toolbar {
+      position: sticky; top: 10px; z-index: 10; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      padding:12px; border:1px solid var(--line); border-radius:16px; background:rgba(8,10,18,.83); backdrop-filter:blur(18px); box-shadow:0 12px 34px rgba(0,0,0,.28);
+    }
+    .search-wrap { position:relative; flex:1 1 260px; }
+    .search-wrap svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.55; }
+    .search { width:100%; border:1px solid var(--line); background:rgba(255,255,255,.04); color:#fff; border-radius:12px; padding:10px 12px 10px 38px; outline:none; }
+    .search:focus { border-color:rgba(139,92,246,.6); box-shadow:0 0 0 3px rgba(139,92,246,.10); }
+    .filter-select { border:1px solid var(--line); background:#141827; color:#fff; border-radius:12px; padding:10px 12px; }
+    .toolbar-summary { color:var(--muted); font-size:12px; font-weight:700; white-space:nowrap; }
+
+    .section-card {
+      margin-top:20px; border:1px solid var(--line); background:var(--panel); border-radius:var(--radius); padding:22px; box-shadow:0 16px 50px rgba(0,0,0,.20);
+    }
+    .section-title { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+    .section-title h2 { margin:0; font-size:22px; letter-spacing:-.03em; }
+    .section-title p { margin:6px 0 0; color:var(--muted); line-height:1.6; font-size:13px; }
+    .pill { display:inline-flex; align-items:center; padding:5px 9px; border-radius:999px; border:1px solid rgba(139,92,246,.26); background:rgba(139,92,246,.10); color:#ddd6fe; font-size:11px; font-weight:800; white-space:nowrap; }
+
+    .playground { display:grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr); gap:14px; }
+    .panel { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.025); overflow:hidden; }
+    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); color:#d6daf0; font-size:12px; font-weight:800; }
+    textarea.editor { width:100%; min-height:300px; resize:vertical; border:0; outline:0; color:#e9ecff; background:#0a0d17; padding:16px; font:13px/1.65 var(--mono); tab-size:2; }
+    pre.output, pre.code { margin:0; white-space:pre-wrap; overflow:auto; font:12px/1.65 var(--mono); }
+    pre.output { min-height:300px; padding:16px; color:#d6dcf4; background:#0a0d17; }
+    .play-options { display:flex; gap:8px; flex-wrap:wrap; }
+    .play-options select { max-width:170px; }
+
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:18px; }
+    .stat-card { padding:16px; border-radius:16px; border:1px solid var(--line); background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.016)); }
+    .stat-card b { display:block; font-size:25px; margin-bottom:5px; }
+    .stat-card span { color:var(--muted); font-size:12px; }
+
+    .demo-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:20px; }
+    .demo-card { border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg,rgba(25,29,47,.80),rgba(13,16,28,.88)); overflow:hidden; transition:.18s ease; min-width:0; }
+    .demo-card:hover { transform:translateY(-2px); border-color:rgba(139,92,246,.30); box-shadow:0 18px 44px rgba(0,0,0,.20); }
+    .demo-card.hidden { display:none; }
+    .demo-head { padding:17px 17px 12px; }
+    .demo-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .demo-index { color:#8f96ae; font:11px var(--mono); }
+    .demo-title { margin:5px 0 7px; font-size:17px; letter-spacing:-.02em; }
+    .demo-summary { margin:0; color:var(--muted); font-size:12px; line-height:1.6; min-height:38px; }
+    .tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:11px; }
+    .tag { font:10px var(--mono); padding:4px 7px; border-radius:999px; background:rgba(34,211,238,.075); border:1px solid rgba(34,211,238,.12); color:#a5f3fc; }
+    .demo-controls { padding:0 17px 14px; }
+    .demo-controls textarea { width:100%; min-height:92px; resize:vertical; border:1px solid var(--line); outline:0; color:#e7eafd; background:#0a0d17; border-radius:12px; padding:11px; font:12px/1.55 var(--mono); }
+    .demo-controls textarea:focus { border-color:rgba(139,92,246,.55); }
+    .demo-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:9px; }
+    .code-wrap { display:none; border-top:1px solid var(--line); background:#090c15; }
+    .code-wrap.open { display:block; }
+    pre.code { max-height:260px; padding:14px; color:#c4d7ff; }
+    .result { border-top:1px solid var(--line); background:#090c15; }
+    .result-head { display:flex; justify-content:space-between; align-items:center; padding:9px 13px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+    .result-state { display:flex; align-items:center; gap:6px; }
+    .result-state::before { content:""; width:7px; height:7px; border-radius:50%; background:#64748b; }
+    .result.success .result-state::before { background:var(--green); }
+    .result.invalid .result-state::before { background:var(--amber); }
+    .result.error .result-state::before { background:var(--red); }
+    .result pre { margin:0; padding:13px; max-height:250px; min-height:74px; overflow:auto; color:#d7ddf6; font:11px/1.62 var(--mono); white-space:pre-wrap; }
+
+    .legend { display:flex; gap:12px; align-items:center; flex-wrap:wrap; color:var(--muted); font-size:11px; }
+    .legend span { display:flex; align-items:center; gap:6px; }
+    .legend i { width:8px; height:8px; border-radius:50%; }
+    .legend .g { background:var(--green); } .legend .a { background:var(--amber); } .legend .r { background:var(--red); }
+
+    .toast { position:fixed; right:22px; bottom:22px; z-index:100; padding:12px 14px; border-radius:12px; background:#171b2c; border:1px solid var(--line-strong); box-shadow:var(--shadow); transform:translateY(120px); opacity:0; transition:.22s ease; font-size:12px; }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    footer { padding:34px 8px 10px; color:#7f879f; text-align:center; font-size:12px; line-height:1.7; }
+    footer a { color:#bbb4f7; text-decoration:none; }
+
+    @media (max-width: 1100px) {
+      .hero-grid, .playground { grid-template-columns:1fr; }
+      .main-layout { grid-template-columns:1fr; }
+      .sidebar { position:relative; top:0; }
+      .nav-list { display:grid; grid-template-columns:repeat(3,1fr); }
+      .demo-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 720px) {
+      .app { padding:12px; }
+      .hero { padding:22px; min-height:0; }
+      .logo { width:52px; height:52px; }
+      .main-layout { gap:14px; }
+      .nav-list { grid-template-columns:repeat(2,1fr); }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+      .toolbar { position:relative; top:0; }
+      .section-card { padding:15px; }
+      .demo-grid { gap:12px; }
+      .hero-actions .btn { flex:1 1 140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="app">
+    <header class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="brand-row">
+            <div class="logo" aria-hidden="true">
+              <svg viewBox="0 0 64 64" fill="none"><path d="M15 14h34L28 50h21" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 14h34" stroke="#a5f3fc" stroke-width="3" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="eyebrow">Interactive schema validation laboratory</div>
+              <h1><span class="gradient-text">Zod 4</span><br>Feature Lab</h1>
+            </div>
+          </div>
+          <p>
+            브라우저에서 Zod의 핵심 검증부터 Zod 4 전용 기능까지 직접 실행하는 종합 샘플이다.
+            스키마 조합, 오류 포맷팅, 변환·코덱, 재귀, 메타데이터, JSON Schema, 파일·함수 검증을 한 페이지에서 확인할 수 있다.
+          </p>
+          <div class="hero-actions">
+            <button class="btn primary" id="runAllTop">전체 예제 실행</button>
+            <button class="btn" id="jumpPlayground">통합 Playground</button>
+            <button class="btn ghost" id="resetAll">입력 초기화</button>
+          </div>
+        </div>
+        <aside class="runtime-card">
+          <div class="runtime-head">
+            <strong>브라우저 런타임</strong>
+            <div class="status" id="runtimeStatus"><span class="dot"></span><span>불러오는 중</span></div>
+          </div>
+          <div class="runtime-grid">
+            <div class="metric"><span>요청 버전</span><strong>4.4.3</strong></div>
+            <div class="metric"><span>예제 수</span><strong id="demoCount">0</strong></div>
+            <div class="metric"><span>외부 의존성</span><strong>0</strong></div>
+            <div class="metric"><span>실행 환경</span><strong>ESM</strong></div>
+          </div>
+          <div class="load-detail" id="loadDetail">CDN 모듈 연결을 확인하고 있다…</div>
+        </aside>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <aside class="sidebar">
+        <h3>기능 분류</h3>
+        <nav class="nav-list" id="categoryNav"></nav>
+        <div class="sidebar-note">
+          <b>TypeScript 참고</b><br>
+          이 파일은 브라우저 실행을 위해 JavaScript로 작성됐다. <code>z.infer&lt;typeof Schema&gt;</code> 같은 정적 타입 추론은 코드 예시로 확인하고, 실제 타입 오류는 TypeScript 빌드 단계에서 검증한다.
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m16.2 16.2 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <input class="search" id="searchInput" placeholder="기능명, API, 설명 검색…" />
+          </div>
+          <select class="filter-select" id="categorySelect" aria-label="기능 분류"></select>
+          <button class="btn small" id="runVisible">보이는 예제 실행</button>
+          <span class="toolbar-summary" id="visibleSummary">0개 표시</span>
+        </div>
+
+        <section class="section-card" id="playgroundSection">
+          <div class="section-title">
+            <div>
+              <h2>통합 객체 검증 Playground</h2>
+              <p>회원 가입 형태의 복합 스키마를 기준으로 JSON과 알 수 없는 키 처리 정책을 바꿔가며 검증한다.</p>
+            </div>
+            <span class="pill">LIVE VALIDATION</span>
+          </div>
+          <div class="play-options" style="margin-bottom:12px">
+            <select class="filter-select" id="unknownMode">
+              <option value="strip">z.object · 알 수 없는 키 제거</option>
+              <option value="strict">z.strictObject · 알 수 없는 키 오류</option>
+              <option value="loose">z.looseObject · 알 수 없는 키 유지</option>
+            </select>
+            <button class="btn small primary" id="validatePlayground">검증 실행</button>
+            <button class="btn small" id="loadValidSample">정상 예시</button>
+            <button class="btn small" id="loadInvalidSample">오류 예시</button>
+          </div>
+          <div class="playground">
+            <div class="panel">
+              <div class="panel-head"><span>입력 JSON</span><span>수정 가능</span></div>
+              <textarea class="editor" id="playgroundInput" spellcheck="false"></textarea>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><span>검증 결과</span><span id="playgroundTime">-</span></div>
+              <pre class="output" id="playgroundOutput">Zod 모듈을 불러오는 중…</pre>
+            </div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card"><b id="runTotal">0</b><span>실행한 예제</span></div>
+            <div class="stat-card"><b id="runSuccess">0</b><span>검증 성공</span></div>
+            <div class="stat-card"><b id="runInvalid">0</b><span>의도된 검증 실패</span></div>
+            <div class="stat-card"><b id="runError">0</b><span>실행 오류</span></div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-title">
+            <div>
+              <h2>기능별 실행 예제</h2>
+              <p>입력값을 직접 수정한 뒤 실행할 수 있다. 노란 상태는 Zod가 입력을 정상적으로 거부한 것이며 페이지 오류가 아니다.</p>
+            </div>
+            <div class="legend"><span><i class="g"></i>성공</span><span><i class="a"></i>검증 실패</span><span><i class="r"></i>실행 오류</span></div>
+          </div>
+          <div class="demo-grid" id="demoGrid"></div>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      Zod 4.4.3 브라우저 데모 · 공식 문서 기준 구성 ·
+      <a href="https://zod.dev/" target="_blank" rel="noreferrer">zod.dev</a> ·
+      <a href="https://github.com/colinhacks/zod" target="_blank" rel="noreferrer">GitHub</a><br>
+      CDN 연결이 차단된 내부망에서는 Zod ESM 파일을 로컬에 저장하고 <code>CDN_URLS</code> 배열을 로컬 경로로 변경해야 한다.
+    </footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    const CDN_URLS = [
+      "https://cdn.jsdelivr.net/npm/zod@4.4.3/+esm",
+      "https://esm.sh/zod@4.4.3",
+      "https://unpkg.com/zod@4.4.3/index.js?module"
+    ];
+
+    const categories = {
+      all: "전체",
+      basic: "기본·원시 타입",
+      string: "문자열·형식",
+      structure: "배열·객체·컬렉션",
+      compose: "조합·재사용",
+      advanced: "변환·고급 검증",
+      errors: "오류 처리",
+      zod4: "Zod 4 기능",
+      browser: "브라우저·런타임"
+    };
+
+    let z = null;
+    let activeCategory = "all";
+    const counters = { total: 0, success: 0, invalid: 0, error: 0 };
+
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+    const now = () => performance.now();
+
+    function toast(message) {
+      const el = $("#toast");
+      el.textContent = message;
+      el.classList.add("show");
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => el.classList.remove("show"), 1600);
+    }
+
+    function normalize(value, seen = new WeakSet()) {
+      if (value === undefined) return "[undefined]";
+      if (typeof value === "bigint") return `${value}n`;
+      if (typeof value === "symbol") return value.toString();
+      if (typeof value === "function") return `[Function ${value.name || "anonymous"}]`;
+      if (typeof value === "number" && Number.isNaN(value)) return "NaN";
+      if (value instanceof Date) return { $type: "Date", value: value.toISOString() };
+      if (typeof File !== "undefined" && value instanceof File) return { $type: "File", name: value.name, size: value.size, type: value.type };
+      if (value instanceof Map) return { $type: "Map", entries: [...value.entries()].map(([k,v]) => [normalize(k, seen), normalize(v, seen)]) };
+      if (value instanceof Set) return { $type: "Set", values: [...value].map(v => normalize(v, seen)) };
+      if (value instanceof Error) return { name: value.name, message: value.message, issues: value.issues ? normalize(value.issues, seen) : undefined };
+      if (!value || typeof value !== "object") return value;
+      if (seen.has(value)) return "[Circular]";
+      seen.add(value);
+      if (Array.isArray(value)) return value.map(v => normalize(v, seen));
+      const out = {};
+      for (const key of Reflect.ownKeys(value)) {
+        const label = typeof key === "symbol" ? key.toString() : key;
+        try { out[label] = normalize(value[key], seen); } catch (e) { out[label] = `[읽기 실패: ${e.message}]`; }
+      }
+      return out;
+    }
+
+    function stringify(value) {
+      if (typeof value === "string") return value;
+      return JSON.stringify(normalize(value), null, 2);
+    }
+
+    function resultOf(result) {
+      if (result?.success === true) return { success: true, data: result.data };
+      if (result?.success === false) return {
+        success: false,
+        issues: result.error.issues,
+        pretty: typeof z?.prettifyError === "function" ? z.prettifyError(result.error) : result.error.message
+      };
+      return result;
+    }
+
+    function parseInput(raw, mode = "json") {
+      if (mode === "text") return raw;
+      if (mode === "number") {
+        const n = Number(raw);
+        if (Number.isNaN(n)) throw new Error("숫자로 변환할 수 없다.");
+        return n;
+      }
+      if (mode === "json") return JSON.parse(raw);
+      return raw;
+    }
+
+    const demos = [
+      {
+        id: "basic-object", category: "basic", title: "기본 객체와 safeParse", tags: ["z.object", "safeParse", "z.infer"],
+        summary: "필수 필드, 중첩 스키마, 정적 타입 추론의 기본 패턴.", mode: "json",
+        input: `{"name":"Ada","age":34,"email":"ada@example.com"}`,
+        code: `const User = z.object({\n  name: z.string().min(2),\n  age: z.number().int().min(0),\n  email: z.email(),\n});\n\ntype User = z.infer<typeof User>;\nconst result = User.safeParse(input);`,
+        run: input => resultOf(z.object({ name: z.string().min(2), age: z.number().int().min(0), email: z.email() }).safeParse(input))
+      },
+      {
+        id: "primitive-types", category: "basic", title: "원시 타입 모음", tags: ["string", "number", "bigint", "symbol", "nan"],
+        summary: "문자열·숫자·불리언뿐 아니라 BigInt, Symbol, NaN 전용 스키마까지 확인.", mode: "json",
+        input: `{"text":"zod","count":12,"flag":true}`,
+        code: `z.string(); z.number(); z.boolean();\nz.bigint(); z.symbol(); z.nan();\nz.undefined(); z.null(); z.void();`,
+        run: input => ({
+          string: resultOf(z.string().safeParse(input.text)),
+          number: resultOf(z.number().safeParse(input.count)),
+          boolean: resultOf(z.boolean().safeParse(input.flag)),
+          bigint: resultOf(z.bigint().safeParse(9007199254740993n)),
+          symbol: resultOf(z.symbol().safeParse(Symbol("demo"))),
+          nan: resultOf(z.nan().safeParse(NaN))
+        })
+      },
+      {
+        id: "string-formats", category: "string", title: "문자열 형식 검증", tags: ["email", "url", "uuid", "ipv4", "e164", "iso"],
+        summary: "Zod 4의 독립형 형식 API를 한 번에 검증.", mode: "json",
+        input: `{"email":"dev@example.com","url":"https://zod.dev","uuid":"550e8400-e29b-41d4-a716-446655440000","date":"2026-07-18","ip":"192.168.0.10","phone":"+821012345678"}`,
+        code: `z.email(); z.httpUrl(); z.uuid();\nz.iso.date(); z.ipv4(); z.e164();`,
+        run: input => ({
+          email: resultOf(z.email().safeParse(input.email)),
+          httpUrl: resultOf(z.httpUrl().safeParse(input.url)),
+          uuid: resultOf(z.uuid().safeParse(input.uuid)),
+          isoDate: resultOf(z.iso.date().safeParse(input.date)),
+          ipv4: resultOf(z.ipv4().safeParse(input.ip)),
+          e164: resultOf(z.e164().safeParse(input.phone))
+        })
+      },
+      {
+        id: "string-transform", category: "string", title: "문자열 제약과 정규화", tags: ["trim", "toUpperCase", "regex", "normalize"],
+        summary: "공백 제거, 대문자 변환, 길이와 정규식 제약을 순차 적용.", mode: "text",
+        input: `  zod lab  `,
+        code: `const schema = z.string()\n  .trim()\n  .toUpperCase()\n  .min(4)\n  .regex(/^[A-Z ]+$/);`,
+        run: input => resultOf(z.string().trim().toUpperCase().min(4).regex(/^[A-Z ]+$/).safeParse(input))
+      },
+      {
+        id: "custom-format", category: "string", title: "사용자 정의 stringFormat", tags: ["z.stringFormat", "invalid_format"],
+        summary: "일반 refine보다 구체적인 invalid_format 이슈를 만드는 Zod 4 형식 API.", mode: "text",
+        input: `SKU-2026-0001`,
+        code: `const sku = z.stringFormat(\n  "sku",\n  /^SKU-\\d{4}-\\d{4}$/\n);`,
+        run: input => resultOf(z.stringFormat("sku", /^SKU-\d{4}-\d{4}$/).safeParse(input))
+      },
+      {
+        id: "number-rules", category: "basic", title: "숫자·정수·배수 제약", tags: ["int", "min", "max", "multipleOf"],
+        summary: "정수 범위와 배수 조건을 조합한 포트·비율 검증.", mode: "json",
+        input: `{"port":8080,"rate":7.5}`,
+        code: `const Port = z.number().int().min(1).max(65535);\nconst Rate = z.number().min(0).max(100).multipleOf(0.5);`,
+        run: input => ({ port: resultOf(z.number().int().min(1).max(65535).safeParse(input.port)), rate: resultOf(z.number().min(0).max(100).multipleOf(0.5).safeParse(input.rate)) })
+      },
+      {
+        id: "coercion", category: "basic", title: "입력값 강제 변환", tags: ["z.coerce", "FormData", "query string"],
+        summary: "HTML 폼이나 URL 쿼리처럼 문자열로 들어오는 값을 숫자·날짜로 변환.", mode: "json",
+        input: `{"qty":"12","date":"2026-07-18"}`,
+        code: `const Query = z.object({\n  qty: z.coerce.number().int().positive(),\n  date: z.coerce.date(),\n});`,
+        run: input => resultOf(z.object({ qty: z.coerce.number().int().positive(), date: z.coerce.date() }).safeParse(input))
+      },
+      {
+        id: "stringbool", category: "zod4", title: "환경변수용 stringbool", tags: ["z.stringbool", "Zod 4.1+"],
+        summary: "true·1·yes·on·enabled와 false 계열 문자열을 실제 boolean으로 변환.", mode: "text",
+        input: `enabled`,
+        code: `const Enabled = z.stringbool();\nEnabled.parse("yes"); // true\nEnabled.parse("off"); // false`,
+        run: input => resultOf(z.stringbool().safeParse(input.trim()))
+      },
+      {
+        id: "enum-literal", category: "basic", title: "Enum·Literal", tags: ["z.enum", "z.literal", "extract", "exclude"],
+        summary: "제한된 상태값과 고정 버전 값을 모델링.", mode: "json",
+        input: `{"status":"published","version":4}`,
+        code: `const Status = z.enum(["draft", "published", "archived"]);\nconst Active = Status.exclude(["archived"]);\nconst Version = z.literal(4);`,
+        run: input => ({ status: resultOf(z.enum(["draft","published","archived"]).exclude(["archived"]).safeParse(input.status)), version: resultOf(z.literal(4).safeParse(input.version)) })
+      },
+      {
+        id: "template-literal", category: "zod4", title: "Template Literal 스키마", tags: ["z.templateLiteral", "CSS unit"],
+        summary: "숫자와 단위 조합을 템플릿 리터럴 타입처럼 검증.", mode: "text",
+        input: `24px`,
+        code: `const CssSize = z.templateLiteral([\n  z.number(),\n  z.enum(["px", "em", "rem", "%"])\n]);`,
+        run: input => resultOf(z.templateLiteral([z.number(), z.enum(["px","em","rem","%"]) ]).safeParse(input.trim()))
+      },
+      {
+        id: "optional-nullable", category: "basic", title: "optional·nullable·nullish", tags: ["optional", "nullable", "nullish", "nonoptional"],
+        summary: "누락(undefined)과 명시적 null을 구분하는 객체 필드 패턴.", mode: "json",
+        input: `{"nickname":null,"bio":"hello"}`,
+        code: `z.object({\n  nickname: z.string().nullable(),\n  bio: z.string().optional(),\n  website: z.url().nullish(),\n});`,
+        run: input => resultOf(z.object({ nickname: z.string().nullable(), bio: z.string().optional(), website: z.url().nullish() }).safeParse(input))
+      },
+      {
+        id: "fallbacks", category: "zod4", title: "default·prefault·catch", tags: ["default", "prefault", "catch"],
+        summary: "파싱을 즉시 끝내는 default, 파싱 전 기본값인 prefault, 오류 대체값인 catch 비교.", mode: "json",
+        input: `{}`,
+        code: `const Config = z.object({\n  theme: z.string().default("system"),\n  label: z.string().trim().toUpperCase().prefault("  draft  "),\n  retry: z.number().min(0).catch(3),\n});`,
+        run: input => resultOf(z.object({ theme: z.string().default("system"), label: z.string().trim().toUpperCase().prefault("  draft  "), retry: z.number().min(0).catch(3) }).safeParse(input))
+      },
+      {
+        id: "array-tuple", category: "structure", title: "Array·Tuple·Rest", tags: ["z.array", "z.tuple", "rest", "nonempty"],
+        summary: "동일 타입 목록과 위치별 타입이 다른 튜플을 함께 검증.", mode: "json",
+        input: `{"tags":["zod","typescript"],"row":["kim",42,true,false]}`,
+        code: `const Tags = z.array(z.string().min(1)).min(1);\nconst Row = z.tuple([z.string(), z.number()]).rest(z.boolean());`,
+        run: input => ({ tags: resultOf(z.array(z.string().min(1)).min(1).safeParse(input.tags)), row: resultOf(z.tuple([z.string(), z.number()]).rest(z.boolean()).safeParse(input.row)) })
+      },
+      {
+        id: "record-partial", category: "structure", title: "Record·partialRecord", tags: ["z.record", "z.partialRecord", "enum keys"],
+        summary: "Enum 키를 사용할 때 전체 키 강제와 일부 키 허용의 차이.", mode: "json",
+        input: `{"full":{"id":"1","name":"Ada","email":"a@example.com"},"partial":{"name":"Ada"}}`,
+        code: `const Keys = z.enum(["id", "name", "email"]);\nconst Full = z.record(Keys, z.string());\nconst Partial = z.partialRecord(Keys, z.string());`,
+        run: input => {
+          const keys = z.enum(["id","name","email"]);
+          return { full: resultOf(z.record(keys, z.string()).safeParse(input.full)), partial: resultOf(z.partialRecord(keys, z.string()).safeParse(input.partial)) };
+        }
+      },
+      {
+        id: "map-set", category: "structure", title: "Map·Set 컬렉션", tags: ["z.map", "z.set", "size"],
+        summary: "JSON에는 없는 JavaScript Map과 Set 인스턴스의 키·값·크기 검증.", mode: "json",
+        input: `{"entries":[["one",1],["two",2]],"values":["read","write"]}`,
+        code: `const Scores = z.map(z.string(), z.number());\nconst Roles = z.set(z.enum(["read", "write", "admin"])).min(1);`,
+        run: input => ({ map: resultOf(z.map(z.string(), z.number()).safeParse(new Map(input.entries))), set: resultOf(z.set(z.enum(["read","write","admin"])).min(1).safeParse(new Set(input.values))) })
+      },
+      {
+        id: "unknown-keys", category: "structure", title: "알 수 없는 객체 키 정책", tags: ["z.object", "strictObject", "looseObject"],
+        summary: "기본 제거, 엄격 오류, 그대로 통과의 세 정책을 동일 입력으로 비교.", mode: "json",
+        input: `{"name":"Yeller","extraKey":true}`,
+        code: `z.object({ name: z.string() });       // strip\nz.strictObject({ name: z.string() }); // error\nz.looseObject({ name: z.string() });  // passthrough`,
+        run: input => ({ strip: resultOf(z.object({name:z.string()}).safeParse(input)), strict: resultOf(z.strictObject({name:z.string()}).safeParse(input)), loose: resultOf(z.looseObject({name:z.string()}).safeParse(input)) })
+      },
+      {
+        id: "catchall", category: "structure", title: "객체 catchall", tags: ["catchall", "unknown keys"],
+        summary: "정의되지 않은 모든 키의 값 타입을 하나의 스키마로 제한.", mode: "json",
+        input: `{"name":"server","region":"seoul","tier":"gold"}`,
+        code: `const Schema = z.object({\n  name: z.string()\n}).catchall(z.string());`,
+        run: input => resultOf(z.object({name:z.string()}).catchall(z.string()).safeParse(input))
+      },
+      {
+        id: "object-utilities", category: "compose", title: "pick·omit·partial·required·keyof", tags: ["pick", "omit", "partial", "required", "keyof"],
+        summary: "하나의 원본 객체 스키마에서 API·수정·키 선택용 스키마를 파생.", mode: "json",
+        input: `{"id":"r1","title":"Soup","description":"hot","ingredients":["water"]}`,
+        code: `const Recipe = z.object({ ... });\nRecipe.pick({ title: true });\nRecipe.omit({ id: true });\nRecipe.partial();\nRecipe.required();\nRecipe.keyof();`,
+        run: input => {
+          const base = z.object({ id:z.string(), title:z.string(), description:z.string().optional(), ingredients:z.array(z.string()) });
+          return {
+            picked: resultOf(base.pick({title:true}).safeParse(input)),
+            omitted: resultOf(base.omit({id:true}).safeParse(input)),
+            partial: resultOf(base.partial().safeParse({title:input.title})),
+            required: resultOf(base.required().safeParse(input)),
+            key: resultOf(base.keyof().safeParse("ingredients"))
+          };
+        }
+      },
+      {
+        id: "safe-extend", category: "compose", title: "extend와 safeExtend", tags: ["extend", "safeExtend", "refinement"],
+        summary: "기존 refinement를 보존하면서 필드를 안전하게 강화·확장.", mode: "json",
+        input: `{"password":"1234567890","confirm":"1234567890","role":"admin"}`,
+        code: `const Base = z.object({ password, confirm })\n  .refine(v => v.password === v.confirm);\n\nconst Extended = Base.safeExtend({\n  password: z.string().min(10),\n  role: z.enum(["user", "admin"])\n});`,
+        run: input => {
+          const base = z.object({password:z.string(),confirm:z.string()}).refine(v=>v.password===v.confirm,{error:"비밀번호가 일치하지 않는다",path:["confirm"]});
+          return resultOf(base.safeExtend({password:z.string().min(10),role:z.enum(["user","admin"])}).safeParse(input));
+        }
+      },
+      {
+        id: "union", category: "compose", title: "Union·Discriminated Union", tags: ["z.union", "discriminatedUnion"],
+        summary: "서로 다른 입력 형식과 상태별 객체를 태그 필드로 효율적으로 구분.", mode: "json",
+        input: `{"type":"card","cardNumber":"1234567812345678"}`,
+        code: `const Payment = z.discriminatedUnion("type", [\n  z.object({ type: z.literal("card"), cardNumber: z.string().length(16) }),\n  z.object({ type: z.literal("bank"), account: z.string().min(8) })\n]);`,
+        run: input => resultOf(z.discriminatedUnion("type", [z.object({type:z.literal("card"),cardNumber:z.string().length(16)}),z.object({type:z.literal("bank"),account:z.string().min(8)})]).safeParse(input))
+      },
+      {
+        id: "intersection", category: "compose", title: "Intersection", tags: ["z.intersection", "and"],
+        summary: "두 독립 스키마를 모두 만족해야 하는 교차 타입 구성.", mode: "json",
+        input: `{"name":"Ada","employeeId":"E-100","department":"ICT"}`,
+        code: `const Person = z.object({ name: z.string() });\nconst Employee = z.object({ employeeId: z.string(), department: z.string() });\nconst Staff = z.intersection(Person, Employee);`,
+        run: input => resultOf(z.intersection(z.object({name:z.string()}),z.object({employeeId:z.string(),department:z.string()})).safeParse(input))
+      },
+      {
+        id: "recursive", category: "advanced", title: "재귀 객체 스키마", tags: ["recursive", "getter", "tree"],
+        summary: "getter를 이용해 자기 자신을 참조하는 카테고리 트리 검증.", mode: "json",
+        input: `{"name":"root","subcategories":[{"name":"child","subcategories":[]}]}`,
+        code: `const Category = z.object({\n  name: z.string(),\n  get subcategories() {\n    return z.array(Category);\n  }\n});`,
+        run: input => {
+          const Category = z.object({ name:z.string(), get subcategories(){ return z.array(Category); } });
+          return resultOf(Category.safeParse(input));
+        }
+      },
+      {
+        id: "refinement", category: "advanced", title: "refine와 사용자 지정 경로", tags: ["refine", "path", "cross-field"],
+        summary: "여러 필드 사이의 관계를 검사하고 오류를 특정 필드에 연결.", mode: "json",
+        input: `{"password":"secret123","confirm":"secret123"}`,
+        code: `const Form = z.object({ password: z.string().min(8), confirm: z.string() })\n  .refine(v => v.password === v.confirm, {\n    error: "비밀번호가 일치하지 않는다",\n    path: ["confirm"]\n  });`,
+        run: input => resultOf(z.object({password:z.string().min(8),confirm:z.string()}).refine(v=>v.password===v.confirm,{error:"비밀번호가 일치하지 않는다",path:["confirm"]}).safeParse(input))
+      },
+      {
+        id: "async-refinement", category: "advanced", title: "비동기 refinement", tags: ["refine async", "safeParseAsync"],
+        summary: "서버 중복 조회를 흉내 낸 비동기 사용자명 검증.", mode: "text",
+        input: `new-user`,
+        code: `const Username = z.string().min(3).refine(async name => {\n  await checkDatabase(name);\n  return name !== "admin";\n});\nawait Username.safeParseAsync(input);`,
+        run: async input => {
+          const schema = z.string().min(3).refine(async name => { await new Promise(r=>setTimeout(r,90)); return !["admin","root","system"].includes(name.toLowerCase()); }, {error:"이미 사용 중인 이름이다"});
+          return resultOf(await schema.safeParseAsync(input.trim()));
+        }
+      },
+      {
+        id: "transform-pipe", category: "advanced", title: "preprocess·transform·pipe", tags: ["preprocess", "transform", "pipe"],
+        summary: "입력 전처리 → 숫자 검증 → 출력 객체 변환의 파이프라인.", mode: "text",
+        input: ` 255 `,
+        code: `const NumberInfo = z.preprocess(\n  v => typeof v === "string" ? v.trim() : v,\n  z.coerce.number().int().min(0)\n).transform(n => ({ value: n, hex: n.toString(16) }));`,
+        run: input => resultOf(z.preprocess(v=>typeof v==="string"?v.trim():v,z.coerce.number().int().min(0)).transform(n=>({value:n,hex:`0x${n.toString(16)}`})).safeParse(input))
+      },
+      {
+        id: "codec", category: "zod4", title: "양방향 Codec", tags: ["z.codec", "decode", "encode", "Zod 4.1+"],
+        summary: "ISO 문자열을 Date로 디코딩하고 다시 ISO 문자열로 인코딩.", mode: "text",
+        input: `2026-07-18T09:30:00.000Z`,
+        code: `const stringToDate = z.codec(\n  z.iso.datetime(),\n  z.date(),\n  { decode: s => new Date(s), encode: d => d.toISOString() }\n);\nconst date = stringToDate.decode(input);\nstringToDate.encode(date);`,
+        run: input => {
+          const codec = z.codec(z.iso.datetime(), z.date(), {decode:s=>new Date(s), encode:d=>d.toISOString()});
+          const date = codec.decode(input.trim());
+          return { decoded: date, encoded: codec.encode(date) };
+        }
+      },
+      {
+        id: "custom-errors", category: "errors", title: "오류 메시지 커스터마이징", tags: ["error param", "issue", "Zod 4"],
+        summary: "Zod 4의 통합 error 파라미터로 필수·타입·길이 오류 문구 제어.", mode: "json",
+        input: `{"name":"A","age":"20"}`,
+        code: `const Schema = z.object({\n  name: z.string({ error: issue =>\n    issue.input === undefined ? "이름은 필수" : "문자열 필요"\n  }).min(2, { error: "이름은 2자 이상" }),\n  age: z.number({ error: "나이는 숫자" })\n});`,
+        run: input => resultOf(z.object({name:z.string({error:i=>i.input===undefined?"이름은 필수":"이름은 문자열이어야 한다"}).min(2,{error:"이름은 2자 이상이어야 한다"}),age:z.number({error:"나이는 숫자여야 한다"})}).safeParse(input))
+      },
+      {
+        id: "error-formatting", category: "errors", title: "오류 포맷팅 3종", tags: ["treeifyError", "flattenError", "prettifyError"],
+        summary: "복합 오류를 트리, 폼 필드, 사람이 읽는 문자열 형식으로 변환.", mode: "json",
+        input: `{"username":1234,"favoriteNumbers":[1234,"4567"],"extraKey":true}`,
+        code: `const result = Schema.safeParse(input);\nz.treeifyError(result.error);\nz.flattenError(result.error);\nz.prettifyError(result.error);`,
+        run: input => {
+          const r = z.strictObject({username:z.string(),favoriteNumbers:z.array(z.number())}).safeParse(input);
+          if (r.success) return r.data;
+          return { issues:r.error.issues, tree:z.treeifyError(r.error), flat:z.flattenError(r.error), pretty:z.prettifyError(r.error) };
+        }
+      },
+      {
+        id: "parse-vs-safe", category: "errors", title: "parse와 safeParse 비교", tags: ["parse", "safeParse", "ZodError"],
+        summary: "예외를 던지는 parse와 결과 객체를 반환하는 safeParse의 제어 흐름 비교.", mode: "text",
+        input: `not-an-email`,
+        code: `schema.parse(input);      // 실패 시 throw\nschema.safeParse(input);  // { success, data | error }`,
+        run: input => {
+          const schema = z.email();
+          let thrown;
+          try { schema.parse(input.trim()); } catch (e) { thrown = {name:e.name,message:e.message,issues:e.issues}; }
+          return { parse: thrown ?? "성공", safeParse: resultOf(schema.safeParse(input.trim())) };
+        }
+      },
+      {
+        id: "metadata", category: "zod4", title: "Metadata와 Registry", tags: ["meta", "registry", "globalRegistry"],
+        summary: "문서화·폼 생성·AI 구조화 출력에 쓸 스키마 메타데이터 저장과 조회.", mode: "json",
+        input: `{"email":"user@example.com"}`,
+        code: `const registry = z.registry();\nconst Email = z.email().meta({\n  id: "email_address",\n  title: "Email address",\n  description: "업무용 이메일"\n});\nEmail.register(registry, { ui: "email-input" });`,
+        run: input => {
+          const registry = z.registry();
+          const Email = z.email().meta({title:"Email address",description:"업무용 이메일",examples:["user@example.com"]});
+          Email.register(registry,{ui:"email-input",required:true});
+          return { validation:resultOf(z.object({email:Email}).safeParse(input)), globalMeta:Email.meta(), customRegistry:registry.get(Email), registered:registry.has(Email) };
+        }
+      },
+      {
+        id: "json-schema", category: "zod4", title: "Zod → JSON Schema", tags: ["toJSONSchema", "Draft 2020-12", "OpenAPI"],
+        summary: "Zod 4 내장 변환기로 메타데이터를 포함한 JSON Schema 생성.", mode: "json",
+        input: `{"target":"draft-2020-12"}`,
+        code: `const User = z.object({\n  name: z.string().min(2),\n  age: z.number().int().min(0),\n  email: z.email()\n}).meta({ title: "User" });\n\nz.toJSONSchema(User, { target: "draft-2020-12" });`,
+        run: input => {
+          const target = input.target || "draft-2020-12";
+          const schema = z.object({name:z.string().min(2),age:z.number().int().min(0),email:z.email()}).meta({title:"User",description:"사용자 등록 정보"});
+          return z.toJSONSchema(schema,{target});
+        }
+      },
+      {
+        id: "from-json-schema", category: "zod4", title: "JSON Schema → Zod (실험적)", tags: ["fromJSONSchema", "experimental"],
+        summary: "JSON Schema를 런타임 Zod 스키마로 바꾸는 실험적 API를 기능 감지 후 실행.", mode: "json",
+        input: `{"name":"Ada","age":34}`,
+        code: `const schema = z.fromJSONSchema({\n  type: "object",\n  properties: { name: { type: "string" }, age: { type: "number" } },\n  required: ["name", "age"]\n});`,
+        run: input => {
+          if (typeof z.fromJSONSchema !== "function") return {available:false,message:"이 빌드에는 fromJSONSchema가 포함되지 않았다."};
+          const schema = z.fromJSONSchema({type:"object",properties:{name:{type:"string"},age:{type:"number",minimum:0}},required:["name","age"],additionalProperties:false});
+          return {available:true,validation:resultOf(schema.safeParse(input))};
+        }
+      },
+      {
+        id: "function-schema", category: "advanced", title: "함수 입력·출력 검증", tags: ["z.function", "implement", "output"],
+        summary: "비즈니스 함수의 매개변수와 반환값을 자동 검증하는 래퍼 생성.", mode: "json",
+        input: `{"text":"  sandwich  "}`,
+        code: `const Fn = z.function({ input: [z.string()], output: z.number() });\nconst trimmedLength = Fn.implement(text => text.trim().length);`,
+        run: input => {
+          const Fn = z.function({input:[z.string()],output:z.number()});
+          const trimmedLength = Fn.implement(text=>text.trim().length);
+          return {input:input.text,result:trimmedLength(input.text)};
+        }
+      },
+      {
+        id: "readonly-brand", category: "advanced", title: "Readonly·Brand", tags: ["readonly", "brand", "Object.freeze"],
+        summary: "출력 객체를 실제로 freeze하고 TypeScript에서 명목형 구분을 위한 브랜드 부여.", mode: "json",
+        input: `{"id":"usr_100","name":"Ada"}`,
+        code: `const UserId = z.string().brand<"UserId">();\nconst ReadonlyUser = z.object({ id: UserId, name: z.string() }).readonly();`,
+        run: input => {
+          const schema = z.object({id:z.string().brand("UserId"),name:z.string()}).readonly();
+          const r = schema.safeParse(input);
+          if (!r.success) return resultOf(r);
+          let mutation;
+          try { r.data.name = "Changed"; mutation = "변경됨"; } catch(e) { mutation = `${e.name}: ${e.message}`; }
+          return {data:r.data,isFrozen:Object.isFrozen(r.data),mutationAttempt:mutation,note:"brand는 런타임 값을 바꾸지 않고 TypeScript 타입에만 영향을 준다."};
+        }
+      },
+      {
+        id: "instance-custom", category: "advanced", title: "instanceof·custom", tags: ["z.instanceof", "z.custom", "class"],
+        summary: "클래스 인스턴스와 기본 API로 표현하기 어려운 사용자 정의 타입 검사.", mode: "json",
+        input: `{"x":10,"y":20}`,
+        code: `class Point { constructor(x, y) { this.x=x; this.y=y; } }\nconst PointSchema = z.instanceof(Point);\nconst Even = z.custom(v => typeof v === "number" && v % 2 === 0);`,
+        run: input => {
+          class Point { constructor(x,y){this.x=x;this.y=y;} }
+          return {point:resultOf(z.instanceof(Point).safeParse(new Point(input.x,input.y))),even:resultOf(z.custom(v=>typeof v==="number"&&v%2===0,{error:"짝수만 허용"}).safeParse(input.x))};
+        }
+      },
+      {
+        id: "file-validation", category: "browser", title: "File 인스턴스 검증", tags: ["z.file", "mime", "min", "max"],
+        summary: "브라우저 File 객체의 크기와 MIME 타입을 검증.", mode: "json",
+        input: `{"name":"avatar.png","type":"image/png","content":"fake image bytes"}`,
+        code: `const Image = z.file()\n  .min(5)\n  .max(1024 * 1024)\n  .mime(["image/png", "image/jpeg"]);`,
+        run: input => {
+          if (typeof File === "undefined") return {available:false,message:"현재 런타임에 File API가 없다."};
+          const file = new File([input.content || ""],input.name || "file.bin",{type:input.type || "application/octet-stream"});
+          return {file,validation:resultOf(z.file().min(5).max(1024*1024).mime(["image/png","image/jpeg"]).safeParse(file))};
+        }
+      },
+      {
+        id: "json-value", category: "structure", title: "JSON 직렬화 가능 값", tags: ["z.json", "recursive union"],
+        summary: "문자열·숫자·불리언·null·배열·객체로 구성된 JSON 값 전체 검증.", mode: "json",
+        input: `{"name":"Zod","features":["schema","parse"],"stable":true,"meta":null}`,
+        code: `const JsonValue = z.json();\nJsonValue.safeParse(input);`,
+        run: input => resultOf(z.json().safeParse(input))
+      },
+      {
+        id: "date-validation", category: "basic", title: "Date와 ISO 날짜 문자열", tags: ["z.date", "z.iso.datetime", "coerce.date"],
+        summary: "Date 인스턴스, ISO 문자열, 문자열→Date 변환의 차이를 비교.", mode: "text",
+        input: `2026-07-18T12:00:00.000Z`,
+        code: `z.iso.datetime();\nz.coerce.date();\nz.date().min(new Date("2026-01-01"));`,
+        run: input => {
+          const iso = input.trim();
+          const coerced = z.coerce.date().safeParse(iso);
+          return {iso:resultOf(z.iso.datetime().safeParse(iso)),coerced:resultOf(coerced),dateRange:coerced.success?resultOf(z.date().min(new Date("2026-01-01")).safeParse(coerced.data)):"coercion failed"};
+        }
+      },
+      {
+        id: "schema-introspection", category: "compose", title: "shape·keyof·isOptional", tags: ["shape", "keyof", "isOptional", "isNullable"],
+        summary: "스키마 구조를 조회해 폼·문서 생성 도구가 활용할 수 있는 정보 확인.", mode: "json",
+        input: `{"key":"email"}`,
+        code: `const User = z.object({ name: z.string(), email: z.email().optional() });\nUser.shape.email.isOptional();\nUser.shape.email.isNullable();\nUser.keyof().safeParse("email");`,
+        run: input => {
+          const User = z.object({name:z.string(),email:z.email().optional()});
+          return {keys:Object.keys(User.shape),emailOptional:User.shape.email.isOptional(),emailNullable:User.shape.email.isNullable(),keyValidation:resultOf(User.keyof().safeParse(input.key))};
+        }
+      },
+      {
+        id: "apply-helper", category: "zod4", title: "apply로 공통 규칙 재사용", tags: ["apply", "helper", "composition"],
+        summary: "외부 헬퍼 함수를 메서드 체인에 결합해 반복 검증 규칙을 재사용.", mode: "number",
+        input: `75`,
+        code: `function percentage(schema) {\n  return schema.min(0).max(100);\n}\nconst Score = z.number().apply(percentage).nullable();`,
+        run: input => {
+          const percentage = schema => schema.min(0).max(100);
+          return resultOf(z.number().apply(percentage).nullable().safeParse(input));
+        }
+      }
+    ];
+
+    const validPlayground = {
+      id: "usr_2026_001",
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+      age: 34,
+      role: "admin",
+      profile: { website: "https://example.com", tags: ["typescript", "zod"] },
+      createdAt: "2026-07-18T10:30:00.000Z",
+      extraField: "unknown-key-demo"
+    };
+    const invalidPlayground = {
+      id: "x",
+      name: "A",
+      email: "not-an-email",
+      age: -3,
+      role: "owner",
+      profile: { website: "ftp://invalid", tags: [] },
+      createdAt: "yesterday",
+      extraField: 123
+    };
+
+    function playgroundSchema(mode) {
+      const shape = {
+        id: z.string().regex(/^usr_\d{4}_\d{3}$/,{error:"id는 usr_YYYY_NNN 형식이어야 한다"}),
+        name: z.string().trim().min(2,{error:"이름은 2자 이상"}).max(40),
+        email: z.email({error:"유효한 이메일이 아니다"}),
+        age: z.number().int().min(0).max(150),
+        role: z.enum(["user","admin","auditor"]),
+        profile: z.object({ website:z.httpUrl().optional(), tags:z.array(z.string().min(2)).min(1).max(6) }),
+        createdAt: z.codec(z.iso.datetime(),z.date(),{decode:s=>new Date(s),encode:d=>d.toISOString()})
+      };
+      if (mode === "strict") return z.strictObject(shape);
+      if (mode === "loose") return z.looseObject(shape);
+      return z.object(shape);
+    }
+
+    function updateCounters() {
+      $("#runTotal").textContent = counters.total;
+      $("#runSuccess").textContent = counters.success;
+      $("#runInvalid").textContent = counters.invalid;
+      $("#runError").textContent = counters.error;
+    }
+
+    function inferState(output) {
+      const scan = JSON.stringify(normalize(output));
+      if (/"success": false/.test(scan)) return "invalid";
+      return "success";
+    }
+
+    async function runDemo(demo, card, count = true) {
+      if (!z) { toast("Zod 모듈이 아직 준비되지 않았다."); return; }
+      const resultBox = $(".result", card);
+      const pre = $(".result pre", card);
+      const stateText = $(".result-state", card);
+      const timeText = $(".result-time", card);
+      resultBox.className = "result";
+      stateText.textContent = "실행 중";
+      pre.textContent = "검증 중…";
+      const start = now();
+      try {
+        const raw = $("textarea", card).value;
+        const input = parseInput(raw, demo.mode);
+        const output = await demo.run(input);
+        const state = inferState(output);
+        resultBox.classList.add(state);
+        stateText.textContent = state === "invalid" ? "검증 실패" : "성공";
+        pre.textContent = stringify(output);
+        if (count) {
+          counters.total++;
+          counters[state]++;
+          updateCounters();
+        }
+      } catch (error) {
+        resultBox.classList.add("error");
+        stateText.textContent = "실행 오류";
+        pre.textContent = stringify({name:error.name,message:error.message,stack:error.stack?.split("\n").slice(0,5).join("\n")});
+        if (count) { counters.total++; counters.error++; updateCounters(); }
+      } finally {
+        timeText.textContent = `${(now()-start).toFixed(1)} ms`;
+      }
+    }
+
+    function renderDemos() {
+      const grid = $("#demoGrid");
+      grid.innerHTML = demos.map((d,i) => `
+        <article class="demo-card" data-id="${d.id}" data-category="${d.category}" data-search="${[d.title,d.summary,...d.tags,d.code].join(" ").toLowerCase().replace(/"/g,"&quot;")}">
+          <div class="demo-head">
+            <div class="demo-top">
+              <div>
+                <div class="demo-index">${String(i+1).padStart(2,"0")} · ${categories[d.category]}</div>
+                <h3 class="demo-title">${d.title}</h3>
+              </div>
+              <span class="pill">${d.category === "zod4" ? "ZOD 4" : "RUN"}</span>
+            </div>
+            <p class="demo-summary">${d.summary}</p>
+            <div class="tags">${d.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
+          </div>
+          <div class="demo-controls">
+            <textarea spellcheck="false" aria-label="${d.title} 입력">${d.input}</textarea>
+            <div class="demo-actions">
+              <button class="btn small primary run-demo">실행</button>
+              <button class="btn small toggle-code">코드 보기</button>
+              <button class="btn small copy-code">코드 복사</button>
+              <button class="btn small reset-demo">초기값</button>
+            </div>
+          </div>
+          <div class="code-wrap"><pre class="code"></pre></div>
+          <div class="result">
+            <div class="result-head"><span class="result-state">대기</span><span class="result-time">-</span></div>
+            <pre>실행 버튼을 누르면 결과가 표시된다.</pre>
+          </div>
+        </article>`).join("");
+
+      $$(".demo-card").forEach(card => {
+        const demo = demos.find(d=>d.id===card.dataset.id);
+        $(".code",card).textContent = demo.code;
+        $(".run-demo",card).addEventListener("click",()=>runDemo(demo,card));
+        $(".toggle-code",card).addEventListener("click",e=>{
+          const wrap=$(".code-wrap",card); wrap.classList.toggle("open");
+          e.currentTarget.textContent=wrap.classList.contains("open")?"코드 닫기":"코드 보기";
+        });
+        $(".copy-code",card).addEventListener("click",async()=>{
+          try { await navigator.clipboard.writeText(demo.code); toast("코드를 복사했다."); }
+          catch { toast("클립보드 접근이 차단됐다."); }
+        });
+        $(".reset-demo",card).addEventListener("click",()=>{ $("textarea",card).value=demo.input; toast("입력을 초기화했다."); });
+      });
+      $("#demoCount").textContent=demos.length;
+    }
+
+    function renderNavigation() {
+      const counts = Object.keys(categories).reduce((acc,key)=>{ acc[key]=key==="all"?demos.length:demos.filter(d=>d.category===key).length; return acc; },{});
+      $("#categoryNav").innerHTML=Object.entries(categories).map(([key,label])=>`<button class="nav-btn ${key==="all"?"active":""}" data-cat="${key}">${label}<span>${counts[key]}</span></button>`).join("");
+      $("#categorySelect").innerHTML=Object.entries(categories).map(([key,label])=>`<option value="${key}">${label} (${counts[key]})</option>`).join("");
+      $$(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>{ activeCategory=btn.dataset.cat; $("#categorySelect").value=activeCategory; applyFilters(); }));
+      $("#categorySelect").addEventListener("change",e=>{ activeCategory=e.target.value; applyFilters(); });
+    }
+
+    function applyFilters() {
+      const query=$("#searchInput").value.trim().toLowerCase();
+      let visible=0;
+      $$(".demo-card").forEach(card=>{
+        const categoryMatch=activeCategory==="all"||card.dataset.category===activeCategory;
+        const searchMatch=!query||card.dataset.search.includes(query);
+        card.classList.toggle("hidden",!(categoryMatch&&searchMatch));
+        if(categoryMatch&&searchMatch) visible++;
+      });
+      $$(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.cat===activeCategory));
+      $("#visibleSummary").textContent=`${visible}개 표시`;
+    }
+
+    async function runCards(cards) {
+      if (!z) { toast("Zod 모듈이 아직 준비되지 않았다."); return; }
+      for (const card of cards) {
+        const demo=demos.find(d=>d.id===card.dataset.id);
+        await runDemo(demo,card);
+      }
+      toast(`${cards.length}개 예제 실행 완료`);
+    }
+
+    async function validatePlayground() {
+      if (!z) return;
+      const start=now();
+      const out=$("#playgroundOutput");
+      try {
+        const input=JSON.parse($("#playgroundInput").value);
+        const result=playgroundSchema($("#unknownMode").value).safeParse(input);
+        if(result.success) out.textContent=stringify({success:true,data:result.data,unknownKeyPolicy:$("#unknownMode").value});
+        else out.textContent=stringify({success:false,issues:result.error.issues,tree:z.treeifyError(result.error),flat:z.flattenError(result.error),pretty:z.prettifyError(result.error)});
+      } catch(error) {
+        out.textContent=stringify({success:false,kind:"JSON 또는 실행 오류",message:error.message});
+      }
+      $("#playgroundTime").textContent=`${(now()-start).toFixed(1)} ms`;
+    }
+
+    async function loadZod() {
+      const status=$("#runtimeStatus");
+      const detail=$("#loadDetail");
+      const failures=[];
+      for(const url of CDN_URLS){
+        try {
+          detail.textContent=`연결 시도: ${url}`;
+          const mod=await import(url);
+          z=mod.z || mod.default?.z || mod.default || mod;
+          if(!z?.object || !z?.string) throw new Error("Zod export를 찾지 못했다.");
+          if(typeof z.config==="function") { try { z.config({jitless:true}); } catch {} }
+          status.className="status ready";
+          status.innerHTML='<span class="dot"></span><span>준비 완료</span>';
+          detail.textContent=`로드 성공: ${url}`;
+          $("#playgroundOutput").textContent="정상 예시가 준비됐다. 검증 실행을 눌러 확인한다.";
+          return;
+        } catch(e) { failures.push(`${url} → ${e.message}`); }
+      }
+      status.className="status error";
+      status.innerHTML='<span class="dot"></span><span>로드 실패</span>';
+      detail.textContent=failures.join(" | ");
+      $("#playgroundOutput").textContent="Zod CDN을 불러오지 못했다. 인터넷 연결, 방화벽, CORS 정책을 확인하거나 CDN_URLS를 로컬 ESM 경로로 바꿔야 한다.";
+    }
+
+    renderDemos();
+    renderNavigation();
+    applyFilters();
+    $("#playgroundInput").value=JSON.stringify(validPlayground,null,2);
+
+    $("#searchInput").addEventListener("input",applyFilters);
+    $("#runVisible").addEventListener("click",()=>runCards($$(".demo-card:not(.hidden)")));
+    $("#runAllTop").addEventListener("click",()=>runCards($$(".demo-card")));
+    $("#validatePlayground").addEventListener("click",validatePlayground);
+    $("#unknownMode").addEventListener("change",validatePlayground);
+    $("#loadValidSample").addEventListener("click",()=>{ $("#playgroundInput").value=JSON.stringify(validPlayground,null,2); validatePlayground(); });
+    $("#loadInvalidSample").addEventListener("click",()=>{ $("#playgroundInput").value=JSON.stringify(invalidPlayground,null,2); validatePlayground(); });
+    $("#jumpPlayground").addEventListener("click",()=>$("#playgroundSection").scrollIntoView({behavior:"smooth",block:"start"}));
+    $("#resetAll").addEventListener("click",()=>{
+      demos.forEach(d=>{ const card=$(`.demo-card[data-id="${d.id}"]`); if(card) $("textarea",card).value=d.input; });
+      $("#playgroundInput").value=JSON.stringify(validPlayground,null,2);
+      toast("모든 입력을 초기화했다.");
+    });
+
+    await loadZod();
+    if(z) validatePlayground();
+  </script>
+</body>
+</html>
