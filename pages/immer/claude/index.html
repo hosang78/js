@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Immer</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px; font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px; color: #a15c00; background: #fff6e5;
+    border: 1px solid #ffe0a3; border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+  }
+  .finding {
+    font-size: 12.5px; color: #0a5ea8; background: #eaf4ff;
+    border: 1px solid #cfe6ff; border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  input[type="number"], input[type="text"] {
+    font-size: 13px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fafbfc; width: 100px;
+  }
+  .state-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .state-box {
+    flex: 1; min-width: 150px; border: 1px solid #e5e5e5; border-radius: 10px;
+    padding: 12px 14px; background: #fafbfc;
+  }
+  .state-box .label { font-size: 11.5px; color: #888; margin-bottom: 4px; }
+  .state-box .value { font-size: 15px; font-weight: 600; color: #333; }
+  .state-box.same .value { color: #0a7a4c; }
+  .state-box.diff .value { color: #c0392b; }
+  .result-box {
+    background: #f0f4ff; border: 1px solid #dbe4ff; border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; color: #333; margin-top: 8px;
+    white-space: pre-wrap; word-break: break-all; font-family: monospace;
+  }
+  .log-box {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444;
+    margin-top: 8px; max-height: 160px; overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 8px; }
+  table.data-table th, table.data-table td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: right; }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table th { background: #f5f6f8; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Immer</h1>
+  <p>
+    Immer는 "직접 값을 바꾸는 것처럼" 코드를 쓰면, 실제로는 원본을 건드리지 않고 <b>새로운 불변
+    객체</b>를 만들어주는 라이브러리입니다. <code>{...state, a: {...state.a, x: 1}}</code>처럼
+    번거로운 스프레드 중첩 없이, <code>draft.a.x = 1</code>이라고 그냥 쓰면 됩니다.
+  </p>
+  <ul>
+    <li><code>produce(state, recipe)</code> — recipe 안에서 draft를 자유롭게 mutate</li>
+    <li>바뀌지 않은 하위 트리는 <b>참조가 그대로 유지</b>되는 구조적 공유(structural sharing)</li>
+    <li>커링된 <code>produce(recipe)</code>로 재사용 가능한 업데이트 함수 생성</li>
+    <li><code>produceWithPatches</code>로 변경 내역을 JSON Patch 형태로 추출 (실행 취소 등에 활용)</li>
+  </ul>
+  <div class="finding">
+    💡 <b>확인된 동작:</b> jsdelivr의 <code>dist/immer.mjs</code>(개발용 ESM 빌드)를 번들러 없이
+    브라우저에 그냥 <code>&lt;script type="module"&gt;</code>로 로드하면 <code>ReferenceError:
+    process is not defined</code>로 즉시 깨집니다 — 코드 안에 <code>process.env.NODE_ENV</code>
+    체크가 그대로 남아있기 때문입니다(브라우저엔 <code>process</code>가 없음). 번들러 없이 CDN에서
+    직접 쓸 때는 반드시 <code>dist/immer.production.mjs</code>를 명시해서 불러와야 합니다. 이
+    페이지도 그렇게 로드합니다.
+  </div>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 위판 데이터는 Immer 기능 설명을 위한 <b>가상의 예시</b>이며, 실제 수협중앙회의
+    통계·조직·절차와 무관합니다. 다른 외부 API는 사용하지 않았습니다 (Immer 11.1.15를 CDN에서 로드).
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 기본 <code>produce()</code> — mutate처럼 쓰고 불변 업데이트 받기</h2>
+  <p class="desc">
+    recipe 함수의 매개변수 <code>draft</code>는 실제 프록시 객체입니다. 여기에 값을 직접 대입해도
+    원본(<code>baseState</code>)은 전혀 바뀌지 않고, <code>produce()</code>가 새 객체를 반환합니다.
+  </p>
+  <div class="controls">
+    <label>중량(kg): <input type="number" id="s1-kg" value="120" /></label>
+    <button class="action" id="s1-apply">produce()로 업데이트</button>
+  </div>
+  <div class="state-row">
+    <div class="state-box" id="s1-base-box">
+      <div class="label">원본 baseState.kg</div>
+      <div class="value" id="s1-base">120</div>
+    </div>
+    <div class="state-box" id="s1-next-box">
+      <div class="label">produce() 결과 nextState.kg</div>
+      <div class="value" id="s1-next">120</div>
+    </div>
+    <div class="state-box" id="s1-ref-box">
+      <div class="label">baseState === nextState ?</div>
+      <div class="value" id="s1-ref">-</div>
+    </div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { produce } from 'immer';
+
+const baseState = { kg: 120, name: '고등어' };
+const nextState = produce(baseState, (draft) => {
+  draft.kg = 150; // 직접 대입하는 것처럼 쓴다
+});
+
+baseState.kg;              // 120 (그대로)
+nextState.kg;               // 150
+baseState === nextState;    // false (완전히 다른 객체)</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. 구조적 공유 (Structural Sharing)</h2>
+  <p class="desc">
+    깊이 중첩된 상태에서 <b>실제로 바뀐 경로의 객체만</b> 새로 만들어지고, 건드리지 않은 형제 브랜치는
+    <b>이전 참조 그대로</b> 재사용됩니다. 이 덕분에 React 같은 프레임워크의 얕은 비교(<code>===</code>)
+    최적화가 잘 작동합니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s2-update-auction">위판 항목 중량 변경 (auction 브랜치만 건드림)</button>
+  </div>
+  <div class="state-row">
+    <div class="state-box" id="s2-auction-box">
+      <div class="label">state.auction (바뀐 브랜치)</div>
+      <div class="value" id="s2-auction">-</div>
+    </div>
+    <div class="state-box" id="s2-weather-box">
+      <div class="label">state.weather (안 건드린 브랜치)</div>
+      <div class="value" id="s2-weather">-</div>
+    </div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const state = {
+  auction: { items: [{ name: '고등어', kg: 120 }] },
+  weather: { temp: 24, condition: 'sunny' }, // 이번엔 건드리지 않음
+};
+
+const next = produce(state, (draft) => {
+  draft.auction.items[0].kg = 150;
+});
+
+next.auction !== state.auction;   // true  — 바뀐 경로는 새 객체
+next.weather === state.weather;   // true  — 안 바뀐 브랜치는 참조 그대로!</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. 커링된 <code>produce(recipe)</code> — 재사용 가능한 업데이트 함수</h2>
+  <p class="desc">
+    <code>produce(recipe)</code>처럼 state 없이 recipe만 주면, 나중에 <code>(state, ...args)</code>로
+    호출할 수 있는 <b>재사용 가능한 업데이트 함수</b>가 만들어집니다. Redux reducer 패턴과 잘 어울립니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s3-add-10">전체 항목 +10kg 일괄 적용</button>
+    <button class="ghost" id="s3-reset">초기화</button>
+  </div>
+  <table class="data-table" id="s3-table">
+    <thead><tr><th>품목</th><th>중량(kg)</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">// state 없이 recipe만 넘기면 재사용 가능한 함수가 반환됨
+const addWeight = produce((draft, amount) => {
+  draft.kg += amount;
+});
+
+const item1 = { name: '갈치', kg: 85 };
+const item2 = { name: '오징어', kg: 60 };
+addWeight(item1, 10); // { name: '갈치', kg: 95 } — 새 객체
+addWeight(item2, 10); // { name: '오징어', kg: 70 } — 같은 함수를 재사용</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. <code>produceWithPatches</code> + <code>applyPatches</code> — 실행 취소(Undo)</h2>
+  <p class="desc">
+    <code>produceWithPatches</code>는 새 상태와 함께 "무엇이 바뀌었는지"를 JSON Patch 배열로,
+    그리고 되돌리기용 역패치(inverse patches)도 함께 돌려줍니다. 이걸로 실행 취소 기능을 간단히
+    구현할 수 있습니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box">
+      <div class="label">현재 kg당 단가</div>
+      <div class="value" id="s4-price">8,000원</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s4-raise">+1,000원 (변경 이력 기록)</button>
+    <button class="ghost" id="s4-undo">↩️ 실행 취소</button>
+  </div>
+  <div class="log-box" id="s4-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { produceWithPatches, applyPatches, enablePatches } from 'immer';
+enablePatches(); // 패치 기능은 명시적으로 켜야 함 (Map/Set과 마찬가지 패턴)
+
+const [next, patches, inversePatches] = produceWithPatches(state, (draft) => {
+  draft.price += 1000;
+});
+// patches:        [{ op: 'replace', path: ['price'], value: 9000 }]
+// inversePatches: [{ op: 'replace', path: ['price'], value: 8000 }]
+
+const undone = applyPatches(next, inversePatches); // 되돌리기</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. Map 지원 — <code>enableMapSet()</code></h2>
+  <p class="desc">
+    기본적으로 Immer는 일반 객체·배열만 지원합니다. <code>enableMapSet()</code>을 호출하면
+    <code>Map</code>/<code>Set</code>에도 <code>draft.set()</code>/<code>draft.delete()</code> 같은
+    네이티브 메서드를 그대로 쓰면서 불변 업데이트를 받을 수 있습니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s5-add">항목 추가 (Map.set)</button>
+    <button class="action" id="s5-bump">첫 항목 +10kg (Map.set)</button>
+    <button class="ghost" id="s5-delete">마지막 항목 삭제 (Map.delete)</button>
+  </div>
+  <table class="data-table" id="s5-table">
+    <thead><tr><th>품목</th><th>중량(kg)</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="result-box" id="s5-refcheck"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { produce, enableMapSet } from 'immer';
+enableMapSet();
+
+const state = new Map([['고등어', 120], ['갈치', 85]]);
+const next = produce(state, (draft) => {
+  draft.set('오징어', 60);   // Map의 네이티브 메서드를 그대로 사용
+  draft.delete('갈치');
+});
+
+state.has('갈치');   // true (원본은 그대로)
+next.has('갈치');    // false
+state !== next;      // true</pre>
+  </details>
+</section>
+
+<script type="module">
+  import { produce, produceWithPatches, applyPatches, enablePatches, enableMapSet } from 'https://cdn.jsdelivr.net/npm/immer@11.1.15/dist/immer.production.mjs';
+
+  enablePatches();
+  enableMapSet();
+
+  // ---------- Section 1 ----------
+  (function () {
+    let baseState = { kg: 120, name: '고등어' };
+    const baseEl = document.getElementById('s1-base');
+    const nextEl = document.getElementById('s1-next');
+    const refEl = document.getElementById('s1-ref');
+    const refBox = document.getElementById('s1-ref-box');
+
+    document.getElementById('s1-apply').addEventListener('click', () => {
+      const kg = Number(document.getElementById('s1-kg').value) || 0;
+      const nextState = produce(baseState, (draft) => {
+        draft.kg = kg;
+      });
+      baseEl.textContent = baseState.kg;
+      nextEl.textContent = nextState.kg;
+      const same = baseState === nextState;
+      refEl.textContent = same ? '같음 (변경 없음)' : '다름 (새 객체)';
+      refBox.className = 'state-box ' + (same ? 'same' : 'diff');
+      baseState = nextState; // 다음 비교를 위해 갱신
+    });
+  })();
+
+  // ---------- Section 2 ----------
+  (function () {
+    let state = {
+      auction: { items: [{ name: '고등어', kg: 120 }] },
+      weather: { temp: 24, condition: 'sunny' },
+    };
+    const auctionEl = document.getElementById('s2-auction');
+    const weatherEl = document.getElementById('s2-weather');
+    const auctionBox = document.getElementById('s2-auction-box');
+    const weatherBox = document.getElementById('s2-weather-box');
+
+    function render() {
+      auctionEl.textContent = state.auction.items[0].kg + 'kg';
+      weatherEl.textContent = state.weather.temp + '℃ / ' + state.weather.condition;
+    }
+    render();
+
+    document.getElementById('s2-update-auction').addEventListener('click', () => {
+      const prevAuction = state.auction;
+      const prevWeather = state.weather;
+      state = produce(state, (draft) => {
+        draft.auction.items[0].kg += 10;
+      });
+      render();
+      const auctionSame = state.auction === prevAuction;
+      const weatherSame = state.weather === prevWeather;
+      auctionBox.className = 'state-box ' + (auctionSame ? 'same' : 'diff');
+      weatherBox.className = 'state-box ' + (weatherSame ? 'same' : 'diff');
+      auctionEl.textContent += auctionSame ? ' (참조 유지)' : ' (참조 바뀜 — 실제로 값이 바뀐 브랜치)';
+      weatherEl.textContent += weatherSame ? ' (참조 그대로 유지됨!)' : ' (참조 바뀜)';
+    });
+  })();
+
+  // ---------- Section 3 ----------
+  (function () {
+    const addWeight = produce((draft, amount) => {
+      draft.kg += amount;
+    });
+    let items = [
+      { name: '고등어', kg: 120 },
+      { name: '갈치', kg: 85 },
+      { name: '오징어', kg: 60 },
+    ];
+    const initial = items;
+    const tbody = document.querySelector('#s3-table tbody');
+
+    function render() {
+      tbody.innerHTML = items.map((i) => `<tr><td>${i.name}</td><td>${i.kg}</td></tr>`).join('');
+    }
+    render();
+
+    document.getElementById('s3-add-10').addEventListener('click', () => {
+      items = items.map((item) => addWeight(item, 10));
+      render();
+    });
+    document.getElementById('s3-reset').addEventListener('click', () => {
+      items = initial;
+      render();
+    });
+  })();
+
+  // ---------- Section 4 ----------
+  (function () {
+    let state = { price: 8000 };
+    const history = []; // { patches, inversePatches }
+    const priceEl = document.getElementById('s4-price');
+    const logEl = document.getElementById('s4-log');
+    const undoBtn = document.getElementById('s4-undo');
+
+    function log(msg) {
+      const row = document.createElement('div');
+      row.textContent = msg;
+      logEl.prepend(row);
+    }
+    function updateUndoBtn() {
+      undoBtn.disabled = history.length === 0;
+    }
+    updateUndoBtn();
+
+    document.getElementById('s4-raise').addEventListener('click', () => {
+      const [next, patches, inversePatches] = produceWithPatches(state, (draft) => {
+        draft.price += 1000;
+      });
+      state = next;
+      history.push({ patches, inversePatches });
+      priceEl.textContent = state.price.toLocaleString() + '원';
+      log(`+1,000원 적용 — patch: ${JSON.stringify(patches)}`);
+      updateUndoBtn();
+    });
+
+    undoBtn.addEventListener('click', () => {
+      const last = history.pop();
+      if (!last) return;
+      state = applyPatches(state, last.inversePatches);
+      priceEl.textContent = state.price.toLocaleString() + '원';
+      log(`실행 취소 — inverse patch: ${JSON.stringify(last.inversePatches)}`);
+      updateUndoBtn();
+    });
+  })();
+
+  // ---------- Section 5 ----------
+  (function () {
+    let stock = new Map([['고등어', 120], ['갈치', 85]]);
+    const tbody = document.querySelector('#s5-table tbody');
+    const refCheckEl = document.getElementById('s5-refcheck');
+    const pool = ['오징어', '전갱이', '문어', '광어'];
+
+    function render() {
+      tbody.innerHTML = Array.from(stock.entries())
+        .map(([name, kg]) => `<tr><td>${name}</td><td>${kg}</td></tr>`)
+        .join('');
+    }
+    render();
+
+    function applyAndCheck(recipe) {
+      const prev = stock;
+      stock = produce(stock, recipe);
+      render();
+      refCheckEl.textContent = `stock instanceof Map: ${stock instanceof Map} | 이전 참조와 다름: ${stock !== prev}`;
+    }
+
+    document.getElementById('s5-add').addEventListener('click', () => {
+      const name = pool[Math.floor(Math.random() * pool.length)];
+      const kg = 20 + Math.floor(Math.random() * 80);
+      applyAndCheck((draft) => { draft.set(name, kg); });
+    });
+    document.getElementById('s5-bump').addEventListener('click', () => {
+      applyAndCheck((draft) => {
+        const firstKey = draft.keys().next().value;
+        if (firstKey !== undefined) draft.set(firstKey, draft.get(firstKey) + 10);
+      });
+    });
+    document.getElementById('s5-delete').addEventListener('click', () => {
+      applyAndCheck((draft) => {
+        const keys = Array.from(draft.keys());
+        const lastKey = keys[keys.length - 1];
+        if (lastKey !== undefined) draft.delete(lastKey);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
