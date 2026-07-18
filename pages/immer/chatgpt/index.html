@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Immer Feature Lab</title>
+  <style>
+    :root{--bg:#08111f;--panel:#0f1b2d;--panel2:#13243a;--line:#28415f;--text:#e8f0fb;--muted:#9bb0c8;--accent:#6ee7b7;--accent2:#60a5fa;--warn:#fbbf24;--bad:#fb7185;--good:#34d399}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(140deg,#07101d,#0a1730 55%,#0b1220);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,select{font:inherit} button{cursor:pointer}
+    header{position:sticky;top:0;z-index:10;background:rgba(8,17,31,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .head{max-width:1500px;margin:auto;padding:18px 22px;display:flex;gap:18px;align-items:center;justify-content:space-between}
+    h1{font-size:clamp(22px,3vw,36px);margin:0}.sub{color:var(--muted);margin-top:5px}.badge{display:inline-flex;padding:5px 9px;border:1px solid #3c638c;border-radius:999px;color:#bfdbfe;font-size:12px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button,.run{border:1px solid #376086;background:#132843;color:#eaf4ff;border-radius:10px;padding:9px 12px}.toolbar button:hover,.run:hover{border-color:var(--accent2);transform:translateY(-1px)}
+    main{max-width:1500px;margin:auto;padding:22px;display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px}
+    nav{position:sticky;top:100px;align-self:start;background:rgba(15,27,45,.8);border:1px solid var(--line);border-radius:16px;padding:14px;max-height:calc(100vh - 125px);overflow:auto}
+    nav input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:#081525;color:var(--text);margin-bottom:10px}
+    nav a{display:block;color:#b7c8da;text-decoration:none;padding:8px 9px;border-radius:8px;font-size:14px}nav a:hover{background:#162b45;color:white}
+    .content{min-width:0}.hero{border:1px solid var(--line);background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(110,231,183,.08));border-radius:18px;padding:20px;margin-bottom:18px}.hero p{color:#c7d5e5;max-width:900px;line-height:1.65}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.stat{background:#0b1828;border:1px solid var(--line);border-radius:12px;padding:13px}.stat b{font-size:22px;color:var(--accent)}.stat span{display:block;color:var(--muted);font-size:12px;margin-top:5px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{scroll-margin-top:115px;background:linear-gradient(180deg,var(--panel),#0b1727);border:1px solid var(--line);border-radius:16px;overflow:hidden}.card.wide{grid-column:1/-1}.card-head{padding:15px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;justify-content:space-between;align-items:center}.card h2{font-size:17px;margin:0}.api{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--accent);font-size:12px}.body{padding:15px}.desc{color:var(--muted);line-height:1.55;font-size:14px;margin:0 0 12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.run{background:#173253}.run.primary{background:#0b5d4e;border-color:#169875}.run.warn{background:#5c4512;border-color:#8d6c1c}
+    pre{margin:0;min-height:150px;max-height:370px;overflow:auto;background:#06101c;border:1px solid #1e3854;border-radius:12px;padding:13px;color:#cfe3f8;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.label{font-size:12px;color:#8fa8c2;margin:0 0 6px}.ok{color:var(--good)}.no{color:var(--bad)}.note{color:#fcd34d}.hidden{display:none!important}
+    footer{max-width:1500px;margin:0 auto;padding:10px 22px 35px;color:var(--muted);font-size:13px}
+    @media(max-width:1000px){main{grid-template-columns:1fr}nav{position:relative;top:auto;max-height:none}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:600px){.head{align-items:flex-start;flex-direction:column}.split,.stats{grid-template-columns:1fr}main{padding:12px}.card.wide{grid-column:auto}}
+  </style>
+</head>
+<body>
+<header><div class="head"><div><h1>Immer Feature Lab</h1><div class="sub">불변 상태 업데이트를 직접 실행하며 비교하는 종합 실험실 <span class="badge">Immer 11.1.11</span></div></div><div class="toolbar"><button id="runAll">전체 실행</button><button id="clearAll">출력 초기화</button><button id="toggleCompact">카드 간격 전환</button></div></div></header>
+<main>
+  <nav><input id="filter" placeholder="기능 검색: patches, Map..." /><div id="navLinks"></div></nav>
+  <section class="content">
+    <div class="hero"><h2>핵심 개념</h2><p>기존 상태는 건드리지 않고 임시 draft만 변경하면 Immer가 변경된 경로만 복사해 다음 상태를 만든다. 각 카드의 실행 버튼을 눌러 원본 보존, 구조 공유, 패치 생성, 동결 여부 등을 확인할 수 있다.</p><div class="stats"><div class="stat"><b id="demoCount">0</b><span>실행형 데모</span></div><div class="stat"><b>1</b><span>단일 HTML 파일</span></div><div class="stat"><b>0</b><span>빌드 도구</span></div><div class="stat"><b id="successCount">0</b><span>성공 실행 횟수</span></div></div></div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+<footer>브라우저 개발자 도구 없이도 결과와 참조 동일성, freeze 상태, patches를 화면에서 확인하도록 구성했다.</footer>
+<script type="module">
+import {
+  produce, produceWithPatches, applyPatches, enablePatches, enableMapSet,
+  createDraft, finishDraft, current, original, isDraft, isDraftable,
+  freeze, setAutoFreeze, setUseStrictShallowCopy, setUseStrictIteration,
+  Immer, immerable, nothing, enableArrayMethods
+} from 'https://cdn.jsdelivr.net/npm/immer@11.1.11/+esm';
+
+enablePatches(); enableMapSet();
+if (typeof enableArrayMethods === 'function') enableArrayMethods();
+
+const pretty = value => JSON.stringify(value, (k,v) => {
+  if (v instanceof Map) return {__type:'Map', entries:[...v.entries()]};
+  if (v instanceof Set) return {__type:'Set', values:[...v.values()]};
+  return v;
+}, 2);
+const bool = v => v ? '✅ true' : '❌ false';
+let successes = 0;
+
+const demos = [
+ {id:'basic',title:'기본 produce',api:'produce(base, recipe)',desc:'중첩 객체와 배열을 직관적인 mutation 문법으로 변경한다.',run(){const base={user:{name:'Kim',level:1},todos:[{id:1,done:false}]};const next=produce(base,d=>{d.user.level++;d.todos[0].done=true;d.todos.push({id:2,done:false})});return {base,next,'base !== next':base!==next,'user copied':base.user!==next.user,'todos copied':base.todos!==next.todos};}},
+ {id:'sharing',title:'구조 공유',api:'structural sharing',desc:'변경되지 않은 하위 객체는 기존 참조를 재사용한다.',run(){const base={profile:{name:'Lee'},settings:{theme:'dark'},meta:{version:1}};const next=produce(base,d=>{d.profile.name='Park'});return {'profile reference changed':base.profile!==next.profile,'settings shared':base.settings===next.settings,'meta shared':base.meta===next.meta,base,next};}},
+ {id:'noop',title:'변경 없는 produce',api:'no-op optimization',desc:'실제 변경이 없으면 원본 객체 자체를 반환한다.',run(){const base={count:1,nested:{x:2}};const next=produce(base,d=>{d.count=1;void d.nested.x});return {'base === next':base===next,'nested shared':base.nested===next.nested,next};}},
+ {id:'arrays',title:'배열 메서드',api:'push · splice · sort · reverse',desc:'draft 배열에서 일반적인 변경 메서드를 그대로 사용한다.',run(){const base=[5,2,9,1];const next=produce(base,d=>{d.push(7);d.splice(1,1,3,4);d.sort((a,b)=>a-b);d.reverse()});return {base,next};}},
+ {id:'delete',title:'속성 추가·삭제',api:'assignment · delete',desc:'객체 속성 추가, 수정, 삭제를 한 recipe에서 수행한다.',run(){const base={a:1,b:2};const next=produce(base,d=>{d.c=3;d.a=10;delete d.b});return {base,next};}},
+ {id:'curried',title:'커리드 producer',api:'produce(recipe)',desc:'recipe를 먼저 정의해 reducer처럼 여러 상태에 재사용한다.',run(){const increment=produce((draft,amount=1)=>{draft.count+=amount});const a=increment({count:0},2);const b=increment(a,5);return {a,b};}},
+ {id:'return',title:'새 값 반환',api:'recipe return value',desc:'draft를 수정하지 않고 recipe에서 완전히 새로운 상태를 반환한다.',run(){const base={status:'idle',data:null};const next=produce(base,()=>({status:'ready',data:[1,2,3]}));return {base,next};}},
+ {id:'nothing',title:'undefined 상태 생성',api:'nothing',desc:'명시적으로 undefined를 결과로 만들 때 nothing 심볼을 반환한다.',run(){const base={active:true};const next=produce(base,()=>nothing);return {base,'next is undefined':next===undefined};}},
+ {id:'patches',title:'Patches 생성',api:'produceWithPatches',desc:'정방향·역방향 패치를 동시에 생성하여 변경 이력을 확인한다.',run(){const base={todos:[{id:1,text:'A',done:false}],filter:'all'};const [next,patches,inversePatches]=produceWithPatches(base,d=>{d.todos[0].done=true;d.todos.push({id:2,text:'B',done:false});d.filter='open'});return {base,next,patches,inversePatches};}},
+ {id:'undo',title:'Undo / Redo',api:'applyPatches',desc:'inverse patches로 실행 취소하고 patches로 다시 적용한다.',run(){const base={value:10,tags:['a']};const [changed,p,ip]=produceWithPatches(base,d=>{d.value=99;d.tags.push('b')});const undone=applyPatches(changed,ip);const redone=applyPatches(undone,p);return {base,changed,undone,redone,'undo equals base':pretty(undone)===pretty(base)};}},
+ {id:'listener',title:'Patch listener',api:'produce(base, recipe, listener)',desc:'produce의 세 번째 인수에서 patches를 즉시 수신한다.',run(){const base={x:1};let captured={};const next=produce(base,d=>{d.x=2},(patches,inverse)=>captured={patches,inverse});return {next,captured};}},
+ {id:'manual',title:'수동 Draft 생명주기',api:'createDraft · finishDraft',desc:'여러 단계에서 draft를 수정한 뒤 마지막에 한 번 확정한다.',run(){const base={cart:[],total:0};const draft=createDraft(base);draft.cart.push({name:'Book',price:12});draft.total+=12;const snapshot=current(draft);draft.cart.push({name:'Pen',price:3});draft.total+=3;const next=finishDraft(draft);return {base,snapshot,next};}},
+ {id:'inspect',title:'Draft 검사',api:'isDraft · original · current',desc:'recipe 내부에서 Proxy draft 여부, 원본, 현재 snapshot을 비교한다.',run(){const base={item:{qty:1}};let info;const next=produce(base,d=>{d.item.qty=2;info={'root is draft':isDraft(d),'child is draft':isDraft(d.item),original:original(d),snapshot:current(d)};d.item.qty=3});return {info,next};}},
+ {id:'draftable',title:'Draft 가능 여부',api:'isDraftable',desc:'어떤 값이 Immer draft로 처리될 수 있는지 확인한다.',run(){class PlainClass{};class EnabledClass{[immerable]=true};return {plainObject:isDraftable({}),array:isDraftable([]),map:isDraftable(new Map()),set:isDraftable(new Set()),date:isDraftable(new Date()),plainClass:isDraftable(new PlainClass()),immerableClass:isDraftable(new EnabledClass())};}},
+ {id:'map',title:'Map 지원',api:'enableMapSet · Map.set/delete',desc:'Map의 추가, 수정, 삭제와 내부 객체 변경을 추적한다.',run(){const base=new Map([['a',{score:1}],['b',{score:2}]]);const next=produce(base,d=>{d.get('a').score=10;d.set('c',{score:3});d.delete('b')});return {base,next,'a object copied':base.get('a')!==next.get('a')};}},
+ {id:'set',title:'Set 지원',api:'enableMapSet · Set.add/delete',desc:'Set의 원소 추가·삭제 결과를 새 Set으로 만든다.',run(){const base=new Set(['red','blue']);const next=produce(base,d=>{d.delete('red');d.add('green')});return {base,next,'base !== next':base!==next};}},
+ {id:'class',title:'클래스 인스턴스',api:'immerable',desc:'immerable 표시된 클래스의 prototype을 유지한 채 draft한다.',run(){class Counter{static [immerable]=true;constructor(value){this.value=value}double(){return this.value*2}}const base=new Counter(4);const next=produce(base,d=>{d.value=7});return {baseValue:base.value,nextValue:next.value,'instanceof Counter':next instanceof Counter,'method result':next.double()};}},
+ {id:'freeze',title:'자동 동결',api:'setAutoFreeze · Object.isFrozen',desc:'기본 자동 동결과 비활성화 상태를 비교한다.',run(){setAutoFreeze(true);const frozen=produce({nested:{x:1}},d=>{d.nested.x=2});setAutoFreeze(false);const mutable=produce({nested:{x:1}},d=>{d.nested.x=2});mutable.nested.x=9;setAutoFreeze(true);return {'frozen root':Object.isFrozen(frozen),'frozen nested':Object.isFrozen(frozen.nested),'mutable root':Object.isFrozen(mutable),'mutated after produce':mutable.nested.x};}},
+ {id:'manual-freeze',title:'수동 freeze',api:'freeze(obj, deep?)',desc:'일반 객체를 얕게 또는 재귀적으로 동결한다.',run(){const shallow={a:{x:1}};freeze(shallow);const deep={a:{x:1}};freeze(deep,true);return {'shallow root':Object.isFrozen(shallow),'shallow child':Object.isFrozen(shallow.a),'deep root':Object.isFrozen(deep),'deep child':Object.isFrozen(deep.a)};}},
+ {id:'instance',title:'독립 Immer 인스턴스',api:'new Immer(options)',desc:'전역 설정과 분리된 autoFreeze 설정을 가진 인스턴스를 만든다.',run(){const loose=new Immer({autoFreeze:false});const strict=new Immer({autoFreeze:true});const a=loose.produce({x:1},d=>{d.x=2});const b=strict.produce({x:1},d=>{d.x=2});return {'loose frozen':Object.isFrozen(a),'strict frozen':Object.isFrozen(b),a,b};}},
+ {id:'strict-copy',title:'Strict shallow copy',api:'setUseStrictShallowCopy',desc:'비열거 속성을 가능한 한 복사하는 엄격 모드를 비교한다.',run(){const base={visible:1};Object.defineProperty(base,'hidden',{value:2,enumerable:false,writable:true,configurable:true});setUseStrictShallowCopy(true);const strict=produce(base,d=>{d.visible=9});setUseStrictShallowCopy(false);const loose=produce(base,d=>{d.visible=8});return {'strict has hidden':Object.prototype.hasOwnProperty.call(strict,'hidden'),'strict descriptor':Object.getOwnPropertyDescriptor(strict,'hidden'),'loose has hidden':Object.prototype.hasOwnProperty.call(loose,'hidden')};}},
+ {id:'strict-iteration',title:'Strict iteration',api:'setUseStrictIteration',desc:'심볼·비열거 속성의 탐색 정책을 전환하여 결과를 확인한다.',run(){const sym=Symbol('secret');const base={a:1,[sym]:2};Object.defineProperty(base,'hidden',{value:3,enumerable:false,writable:true});setUseStrictIteration(true);const strict=produce(base,d=>{d.a=10});setUseStrictIteration(false);const loose=produce(base,d=>{d.a=20});return {'strict symbols':Object.getOwnPropertySymbols(strict).length,'strict hidden':Object.prototype.hasOwnProperty.call(strict,'hidden'),'loose symbols':Object.getOwnPropertySymbols(loose).length,'loose hidden':Object.prototype.hasOwnProperty.call(loose,'hidden')};}},
+ {id:'nested-produce',title:'중첩 produce 병합 주의',api:'nested produce',desc:'중첩 produce의 반환값은 바깥 draft에 직접 반영해야 한다.',run(){const base={user:{name:'A',age:20}};const correct=produce(base,d=>{d.user=produce(d.user,u=>{u.age++})});const ignored=produce(base,d=>{produce(d.user,u=>{u.age++})});return {base,correct,ignored,'correct age':correct.user.age,'ignored age':ignored.user.age};}},
+ {id:'external',title:'외부 객체 주의',api:'data not originating from state',desc:'외부에서 들어온 객체는 자동 draft가 아닐 수 있어 직접 변경 시 원본도 변할 수 있다.',run(){const external={done:false};const base={items:[]};const next=produce(base,d=>{d.items.push(external);external.done=true});return {external,base,next,'same external reference':next.items[0]===external,note:'외부 객체 자체를 recipe 밖에서 변경했으므로 원본 참조도 변경됨'};}},
+ {id:'benchmark',title:'대량 업데이트 미니 벤치마크',api:'produce performance',desc:'5,000개 항목 중 일부를 변경하고 소요시간과 구조 공유 수를 측정한다.',run(){const base=Array.from({length:5000},(_,i)=>({id:i,value:i,group:{key:i%10}}));const t0=performance.now();const next=produce(base,d=>{for(let i=0;i<d.length;i+=250)d[i].value*=-1});const ms=performance.now()-t0;let shared=0;for(let i=0;i<base.length;i++)if(base[i]===next[i])shared++;return {items:base.length,changed:base.length-shared,shared,'elapsed ms':Number(ms.toFixed(3))};}}
+];
+
+const grid=document.querySelector('#grid');
+function makeCard(d){const el=document.createElement('article');el.className='card';el.id=d.id;el.dataset.search=(d.title+' '+d.api+' '+d.desc).toLowerCase();el.innerHTML=`<div class="card-head"><div><h2>${d.title}</h2><span class="api">${d.api}</span></div></div><div class="body"><p class="desc">${d.desc}</p><div class="actions"><button class="run primary" data-run="${d.id}">실행</button><button class="run" data-copy="${d.id}">결과 복사</button></div><pre id="out-${d.id}">실행 전</pre></div>`;return el}
+demos.forEach(d=>grid.appendChild(makeCard(d)));
+document.querySelector('#demoCount').textContent=demos.length;
+document.querySelector('#navLinks').innerHTML=demos.map(d=>`<a href="#${d.id}" data-nav="${d.id}">${d.title}</a>`).join('');
+
+function execute(id){const d=demos.find(x=>x.id===id);const out=document.querySelector('#out-'+id);try{const result=d.run();out.textContent=pretty(result);out.style.borderColor='#1d705a';successes++;document.querySelector('#successCount').textContent=successes;}catch(err){out.textContent='ERROR\n'+(err?.stack||err);out.style.borderColor='#9f3650';}}
+
+grid.addEventListener('click',async e=>{const run=e.target.closest('[data-run]');if(run)execute(run.dataset.run);const copy=e.target.closest('[data-copy]');if(copy){const text=document.querySelector('#out-'+copy.dataset.copy).textContent;try{await navigator.clipboard.writeText(text);copy.textContent='복사됨';setTimeout(()=>copy.textContent='결과 복사',900)}catch{copy.textContent='복사 실패'}}});
+document.querySelector('#runAll').onclick=()=>demos.forEach((d,i)=>setTimeout(()=>execute(d.id),i*20));
+document.querySelector('#clearAll').onclick=()=>document.querySelectorAll('pre[id^="out-"]').forEach(x=>{x.textContent='실행 전';x.style.borderColor=''});
+document.querySelector('#toggleCompact').onclick=()=>{document.querySelector('.grid').style.gap=document.querySelector('.grid').style.gap==='6px'?'16px':'6px'};
+document.querySelector('#filter').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll('.card').forEach(c=>c.classList.toggle('hidden',q&&!c.dataset.search.includes(q)));document.querySelectorAll('[data-nav]').forEach(a=>{const d=demos.find(x=>x.id===a.dataset.nav);a.classList.toggle('hidden',q&&!((d.title+' '+d.api+' '+d.desc).toLowerCase().includes(q)))})});
+</script>
+</body>
+</html>
