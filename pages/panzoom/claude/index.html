@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Panzoom</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .pz-wrap {
+    width: 100%;
+    max-width: 560px;
+    height: 320px;
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #eef1f6;
+    cursor: grab;
+  }
+  .pz-wrap:active { cursor: grabbing; }
+  .pz-wrap img { max-width: none; display: block; user-select: none; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Panzoom 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Panzoom</strong>은 CSS transform만으로 <strong>어떤 요소든</strong>(이미지, SVG, video,
+    canvas, 텍스트...) 손쉽게 패닝·줌 기능을 넣어주는 아주 가벼운(~3.7kb) 라이브러리입니다.
+    <ul>
+      <li><code>Panzoom(element, options)</code> 한 줄로 드래그 패닝 + 핀치 줌이 자동으로 활성화됨</li>
+      <li><code>zoomIn()</code>/<code>zoomOut()</code>/<code>zoom(scale)</code>/<code>reset()</code>으로 프로그램에서 직접 제어</li>
+      <li><code>zoomWithWheel</code>을 휠 이벤트에 연결하면 마우스 휠로 확대·축소</li>
+      <li><code>zoomToPoint(scale, point)</code>로 특정 지점을 기준으로 확대 — 클릭한 자리가 화면 중심을 벗어나지 않고 그대로 확대됨</li>
+      <li><code>panzoomchange</code> 커스텀 이벤트로 현재 배율·이동값을 실시간 구독</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 배치도는 실제 수협중앙회 위판장 도면이 아니라, ffmpeg로 생성한 <strong>가상의 예시
+      도면</strong>입니다(A/B/C구역, 중앙 통로, 냉동 보관 구역이라는 명칭도 가상). 다른 외부 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 확대/축소/이동</h2>
+    <div class="desc">이미지를 드래그해서 이동하고, 버튼으로 확대·축소·초기화해보세요.</div>
+    <div class="pz-wrap" id="wrap1">
+      <img id="elem1" src="floorplan.jpg" width="1600" height="1000" alt="가상 위판장 배치도" />
+    </div>
+    <div class="controls">
+      <button id="zoomInBtn1">확대 +</button>
+      <button id="zoomOutBtn1">축소 -</button>
+      <button class="ghost" id="resetBtn1">초기화</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const panzoom = Panzoom(elem, { maxScale: 5, minScale: 0.5 });
+
+zoomInBtn.addEventListener('click', panzoom.zoomIn);
+zoomOutBtn.addEventListener('click', panzoom.zoomOut);
+resetBtn.addEventListener('click', panzoom.reset);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 마우스 휠로 확대/축소</h2>
+    <div class="desc">이미지 위에서 마우스 휠을 굴려보세요.</div>
+    <div class="pz-wrap" id="wrap2">
+      <img id="elem2" src="floorplan.jpg" width="1600" height="1000" alt="가상 위판장 배치도" />
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const panzoom = Panzoom(elem, { maxScale: 5, minScale: 0.5 });
+wrapEl.addEventListener('wheel', panzoom.zoomWithWheel);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 특정 지점 기준으로 확대</h2>
+    <div class="desc">이미지의 원하는 지점을 더블클릭하면 그 지점을 중심으로 확대됩니다. 다시 더블클릭하면 초기화됩니다.</div>
+    <div class="pz-wrap" id="wrap3">
+      <img id="elem3" src="floorplan.jpg" width="1600" height="1000" alt="가상 위판장 배치도" />
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">elem.addEventListener('dblclick', (event) => {
+  panzoom.zoomToPoint(2, event); // 클릭 지점을 중심으로 2배 확대
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. panzoomchange 이벤트로 상태 추적</h2>
+    <div class="desc">아래 이미지를 드래그하거나 휠로 확대/축소하면, 현재 배율과 이동값이 실시간으로 표시됩니다.</div>
+    <div class="pz-wrap" id="wrap4">
+      <img id="elem4" src="floorplan.jpg" width="1600" height="1000" alt="가상 위판장 배치도" />
+    </div>
+    <div class="result-box" id="output4">배율: 1.00 · 이동: (0, 0)</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">elem.addEventListener('panzoomchange', (event) => {
+  const { x, y, scale } = event.detail;
+  console.log(`배율 ${scale}, 이동 (${x}, ${y})`);
+});</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.6.2/dist/panzoom.min.js"></script>
+  <script>
+    const OPTS = { maxScale: 5, minScale: 0.5, startScale: 1 };
+
+    // ---------- 1. 기본 확대/축소/이동 ----------
+    const elem1 = document.getElementById('elem1');
+    const panzoom1 = Panzoom(elem1, OPTS);
+    document.getElementById('zoomInBtn1').addEventListener('click', panzoom1.zoomIn);
+    document.getElementById('zoomOutBtn1').addEventListener('click', panzoom1.zoomOut);
+    document.getElementById('resetBtn1').addEventListener('click', panzoom1.reset);
+
+    // ---------- 2. 마우스 휠 확대/축소 ----------
+    const elem2 = document.getElementById('elem2');
+    const panzoom2 = Panzoom(elem2, OPTS);
+    document.getElementById('wrap2').addEventListener('wheel', panzoom2.zoomWithWheel);
+
+    // ---------- 3. 특정 지점 확대 ----------
+    const elem3 = document.getElementById('elem3');
+    const panzoom3 = Panzoom(elem3, OPTS);
+    let zoomedIn3 = false;
+    elem3.addEventListener('dblclick', (event) => {
+      if (zoomedIn3) {
+        panzoom3.reset();
+      } else {
+        panzoom3.zoomToPoint(2.5, event);
+      }
+      zoomedIn3 = !zoomedIn3;
+    });
+
+    // ---------- 4. 이벤트로 상태 추적 ----------
+    const elem4 = document.getElementById('elem4');
+    const panzoom4 = Panzoom(elem4, OPTS);
+    document.getElementById('wrap4').addEventListener('wheel', panzoom4.zoomWithWheel);
+    const output4 = document.getElementById('output4');
+    elem4.addEventListener('panzoomchange', (event) => {
+      const { x, y, scale } = event.detail;
+      output4.textContent = `배율: ${scale.toFixed(2)} · 이동: (${x.toFixed(0)}, ${y.toFixed(0)})`;
+    });
+  </script>
+</body>
+</html>
