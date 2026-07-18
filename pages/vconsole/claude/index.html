@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>vConsole</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .sample-area {
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fafbfc;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .member-card {
+    display: inline-block;
+    background: #fff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  .member-card .label { color: #888; font-size: 11.5px; }
+  .member-card .val { font-weight: 700; font-size: 15px; margin-top: 2px; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>vConsole 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>vConsole</strong>는 Tencent가 만든 <strong>모바일 브라우저용 경량 개발자도구</strong>로,
+    위챗 미니프로그램의 공식 디버깅 도구이기도 합니다. 페이지에 삽입하면 화면 한쪽에 진입 버튼이
+    뜨고, 누르면 Log/System/Network/Element/Storage 탭으로 구성된 패널이 열립니다.
+    <ul>
+      <li><code>new VConsole()</code>으로 초기화하면 전역 <code>console</code> 호출을 자동으로 가로챔</li>
+      <li><code>console.log('[system]', ...)</code>처럼 첫 인자에 <code>[system]</code> 태그를 붙이면 System 탭으로 따로 라우팅됨</li>
+      <li>Network 탭은 <code>fetch</code>/<code>XMLHttpRequest</code> 요청을 별도 설정 없이 자동 캡처</li>
+      <li>Element 탭은 실제 DOM 트리를 보여주며, 노드를 펼쳐두면 이후 변경사항이 실시간으로 반영됨</li>
+      <li><code>vConsole.addPlugin()</code>으로 커스텀 탭을 직접 추가 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판장·조합원 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 다른 외부 API는 사용하지 않습니다. 화면 우측 하단의 "vConsole" 버튼이
+      진입 버튼입니다. (검증 중 발견: <code>vConsole.showPlugin(이름)</code>은 패널이 이미 열려있을
+      때만 탭을 전환하고, 패널이 닫혀있으면 그 자체로는 열지 않습니다 — 아래 데모는 이를 감안해
+      항상 인자 없는 <code>show()</code>를 먼저 호출합니다. 또한 패널이 화면 하단 대부분을 덮기
+      때문에, 다른 섹션 버튼을 가리지 않도록 약 2.5초 뒤 자동으로 닫힙니다.)
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 콘솔 로그 캡처 &amp; System 탭 라우팅</h2>
+    <div class="desc">일반 <code>console.log/warn/error</code>는 Log 탭에 쌓입니다. 첫 인자를 <code>'[system]'</code>로 시작하면 같은 <code>console.log</code>인데도 System 탭으로 따로 분류됩니다.</div>
+    <div class="controls">
+      <button class="action" id="logBtn1">일반 로그 3건 발생</button>
+      <button class="action" id="systemLogBtn1">[system] 태그 로그 발생</button>
+    </div>
+    <div class="result-box" id="output1">아직 실행 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">console.log('위판 접수 완료');
+console.warn('재고 부족 경고');
+console.error('가상 위판 서버 응답 지연');
+// 아래는 System 탭으로 라우팅됨
+console.log('[system]', '가상 위판장 서버 상태 점검');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. Network 자동 캡처</h2>
+    <div class="desc">버튼을 누르면 가상 위판 데이터 파일(<code>auction-data.json</code>)을 실제로 <code>fetch</code>합니다. vConsole은 별도 설정 없이 이 요청을 자동으로 가로채 Network 탭에 기록합니다.</div>
+    <div class="controls">
+      <button class="action" id="fetchBtn2">가상 위판 데이터 fetch</button>
+    </div>
+    <div class="result-box" id="output2">아직 요청 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const res = await fetch('./auction-data.json');
+const data = await res.json();
+// 별도 후킹 코드 없이 Network 탭에 method/status/응답이 자동으로 기록됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Element 탭 — 실시간 DOM 트리</h2>
+    <div class="desc">버튼을 누르면 아래 조합원 카드 영역에 새 카드가 실제로 추가됩니다. Element 탭은 트리가 기본적으로 접혀있고 노드를 펼쳐야 그 아래 내용이 보이는데(데모 편의상 자동으로 펼쳐줍니다), 일단 펼쳐진 노드는 이후 추가되는 자식 노드를 클릭 없이도 실시간으로 반영합니다.</div>
+    <div class="sample-area" id="memberArea">
+      <div class="member-card">
+        <div class="label">가상 조합원 번호</div>
+        <div class="val">MEM-2026-0101</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="action" id="addMemberBtn3">조합원 카드 추가 + Element 탭 열기</button>
+    </div>
+    <div class="result-box" id="output3">아직 추가 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">memberArea.appendChild(newCardEl);
+// Element 탭에서 해당 노드가 펼쳐진 상태라면 MutationObserver 기반으로
+// 별도 새로고침 없이 새 노드가 즉시 트리에 나타남
+// (기본은 접힌 트리라서 처음엔 노드를 눌러 펼쳐야 자식이 보임)</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. Storage 탭</h2>
+    <div class="desc">버튼을 누르면 가상 위판장 설정값을 <code>localStorage</code>에 저장합니다. Storage 탭 → LocalStorage 서브탭에서 실제로 저장된 값을 확인할 수 있습니다.</div>
+    <div class="controls">
+      <button class="action" id="storageBtn4">가상 설정값 localStorage에 저장</button>
+    </div>
+    <div class="result-box" id="output4">아직 저장 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">localStorage.setItem('suhyup_demo_port', 'PORT-B-2026');
+// Storage 탭 → LocalStorage 서브탭에서 key/value가 실제로 표시됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>5. 커스텀 플러그인(탭) 추가</h2>
+    <div class="desc"><code>VConsole.VConsolePlugin</code>으로 나만의 탭을 만들어 패널에 추가할 수 있습니다. 버튼을 누르면 "위판 요약" 탭이 새로 생기고 그 안에 커스텀 내용이 렌더링됩니다.</div>
+    <div class="controls">
+      <button class="action" id="pluginBtn5">커스텀 탭 추가</button>
+    </div>
+    <div class="result-box" id="output5">아직 추가 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const plugin = new VConsole.VConsolePlugin('auction_summary', '위판 요약');
+plugin.on('renderTab', (callback) => {
+  callback('&lt;div&gt;오늘 가상 위판 총액: 1,234,000원&lt;/div&gt;');
+});
+vConsole.addPlugin(plugin);
+vConsole.showPlugin('auction_summary');</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/vconsole@3.15.1/dist/vconsole.min.js"></script>
+  <script>
+    const vConsole = new VConsole();
+
+    // vConsole.showPlugin(이름)은 패널이 이미 열려있을 때만 탭을 전환할 뿐, 패널이
+    // 닫혀있으면 그 자체로는 열지 않는다(실제로 검증해 확인) — 인자 없는 show()로
+    // 먼저 패널을 연 뒤 탭을 전환한다. 패널이 화면 하단을 크게 덮으므로 잠시 후 자동으로 닫는다.
+    let autoHideTimer = null;
+    function openVConsoleTab(name) {
+      vConsole.show();
+      vConsole.showPlugin(name);
+      if (autoHideTimer) clearTimeout(autoHideTimer);
+      autoHideTimer = setTimeout(() => vConsole.hide(), 2500);
+    }
+
+    function vconsoleRoot() {
+      return document.getElementById('__vconsole');
+    }
+
+    function logRowCount() {
+      const root = vconsoleRoot();
+      return root ? root.querySelectorAll('#__vc_plug_default .vc-log-row').length : 0;
+    }
+    function systemRowCount() {
+      const root = vconsoleRoot();
+      return root ? root.querySelectorAll('#__vc_plug_system .vc-log-row').length : 0;
+    }
+    function networkGroupCount() {
+      const root = vconsoleRoot();
+      return root ? root.querySelectorAll('#__vc_plug_network .vc-group').length : 0;
+    }
+
+    // ---------- 1. 콘솔 로그 캡처 & System 라우팅 ----------
+    document.getElementById('logBtn1').addEventListener('click', () => {
+      console.log('위판 접수 완료');
+      console.warn('재고 부족 경고');
+      console.error('가상 위판 서버 응답 지연');
+      openVConsoleTab('default');
+      setTimeout(() => {
+        const output1 = document.getElementById('output1');
+        output1.textContent = `Log 탭에 실제로 캡처된 로그: ${logRowCount()}건`;
+        output1.classList.add('ok');
+      }, 150);
+    });
+    document.getElementById('systemLogBtn1').addEventListener('click', () => {
+      console.log('[system]', '가상 위판장 서버 상태 점검');
+      openVConsoleTab('system');
+      setTimeout(() => {
+        const output1 = document.getElementById('output1');
+        output1.textContent = `[system] 태그 로그는 Log 탭이 아닌 System 탭으로 라우팅됨 — System 탭 항목 수: ${systemRowCount()}건`;
+        output1.classList.add('ok');
+      }, 150);
+    });
+
+    // ---------- 2. Network 자동 캡처 ----------
+    document.getElementById('fetchBtn2').addEventListener('click', async () => {
+      const output2 = document.getElementById('output2');
+      output2.textContent = '요청 중...';
+      const res = await fetch('./auction-data.json');
+      const data = await res.json();
+      openVConsoleTab('network');
+      setTimeout(() => {
+        output2.textContent =
+          `응답 수신: ${data.port} / ${data.records.length}건\n` +
+          `Network 탭에 자동 캡처된 요청 그룹: ${networkGroupCount()}건`;
+        output2.classList.add('ok');
+      }, 150);
+    });
+
+    // ---------- 3. Element 실시간 DOM 트리 ----------
+    let memberCount = 1;
+    document.getElementById('addMemberBtn3').addEventListener('click', () => {
+      memberCount++;
+      const card = document.createElement('div');
+      card.className = 'member-card';
+      card.style.marginLeft = '8px';
+      card.innerHTML = `<div class="label">가상 조합원 번호</div><div class="val">MEM-2026-0${memberCount}01</div>`;
+      document.getElementById('memberArea').appendChild(card);
+
+      vConsole.show();
+      vConsole.showPlugin('element');
+      // 새 카드는 body 바로 아래가 아니라 여러 단계 안쪽(section > sample-area > memberArea)에
+      // 있으므로, 열려있는 시작 태그 노드를 반복적으로 펼쳐 내려가며 실제로 보이게 만든다
+      // (vConsole이 제공하는 실제 클릭-펼치기 UI를 여러 번 자동 클릭하는 것일 뿐, 트리 자체를
+      // 조작하는 것은 아님)
+      let expandPass = 0;
+      const expandTimer = setInterval(() => {
+        const root = vconsoleRoot();
+        const nodes = root.querySelectorAll('#__vc_plug_element .vcelm-node');
+        nodes.forEach((n) => {
+          const text = n.textContent.trim();
+          if (text.startsWith('<') && !text.startsWith('</') && !n.parentElement.classList.contains('vc-toggle')) {
+            n.click();
+          }
+        });
+        expandPass++;
+        if (expandPass >= 6) clearInterval(expandTimer);
+      }, 200);
+      if (autoHideTimer) clearTimeout(autoHideTimer);
+      autoHideTimer = setTimeout(() => vConsole.hide(), 4500);
+
+      const output3 = document.getElementById('output3');
+      output3.textContent = `조합원 카드를 실제로 추가했습니다 (총 ${memberCount}장). Element 탭 트리를 자동으로 펼쳐서 새 카드가 보이는지 확인해보세요.`;
+      output3.classList.add('ok');
+    });
+
+    // ---------- 4. Storage 탭 ----------
+    document.getElementById('storageBtn4').addEventListener('click', () => {
+      localStorage.setItem('suhyup_demo_port', 'PORT-B-2026');
+      openVConsoleTab('storage');
+      const output4 = document.getElementById('output4');
+      output4.textContent = "localStorage에 suhyup_demo_port = 'PORT-B-2026' 저장 완료. Storage 탭 → LocalStorage 서브탭에서 확인해보세요.";
+      output4.classList.add('ok');
+    });
+
+    // ---------- 5. 커스텀 플러그인 ----------
+    let pluginAdded = false;
+    document.getElementById('pluginBtn5').addEventListener('click', () => {
+      const output5 = document.getElementById('output5');
+      if (!pluginAdded) {
+        const plugin = new VConsole.VConsolePlugin('auction_summary', '위판 요약');
+        plugin.on('renderTab', (callback) => {
+          callback('<div style="padding:8px;">오늘 가상 위판 총액: 1,234,000원 (전복 8,640,000원 + 참조기 10,920,000원, 예시 수치)</div>');
+        });
+        const added = vConsole.addPlugin(plugin);
+        pluginAdded = true;
+        output5.textContent = `커스텀 탭 '위판 요약' 추가 ${added ? '성공' : '실패'}. 패널 상단 탭 목록에 새로 생긴 것을 확인해보세요.`;
+      } else {
+        output5.textContent = "이미 '위판 요약' 탭이 추가되어 있습니다.";
+      }
+      openVConsoleTab('auction_summary');
+      output5.classList.add('ok');
+    });
+  </script>
+</body>
+</html>
