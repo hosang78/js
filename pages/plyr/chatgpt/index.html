@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Plyr 종합 기능 샘플</title>
+
+  <!-- Plyr CDN -->
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+  <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel2: #172033;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: #263244;
+      --accent: #00b3ff;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --radius: 18px;
+      --shadow: 0 18px 45px rgba(0,0,0,.34);
+
+      /* Plyr theme variables */
+      --plyr-color-main: var(--accent);
+      --plyr-video-background: #020617;
+      --plyr-menu-background: #111827;
+      --plyr-menu-color: #e5e7eb;
+      --plyr-tooltip-background: #111827;
+      --plyr-tooltip-color: #e5e7eb;
+      --plyr-control-radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(0,179,255,.18), transparent 30%),
+        radial-gradient(circle at 80% 10%, rgba(34,197,94,.10), transparent 28%),
+        linear-gradient(135deg, #020617 0%, #0f172a 55%, #111827 100%);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 34px 18px 20px;
+      max-width: 1260px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero-card, .panel {
+      background: rgba(17, 24, 39, .86);
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-card { padding: 26px; }
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 4vw, 46px);
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      border: 1px solid rgba(0,179,255,.28);
+      background: rgba(0,179,255,.08);
+      color: #dff7ff;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .feature-box {
+      padding: 22px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(148,163,184,.12);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .feature-item:last-child { border-bottom: none; }
+    .dot {
+      width: 9px;
+      height: 9px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex: 0 0 auto;
+      box-shadow: 0 0 18px rgba(0,179,255,.8);
+    }
+
+    main {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 0 18px 44px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 12px 0;
+      background: linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.76));
+      backdrop-filter: blur(10px);
+    }
+
+    .tab {
+      border: 1px solid rgba(148,163,184,.22);
+      background: rgba(17,24,39,.78);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 9px 13px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #00131e;
+    }
+
+    section.demo-section { display: none; }
+    section.demo-section.active { display: block; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel { padding: 18px; }
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: -0.03em;
+    }
+    .panel h3 {
+      margin: 18px 0 8px;
+      font-size: 15px;
+    }
+    .desc {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 0 0 14px;
+      font-size: 14px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 9px;
+      margin: 14px 0;
+    }
+
+    button, select, input[type="range"], input[type="text"] {
+      font: inherit;
+    }
+
+    .btn {
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(15,23,42,.86);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 11px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary {
+      background: var(--accent);
+      color: #00131e;
+      border-color: var(--accent);
+    }
+    .btn.good {
+      background: rgba(34,197,94,.15);
+      border-color: rgba(34,197,94,.35);
+    }
+    .btn.warn {
+      background: rgba(245,158,11,.13);
+      border-color: rgba(245,158,11,.32);
+    }
+
+    .form-row {
+      display: grid;
+      gap: 6px;
+      margin: 10px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(2,6,23,.75);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 11px;
+      outline: none;
+    }
+    input[type="range"] { width: 100%; }
+
+    .status {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .stat {
+      background: rgba(2,6,23,.35);
+      border: 1px solid rgba(148,163,184,.14);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .stat b {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stat span { font-size: 18px; font-weight: 800; }
+
+    .log {
+      height: 230px;
+      overflow: auto;
+      background: #020617;
+      border: 1px solid rgba(148,163,184,.16);
+      border-radius: 14px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+    }
+
+    .playlist {
+      display: grid;
+      gap: 8px;
+    }
+    .playlist button {
+      text-align: left;
+      display: grid;
+      gap: 3px;
+    }
+    .playlist small { color: var(--muted); }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+    }
+
+    .swatch {
+      height: 42px;
+      border-radius: 13px;
+      border: 1px solid rgba(255,255,255,.16);
+      cursor: pointer;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      border: 1px solid rgba(148,163,184,.35);
+      border-bottom-width: 3px;
+      border-radius: 7px;
+      font-size: 12px;
+      color: #e2e8f0;
+      background: rgba(2,6,23,.55);
+      margin: 2px;
+    }
+
+    .code {
+      background: #020617;
+      color: #cbd5e1;
+      border-radius: 14px;
+      padding: 12px;
+      overflow: auto;
+      border: 1px solid rgba(148,163,184,.16);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .notice {
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(245,158,11,.35);
+      background: rgba(245,158,11,.10);
+      color: #fde68a;
+      line-height: 1.5;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    footer {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 0 18px 30px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 900px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .controls-grid, .status { grid-template-columns: 1fr; }
+      .tabs { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <div class="hero-card">
+        <h1>Plyr 종합 기능 샘플</h1>
+        <p class="lead">
+          HTML5 Video, Audio, YouTube, Vimeo 플레이어를 한 화면에서 비교하고
+          자막, 품질, 속도, 루프, 전체화면, Picture-in-Picture, AirPlay, 키보드, 이벤트, API 제어를 테스트하는 샘플입니다.
+        </p>
+        <div class="badge-row">
+          <span class="badge">HTML5 Video</span>
+          <span class="badge">HTML5 Audio</span>
+          <span class="badge">YouTube</span>
+          <span class="badge">Vimeo</span>
+          <span class="badge">Captions</span>
+          <span class="badge">Quality</span>
+          <span class="badge">Speed</span>
+          <span class="badge">Loop</span>
+          <span class="badge">Events</span>
+          <span class="badge">API</span>
+          <span class="badge">Theme</span>
+        </div>
+      </div>
+
+      <div class="panel feature-box">
+        <div class="feature-item"><span class="dot"></span><span>컨트롤 메뉴: 재생, 진행바, 시간, 음소거, 볼륨, 자막, 설정, PiP, AirPlay, 전체화면</span></div>
+        <div class="feature-item"><span class="dot"></span><span>API 제어: play, pause, restart, rewind, forward, seek, speed, volume, mute, fullscreen</span></div>
+        <div class="feature-item"><span class="dot"></span><span>이벤트 로그: ready, play, pause, timeupdate, ratechange, volumechange, seeking, ended 등</span></div>
+        <div class="feature-item"><span class="dot"></span><span>소스 교체: video/audio/YouTube/Vimeo 탭에서 각각 테스트</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <nav class="tabs" aria-label="Plyr 샘플 탭">
+      <button class="tab active" data-tab="video">HTML5 Video</button>
+      <button class="tab" data-tab="audio">Audio</button>
+      <button class="tab" data-tab="youtube">YouTube</button>
+      <button class="tab" data-tab="vimeo">Vimeo</button>
+      <button class="tab" data-tab="api">API·이벤트</button>
+      <button class="tab" data-tab="theme">테마·설정</button>
+      <button class="tab" data-tab="notes">구현 메모</button>
+    </nav>
+
+    <section id="video" class="demo-section active">
+      <div class="grid">
+        <div class="panel">
+          <h2>1. HTML5 Video + 자막 + 포스터 + 다중 화질</h2>
+          <p class="desc">
+            MP4/WebM 소스, poster, playsinline, crossorigin, track captions, settings 메뉴, quality 메뉴를 확인합니다.
+          </p>
+
+          <video id="videoPlayer" playsinline controls crossorigin poster="https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-HD.jpg">
+            <source src="https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-576p.mp4" type="video/mp4" size="576" />
+            <source src="https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-720p.mp4" type="video/mp4" size="720" />
+            <source src="https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-1080p.mp4" type="video/mp4" size="1080" />
+            <track kind="captions" label="English" srclang="en" src="https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-HD.en.vtt" default />
+            <track kind="captions" label="Français" srclang="fr" src="https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-HD.fr.vtt" />
+          </video>
+
+          <div class="notice">
+            일부 브라우저는 Picture-in-Picture, AirPlay, 자동재생, 전체화면 API를 보안 정책이나 기기 지원 여부에 따라 제한할 수 있습니다.
+          </div>
+        </div>
+
+        <aside class="panel">
+          <h2>Video 제어판</h2>
+          <div class="controls-grid">
+            <button class="btn primary" data-action="play" data-player="video">재생</button>
+            <button class="btn" data-action="pause" data-player="video">일시정지</button>
+            <button class="btn" data-action="restart" data-player="video">처음부터</button>
+            <button class="btn" data-action="fullscreen" data-player="video">전체화면</button>
+            <button class="btn" data-action="rewind" data-player="video">-10초</button>
+            <button class="btn" data-action="forward" data-player="video">+10초</button>
+            <button class="btn" data-action="mute" data-player="video">음소거 전환</button>
+            <button class="btn" data-action="loop" data-player="video">루프 전환</button>
+          </div>
+
+          <label class="form-row">재생 속도
+            <select data-set="speed" data-player="video">
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </label>
+
+          <label class="form-row">볼륨
+            <input type="range" min="0" max="1" step="0.05" value="0.75" data-set="volume" data-player="video" />
+          </label>
+
+          <label class="form-row">탐색 위치: <span id="videoSeekLabel">0초</span>
+            <input type="range" min="0" max="100" step="1" value="0" data-set="seek" data-player="video" />
+          </label>
+
+          <div class="status">
+            <div class="stat"><b>상태</b><span id="videoState">대기</span></div>
+            <div class="stat"><b>현재 시간</b><span id="videoTime">0:00</span></div>
+            <div class="stat"><b>속도</b><span id="videoSpeed">1x</span></div>
+            <div class="stat"><b>볼륨</b><span id="videoVolume">75%</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="audio" class="demo-section">
+      <div class="grid">
+        <div class="panel">
+          <h2>2. HTML5 Audio + 플레이리스트</h2>
+          <p class="desc">Plyr는 오디오에도 동일한 컨트롤 UI를 적용할 수 있습니다. 아래 버튼으로 오디오 소스를 교체합니다.</p>
+
+          <audio id="audioPlayer" controls>
+            <source src="https://cdn.plyr.io/static/demo/Kishi_Bashi_-_It_All_Began_With_A_Burst.mp3" type="audio/mp3" />
+            <source src="https://cdn.plyr.io/static/demo/Kishi_Bashi_-_It_All_Began_With_A_Burst.ogg" type="audio/ogg" />
+          </audio>
+
+          <h3>오디오 플레이리스트</h3>
+          <div class="playlist">
+            <button class="btn good" data-audio-src="https://cdn.plyr.io/static/demo/Kishi_Bashi_-_It_All_Began_With_A_Burst.mp3">
+              Kishi Bashi - It All Began With A Burst
+              <small>MP3 소스 교체</small>
+            </button>
+            <button class="btn good" data-audio-src="https://cdn.plyr.io/static/demo/Kishi_Bashi_-_It_All_Began_With_A_Burst.ogg">
+              Kishi Bashi - It All Began With A Burst
+              <small>OGG 소스 교체</small>
+            </button>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <h2>Audio 제어판</h2>
+          <div class="controls-grid">
+            <button class="btn primary" data-action="play" data-player="audio">재생</button>
+            <button class="btn" data-action="pause" data-player="audio">일시정지</button>
+            <button class="btn" data-action="restart" data-player="audio">처음부터</button>
+            <button class="btn" data-action="rewind" data-player="audio">-10초</button>
+            <button class="btn" data-action="forward" data-player="audio">+10초</button>
+            <button class="btn" data-action="mute" data-player="audio">음소거 전환</button>
+          </div>
+
+          <label class="form-row">재생 속도
+            <select data-set="speed" data-player="audio">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </label>
+
+          <label class="form-row">볼륨
+            <input type="range" min="0" max="1" step="0.05" value="0.75" data-set="volume" data-player="audio" />
+          </label>
+
+          <div class="status">
+            <div class="stat"><b>상태</b><span id="audioState">대기</span></div>
+            <div class="stat"><b>현재 시간</b><span id="audioTime">0:00</span></div>
+            <div class="stat"><b>속도</b><span id="audioSpeed">1x</span></div>
+            <div class="stat"><b>볼륨</b><span id="audioVolume">75%</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="youtube" class="demo-section">
+      <div class="grid">
+        <div class="panel">
+          <h2>3. YouTube Provider</h2>
+          <p class="desc">data-plyr-provider와 data-plyr-embed-id로 YouTube 영상을 Plyr UI에서 재생합니다.</p>
+
+          <div id="youtubePlayer" data-plyr-provider="youtube" data-plyr-embed-id="bTqVqk7FSmY"></div>
+
+          <h3>YouTube 소스 교체</h3>
+          <div class="playlist">
+            <button class="btn good" data-youtube-id="bTqVqk7FSmY">샘플 YouTube 1</button>
+            <button class="btn good" data-youtube-id="M7lc1UVf-VE">YouTube API 공식 샘플</button>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <h2>YouTube 제어판</h2>
+          <div class="controls-grid">
+            <button class="btn primary" data-action="play" data-player="youtube">재생</button>
+            <button class="btn" data-action="pause" data-player="youtube">일시정지</button>
+            <button class="btn" data-action="restart" data-player="youtube">처음부터</button>
+            <button class="btn" data-action="fullscreen" data-player="youtube">전체화면</button>
+            <button class="btn" data-action="rewind" data-player="youtube">-10초</button>
+            <button class="btn" data-action="forward" data-player="youtube">+10초</button>
+            <button class="btn" data-action="mute" data-player="youtube">음소거 전환</button>
+            <button class="btn" data-action="loop" data-player="youtube">루프 전환</button>
+          </div>
+
+          <div class="notice">
+            YouTube 품질·광고·재생 정책은 YouTube 쪽 정책과 브라우저 정책 영향을 받을 수 있습니다.
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="vimeo" class="demo-section">
+      <div class="grid">
+        <div class="panel">
+          <h2>4. Vimeo Provider</h2>
+          <p class="desc">Vimeo 임베드도 동일한 Plyr 컨트롤 패턴으로 테스트할 수 있습니다.</p>
+
+          <div id="vimeoPlayer" data-plyr-provider="vimeo" data-plyr-embed-id="76979871"></div>
+
+          <h3>Vimeo 소스 교체</h3>
+          <div class="playlist">
+            <button class="btn good" data-vimeo-id="76979871">Vimeo 샘플 1</button>
+            <button class="btn good" data-vimeo-id="147865858">Vimeo 샘플 2</button>
+          </div>
+        </div>
+
+        <aside class="panel">
+          <h2>Vimeo 제어판</h2>
+          <div class="controls-grid">
+            <button class="btn primary" data-action="play" data-player="vimeo">재생</button>
+            <button class="btn" data-action="pause" data-player="vimeo">일시정지</button>
+            <button class="btn" data-action="restart" data-player="vimeo">처음부터</button>
+            <button class="btn" data-action="fullscreen" data-player="vimeo">전체화면</button>
+            <button class="btn" data-action="rewind" data-player="vimeo">-10초</button>
+            <button class="btn" data-action="forward" data-player="vimeo">+10초</button>
+            <button class="btn" data-action="mute" data-player="vimeo">음소거 전환</button>
+            <button class="btn" data-action="loop" data-player="vimeo">루프 전환</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="api" class="demo-section">
+      <div class="grid">
+        <div class="panel">
+          <h2>5. API·이벤트 로그</h2>
+          <p class="desc">
+            현재 활성 플레이어의 이벤트를 기록합니다. 재생, 일시정지, 탐색, 속도 변경, 볼륨 변경, 전체화면, 자막 변경 등을 눌러 로그를 확인하세요.
+          </p>
+
+          <div class="controls-grid">
+            <button class="btn primary" id="playActive">활성 플레이어 재생</button>
+            <button class="btn" id="pauseActive">활성 플레이어 일시정지</button>
+            <button class="btn" id="snapshot">현재 상태 스냅샷</button>
+            <button class="btn warn" id="clearLog">로그 지우기</button>
+          </div>
+
+          <h3>키보드 단축키 확인</h3>
+          <p class="desc">
+            플레이어에 포커스 후 <span class="kbd">Space</span> 재생/정지,
+            <span class="kbd">←</span><span class="kbd">→</span> 탐색,
+            <span class="kbd">↑</span><span class="kbd">↓</span> 볼륨,
+            <span class="kbd">F</span> 전체화면,
+            <span class="kbd">M</span> 음소거를 테스트하세요.
+          </p>
+
+          <h3>이벤트 로그</h3>
+          <div id="eventLog" class="log"></div>
+        </div>
+
+        <aside class="panel">
+          <h2>활성 플레이어 상태</h2>
+          <div class="status">
+            <div class="stat"><b>활성 탭</b><span id="activeName">video</span></div>
+            <div class="stat"><b>Provider</b><span id="activeProvider">html5</span></div>
+            <div class="stat"><b>Duration</b><span id="activeDuration">-</span></div>
+            <div class="stat"><b>Paused</b><span id="activePaused">-</span></div>
+            <div class="stat"><b>Muted</b><span id="activeMuted">-</span></div>
+            <div class="stat"><b>Fullscreen</b><span id="activeFullscreen">-</span></div>
+          </div>
+
+          <h3>대표 API 예시</h3>
+          <pre class="code"><code>const player = new Plyr('#videoPlayer', options);
+
+player.play();
+player.pause();
+player.restart();
+player.forward(10);
+player.rewind(10);
+
+player.currentTime = 30;
+player.volume = 0.5;
+player.speed = 1.25;
+player.muted = true;
+player.fullscreen.enter();
+
+player.on('play', event => {
+  console.log('play', event.detail.plyr);
+});</code></pre>
+        </aside>
+      </div>
+    </section>
+
+    <section id="theme" class="demo-section">
+      <div class="grid">
+        <div class="panel">
+          <h2>6. 테마·옵션 변경</h2>
+          <p class="desc">
+            CSS 변수로 Plyr의 메인 색상과 컨트롤 스타일을 바꿉니다. 실제 서비스에서는 브랜드 컬러를 적용하면 됩니다.
+          </p>
+
+          <h3>테마 색상</h3>
+          <div class="mini-grid">
+            <button class="swatch" title="Sky" data-accent="#00b3ff" style="background:#00b3ff"></button>
+            <button class="swatch" title="Green" data-accent="#22c55e" style="background:#22c55e"></button>
+            <button class="swatch" title="Orange" data-accent="#f59e0b" style="background:#f59e0b"></button>
+            <button class="swatch" title="Pink" data-accent="#ec4899" style="background:#ec4899"></button>
+            <button class="swatch" title="Violet" data-accent="#8b5cf6" style="background:#8b5cf6"></button>
+            <button class="swatch" title="Red" data-accent="#ef4444" style="background:#ef4444"></button>
+          </div>
+
+          <h3>옵션 토글</h3>
+          <div class="controls-grid">
+            <button class="btn" id="toggleTooltips">tooltips 옵션 안내</button>
+            <button class="btn" id="toggleInvert">화면 톤 반전</button>
+          </div>
+
+          <div class="notice">
+            일부 옵션은 Plyr 인스턴스 생성 시점에 적용됩니다. 런타임에서 완전히 바꾸려면 destroy 후 재생성하는 방식이 안전합니다.
+          </div>
+        </div>
+
+        <aside class="panel">
+          <h2>생성 옵션 예시</h2>
+          <pre class="code"><code>const options = {
+  controls: [
+    'play-large', 'restart', 'rewind', 'play',
+    'fast-forward', 'progress', 'current-time',
+    'duration', 'mute', 'volume', 'captions',
+    'settings', 'pip', 'airplay', 'fullscreen'
+  ],
+  settings: ['captions', 'quality', 'speed', 'loop'],
+  captions: { active: true, language: 'en', update: true },
+  quality: { default: 720, options: [1080, 720, 576] },
+  speed: { selected: 1, options: [0.5, .75, 1, 1.25, 1.5, 2] },
+  keyboard: { focused: true, global: false },
+  tooltips: { controls: true, seek: true },
+  fullscreen: { enabled: true, fallback: true, iosNative: false }
+};</code></pre>
+        </aside>
+      </div>
+    </section>
+
+    <section id="notes" class="demo-section">
+      <div class="panel">
+        <h2>7. 구현 메모</h2>
+        <p class="desc">Plyr 기능 검토용으로 많이 쓰는 항목을 샘플에 포함했습니다.</p>
+
+        <div class="status">
+          <div class="stat"><b>미디어 종류</b><span>video / audio / youtube / vimeo</span></div>
+          <div class="stat"><b>자막</b><span>&lt;track&gt; VTT</span></div>
+          <div class="stat"><b>컨트롤</b><span>controls 배열</span></div>
+          <div class="stat"><b>설정 메뉴</b><span>captions / quality / speed / loop</span></div>
+          <div class="stat"><b>이벤트</b><span>player.on(...)</span></div>
+          <div class="stat"><b>소스 변경</b><span>player.source</span></div>
+        </div>
+
+        <h3>실무 적용 시 체크할 점</h3>
+        <pre class="code"><code>1. 내부망 환경이면 CDN 파일을 다운로드해 로컬 경로로 교체
+2. 자막 파일은 .vtt 형식으로 제공
+3. iOS/Android 자동재생은 muted, playsinline 여부와 브라우저 정책 확인
+4. YouTube/Vimeo는 외부 서비스 접속이 필요하므로 폐쇄망에서는 HTML5 파일 기반 권장
+5. DRM·권한 미디어는 서버의 CORS, Range Request, 인증 처리 필요
+6. 장시간 영상은 HLS/DASH가 필요할 수 있으며, Plyr 단독이 아니라 hls.js 등과 연동 검토</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    이 샘플은 Plyr 기능 확인용입니다. CDN 접속이 차단된 내부망에서는 plyr.css, plyr.polyfilled.js, 미디어 파일을 로컬에 내려받아 경로를 바꿔야 합니다.
+  </footer>
+
+  <script>
+    const commonOptions = {
+      controls: [
+        'play-large',
+        'restart',
+        'rewind',
+        'play',
+        'fast-forward',
+        'progress',
+        'current-time',
+        'duration',
+        'mute',
+        'volume',
+        'captions',
+        'settings',
+        'pip',
+        'airplay',
+        'fullscreen'
+      ],
+      settings: ['captions', 'quality', 'speed', 'loop'],
+      captions: { active: true, language: 'en', update: true },
+      quality: { default: 720, options: [1080, 720, 576] },
+      speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+      keyboard: { focused: true, global: false },
+      tooltips: { controls: true, seek: true },
+      fullscreen: { enabled: true, fallback: true, iosNative: false }
+    };
+
+    const players = {
+      video: new Plyr('#videoPlayer', commonOptions),
+      audio: new Plyr('#audioPlayer', {
+        ...commonOptions,
+        controls: ['restart','rewind','play','fast-forward','progress','current-time','duration','mute','volume','settings'],
+        settings: ['speed', 'loop']
+      }),
+      youtube: new Plyr('#youtubePlayer', commonOptions),
+      vimeo: new Plyr('#vimeoPlayer', commonOptions)
+    };
+
+    let active = 'video';
+    const logEl = document.querySelector('#eventLog');
+
+    function now() {
+      return new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    }
+
+    function log(message) {
+      if (!logEl) return;
+      logEl.textContent = `[${now()}] ${message}\n` + logEl.textContent;
+    }
+
+    function fmt(sec) {
+      if (!Number.isFinite(sec)) return '-';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function getPlayer(name = active) {
+      return players[name];
+    }
+
+    function updateStats(name) {
+      const p = players[name];
+      if (!p) return;
+
+      const prefix = name;
+      const stateEl = document.querySelector(`#${prefix}State`);
+      const timeEl = document.querySelector(`#${prefix}Time`);
+      const speedEl = document.querySelector(`#${prefix}Speed`);
+      const volumeEl = document.querySelector(`#${prefix}Volume`);
+
+      if (stateEl) stateEl.textContent = p.paused ? '정지' : '재생 중';
+      if (timeEl) timeEl.textContent = fmt(p.currentTime || 0);
+      if (speedEl) speedEl.textContent = `${p.speed || 1}x`;
+      if (volumeEl) volumeEl.textContent = `${Math.round((p.volume || 0) * 100)}%`;
+
+      if (name === 'video') {
+        const seek = document.querySelector('[data-set="seek"][data-player="video"]');
+        const seekLabel = document.querySelector('#videoSeekLabel');
+        if (seek && p.duration) seek.value = Math.round((p.currentTime / p.duration) * 100);
+        if (seekLabel) seekLabel.textContent = `${Math.round(p.currentTime || 0)}초`;
+      }
+
+      updateActiveStatus();
+    }
+
+    function updateActiveStatus() {
+      const p = getPlayer();
+      document.querySelector('#activeName').textContent = active;
+      document.querySelector('#activeProvider').textContent = p.provider || 'html5';
+      document.querySelector('#activeDuration').textContent = fmt(p.duration);
+      document.querySelector('#activePaused').textContent = String(p.paused);
+      document.querySelector('#activeMuted').textContent = String(p.muted);
+      document.querySelector('#activeFullscreen').textContent = String(p.fullscreen && p.fullscreen.active);
+    }
+
+    const trackedEvents = [
+      'ready','play','pause','playing','timeupdate','seeking','seeked',
+      'ratechange','volumechange','enterfullscreen','exitfullscreen',
+      'captionsenabled','captionsdisabled','languagechange','qualitychange',
+      'ended','error','waiting','canplay'
+    ];
+
+    Object.entries(players).forEach(([name, player]) => {
+      trackedEvents.forEach(eventName => {
+        player.on(eventName, () => {
+          if (eventName !== 'timeupdate') {
+            log(`${name}: ${eventName}`);
+          }
+          updateStats(name);
+        });
+      });
+      player.on('ready', () => {
+        log(`${name}: ready / provider=${player.provider || 'html5'}`);
+        updateStats(name);
+      });
+    });
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const id = tab.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+        document.querySelectorAll('.demo-section').forEach(sec => sec.classList.toggle('active', sec.id === id));
+
+        if (players[id]) active = id;
+        log(`active tab: ${id}`);
+        updateActiveStatus();
+      });
+    });
+
+    document.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const p = getPlayer(btn.dataset.player);
+        const action = btn.dataset.action;
+
+        try {
+          if (action === 'play') await p.play();
+          if (action === 'pause') p.pause();
+          if (action === 'restart') p.restart();
+          if (action === 'rewind') p.rewind(10);
+          if (action === 'forward') p.forward(10);
+          if (action === 'mute') p.muted = !p.muted;
+          if (action === 'loop') p.loop = !p.loop;
+          if (action === 'fullscreen') p.fullscreen.toggle();
+          log(`${btn.dataset.player}: action=${action}`);
+        } catch (err) {
+          log(`${btn.dataset.player}: ${action} 실패 - ${err.message}`);
+        }
+        updateStats(btn.dataset.player);
+      });
+    });
+
+    document.querySelectorAll('[data-set]').forEach(input => {
+      input.addEventListener('input', () => {
+        const p = getPlayer(input.dataset.player);
+        const type = input.dataset.set;
+        const value = Number(input.value);
+
+        if (type === 'speed') p.speed = value;
+        if (type === 'volume') p.volume = value;
+        if (type === 'seek' && p.duration) p.currentTime = p.duration * value / 100;
+
+        log(`${input.dataset.player}: set ${type}=${value}`);
+        updateStats(input.dataset.player);
+      });
+    });
+
+    document.querySelectorAll('[data-audio-src]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const src = btn.dataset.audioSrc;
+        const type = src.endsWith('.ogg') ? 'audio/ogg' : 'audio/mp3';
+        players.audio.source = {
+          type: 'audio',
+          sources: [{ src, type }]
+        };
+        active = 'audio';
+        log(`audio: source changed`);
+      });
+    });
+
+    document.querySelectorAll('[data-youtube-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        players.youtube.source = {
+          type: 'video',
+          sources: [{ src: btn.dataset.youtubeId, provider: 'youtube' }]
+        };
+        active = 'youtube';
+        log(`youtube: source changed to ${btn.dataset.youtubeId}`);
+      });
+    });
+
+    document.querySelectorAll('[data-vimeo-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        players.vimeo.source = {
+          type: 'video',
+          sources: [{ src: btn.dataset.vimeoId, provider: 'vimeo' }]
+        };
+        active = 'vimeo';
+        log(`vimeo: source changed to ${btn.dataset.vimeoId}`);
+      });
+    });
+
+    document.querySelector('#playActive').addEventListener('click', async () => {
+      try {
+        await getPlayer().play();
+        log(`${active}: active play`);
+      } catch (err) {
+        log(`${active}: active play 실패 - ${err.message}`);
+      }
+    });
+
+    document.querySelector('#pauseActive').addEventListener('click', () => {
+      getPlayer().pause();
+      log(`${active}: active pause`);
+    });
+
+    document.querySelector('#snapshot').addEventListener('click', () => {
+      const p = getPlayer();
+      log(`${active}: snapshot currentTime=${fmt(p.currentTime)} duration=${fmt(p.duration)} volume=${Math.round(p.volume*100)} muted=${p.muted} paused=${p.paused} speed=${p.speed}`);
+    });
+
+    document.querySelector('#clearLog').addEventListener('click', () => {
+      logEl.textContent = '';
+    });
+
+    document.querySelectorAll('[data-accent]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const color = btn.dataset.accent;
+        document.documentElement.style.setProperty('--accent', color);
+        document.documentElement.style.setProperty('--plyr-color-main', color);
+        log(`theme: accent changed ${color}`);
+      });
+    });
+
+    document.querySelector('#toggleTooltips').addEventListener('click', () => {
+      alert('tooltips는 생성 옵션에서 controls/seek를 true로 두면 컨트롤 도움말과 탐색 도움말을 표시합니다.');
+    });
+
+    document.querySelector('#toggleInvert').addEventListener('click', () => {
+      document.body.style.filter = document.body.style.filter ? '' : 'hue-rotate(155deg)';
+      log('theme: page tone toggled');
+    });
+
+    setInterval(() => {
+      Object.keys(players).forEach(updateStats);
+    }, 750);
+
+    log('Plyr sample loaded');
+  </script>
+</body>
+</html>
