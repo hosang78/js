@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Matter.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .canvas-wrap {
+    width: 100%;
+    height: 320px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fafbfc;
+    border: 1px solid #eee;
+    margin-bottom: 12px;
+  }
+  .canvas-wrap canvas { display: block; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Matter.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Matter.js</strong>는 중력·충돌·마찰·반발력 같은 실제 물리 법칙을 시뮬레이션하는
+    2D 리지드바디 엔진입니다. 게임이나 인터랙티브 UI에서 "진짜처럼 움직이는" 오브젝트를 만들
+    때 쓰입니다.
+    <ul>
+      <li><code>Engine.create()</code>로 물리 세계를 만들고 <code>Bodies.rectangle/circle()</code>로 물체 생성</li>
+      <li><code>Runner.run(runner, engine)</code>로 시뮬레이션을 매 프레임 진행</li>
+      <li><code>Matter.Render</code>는 내장 캔버스 렌더러 — 직접 그리기 코드를 짤 필요 없음</li>
+      <li><code>Events.on(engine, 'collisionStart', ...)</code>로 충돌 순간 감지</li>
+      <li><code>MouseConstraint</code>로 마우스 드래그, <code>Constraint</code>로 로프·스프링 연결</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 렌더링은 Matter.js에 내장된 <code>Matter.Render</code>(캔버스 2D 렌더러)를 그대로
+      사용했습니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 중력 낙하 + 반발(restitution)</h2>
+    <div class="desc">반발계수가 다른 도형들을 떨어뜨립니다. 값이 높을수록(공처럼) 더 많이 튕기고, 낮으면(상자처럼) 거의 안 튕깁니다.</div>
+    <div class="canvas-wrap" id="canvas1"></div>
+    <div class="controls"><button class="ghost" id="dropBtn1">도형 더 떨어뜨리기</button></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const bouncyBall = Bodies.circle(x, y, 20, { restitution: 0.9 }); // 잘 튕김
+const dullBox = Bodies.rectangle(x, y, 40, 40, { restitution: 0.05 }); // 거의 안 튕김</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 충돌 감지 (collisionStart)</h2>
+    <div class="desc">공이 떨어지다가 다른 물체와 부딪히는 순간 색이 바뀝니다. 실제 충돌 이벤트를 감지해서 처리합니다.</div>
+    <div class="canvas-wrap" id="canvas2"></div>
+    <div class="result-box" id="output2">충돌 횟수: 0</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">Events.on(engine, 'collisionStart', (event) => {
+  event.pairs.forEach((pair) => {
+    pair.bodyA.render.fillStyle = '#e0524a';
+    pair.bodyB.render.fillStyle = '#e0524a';
+  });
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 마우스로 드래그 (MouseConstraint)</h2>
+    <div class="desc">도형을 마우스로 직접 잡아서 끌었다 놓아보세요. 놓는 순간의 속도가 그대로 관성으로 이어집니다.</div>
+    <div class="canvas-wrap" id="canvas3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const mouse = Mouse.create(canvas);
+const mouseConstraint = MouseConstraint.create(engine, { mouse });
+Composite.add(world, mouseConstraint); // 이것만 추가하면 모든 물체가 드래그 가능해짐</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. Constraint로 만든 진자</h2>
+    <div class="desc">고정점과 물체를 <code>Constraint</code>로 연결하면 진자가 됩니다. 클릭해서 밀어보세요.</div>
+    <div class="canvas-wrap" id="canvas4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const constraint = Constraint.create({
+  pointA: { x: 250, y: 30 },  // 고정된 지지점
+  bodyB: pendulumBob,
+  length: 120,
+  stiffness: 0.9,
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>5. 마찰(friction) 비교</h2>
+    <div class="desc">경사면 위에 마찰이 낮은 상자(파란색)와 높은 상자(주황색)를 올려두면, 마찰이 낮은 쪽이 훨씬 더 멀리 미끄러집니다.</div>
+    <div class="canvas-wrap" id="canvas5"></div>
+    <div class="result-box" id="output5">아직 측정 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">Bodies.rectangle(x, y, 30, 30, { friction: 0.001 }); // 미끄러운 표면
+Bodies.rectangle(x, y, 30, 30, { friction: 0.9 });   // 거친 표면</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+  <script>
+    const { Engine, World, Bodies, Body, Composite, Events, Mouse, MouseConstraint, Constraint, Runner, Render } = Matter;
+
+    function makeRender(container, engine, options = {}) {
+      const w = container.clientWidth, h = container.clientHeight;
+      const render = Render.create({
+        element: container,
+        engine: engine,
+        options: {
+          width: w,
+          height: h,
+          wireframes: false,
+          background: '#fafbfc',
+          ...options,
+        },
+      });
+      Render.run(render);
+      return { render, w, h };
+    }
+
+    // ---------- 1. 중력 낙하 + 반발 ----------
+    (function section1() {
+      const container = document.getElementById('canvas1');
+      const engine = Engine.create();
+      const world = engine.world;
+      const { w, h } = makeRender(container, engine);
+
+      const ground = Bodies.rectangle(w / 2, h - 10, w, 20, { isStatic: true, render: { fillStyle: '#888' } });
+      Composite.add(world, ground);
+
+      function addShapes() {
+        const bouncy = Bodies.circle(w * 0.3 + Math.random() * 40, 30, 18, {
+          restitution: 0.9, render: { fillStyle: '#22c07a' },
+        });
+        const dull = Bodies.rectangle(w * 0.6 + Math.random() * 40, 30, 36, 36, {
+          restitution: 0.05, render: { fillStyle: '#4f7dff' },
+        });
+        Composite.add(world, [bouncy, dull]);
+      }
+      addShapes();
+      document.getElementById('dropBtn1').addEventListener('click', addShapes);
+
+      const runner = Runner.create();
+      Runner.run(runner, engine);
+    })();
+
+    // ---------- 2. 충돌 감지 ----------
+    (function section2() {
+      const container = document.getElementById('canvas2');
+      const engine = Engine.create();
+      const world = engine.world;
+      const { w, h } = makeRender(container, engine);
+
+      const ground = Bodies.rectangle(w / 2, h - 10, w, 20, { isStatic: true, render: { fillStyle: '#888' } });
+      const ledge = Bodies.rectangle(w / 2, h * 0.55, 120, 16, { isStatic: true, render: { fillStyle: '#aaa' } });
+      Composite.add(world, [ground, ledge]);
+
+      const output2 = document.getElementById('output2');
+      let collisionCount = 0;
+
+      function dropBall() {
+        const ball = Bodies.circle(w / 2 + (Math.random() - 0.5) * 60, 30, 16, {
+          restitution: 0.4, render: { fillStyle: '#4f7dff' },
+        });
+        Composite.add(world, ball);
+      }
+      for (let i = 0; i < 3; i++) setTimeout(dropBall, i * 400);
+      setInterval(dropBall, 2500);
+
+      Events.on(engine, 'collisionStart', (event) => {
+        event.pairs.forEach((pair) => {
+          if (pair.bodyA.render.fillStyle === '#4f7dff') pair.bodyA.render.fillStyle = '#e0524a';
+          if (pair.bodyB.render.fillStyle === '#4f7dff') pair.bodyB.render.fillStyle = '#e0524a';
+        });
+        collisionCount++;
+        output2.textContent = `충돌 횟수: ${collisionCount}`;
+        output2.classList.add('ok');
+      });
+
+      const runner = Runner.create();
+      Runner.run(runner, engine);
+    })();
+
+    // ---------- 3. 마우스 드래그 ----------
+    (function section3() {
+      const container = document.getElementById('canvas3');
+      const engine = Engine.create();
+      const world = engine.world;
+      const { render, w, h } = makeRender(container, engine);
+
+      const ground = Bodies.rectangle(w / 2, h - 10, w, 20, { isStatic: true, render: { fillStyle: '#888' } });
+      const shapes = [
+        Bodies.rectangle(w * 0.3, h * 0.4, 50, 50, { render: { fillStyle: '#4f7dff' } }),
+        Bodies.circle(w * 0.5, h * 0.3, 30, { render: { fillStyle: '#22c07a' } }),
+        Bodies.polygon(w * 0.7, h * 0.4, 5, 32, { render: { fillStyle: '#e08a2e' } }),
+      ];
+      Composite.add(world, [ground, ...shapes]);
+
+      const mouse = Mouse.create(render.canvas);
+      const mouseConstraint = MouseConstraint.create(engine, {
+        mouse: mouse,
+        constraint: { stiffness: 0.2, render: { visible: false } },
+      });
+      Composite.add(world, mouseConstraint);
+      render.mouse = mouse;
+
+      const runner = Runner.create();
+      Runner.run(runner, engine);
+    })();
+
+    // ---------- 4. 진자 ----------
+    (function section4() {
+      const container = document.getElementById('canvas4');
+      const engine = Engine.create();
+      const world = engine.world;
+      const { render, w, h } = makeRender(container, engine);
+
+      const anchor = { x: w / 2, y: 30 };
+      const bob = Bodies.circle(w / 2, 150, 24, { render: { fillStyle: '#e0524a' } });
+      const constraint = Constraint.create({
+        pointA: anchor,
+        bodyB: bob,
+        length: 120,
+        stiffness: 0.9,
+        render: { strokeStyle: '#888', lineWidth: 2 },
+      });
+      Composite.add(world, [bob, constraint]);
+
+      const mouse = Mouse.create(render.canvas);
+      const mouseConstraint = MouseConstraint.create(engine, { mouse, constraint: { stiffness: 0.2 } });
+      Composite.add(world, mouseConstraint);
+      render.mouse = mouse;
+
+      // initial push
+      setTimeout(() => Body.applyForce(bob, bob.position, { x: 0.03, y: 0 }), 300);
+
+      const runner = Runner.create();
+      Runner.run(runner, engine);
+    })();
+
+    // ---------- 5. 마찰 비교 ----------
+    (function section5() {
+      const container = document.getElementById('canvas5');
+      const engine = Engine.create();
+      const world = engine.world;
+      const { render, w, h } = makeRender(container, engine);
+
+      const ramp = Bodies.rectangle(w / 2, h * 0.55, w * 0.9, 20, {
+        isStatic: true, angle: 0.2, render: { fillStyle: '#888' },
+      });
+      const floor = Bodies.rectangle(w / 2, h - 10, w, 20, { isStatic: true, render: { fillStyle: '#888' } });
+      const lowFriction = Bodies.rectangle(w * 0.25, h * 0.25, 34, 34, {
+        friction: 0.001, render: { fillStyle: '#4f7dff' },
+      });
+      const highFriction = Bodies.rectangle(w * 0.45, h * 0.25, 34, 34, {
+        friction: 0.9, render: { fillStyle: '#e08a2e' },
+      });
+      Composite.add(world, [ramp, floor, lowFriction, highFriction]);
+
+      const output5 = document.getElementById('output5');
+      let measured = false;
+      setTimeout(() => {
+        if (measured) return;
+        measured = true;
+        const dx = Math.abs(lowFriction.position.x - highFriction.position.x);
+        output5.textContent = `저마찰(파랑) 상자가 고마찰(주황) 상자보다 약 ${Math.round(dx)}px 더 미끄러졌습니다.`;
+        output5.classList.add('ok');
+      }, 4000);
+
+      const runner = Runner.create();
+      Runner.run(runner, engine);
+    })();
+  </script>
+</body>
+</html>
