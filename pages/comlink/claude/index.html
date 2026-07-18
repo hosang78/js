@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Comlink</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid #dbe4ff;
+    border-top-color: #4f7dff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-bar {
+    height: 10px;
+    background: #eef1f6;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: #4f7dff;
+    width: 0%;
+    transition: width 0.15s;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Comlink 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Comlink</strong>는 Web Worker와의 통신(<code>postMessage</code> 기반이라 원래는
+    번거로움)을 ES6 Proxy로 감싸서, 워커 안의 함수·객체를 <strong>마치 로컬에 있는 것처럼</strong>
+    <code>await</code>로 호출할 수 있게 해주는 라이브러리입니다.
+    <ul>
+      <li><code>Comlink.expose(Class)</code>(워커 쪽) + <code>Comlink.wrap(worker)</code>(메인 쪽)로 원격 호출 연결</li>
+      <li>워커 안에서 <code>new</code>로 만든 클래스 인스턴스는 여러 번 호출해도 <strong>상태가 유지</strong>됨</li>
+      <li><code>Comlink.proxy(fn)</code>으로 메인 스레드 콜백을 워커에 넘겨 진행 상황을 실시간으로 전달받음</li>
+      <li><code>Comlink.transfer(buffer, [buffer])</code>로 ArrayBuffer를 복사 없이 워커로 <strong>이전</strong>(원본은 비워짐)</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 물량·시세 계산은 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 워커에서 무거운 계산 실행 (메인 스레드가 멈추지 않음)</h2>
+    <div class="desc">버튼을 누르면 워커 안에서 2백만 번 반복 계산을 수행합니다. 계산 중에도 옆의 스피너가 끊김 없이 계속 도는 것을 확인하세요 — 메인 스레드(화면)가 전혀 막히지 않았다는 뜻입니다.</div>
+    <div class="controls">
+      <button id="computeBtn1">무거운 계산 실행</button>
+      <span class="spinner"></span> <span style="font-size:12.5px;color:#888;">← 계속 돌고 있어야 정상</span>
+    </div>
+    <div class="result-box" id="output1">아직 실행 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// worker.js
+class MarketCalculator {
+  async heavyCompute(n) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += Math.sqrt(i);
+    return sum;
+  }
+}
+Comlink.expose(MarketCalculator);
+
+// 메인 스레드
+const WorkerAPI = Comlink.wrap(new Worker('worker.js'));
+const instance = await new WorkerAPI();
+const result = await instance.heavyCompute(2000000); // await해도 화면은 안 멈춤</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 워커 안의 클래스 인스턴스 — 상태 유지</h2>
+    <div class="desc">버튼을 여러 번 누르면 워커 안의 같은 인스턴스에 값이 계속 누적됩니다(요청마다 새로 만들어지는 게 아님).</div>
+    <div class="controls">
+      <button id="addBtn2">위판 물량 +10kg 누적</button>
+      <button class="ghost" id="resetBtn2">초기화(새 인스턴스)</button>
+    </div>
+    <div class="result-box" id="output2">누적 물량: 0kg</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const instance = await new WorkerAPI(); // 워커 안에 인스턴스 하나 생성
+await instance.addToTotal(10); // 10
+await instance.addToTotal(10); // 20 — 이전 호출의 상태가 유지됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 콜백 프록시로 진행률 받기</h2>
+    <div class="desc">워커가 처리 중간중간 진행 상황을 메인 스레드의 콜백 함수로 직접 호출해 알려줍니다.</div>
+    <div class="controls"><button id="progressBtn3">5단계 작업 시작</button></div>
+    <div class="progress-bar"><div class="progress-bar-fill" id="progressFill3"></div></div>
+    <div class="result-box" id="output3">대기 중</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">await instance.processWithProgress(5, Comlink.proxy((step, total) => {
+  console.log(`${step}/${total} 완료`); // 워커에서 메인 스레드 함수를 직접 호출
+}));</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. Transferable 객체 전송</h2>
+    <div class="desc">버퍼를 복사하지 않고 워커로 <strong>이전(transfer)</strong>합니다. 전송 후 메인 스레드에 남은 원본 버퍼의 크기가 0이 되는 것을 확인하세요 — 소유권 자체가 넘어갔다는 증거입니다.</div>
+    <div class="controls"><button id="transferBtn4">숫자 5개 버퍼로 전송</button></div>
+    <div class="result-box" id="output4">아직 전송 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const buffer = new Float64Array([10, 20, 30, 40, 50]).buffer;
+buffer.byteLength; // 40
+
+const result = await instance.sumBuffer(Comlink.transfer(buffer, [buffer]));
+buffer.byteLength; // 0 — 복사가 아니라 소유권이 워커로 이전됨(더 빠름)</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/comlink@4.4.2/dist/umd/comlink.min.js"></script>
+  <script>
+    const worker = new Worker('worker.js');
+    const WorkerAPI = Comlink.wrap(worker);
+    let instancePromise = new WorkerAPI();
+
+    // ---------- 1. 무거운 계산 ----------
+    document.getElementById('computeBtn1').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      const output1 = document.getElementById('output1');
+      output1.textContent = '계산 중... (워커에서 실행)';
+      const instance = await instancePromise;
+      const start = Date.now();
+      const result = await instance.heavyCompute(2000000);
+      output1.textContent = `결과: ${result.toFixed(2)} (${Date.now() - start}ms 소요, 그동안 스피너는 멈추지 않았음)`;
+      output1.classList.add('ok');
+      e.target.disabled = false;
+    });
+
+    // ---------- 2. 상태 유지 ----------
+    const output2 = document.getElementById('output2');
+    document.getElementById('addBtn2').addEventListener('click', async () => {
+      const instance = await instancePromise;
+      const total = await instance.addToTotal(10);
+      output2.textContent = `누적 물량: ${total}kg`;
+      output2.classList.add('ok');
+    });
+    document.getElementById('resetBtn2').addEventListener('click', () => {
+      instancePromise = new WorkerAPI(); // 새 인스턴스 = 상태 초기화
+      output2.textContent = '누적 물량: 0kg (새 인스턴스로 초기화됨)';
+      output2.classList.remove('ok');
+    });
+
+    // ---------- 3. 콜백 프록시 ----------
+    document.getElementById('progressBtn3').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      const output3 = document.getElementById('output3');
+      const fill3 = document.getElementById('progressFill3');
+      fill3.style.width = '0%';
+      output3.textContent = '진행 중...';
+      const instance = await instancePromise;
+      const done = await instance.processWithProgress(5, Comlink.proxy((step, total) => {
+        fill3.style.width = `${(step / total) * 100}%`;
+        output3.textContent = `${step}/${total} 단계 진행 중`;
+      }));
+      output3.textContent = done;
+      output3.classList.add('ok');
+      e.target.disabled = false;
+    });
+
+    // ---------- 4. Transferable 전송 ----------
+    document.getElementById('transferBtn4').addEventListener('click', async () => {
+      const output4 = document.getElementById('output4');
+      const instance = await instancePromise;
+      const buffer = new Float64Array([10, 20, 30, 40, 50]).buffer;
+      const byteLengthBefore = buffer.byteLength;
+      const result = await instance.sumBuffer(Comlink.transfer(buffer, [buffer]));
+      const byteLengthAfter = buffer.byteLength;
+      output4.textContent =
+        `합계: ${result.sum} · 전송 전 크기: ${byteLengthBefore}bytes → 전송 후 원본 크기: ${byteLengthAfter}bytes (0이면 소유권이 워커로 완전히 이전된 것)`;
+      output4.classList.add('ok');
+    });
+  </script>
+</body>
+</html>
