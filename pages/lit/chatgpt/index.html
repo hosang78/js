@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lit 3 종합 기능 실험실</title>
+  <style>
+    :root{color-scheme:dark;--bg:#08111f;--panel:#101c2d;--panel2:#15243a;--line:#2b3d56;--text:#e9f1fb;--muted:#91a4bc;--brand:#5ec8ff;--ok:#64e6ad;--warn:#ffca6a;--bad:#ff7c91}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 10% 0,#132b48 0,transparent 32%),var(--bg);color:var(--text);font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+    button,input,select,textarea{font:inherit} button{cursor:pointer}.shell{max-width:1500px;margin:auto;padding:22px}.hero{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;padding:25px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(135deg,#14243b,#0b1728);box-shadow:0 18px 50px #0007}.hero h1{margin:0;font-size:clamp(27px,4vw,45px);letter-spacing:-.04em}.hero p{margin:8px 0 0;color:var(--muted);max-width:780px}.badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:15px}.badge{border:1px solid #33506e;background:#10243b;color:#bfeaff;border-radius:999px;padding:5px 9px;font-size:12px}.status{min-width:230px;padding:14px;border-radius:15px;background:#07111f;border:1px solid var(--line)}.status strong{display:block;color:var(--ok);font-size:17px}.toolbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;padding:11px;border:1px solid var(--line);border-radius:14px;background:#08111fe8;backdrop-filter:blur(12px)}.toolbar button,.btn{border:1px solid #37506d;background:#152842;color:var(--text);padding:8px 11px;border-radius:10px}.toolbar button:hover,.btn:hover{border-color:var(--brand);transform:translateY(-1px)}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{grid-column:span 4;min-width:0;border:1px solid var(--line);border-radius:17px;background:linear-gradient(180deg,var(--panel),#0c1726);overflow:hidden}.card.wide{grid-column:span 8}.card.full{grid-column:1/-1}.card header{padding:13px 15px;border-bottom:1px solid var(--line);background:#15243a}.card h2{font-size:16px;margin:0}.card header small{color:var(--muted)}.card .body{padding:15px}.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.stack{display:grid;gap:10px}.control{display:grid;gap:4px;min-width:120px;flex:1}.control label{font-size:12px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid #354b67;border-radius:9px;padding:8px 10px;background:#07111f;color:var(--text)}input[type=checkbox]{width:auto}.demo{margin-top:12px;padding:12px;border:1px dashed #3a526f;border-radius:12px;background:#07111f}.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#b8d9ff;font-size:12px}.log{height:210px;overflow:auto;white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;background:#030912;border:1px solid var(--line);padding:10px;border-radius:10px;color:#a9efc9}.muted{color:var(--muted)}.ok{color:var(--ok)}.warn{color:var(--warn)}.pill{display:inline-flex;padding:3px 8px;border-radius:999px;background:#263c58;margin:2px}.meter{height:10px;border-radius:999px;background:#24344a;overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,#5ec8ff,#64e6ad)}
+    @media(max-width:1000px){.card,.card.wide{grid-column:span 6}.hero{flex-direction:column}.status{width:100%}}@media(max-width:680px){.shell{padding:10px}.card,.card.wide{grid-column:1/-1}.hero{padding:18px}.toolbar{position:static}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div><h1>Lit 3 종합 기능 실험실</h1><p>LitElement, 반응형 속성, 템플릿 표현식, 내장 directives, 이벤트, 폼 바인딩, 슬롯, Shadow DOM, 라이프사이클, 비동기 iterable, DOM 참조, SVG를 한 페이지에서 조작하는 단일 HTML 샘플.</p><div class="badges"><span class="badge">No build</span><span class="badge">ES Module CDN</span><span class="badge">Web Components</span><span class="badge">Responsive</span><span class="badge">Lit 3</span></div></div>
+      <div class="status"><strong id="boot">모듈 로딩 중…</strong><span class="muted">개발자 도구 콘솔과 하단 이벤트 로그도 함께 확인</span></div>
+    </section>
+    <nav class="toolbar" id="nav"></nav>
+    <lit-lab></lit-lab>
+  </div>
+
+<script type="module">
+import {
+ LitElement, html, css, svg, nothing, noChange,
+ repeat, map, range, join, when, choose, cache, keyed, guard,
+ classMap, styleMap, ifDefined, live, ref, createRef,
+ unsafeHTML, until, asyncReplace, asyncAppend
+} from 'https://cdn.jsdelivr.net/gh/lit/dist@3/all/lit-all.min.js';
+
+const sections=['기본 반응성','속성 변환','템플릿·목록','조건·캐시','Class·Style','이벤트·폼','슬롯','라이프사이클','비동기','DOM Ref','SVG','Light DOM','로그'];
+document.querySelector('#nav').innerHTML=sections.map((s,i)=>`<button data-target="s${i}">${s}</button>`).join('');
+document.querySelector('#nav').addEventListener('click',e=>{const id=e.target.dataset.target;if(id)document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})});
+
+class ReactiveDemo extends LitElement{
+ static properties={name:{type:String,reflect:true},count:{type:Number,reflect:true},active:{type:Boolean,reflect:true},data:{attribute:false},score:{type:Number,hasChanged:(v,o)=>Math.floor(v/10)!==Math.floor(o/10)}};
+ static styles=css`:host{display:block}.box{padding:12px;border-radius:12px;background:#13253c}.on{outline:2px solid #64e6ad}.value{font-size:22px;font-weight:800}`;
+ constructor(){super();this.name='Lit';this.count=0;this.active=true;this.data={source:'property only'};this.score=0}
+ render(){return html`<div class="box ${this.active?'on':''}"><div>Hello <b>${this.name}</b></div><div class="value">${this.count}</div><div>score bucket: ${Math.floor(this.score/10)*10}–${Math.floor(this.score/10)*10+9}</div><small>attributes: name=${this.getAttribute('name')} / count=${this.getAttribute('count')} / active=${this.hasAttribute('active')}</small></div>`}
+}
+customElements.define('reactive-demo',ReactiveDemo);
+
+class ConvertDemo extends LitElement{
+ static properties={config:{reflect:true,converter:{fromAttribute:v=>{try{return JSON.parse(v)}catch{return {error:true}}},toAttribute:v=>JSON.stringify(v)}},mode:{attribute:'display-mode',reflect:true}};
+ constructor(){super();this.config={theme:'ocean',density:2};this.mode='compact'}
+ render(){return html`<div>객체 속성: <code>${JSON.stringify(this.config)}</code></div><div>별칭 attribute: <b>${this.mode}</b></div>`}
+}
+customElements.define('convert-demo',ConvertDemo);
+
+class SlotDemo extends LitElement{
+ static styles=css`:host{display:block;border:1px solid #405675;border-radius:12px;padding:12px}header{font-weight:800;color:#5ec8ff}::slotted(.featured){color:#64e6ad;font-weight:700}.footer{opacity:.7}`;
+ render(){return html`<header><slot name="title">기본 제목</slot></header><main><slot @slotchange=${this._slotChanged}>기본 본문</slot></main><div class="footer"><slot name="footer">기본 푸터</slot></div>`}
+ _slotChanged(e){this.dispatchEvent(new CustomEvent('slot-report',{detail:{count:e.target.assignedElements({flatten:true}).length},bubbles:true,composed:true}))}
+}
+customElements.define('slot-demo',SlotDemo);
+
+class LifeDemo extends LitElement{
+ static properties={value:{type:Number}};constructor(){super();this.value=0;this.history=[];this.note('constructor')}
+ connectedCallback(){super.connectedCallback();this.note('connectedCallback')}
+ shouldUpdate(changed){this.note('shouldUpdate: '+[...changed.keys()].join(','));return true}
+ willUpdate(changed){this.note('willUpdate: '+[...changed.keys()].join(','))}
+ render(){this.note('render');return html`<button @click=${()=>this.value++}>값 ${this.value}</button><ol>${this.history.slice(-8).map(x=>html`<li>${x}</li>`)}</ol>`}
+ firstUpdated(){this.note('firstUpdated');this.requestUpdate()}
+ updated(changed){this.note('updated: '+[...changed.keys()].join(','))}
+ note(x){this.history.push(`${performance.now().toFixed(1)}ms ${x}`)}
+}
+customElements.define('life-demo',LifeDemo);
+
+class LightDomDemo extends LitElement{
+ createRenderRoot(){return this}
+ render(){return html`<div class="demo"><b>Light DOM 렌더링</b> — 이 내용은 Shadow Root 안이 아니라 일반 DOM에 생성됨.</div>`}
+}
+customElements.define('light-dom-demo',LightDomDemo);
+
+class LitLab extends LitElement{
+ static properties={name:{},count:{type:Number},active:{type:Boolean},score:{type:Number},items:{state:true},filter:{state:true},view:{state:true},theme:{state:true},size:{state:true},showHtml:{state:true},promiseVersion:{state:true},streamVersion:{state:true},lightMounted:{state:true},logs:{state:true}};
+ createRenderRoot(){return this}
+ constructor(){super();this.name='Lit';this.count=3;this.active=true;this.score=5;this.items=['Template','Reactive','Directive','Shadow DOM'];this.filter='';this.view='list';this.theme='ocean';this.size=18;this.showHtml=false;this.promiseVersion=0;this.streamVersion=0;this.lightMounted=true;this.logs=[];this.inputRef=createRef();this.guardRuns=0}
+ log(msg){this.logs=[...this.logs,`${new Date().toLocaleTimeString()}  ${msg}`].slice(-100)}
+ addItem(){this.items=[...this.items,`Item ${this.items.length+1}`];this.log('불변 배열 갱신')}
+ shuffle(){this.items=[...this.items].sort(()=>Math.random()-.5);this.log('repeat key 기반 재정렬')}
+ delayed(v){return new Promise(r=>setTimeout(()=>r(html`<span class="ok">완료 #${v}</span>`),900))}
+ async *stream(v){for(let i=1;i<=5;i++){await new Promise(r=>setTimeout(r,350));yield html`<span class="pill">${v}.${i}</span>`}}
+ render(){const filtered=this.items.filter(x=>x.toLowerCase().includes(this.filter.toLowerCase()));const cls={demo:true,ok:this.active,warn:!this.active};const sty={fontSize:`${this.size}px`,borderColor:this.theme==='ocean'?'#5ec8ff':'#ffca6a'};return html`
+ <div class="grid">
+  ${this.card(0,'반응형 속성·attribute reflection','static properties, type conversion, hasChanged',html`<div class="row"><div class="control"><label>name</label><input .value=${this.name} @input=${e=>this.name=e.target.value}></div><div class="control"><label>count</label><input type="number" .value=${String(this.count)} @input=${e=>this.count=+e.target.value}></div><label><input type="checkbox" .checked=${this.active} @change=${e=>this.active=e.target.checked}> active</label></div><div class="row"><button class="btn" @click=${()=>this.score++}>score +1</button><span>${this.score}</span></div><reactive-demo .name=${this.name} .count=${this.count} ?active=${this.active} .score=${this.score}></reactive-demo>`) }
+  ${this.card(1,'커스텀 converter·attribute 별칭','fromAttribute / toAttribute / attribute option',html`<convert-demo config='{"theme":"forest","density":3}' display-mode="comfortable"></convert-demo><p class="muted">JSON 문자열 ↔ 객체 변환 및 display-mode ↔ mode 매핑</p>`)}
+  ${this.card(2,'템플릿·목록 directives','repeat, map, range, join',html`<div class="row"><input placeholder="필터" .value=${this.filter} @input=${e=>this.filter=e.target.value}><button class="btn" @click=${this.addItem}>추가</button><button class="btn" @click=${this.shuffle}>섞기</button></div><div class="demo">${repeat(filtered,x=>x,x=>html`<span class="pill">${x}</span>`)}</div><div class="demo">map: ${join(map(range(1,6),x=>html`<b>${x*x}</b>`),html` · `)}</div>`)}
+  ${this.card(3,'조건부·캐시·keyed','when, choose, cache, keyed, nothing',html`<div class="row"><select .value=${this.view} @change=${e=>this.view=e.target.value}><option value="list">목록</option><option value="stats">통계</option><option value="none">없음</option></select><button class="btn" @click=${()=>this.promiseVersion++}>key 변경</button></div><div class="demo">${cache(choose(this.view,[['list',()=>html`<ul>${this.items.map(x=>html`<li>${x}</li>`)}</ul>`],['stats',()=>html`<b>${this.items.length}개 항목</b>`]],()=>nothing))}</div><div>keyed: ${keyed(this.promiseVersion,html`<input placeholder="key=${this.promiseVersion}; 변경 시 DOM 재생성">`)}</div>`)}
+  ${this.card(4,'동적 class·style·attribute','classMap, styleMap, ifDefined',html`<div class="row"><select .value=${this.theme} @change=${e=>this.theme=e.target.value}><option value="ocean">ocean</option><option value="sun">sun</option></select><input type="range" min="12" max="32" .value=${String(this.size)} @input=${e=>this.size=+e.target.value}></div><div class=${classMap(cls)} style=${styleMap(sty)} title=${ifDefined(this.active?'활성 상태':undefined)}>동적 클래스와 인라인 스타일 (${this.size}px)</div>`)}
+  ${this.card(5,'이벤트·폼·live','@event, property binding, boolean binding, live',html`<div class="stack"><input ${ref(this.inputRef)} .value=${live(this.name)} @input=${e=>{this.name=e.target.value;this.log('input 이벤트: '+e.target.value)}}><label><input type="checkbox" ?disabled=${!this.active}> active일 때만 활성</label><div class="row"><button class="btn" @click=${()=>this.inputRef.value?.focus()}>ref로 포커스</button><button class="btn" @click=${e=>this.log(`클릭 좌표 ${e.clientX},${e.clientY}`)}>이벤트 기록</button></div></div>`)}
+  ${this.card(6,'슬롯·composed 이벤트','named/default slot, slotchange, CustomEvent',html`<slot-demo @slot-report=${e=>this.log(`slotchange: ${e.detail.count}개`)}><span slot="title">사용자 지정 제목</span><p class="featured">기본 슬롯의 강조 콘텐츠</p><small slot="footer">named footer 슬롯</small></slot-demo>`)}
+  ${this.card(7,'업데이트 라이프사이클','shouldUpdate → willUpdate → render → updated',html`<life-demo></life-demo>`)}
+  ${this.card(8,'Promise·AsyncIterable','until, asyncReplace, asyncAppend',html`<div class="row"><button class="btn" @click=${()=>this.promiseVersion++}>Promise 재실행</button><button class="btn" @click=${()=>this.streamVersion++}>Stream 재실행</button></div><div class="demo">until: ${until(this.delayed(this.promiseVersion),html`<span class="warn">대기 중…</span>`)}</div><div class="demo">asyncReplace: ${asyncReplace(this.stream(this.streamVersion))}</div><div class="demo">asyncAppend: ${asyncAppend(this.stream(this.streamVersion+100))}</div>`)}
+  ${this.card(9,'DOM 참조·guard','ref/createRef, guard 의존성 메모화',html`<button class="btn" @click=${()=>{this.guardRuns++;this.requestUpdate()}}>일반 업데이트</button><div class="demo">${guard([this.items.length],()=>html`items.length가 변할 때만 템플릿 재계산: <b>${this.items.length}</b> (${Date.now()})`)}</div><div class="muted">버튼만 누르면 timestamp 유지, 항목 추가 시 변경</div>`)}
+  ${this.card(10,'SVG 템플릿','svg tagged template + 속성 바인딩',html`<div class="demo">${svg`<svg viewBox="0 0 320 100" width="100%" role="img"><defs><linearGradient id="g"><stop stop-color="#5ec8ff"/><stop offset="1" stop-color="#64e6ad"/></linearGradient></defs><rect x="5" y="5" width="310" height="90" rx="18" fill="#10243b" stroke="#3a526f"/><circle cx=${30+this.count*15} cy="50" r="18" fill="url(#g)"/><text x="135" y="57" fill="white">count로 원 이동</text></svg>`}</div>`)}
+  ${this.card(11,'unsafeHTML','신뢰된 HTML 문자열 렌더링 — 보안 주의',html`<label><input type="checkbox" .checked=${this.showHtml} @change=${e=>this.showHtml=e.target.checked}> unsafeHTML 사용</label><div class="demo">${this.showHtml?unsafeHTML('<b style="color:#64e6ad">HTML 문자열이 실제 요소로 렌더링됨</b>'):html`&lt;b&gt;기본적으로 문자열은 escape됨&lt;/b&gt;`}</div>`)}
+  ${this.card(12,'Light DOM','createRenderRoot()에서 this 반환',html`<button class="btn" @click=${()=>this.lightMounted=!this.lightMounted}>마운트 전환</button>${this.lightMounted?html`<light-dom-demo></light-dom-demo>`:nothing}`,'full')}
+  ${this.card(13,'이벤트 로그','컴포넌트 간 이벤트와 사용자 조작 기록',html`<div class="row"><button class="btn" @click=${()=>this.logs=[]}>지우기</button><span>${this.logs.length}건</span></div><div class="log">${this.logs.length?this.logs.join('\n'):'아직 로그가 없음'}</div>`,'full')}
+ </div>`}
+ card(i,title,sub,body,size=''){return html`<section id="s${i}" class="card ${size}"><header><h2>${title}</h2><small>${sub}</small></header><div class="body">${body}</div></section>`}
+ firstUpdated(){document.querySelector('#boot').textContent='Lit 모듈 정상 로드';this.log('LitLab firstUpdated 완료')}
+}
+customElements.define('lit-lab',LitLab);
+
+window.addEventListener('error',e=>{document.querySelector('#boot').textContent='오류: '+e.message;document.querySelector('#boot').style.color='var(--bad)'});
+</script>
+<noscript>이 페이지는 JavaScript가 필요합니다.</noscript>
+</body>
+</html>
