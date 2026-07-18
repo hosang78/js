@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>chartjs-plugin-zoom</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap {
+    width: 100%;
+    height: 280px;
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>chartjs-plugin-zoom 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>chartjs-plugin-zoom</strong>은 <strong>Chart.js</strong> 차트를 마우스 휠·드래그·
+    (모바일에서는) 핀치 제스처로 확대·축소·이동할 수 있게 해주는 공식 플러그인입니다. 데이터
+    포인트가 많아 한 화면에 다 보기 어려운 시계열 차트에 특히 유용합니다.
+    <ul>
+      <li><code>zoom.wheel.enabled</code>로 마우스 휠 줌, <code>pan.enabled</code>로 드래그 이동</li>
+      <li><code>zoom.drag.enabled</code>로 사각형을 드래그해서 그 구간만 확대</li>
+      <li><code>limits</code>로 줌/팬이 가능한 범위(min/max)와 최소 확대 폭(minRange)을 제한</li>
+      <li><code>chart.zoom()</code>, <code>chart.resetZoom()</code>, <code>chart.getZoomLevel()</code> 등 코드로도 직접 제어 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판량 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. Chart.js와, 핀치 제스처 인식을 위한 Hammer.js를 함께 사용했습니다 (모두 CDN).
+      검증 중 실제로 확인한 점: <code>limits.minRange</code>를 설정하지 않고 마우스 휠로 계속
+      확대하면 카테고리 축 범위가 폭 0으로 찌그러지는 현상을 재현했습니다 — 그래서 이 페이지의
+      모든 차트에 <code>minRange</code>를 기본으로 넣어두었습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 마우스 휠 줌 + 드래그 팬</h2>
+    <div class="desc">차트 위에서 마우스 휠을 굴려 확대/축소하고, 확대된 상태에서 드래그하면 좌우로 이동합니다.</div>
+    <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">plugins: {
+  zoom: {
+    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+    pan: { enabled: true, mode: 'x' },
+    limits: { x: { min: 0, max: 29, minRange: 5 } },
+  },
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 드래그로 영역 확대 (drag-to-zoom)</h2>
+    <div class="desc">차트 위에서 마우스로 사각형을 드래그하면 그 구간만 확대됩니다. 더블클릭하면 원래대로 돌아갑니다.</div>
+    <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+    <div class="controls"><button class="ghost" id="resetBtn2">초기화 (더블클릭과 동일)</button></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">plugins: {
+  zoom: {
+    zoom: { drag: { enabled: true, backgroundColor: 'rgba(79,125,255,0.2)' }, mode: 'x' },
+  },
+}
+// 더블클릭 시 리셋
+canvas.ondblclick = () => chart.resetZoom();</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 줌/팬 범위 제한 (limits)</h2>
+    <div class="desc">아무리 휠을 굴려도 원본 데이터 범위(0~29일) 밖으로는 나갈 수 없고, <code>minRange: 5</code>라 5일 구간보다 더 좁게는 확대되지 않습니다. (검증 중 실제로 확인: minRange가 없으면 계속 확대할 때 축 범위가 폭 0으로 찌그러지는 문제가 있었습니다 — 이 섹션이 바로 그 방지책입니다.)</div>
+    <div class="chart-wrap"><canvas id="chart3"></canvas></div>
+    <div class="result-box" id="output3">아직 확대 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">limits: {
+  x: { min: 0, max: 29, minRange: 5 }, // 5일 미만으로는 확대 불가, 범위 밖 이동 불가
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 프로그래매틱 API 제어</h2>
+    <div class="desc">버튼으로 <code>chart.zoom()</code> / <code>chart.pan()</code> / <code>chart.resetZoom()</code>을 직접 호출합니다.</div>
+    <div class="chart-wrap"><canvas id="chart4"></canvas></div>
+    <div class="controls">
+      <button class="action" id="zoomInBtn4">확대 (zoom 1.4배)</button>
+      <button class="action" id="zoomOutBtn4">축소 (zoom 0.7배)</button>
+      <button class="ghost" id="panLeftBtn4">← 왼쪽으로 이동</button>
+      <button class="ghost" id="panRightBtn4">오른쪽으로 이동 →</button>
+      <button class="ghost" id="resetBtn4">resetZoom()</button>
+    </div>
+    <div class="result-box" id="output4">확대 레벨(getZoomLevel): 1.00</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">chart.zoom(1.4);       // 확대
+chart.zoom(0.7);       // 축소
+chart.pan({ x: -40 }); // 왼쪽으로 이동 (픽셀 단위)
+chart.resetZoom();     // 원래대로
+chart.getZoomLevel();  // 현재 확대 배율</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+  <script>
+    Chart.register(ChartZoom);
+
+    const dayLabels = Array.from({ length: 30 }, (_, i) => (i + 1) + '일');
+    function genCatchData() {
+      return Array.from({ length: 30 }, (_, i) => 300 + Math.round(120 * Math.sin(i / 4)) + i * 3);
+    }
+
+    // ---------- 1. 휠 줌 + 드래그 팬 ----------
+    new Chart(document.getElementById('chart1').getContext('2d'), {
+      type: 'line',
+      data: { labels: dayLabels, datasets: [{ label: '위판량(kg)', data: genCatchData(), borderColor: '#4f7dff', pointRadius: 0 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          zoom: {
+            zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+            pan: { enabled: true, mode: 'x' },
+            limits: { x: { min: 0, max: 29, minRange: 5 } },
+          },
+        },
+      },
+    });
+
+    // ---------- 2. 드래그 영역 확대 ----------
+    const chart2 = new Chart(document.getElementById('chart2').getContext('2d'), {
+      type: 'line',
+      data: { labels: dayLabels, datasets: [{ label: '위판량(kg)', data: genCatchData(), borderColor: '#22c07a', pointRadius: 0 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          zoom: {
+            zoom: {
+              drag: { enabled: true, backgroundColor: 'rgba(34,192,122,0.2)', borderColor: '#22c07a' },
+              mode: 'x',
+            },
+            limits: { x: { min: 0, max: 29, minRange: 5 } },
+          },
+        },
+      },
+    });
+    document.getElementById('chart2').ondblclick = () => chart2.resetZoom();
+    document.getElementById('resetBtn2').addEventListener('click', () => chart2.resetZoom());
+
+    // ---------- 3. 범위 제한 ----------
+    function updateOutput3(chart) {
+      const span = Math.round((chart.scales.x.max - chart.scales.x.min) * 10) / 10;
+      const output3 = document.getElementById('output3');
+      output3.textContent = `현재 보이는 구간: ${span}일 (min ${Math.round(chart.scales.x.min)}, max ${Math.round(chart.scales.x.max)}) — minRange:5보다 좁아지지 않음`;
+      output3.classList.add('ok');
+    }
+    const chart3 = new Chart(document.getElementById('chart3').getContext('2d'), {
+      type: 'line',
+      data: { labels: dayLabels, datasets: [{ label: '위판량(kg)', data: genCatchData(), borderColor: '#e08a2e', pointRadius: 0 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          zoom: {
+            zoom: {
+              wheel: { enabled: true },
+              mode: 'x',
+              onZoomComplete: ({ chart }) => updateOutput3(chart),
+            },
+            pan: {
+              enabled: true,
+              mode: 'x',
+              onPanComplete: ({ chart }) => updateOutput3(chart),
+            },
+            limits: { x: { min: 0, max: 29, minRange: 5 } },
+          },
+        },
+      },
+    });
+
+    // ---------- 4. 프로그래매틱 API ----------
+    const chart4 = new Chart(document.getElementById('chart4').getContext('2d'), {
+      type: 'line',
+      data: { labels: dayLabels, datasets: [{ label: '위판량(kg)', data: genCatchData(), borderColor: '#4f7dff', pointRadius: 0 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          zoom: {
+            zoom: { wheel: { enabled: true }, mode: 'x' },
+            pan: { enabled: true, mode: 'x' },
+            limits: { x: { min: 0, max: 29, minRange: 5 } },
+          },
+        },
+      },
+    });
+    function updateOutput4() {
+      document.getElementById('output4').textContent = `확대 레벨(getZoomLevel): ${chart4.getZoomLevel().toFixed(2)}`;
+    }
+    document.getElementById('zoomInBtn4').addEventListener('click', () => { chart4.zoom(1.4); updateOutput4(); });
+    document.getElementById('zoomOutBtn4').addEventListener('click', () => { chart4.zoom(0.7); updateOutput4(); });
+    document.getElementById('panLeftBtn4').addEventListener('click', () => { chart4.pan({ x: 40 }); updateOutput4(); });
+    document.getElementById('panRightBtn4').addEventListener('click', () => { chart4.pan({ x: -40 }); updateOutput4(); });
+    document.getElementById('resetBtn4').addEventListener('click', () => { chart4.resetZoom(); updateOutput4(); });
+  </script>
+</body>
+</html>
