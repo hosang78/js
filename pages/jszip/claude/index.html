@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>JSZip</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .tree {
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    font-family: monospace;
+    margin-top: 8px;
+  }
+  .tree .dir { color: #4f7dff; font-weight: bold; }
+  .tree .file { color: #555; }
+  .tree .indent { padding-left: 18px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  th, td {
+    border: 1px solid #e5e5e5;
+    padding: 6px 10px;
+    text-align: right;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { background: #f5f6f8; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>JSZip 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>JSZip</strong>은 브라우저에서 직접 ZIP 파일을 만들고 읽을 수 있게 해주는 라이브러리입니다.
+    <code>file()</code>/<code>folder()</code> 체이닝 API로 폴더 구조가 있는 압축 파일도 쉽게 만듭니다.
+    <ul>
+      <li><code>zip.file(경로, 내용)</code>, <code>zip.folder(이름)</code>으로 폴더/파일 추가</li>
+      <li><code>zip.generateAsync({ type: 'blob' })</code>로 실제 다운로드 가능한 ZIP 생성</li>
+      <li><code>JSZip.loadAsync(데이터)</code>로 기존 ZIP을 읽고 <code>forEach</code>로 순회</li>
+      <li>파일마다 <code>{ compression: 'STORE' | 'DEFLATE' }</code>로 압축 방식 선택 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 저장소에는 비슷한 목적의 zip.js 데모도 있습니다 — zip.js는 ZipWriter/ZipReader와
+      비밀번호 암호화·진행률에 초점을 맞췄다면, 이 페이지는 JSZip 특유의
+      <code>file()</code>/<code>folder()</code> 체이닝과 압축 방식·출력 형식 비교에 집중했습니다.
+      이 페이지의 위판 서류는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의 자료가
+      아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 폴더 구조로 여러 파일 압축</h2>
+    <div class="desc">가상 위판 서류를 폴더별로 묶어 ZIP 하나로 만듭니다. 버튼을 누르면 실제로 ZIP 파일이 다운로드됩니다.</div>
+    <div class="controls"><button class="action" id="buildBtn1">ZIP 만들기 + 다운로드</button></div>
+    <div class="result-box" id="output1">아직 만들지 않음</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const zip = new JSZip();
+zip.file('README.txt', '가상 위판 서류 모음집입니다.');
+const auctionFolder = zip.folder('위판기록');
+auctionFolder.file('2026-07-18.csv', 'species,weightKg\n고등어,120');
+const blob = await zip.generateAsync({ type: 'blob' });
+// blob으로 다운로드 링크 생성</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. ZIP 읽기 + 파일 트리 순회</h2>
+    <div class="desc">1번에서 만든 ZIP을 다시 읽어(loadAsync) 폴더 구조를 그대로 나열하고, 특정 파일 내용을 꺼내봅니다.</div>
+    <div class="controls"><button class="action" id="readBtn2" disabled>ZIP 읽고 트리 표시 (먼저 1번 실행)</button></div>
+    <div class="tree" id="treeOutput2"></div>
+    <div class="result-box" id="output2">아직 읽지 않음</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const loaded = await JSZip.loadAsync(blob);
+loaded.forEach((relativePath, file) => {
+  console.log(relativePath, file.dir ? '(폴더)' : '(파일)');
+});
+const content = await loaded.file('위판기록/2026-07-18.csv').async('string');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 압축 방식 비교 (STORE vs DEFLATE)</h2>
+    <div class="desc">반복이 많은 같은 텍스트를 압축 없이(STORE) 담을 때와 DEFLATE로 압축해서 담을 때 실제 파일 크기를 비교합니다.</div>
+    <div class="controls"><button class="action" id="compareBtn3">압축 방식 비교 실행</button></div>
+    <div id="compareTableWrap3"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">zip.file('data.txt', text, { compression: 'STORE' });   // 압축 안 함, 그대로 저장
+zip.file('data.txt', text, {
+  compression: 'DEFLATE',
+  compressionOptions: { level: 9 }, // 1(빠름)~9(고압축)
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 다양한 출력 형식</h2>
+    <div class="desc">같은 ZIP을 blob·base64·arraybuffer 세 가지 형식으로 만들어 크기와 타입을 비교하고, base64로 왕복 복원이 되는지 확인합니다.</div>
+    <div class="controls"><button class="action" id="formatBtn4">형식별로 생성</button></div>
+    <div id="formatTableWrap4"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">await zip.generateAsync({ type: 'blob' });        // 다운로드용
+await zip.generateAsync({ type: 'base64' });      // 텍스트 저장/전송용
+await zip.generateAsync({ type: 'arraybuffer' }); // 바이너리 처리용
+await JSZip.loadAsync(base64String, { base64: true }); // base64에서 복원</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    let lastZipBlob = null;
+
+    // ---------- 1. 폴더 구조 + 다운로드 ----------
+    document.getElementById('buildBtn1').addEventListener('click', async () => {
+      const zip = new JSZip();
+      zip.file('README.txt', '가상 위판 서류 모음집입니다.');
+      const auctionFolder = zip.folder('위판기록');
+      auctionFolder.file('2026-07-18.csv', 'species,weightKg\n고등어,120\n갈치,85');
+      auctionFolder.file('2026-07-19.csv', 'species,weightKg\n오징어,60');
+      const reportFolder = zip.folder('보고서');
+      reportFolder.file('요약.txt', '이번 주 위판 총량: 265kg (가상 예시)');
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      lastZipBlob = blob;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'suhyup-demo.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      const output1 = document.getElementById('output1');
+      output1.textContent = `ZIP 생성 완료 — 파일 ${Object.keys(zip.files).length}개(폴더 포함), 크기 ${blob.size.toLocaleString('ko-KR')}바이트. suhyup-demo.zip으로 다운로드됨.`;
+      output1.classList.add('ok');
+
+      document.getElementById('readBtn2').disabled = false;
+    });
+
+    // ---------- 2. 읽기 + 트리 순회 ----------
+    document.getElementById('readBtn2').addEventListener('click', async () => {
+      if (!lastZipBlob) return;
+      const loaded = await JSZip.loadAsync(lastZipBlob);
+      const entries = [];
+      loaded.forEach((relativePath, file) => {
+        entries.push({ path: relativePath, isDir: file.dir });
+      });
+      entries.sort((a, b) => a.path.localeCompare(b.path));
+
+      const treeOutput2 = document.getElementById('treeOutput2');
+      treeOutput2.innerHTML = entries.map((e) => {
+        const depth = (e.path.match(/\//g) || []).length - (e.path.endsWith('/') ? 1 : 0);
+        const indentClass = depth > 0 ? 'indent' : '';
+        const name = e.path.replace(/\/$/, '').split('/').pop();
+        return `<div class="${e.isDir ? 'dir' : 'file'} ${indentClass}">${e.isDir ? '📁' : '📄'} ${name}${e.isDir ? '/' : ''}</div>`;
+      }).join('');
+
+      const csvFile = loaded.file('위판기록/2026-07-18.csv');
+      const content = await csvFile.async('string');
+      const output2 = document.getElementById('output2');
+      output2.textContent = `총 ${entries.length}개 항목 발견.\n'위판기록/2026-07-18.csv' 내용:\n${content}`;
+      output2.classList.add('ok');
+    });
+
+    // ---------- 3. 압축 방식 비교 ----------
+    document.getElementById('compareBtn3').addEventListener('click', async () => {
+      const bigText = '가상 위판 데이터 반복 텍스트. '.repeat(2000);
+      const originalSize = new TextEncoder().encode(bigText).length;
+
+      const zipStore = new JSZip();
+      zipStore.file('data.txt', bigText, { compression: 'STORE' });
+      const t0 = performance.now();
+      const storeBlob = await zipStore.generateAsync({ type: 'blob' });
+      const storeMs = (performance.now() - t0).toFixed(1);
+
+      const zipDeflate = new JSZip();
+      zipDeflate.file('data.txt', bigText, { compression: 'DEFLATE', compressionOptions: { level: 9 } });
+      const t1 = performance.now();
+      const deflateBlob = await zipDeflate.generateAsync({ type: 'blob' });
+      const deflateMs = (performance.now() - t1).toFixed(1);
+
+      const wrap = document.getElementById('compareTableWrap3');
+      wrap.innerHTML = `
+        <table>
+          <tr><th>방식</th><th>결과 크기(byte)</th><th>소요시간(ms)</th></tr>
+          <tr><td>STORE (압축 없음)</td><td>${storeBlob.size.toLocaleString('ko-KR')}</td><td>${storeMs}</td></tr>
+          <tr><td>DEFLATE (level 9)</td><td>${deflateBlob.size.toLocaleString('ko-KR')}</td><td>${deflateMs}</td></tr>
+        </table>
+        <div class="result-box ok">원본 텍스트 ${originalSize.toLocaleString('ko-KR')}바이트 → DEFLATE가 STORE 대비 약 ${Math.round((1 - deflateBlob.size / storeBlob.size) * 100)}% 더 작습니다.</div>
+      `;
+    });
+
+    // ---------- 4. 다양한 출력 형식 ----------
+    document.getElementById('formatBtn4').addEventListener('click', async () => {
+      const zip = new JSZip();
+      zip.file('hello.txt', '가상 위판장 인사말: 안녕하세요!');
+
+      const asBlob = await zip.generateAsync({ type: 'blob' });
+      const asBase64 = await zip.generateAsync({ type: 'base64' });
+      const asArrayBuffer = await zip.generateAsync({ type: 'arraybuffer' });
+
+      const fromBase64 = await JSZip.loadAsync(asBase64, { base64: true });
+      const restored = await fromBase64.file('hello.txt').async('string');
+      const roundTripOk = restored === '가상 위판장 인사말: 안녕하세요!';
+
+      const wrap = document.getElementById('formatTableWrap4');
+      wrap.innerHTML = `
+        <table>
+          <tr><th>형식</th><th>타입</th><th>크기</th></tr>
+          <tr><td>blob</td><td>${asBlob.constructor.name}</td><td>${asBlob.size}바이트</td></tr>
+          <tr><td>base64</td><td>${typeof asBase64}</td><td>${asBase64.length}자</td></tr>
+          <tr><td>arraybuffer</td><td>${asArrayBuffer.constructor.name}</td><td>${asArrayBuffer.byteLength}바이트</td></tr>
+        </table>
+        <div class="result-box ${roundTripOk ? 'ok' : ''}">base64 문자열 앞부분: ${asBase64.slice(0, 24)}...\nbase64 → loadAsync로 복원한 내용이 원본과 일치: ${roundTripOk ? '예' : '아니오'}</div>
+      `;
+    });
+  </script>
+</body>
+</html>
