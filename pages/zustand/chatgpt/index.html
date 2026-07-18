@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zustand 기능 실험실 - 오프라인 완전판</title>
+<style>
+:root{--bg:#0b0e14;--panel:#141923;--line:#293244;--text:#eef3fa;--muted:#9aa8bc;--brand:#f5b942;--good:#59d99b;--bad:#ff7382;--info:#6ebcff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#2a2112 0,transparent 28%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+.wrap{max-width:1450px;margin:auto;padding:24px}.hero,.card{background:linear-gradient(145deg,#171d29,#10141c);border:1px solid var(--line);border-radius:18px}
+.hero{padding:28px;margin-bottom:18px}.eyebrow{color:var(--brand);font-weight:800;letter-spacing:.12em;font-size:12px}h1{font-size:clamp(30px,5vw,56px);margin:8px 0 12px;letter-spacing:-.04em}.hero p{color:#bdc7d6;line-height:1.7;max-width:900px}
+.note{display:inline-block;padding:7px 10px;border:1px solid #4c4027;border-radius:999px;color:#ffd976;background:#211b0f;font-size:12px}
+.nav{position:sticky;top:8px;z-index:5;display:flex;gap:6px;overflow:auto;padding:9px;background:#0d1118dd;backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:13px;margin-bottom:18px}.nav a{color:#cbd5e4;text-decoration:none;white-space:nowrap;padding:8px 10px;border-radius:8px;font-size:13px}.nav a:hover{background:#202737}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}.card{grid-column:span 4;padding:19px;min-width:0}.wide{grid-column:span 6}.full{grid-column:1/-1}.card h2{margin:0 0 6px;font-size:18px}.desc{color:var(--muted);font-size:13px;line-height:1.55;margin:0 0 16px}.badge{font-size:10px;border:1px solid #3a455a;border-radius:999px;padding:4px 7px;color:#b9c5d6;margin-left:6px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.btn{border:1px solid #3a465d;background:#202839;color:white;border-radius:9px;padding:9px 12px;cursor:pointer}.btn:hover{filter:brightness(1.15)}.primary{background:var(--brand);border-color:var(--brand);color:#1d1608;font-weight:800}.good{background:#173b2d;color:#9ff1c6;border-color:#2e6c52}.bad{background:#3b1f27;color:#ff9eaa;border-color:#743243}.info{background:#172f48;color:#9bd2ff;border-color:#2d638f}
+input,select{background:#0c1017;border:1px solid #344057;color:white;border-radius:9px;padding:9px 10px}.metric{font-size:42px;font-weight:900;color:#ffd66f;letter-spacing:-.04em}.small{font-size:12px;color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.state{background:#080b10;border:1px solid #242d3c;border-radius:11px;padding:12px;white-space:pre-wrap;overflow:auto;max-height:240px;color:#b7e2ff;font-size:12px;line-height:1.5}.sep{height:1px;background:#273142;margin:15px 0}.todo{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #242d3c}.todo span{flex:1}.done span{text-decoration:line-through;color:#6f7c90}.bar{height:9px;background:#283143;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,#f3b43e,#ffe18a)}.box{background:#0f141d;border:1px solid #2b3547;border-radius:12px;padding:13px}.log{max-height:220px;overflow:auto}.log div{font-size:12px;border-left:3px solid var(--info);background:#0d121a;padding:8px;margin:5px 0}.render{font-size:11px;color:#b8a0ff}.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px}.chip{font-size:11px;padding:6px 9px;border:1px solid #364157;border-radius:999px;color:#c6d0df}
+footer{text-align:center;color:#748198;padding:28px 0 10px;font-size:12px}
+@media(max-width:1000px){.card,.wide{grid-column:span 6}}@media(max-width:650px){.wrap{padding:12px}.card,.wide{grid-column:1/-1}.hero{padding:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="hero">
+<div class="eyebrow">ZUSTAND CONCEPT LAB · OFFLINE</div>
+<h1>Zustand 기능 실험실</h1>
+<p>외부 CDN, React, npm 없이 즉시 실행되는 단일 HTML이다. Zustand의 핵심 개념인 store, selector, subscribe, persist, middleware, immer형 업데이트, redux 패턴, vanilla store, context형 독립 인스턴스를 직접 조작할 수 있다.</p>
+<span class="note">완전 오프라인 실행 · 검은 화면 문제 제거</span>
+<div class="chips"><span class="chip">create</span><span class="chip">set/get</span><span class="chip">selector</span><span class="chip">subscribe</span><span class="chip">persist</span><span class="chip">middleware</span><span class="chip">redux</span><span class="chip">vanilla store</span><span class="chip">context pattern</span></div>
+</section>
+<nav class="nav">
+<a href="#basic">기본 Store</a><a href="#selector">Selector</a><a href="#todo">CRUD</a><a href="#async">비동기</a><a href="#persist">Persist</a><a href="#subscribe">구독</a><a href="#redux">Redux</a><a href="#vanilla">Vanilla</a><a href="#context">Context</a><a href="#api">API</a>
+</nav>
+<div id="app" class="grid"></div>
+<footer>Zustand API 학습용 오프라인 실험실 · 실제 운영 적용 시 공식 Zustand 패키지 사용 권장</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+function createStore(initializer){
+  let state;
+  const listeners=new Set();
+  const setState=(partial,replace=false,action="setState")=>{
+    const prev=state;
+    const next=typeof partial==="function"?partial(state):partial;
+    state=replace?next:Object.assign({},state,next);
+    listeners.forEach(fn=>fn(state,prev,action));
+  };
+  const getState=()=>state;
+  const subscribe=(selector,listener,options={})=>{
+    if(typeof listener!=="function"){ listener=selector; selector=s=>s; }
+    let current=selector(state);
+    const wrapped=(next,prev,action)=>{
+      const selected=selector(next);
+      if(!Object.is(selected,current)){
+        const old=current; current=selected; listener(selected,old,action);
+      }
+    };
+    listeners.add(wrapped);
+    if(options.fireImmediately) listener(current,current,"fireImmediately");
+    return ()=>listeners.delete(wrapped);
+  };
+  state=initializer(setState,getState);
+  return {getState,setState,subscribe,getInitialState:()=>state};
+}
+
+function persist(store,key,partialize=s=>s){
+  const raw=localStorage.getItem(key);
+  if(raw){try{store.setState(JSON.parse(raw),false,"persist/rehydrate")}catch(e){}}
+  store.subscribe(s=>s, s=>{
+    try{localStorage.setItem(key,JSON.stringify(partialize(s)))}catch(e){}
+  });
+  return store;
+}
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function card(id,title,badge,desc,body,cls=""){return `<section id="${id}" class="card ${cls}"><h2>${title}<span class="badge">${badge}</span></h2><p class="desc">${desc}</p>${body}</section>`}
+
+const initial={
+ count:0,step:1,theme:"dark",todos:[{id:1,text:"선택자로 필요한 상태만 구독",done:true},{id:2,text:"persist 상태 저장 확인",done:false}],
+ profile:{name:"Zustand Bear",stats:{level:1,xp:0}},request:{status:"idle",data:null,error:null},transient:0
+};
+
+const store=persist(createStore((set,get)=>Object.assign(clone(initial),{
+ inc:()=>set(s=>({count:s.count+s.step}),false,"counter/inc"),
+ dec:()=>set(s=>({count:s.count-s.step}),false,"counter/dec"),
+ addTodo:text=>set(s=>({todos:[...s.todos,{id:Date.now(),text,done:false}]}),false,"todo/add"),
+ toggleTodo:id=>set(s=>({todos:s.todos.map(t=>t.id===id?Object.assign({},t,{done:!t.done}):t)}),false,"todo/toggle"),
+ removeTodo:id=>set(s=>({todos:s.todos.filter(t=>t.id!==id)}),false,"todo/remove"),
+ gainXp:n=>set(s=>{const p=clone(s.profile);p.stats.xp+=n;while(p.stats.xp>=100){p.stats.xp-=100;p.stats.level++}return{profile:p}},false,"profile/gainXp"),
+ reset:()=>set(Object.assign(clone(initial),actions()),true,"app/reset")
+})),"zustand-offline-lab",s=>({todos:s.todos,profile:s.profile,theme:s.theme}));
+
+function actions(){return {
+ inc:()=>store.setState(s=>({count:s.count+s.step}),false,"counter/inc"),
+ dec:()=>store.setState(s=>({count:s.count-s.step}),false,"counter/dec"),
+ addTodo:text=>store.setState(s=>({todos:[...s.todos,{id:Date.now(),text,done:false}]}),false,"todo/add"),
+ toggleTodo:id=>store.setState(s=>({todos:s.todos.map(t=>t.id===id?Object.assign({},t,{done:!t.done}):t)}),false,"todo/toggle"),
+ removeTodo:id=>store.setState(s=>({todos:s.todos.filter(t=>t.id!==id)}),false,"todo/remove"),
+ gainXp:n=>store.setState(s=>{const p=clone(s.profile);p.stats.xp+=n;while(p.stats.xp>=100){p.stats.xp-=100;p.stats.level++}return{profile:p}},false,"profile/gainXp"),
+ reset:()=>store.setState(Object.assign(clone(initial),actions()),true,"app/reset")
+}}
+
+const reduxStore=createStore((set,get)=>({items:[],dispatch(action){
+ const s=get();
+ if(action.type==="ADD"){const f=s.items.find(x=>x.id===action.item.id);set({items:f?s.items.map(x=>x.id===f.id?Object.assign({},x,{qty:x.qty+1}):x):[...s.items,Object.assign({},action.item,{qty:1})]},false,"redux/ADD")}
+ if(action.type==="REMOVE")set({items:s.items.filter(x=>x.id!==action.id)},false,"redux/REMOVE");
+ if(action.type==="CLEAR")set({items:[]},false,"redux/CLEAR");
+}}));
+
+const vanilla=createStore((set,get)=>({temperature:21,unit:"C",setTemperature:v=>set({temperature:v}),toggleUnit:()=>set({unit:get().unit==="C"?"F":"C"})}));
+const scopeA=createStore(set=>({value:0,inc:()=>set(s=>({value:s.value+1})),dec:()=>set(s=>({value:s.value-1}))}));
+const scopeB=createStore(set=>({value:0,inc:()=>set(s=>({value:s.value+1})),dec:()=>set(s=>({value:s.value-1}))}));
+
+let logs=[],subOff=null, renderCounts={count:0,theme:0};
+function render(){
+ const s=store.getState(), cart=reduxStore.getState(), v=vanilla.getState(), a=scopeA.getState(), b=scopeB.getState();
+ const total=cart.items.reduce((n,x)=>n+x.price*x.qty,0);
+ const temp=v.unit==="C"?v.temperature:Math.round((v.temperature*9/5+32)*10)/10;
+ renderCounts.count++; renderCounts.theme++;
+ document.getElementById("app").innerHTML=
+ card("basic","기본 Store","create · set/get","함수형 업데이트와 액션을 실험한다.",`
+ <div class="row between"><div class="metric">${s.count}</div><span class="render">렌더 ${renderCounts.count}회</span></div>
+ <div class="row"><button class="btn" data-act="dec">− step</button><button class="btn primary" data-act="inc">+ step</button>
+ <select id="step"><option ${s.step===1?"selected":""}>1</option><option ${s.step===2?"selected":""}>2</option><option ${s.step===5?"selected":""}>5</option><option ${s.step===10?"selected":""}>10</option></select></div>`) +
+ card("selector","Selector","부분 구독","특정 상태 조각만 감시하는 선택자 구독을 보여준다.",`
+ <div class="box"><b>count selector</b><div class="metric">${s.count}</div></div><div style="height:8px"></div>
+ <div class="box"><b>theme selector</b><div class="metric" style="font-size:26px">${s.theme}</div></div>`) +
+ card("immer","중첩 상태","immer 패턴","복제 후 중첩 값을 안전하게 갱신하는 방식을 체험한다.",`
+ <div class="row between"><div><div class="metric" style="font-size:29px">Lv.${s.profile.stats.level}</div><b>${esc(s.profile.name)}</b></div><button class="btn primary" data-act="xp">XP +25</button></div>
+ <p class="small">XP ${s.profile.stats.xp}/100</p><div class="bar"><i style="width:${s.profile.stats.xp}%"></i></div>`) +
+ card("todo","Todo CRUD","array update","배열 추가·토글·삭제와 상태 갱신을 확인한다.",`
+ <div class="row"><input id="todoText" placeholder="할 일 입력" style="flex:1"><button class="btn primary" data-act="addTodo">추가</button></div>
+ <div style="margin-top:10px">${s.todos.map(t=>`<div class="todo ${t.done?"done":""}"><input type="checkbox" data-toggle="${t.id}" ${t.done?"checked":""}><span>${esc(t.text)}</span><button class="btn bad" data-remove="${t.id}">삭제</button></div>`).join("")}</div>`,"wide") +
+ card("async","비동기 액션","async action","로딩과 성공 상태를 Store에서 관리한다.",`
+ <button class="btn primary" data-act="fetch" ${s.request.status==="loading"?"disabled":""}>${s.request.status==="loading"?"불러오는 중…":"샘플 요청"}</button><div style="height:10px"></div><pre class="state">${esc(JSON.stringify(s.request,null,2))}</pre>`,"wide") +
+ card("persist","영속 저장","persist","Todo와 프로필 일부를 localStorage에 저장한다.",`
+ <pre class="state">${esc(JSON.stringify({todos:s.todos,profile:s.profile},null,2))}</pre><button class="btn bad" data-act="clearPersist">저장 데이터 삭제</button>`) +
+ card("subscribe","선택자 구독","subscribeWithSelector","count 값 변화만 골라 이전 값과 함께 기록한다.",`
+ <button class="btn info" data-act="toggleSub">${subOff?"구독 해제":"구독 시작"}</button><div class="log">${logs.slice(-12).reverse().map(x=>`<div>${esc(x)}</div>`).join("")||"<div>로그 없음</div>"}</div>`) +
+ card("vanilla","Vanilla Store","createStore","React와 무관한 독립 Store 패턴이다.",`
+ <div class="metric">${temp}°${v.unit}</div><input id="temp" type="range" min="-10" max="40" value="${v.temperature}" style="width:100%"><div class="row"><button class="btn" data-act="unit">°C / °F</button><button class="btn" data-act="tempReset">21도로 초기화</button></div>`) +
+ card("redux","Redux 패턴","reducer · dispatch","dispatch 기반 장바구니 패턴을 체험한다.",`
+ <div class="row">${[{id:1,name:"연어",price:12000},{id:2,name:"전복",price:18000},{id:3,name:"김",price:7000}].map(p=>`<button class="btn good" data-product='${JSON.stringify(p)}'>${p.name} 담기</button>`).join("")}</div>
+ <div class="sep"></div><div class="row between"><b>합계 ${total.toLocaleString()}원</b><button class="btn bad" data-act="cartClear">비우기</button></div><pre class="state">${esc(JSON.stringify(cart.items,null,2))}</pre>`,"wide") +
+ card("context","독립 Store 인스턴스","Context pattern","동일한 UI가 서로 다른 Store 인스턴스를 사용한다.",`
+ <div class="row"><div class="box" style="flex:1"><b>왼쪽 인스턴스</b><div class="metric">${a.value}</div><button class="btn" data-scope="a-">−</button> <button class="btn primary" data-scope="a+">+</button></div>
+ <div class="box" style="flex:1"><b>오른쪽 인스턴스</b><div class="metric">${b.value}</div><button class="btn" data-scope="b-">−</button> <button class="btn primary" data-scope="b+">+</button></div></div>`,"wide") +
+ card("api","외부 API","getState · setState","컴포넌트 밖에서 상태를 직접 읽고 쓸 수 있다.",`
+ <div class="row"><button class="btn info" data-act="set777">setState → 777</button><button class="btn bad" data-act="reset">전체 초기화</button><button class="btn good" data-act="export">JSON 내보내기</button></div>
+ <pre class="state">${esc(JSON.stringify({count:s.count,step:s.step,todoCount:s.todos.length,theme:s.theme},null,2))}</pre>`,"full");
+ bind();
+}
+function bind(){
+ document.querySelectorAll("[data-act]").forEach(el=>el.onclick=()=>act(el.dataset.act));
+ document.querySelectorAll("[data-toggle]").forEach(el=>el.onchange=()=>store.getState().toggleTodo(Number(el.dataset.toggle)));
+ document.querySelectorAll("[data-remove]").forEach(el=>el.onclick=()=>store.getState().removeTodo(Number(el.dataset.remove)));
+ document.querySelectorAll("[data-product]").forEach(el=>el.onclick=()=>reduxStore.getState().dispatch({type:"ADD",item:JSON.parse(el.dataset.product)}));
+ document.querySelectorAll("[data-scope]").forEach(el=>el.onclick=()=>{const x=el.dataset.scope; const st=x[0]==="a"?scopeA:scopeB; x[1]==="+"?st.getState().inc():st.getState().dec()});
+ const step=document.getElementById("step"); if(step)step.onchange=e=>store.setState({step:Number(e.target.value)},false,"counter/setStep");
+ const temp=document.getElementById("temp"); if(temp)temp.oninput=e=>vanilla.getState().setTemperature(Number(e.target.value));
+}
+function act(name){
+ const s=store.getState();
+ if(name==="inc")s.inc(); if(name==="dec")s.dec(); if(name==="xp")s.gainXp(25);
+ if(name==="addTodo"){const i=document.getElementById("todoText");if(i.value.trim())s.addTodo(i.value.trim())}
+ if(name==="fetch"){store.setState({request:{status:"loading",data:null,error:null}},false,"request/start");setTimeout(()=>store.setState({request:{status:"success",data:{id:crypto.randomUUID?crypto.randomUUID():Date.now(),value:Math.floor(Math.random()*1000),time:new Date().toLocaleTimeString()},error:null}},false,"request/success"),700)}
+ if(name==="clearPersist"){localStorage.removeItem("zustand-offline-lab");location.reload()}
+ if(name==="toggleSub"){if(subOff){subOff();subOff=null;logs.push("구독 해제")}else{subOff=store.subscribe(x=>x.count,(v,p,a)=>{logs.push(`[${new Date().toLocaleTimeString()}] ${p} → ${v} · ${a}`);render()},{fireImmediately:true});logs.push("count selector 구독 시작")}render()}
+ if(name==="unit")vanilla.getState().toggleUnit(); if(name==="tempReset")vanilla.setState({temperature:21});
+ if(name==="cartClear")reduxStore.getState().dispatch({type:"CLEAR"}); if(name==="set777")store.setState({count:777},false,"external/setState");
+ if(name==="reset")store.getState().reset();
+ if(name==="export"){const clean=clone(store.getState());Object.keys(clean).forEach(k=>typeof clean[k]==="function"&&delete clean[k]);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(clean,null,2)],{type:"application/json"}));a.download="zustand-state.json";a.click()}
+}
+store.subscribe(render);reduxStore.subscribe(render);vanilla.subscribe(render);scopeA.subscribe(render);scopeB.subscribe(render);
+render();
+})();
+</script>
+</body>
+</html>
