@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>axe-core</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .sample-area {
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fafbfc;
+  }
+  .sample-area img { vertical-align: middle; margin-right: 10px; }
+  .sample-area input { padding: 6px 8px; margin-left: 6px; }
+  .sample-area button { margin-right: 8px; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .violation-item {
+    border: 1px solid #f5c2c2;
+    background: #fff6f6;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .violation-item:hover { background: #ffeaea; }
+  .violation-item .impact {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    color: #fff;
+    margin-right: 6px;
+  }
+  .impact-critical { background: #b42318; }
+  .impact-serious { background: #e08a2e; }
+  .impact-moderate { background: #c7a600; }
+  .impact-minor { background: #999; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>axe-core 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>axe-core</strong>는 웹페이지를 실제 스캔해서 <strong>WCAG 접근성 위반사항</strong>을
+    자동으로 찾아주는 감사(audit) 엔진입니다. 브라우저 확장 프로그램 Axe DevTools, Lighthouse,
+    여러 E2E 테스트 도구(Playwright, Cypress 등)가 내부적으로 이 엔진을 사용합니다.
+    <ul>
+      <li><code>axe.run(선택자 또는 DOM 요소)</code>로 특정 영역을 검사, <code>results.violations</code>에 실제 문제 목록이 담김</li>
+      <li>각 위반사항은 규칙 ID(<code>id</code>), 심각도(<code>impact</code>), 설명(<code>help</code>), 영향받은 요소의 CSS 선택자(<code>target</code>)를 포함</li>
+      <li><code>runOnly: { type: 'tag', values: [...] }</code>로 WCAG 레벨(A/AA 등) 기준만 골라서 검사 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 "문제 있는 예제" 영역은 실제 서비스 화면이 아니라, 접근성 문제를 일부러 심어둔
+      <strong>가상의 예시</strong> 마크업입니다. 검증 중 <code>color-contrast</code>(명암비) 규칙은
+      WCAG <strong>AA</strong> 레벨에서만 잡히고, A 레벨만 검사하면 놓친다는 것을 실제로 확인했습니다
+      (아래 3번 참고). 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 예제 영역 스캔</h2>
+    <div class="desc">아래 영역에는 대체 텍스트 없는 이미지, 명암비가 낮은 텍스트, 빈 버튼, 라벨 없는 입력창이 일부러 섞여 있습니다. 실제로 몇 개가 잡히는지 스캔해보세요.</div>
+    <div class="sample-area" id="demoArea">
+      <img id="img1" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234f7dff'/%3E%3C/svg%3E" />
+      <button id="emptyButton1"></button>
+      <input id="textInput1" type="text" />
+      <p id="lowContrastText" style="color:#ddd; background:#fff; margin:10px 0 0;">위판 시세 공지 (명암비가 낮아 잘 안 보임)</p>
+    </div>
+    <div class="controls"><button class="action" id="scanBtn1">스캔 실행</button></div>
+    <div class="result-box" id="output1">아직 스캔 안 함</div>
+    <div id="violationList1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const results = await axe.run('#demoArea');
+results.violations.forEach((v) => {
+  console.log(v.id, v.impact, v.help);
+  console.log(v.nodes[0].target); // 문제 요소의 CSS 선택자
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 위반 요소 하이라이트</h2>
+    <div class="desc">1번에서 스캔한 뒤, 목록의 위반사항을 클릭하면 실제 DOM에서 그 요소를 빨간 테두리로 표시합니다.</div>
+    <div class="result-box" id="output2">먼저 1번에서 스캔해주세요</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const selector = violation.nodes[0].target[0];
+document.querySelector(selector).style.outline = '3px solid red';
+document.querySelector(selector).scrollIntoView({ block: 'center' });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. WCAG 레벨별 필터링</h2>
+    <div class="desc">같은 영역을 WCAG A 레벨만 검사할 때와, A+AA를 함께 검사할 때로 나눠 비교합니다.</div>
+    <div class="controls"><button class="action" id="wcagBtn3">A vs A+AA 비교</button></div>
+    <div class="result-box" id="output3">아직 비교 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">await axe.run('#demoArea', { runOnly: { type: 'tag', values: ['wcag2a'] } });
+await axe.run('#demoArea', { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } });
+// color-contrast는 AA 레벨 규칙이라 A만 검사하면 결과에서 빠짐</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 수정 후 재검사 (Before / After)</h2>
+    <div class="desc">버튼을 누르면 위 1번 영역이 접근성을 개선한 버전(대체 텍스트 추가, 버튼에 이름 추가, 입력창에 라벨 연결, 명암비 개선)으로 바뀌고 다시 스캔합니다.</div>
+    <div class="controls"><button class="action" id="fixBtn4">접근성 개선 버전 적용 후 재스캔</button></div>
+    <div class="result-box" id="output4">아직 적용 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// 개선 예시
+&lt;img src="..." alt="가상 위판장 로고" /&gt;
+&lt;button&gt;확인&lt;/button&gt;              &lt;!-- 빈 버튼 대신 텍스트 포함 --&gt;
+&lt;label for="name"&gt;이름&lt;/label&gt;
+&lt;input id="name" type="text" /&gt;
+&lt;p style="color:#222;"&gt;...&lt;/p&gt;     &lt;!-- 명암비 개선 --&gt;</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/axe-core@4.12.1/axe.min.js"></script>
+  <script>
+    let lastViolations = [];
+
+    function impactClass(impact) {
+      return 'impact-' + (impact || 'minor');
+    }
+
+    // ---------- 1. 예제 영역 스캔 ----------
+    document.getElementById('scanBtn1').addEventListener('click', async () => {
+      const output1 = document.getElementById('output1');
+      const listEl = document.getElementById('violationList1');
+      output1.textContent = '스캔 중...';
+      const results = await axe.run('#demoArea');
+      lastViolations = results.violations;
+      output1.textContent = `위반사항 ${results.violations.length}건 발견 (통과 항목 ${results.passes.length}건)`;
+      output1.classList.toggle('ok', results.violations.length === 0);
+      listEl.innerHTML = '';
+      results.violations.forEach((v, idx) => {
+        const div = document.createElement('div');
+        div.className = 'violation-item';
+        div.innerHTML = `<span class="impact ${impactClass(v.impact)}">${v.impact}</span><strong>${v.id}</strong> — ${v.help} <br><span style="color:#888;">대상: ${v.nodes[0].target[0]}</span>`;
+        div.addEventListener('click', () => highlightViolation(v));
+        listEl.appendChild(div);
+      });
+    });
+
+    function highlightViolation(violation) {
+      const output2 = document.getElementById('output2');
+      const selector = violation.nodes[0].target[0];
+      const el = document.querySelector(selector);
+      document.querySelectorAll('#demoArea *').forEach((n) => { n.style.outline = ''; });
+      if (el) {
+        el.style.outline = '3px solid red';
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        output2.textContent = `강조 표시됨: ${violation.id} → ${selector}`;
+        output2.classList.add('ok');
+      } else {
+        output2.textContent = '요소를 찾지 못했습니다.';
+        output2.classList.remove('ok');
+      }
+    }
+
+    // ---------- 3. WCAG 레벨별 필터링 ----------
+    document.getElementById('wcagBtn3').addEventListener('click', async () => {
+      const output3 = document.getElementById('output3');
+      output3.textContent = '비교 중...';
+      const resultsA = await axe.run('#demoArea', { runOnly: { type: 'tag', values: ['wcag2a'] } });
+      const resultsAA = await axe.run('#demoArea', { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } });
+      output3.textContent =
+        `WCAG A만: ${resultsA.violations.length}건 (${resultsA.violations.map((v) => v.id).join(', ') || '없음'})\n` +
+        `WCAG A+AA: ${resultsAA.violations.length}건 (${resultsAA.violations.map((v) => v.id).join(', ') || '없음'})`;
+      output3.classList.add('ok');
+    });
+
+    // ---------- 4. 수정 후 재검사 ----------
+    document.getElementById('fixBtn4').addEventListener('click', async () => {
+      const output4 = document.getElementById('output4');
+      const demoArea = document.getElementById('demoArea');
+      demoArea.innerHTML = `
+        <img id="img1" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%234f7dff'/%3E%3C/svg%3E" alt="가상 위판장 로고" />
+        <button id="fixedButton1">확인</button>
+        <label for="textInput1f">이름</label>
+        <input id="textInput1f" type="text" placeholder="이름 입력" />
+        <p id="okContrastText" style="color:#222; background:#fff; margin:10px 0 0;">위판 시세 공지 (명암비 개선됨)</p>
+      `;
+      const results = await axe.run('#demoArea');
+      output4.textContent = `개선 후 위반사항: ${results.violations.length}건`;
+      output4.classList.toggle('ok', results.violations.length === 0);
+    });
+  </script>
+</body>
+</html>
