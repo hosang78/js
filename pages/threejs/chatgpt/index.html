@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Three.js의 렌더링, 기하도형, 재질, 조명, 그림자, 애니메이션, 레이캐스팅, 후처리, 모델 로더 등을 한 페이지에서 체험하는 종합 샘플" />
+  <title>Three.js Feature Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --panel: rgba(12, 18, 32, 0.92);
+      --panel-2: rgba(19, 28, 48, 0.88);
+      --line: rgba(148, 163, 184, 0.22);
+      --text: #eaf1ff;
+      --muted: #9dafc8;
+      --primary: #67e8f9;
+      --primary-2: #8b5cf6;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --danger: #fb7185;
+      --shadow: 0 20px 60px rgba(0, 0, 0, .38);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--bg); font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, sans-serif; color: var(--text); }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    #app { position: relative; width: 100%; height: 100%; background: radial-gradient(circle at 70% 15%, #172554 0, #070b14 46%, #03050a 100%); }
+    #viewport { position: absolute; inset: 0; }
+    #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+    .topbar {
+      position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+      z-index: 20; display: flex; align-items: center; gap: 8px; width: min(980px, calc(100% - 400px));
+      padding: 9px; border: 1px solid var(--line); border-radius: 18px; background: rgba(7, 11, 20, .72);
+      backdrop-filter: blur(16px); box-shadow: var(--shadow);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 190px; padding: 0 8px; }
+    .brand-mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; font-weight: 900; color: #061018; background: linear-gradient(135deg, var(--primary), #c4b5fd); }
+    .brand strong { display: block; font-size: 14px; letter-spacing: .02em; }
+    .brand small { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+    .toolbar { display: flex; align-items: center; gap: 6px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+    .toolbar::-webkit-scrollbar { display: none; }
+    .icon-btn, .action-btn, .seg-btn {
+      border: 1px solid var(--line); background: rgba(20, 29, 48, .75); border-radius: 11px; cursor: pointer;
+      transition: .18s ease; white-space: nowrap;
+    }
+    .icon-btn { width: 38px; height: 38px; display: grid; place-items: center; font-size: 16px; }
+    .action-btn { padding: 10px 13px; font-size: 12px; font-weight: 700; }
+    .icon-btn:hover, .action-btn:hover, .seg-btn:hover { border-color: rgba(103, 232, 249, .65); background: rgba(31, 48, 74, .92); transform: translateY(-1px); }
+    .icon-btn.active, .action-btn.active, .seg-btn.active { color: #071018; background: linear-gradient(135deg, var(--primary), #a78bfa); border-color: transparent; }
+    .action-btn.primary { color: #061018; background: linear-gradient(135deg, var(--primary), #93c5fd); border-color: transparent; }
+    .grow { flex: 1; }
+
+    .sidebar {
+      position: absolute; z-index: 30; top: 12px; right: 12px; bottom: 12px; width: 360px;
+      display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 22px;
+      background: var(--panel); backdrop-filter: blur(20px); box-shadow: var(--shadow); overflow: hidden;
+      transition: transform .25s ease;
+    }
+    .sidebar-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(37, 99, 235, .1), transparent); }
+    .sidebar-head h1 { font-size: 18px; margin: 0 0 5px; }
+    .sidebar-head p { font-size: 11px; line-height: 1.55; color: var(--muted); margin: 0; }
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 14px; }
+    .tab-btn { border: 1px solid var(--line); background: rgba(10, 16, 29, .7); color: var(--muted); border-radius: 9px; padding: 8px 3px; font-size: 11px; cursor: pointer; }
+    .tab-btn.active { color: #061018; font-weight: 800; border-color: transparent; background: var(--primary); }
+    .panel-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .section { border: 1px solid var(--line); border-radius: var(--radius); background: rgba(9, 15, 27, .58); padding: 13px; margin-bottom: 10px; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
+    .section-title strong { font-size: 12px; }
+    .badge { padding: 3px 7px; border-radius: 999px; background: rgba(103, 232, 249, .12); color: var(--primary); font-size: 9px; border: 1px solid rgba(103, 232, 249, .18); }
+    .control { display: grid; grid-template-columns: 100px 1fr auto; gap: 8px; align-items: center; margin: 9px 0; }
+    .control > label { color: var(--muted); font-size: 11px; }
+    .control output { min-width: 42px; text-align: right; color: #dbeafe; font-size: 10px; font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--primary); }
+    input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: transparent; }
+    select { width: 100%; min-width: 0; color: var(--text); border: 1px solid var(--line); border-radius: 8px; background: #111a2b; padding: 7px 8px; font-size: 11px; }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 11px; color: var(--muted); }
+    .switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; cursor: pointer; border-radius: 999px; background: #27344a; transition: .2s; }
+    .slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: #dbeafe; transition: .2s; }
+    .switch input:checked + .slider { background: linear-gradient(135deg, #0891b2, #7c3aed); }
+    .switch input:checked + .slider::before { transform: translateX(16px); background: white; }
+    .button-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .button-grid.three { grid-template-columns: repeat(3, 1fr); }
+    .seg-btn { padding: 8px 6px; font-size: 10px; }
+    .file-label { display: block; text-align: center; padding: 11px; border: 1px dashed rgba(103, 232, 249, .45); border-radius: 11px; color: var(--primary); font-size: 11px; cursor: pointer; background: rgba(8, 145, 178, .06); }
+    .file-label:hover { background: rgba(8, 145, 178, .13); }
+    .file-label input { display: none; }
+    .hint { margin: 8px 0 0; font-size: 9px; line-height: 1.55; color: #7f91aa; }
+    .info-list { display: grid; gap: 6px; }
+    .info-item { display: grid; grid-template-columns: 92px 1fr; gap: 8px; padding: 7px 8px; border-radius: 9px; background: rgba(30, 41, 59, .42); font-size: 10px; }
+    .info-item span:first-child { color: var(--muted); }
+    .info-item span:last-child { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .feature-card { padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(16, 24, 40, .62); }
+    .feature-card strong { display: block; font-size: 10px; margin-bottom: 4px; color: #dbeafe; }
+    .feature-card span { font-size: 9px; line-height: 1.4; color: var(--muted); }
+
+    .bottom-status {
+      position: absolute; z-index: 15; left: 14px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+      max-width: calc(100% - 400px); pointer-events: none;
+    }
+    .stat-pill { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: rgba(7, 11, 20, .72); backdrop-filter: blur(10px); font-size: 10px; color: var(--muted); }
+    .stat-pill b { color: var(--text); font-variant-numeric: tabular-nums; }
+    .selection-card {
+      position: absolute; z-index: 15; left: 14px; top: 76px; width: min(280px, calc(100% - 28px));
+      padding: 12px 13px; border: 1px solid var(--line); border-radius: 14px; background: rgba(7, 11, 20, .74); backdrop-filter: blur(12px);
+      pointer-events: none; box-shadow: var(--shadow);
+    }
+    .selection-card .eyebrow { font-size: 9px; color: var(--primary); text-transform: uppercase; letter-spacing: .14em; }
+    .selection-card strong { display: block; font-size: 13px; margin: 4px 0; }
+    .selection-card p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .crosshair { position: absolute; z-index: 10; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); pointer-events: none; opacity: .55; }
+    .crosshair::before, .crosshair::after { content: ""; position: absolute; background: rgba(255,255,255,.65); }
+    .crosshair::before { left: 6px; top: 0; width: 1px; height: 14px; }
+    .crosshair::after { top: 6px; left: 0; width: 14px; height: 1px; }
+    .toast { position: absolute; z-index: 100; left: 50%; bottom: 70px; transform: translate(-50%, 20px); padding: 10px 14px; border: 1px solid var(--line); border-radius: 11px; background: rgba(5, 9, 17, .94); color: #e2e8f0; font-size: 11px; opacity: 0; pointer-events: none; transition: .25s; box-shadow: var(--shadow); }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .loading { position: absolute; z-index: 120; inset: 0; display: grid; place-items: center; background: #050812; transition: opacity .45s ease; }
+    .loading.hide { opacity: 0; pointer-events: none; }
+    .loader-box { text-align: center; }
+    .loader-orbit { width: 54px; height: 54px; margin: 0 auto 14px; border: 2px solid rgba(103, 232, 249, .16); border-top-color: var(--primary); border-right-color: #a78bfa; border-radius: 50%; animation: spin 1s linear infinite; }
+    .loader-box strong { display: block; font-size: 13px; }
+    .loader-box small { display: block; color: var(--muted); margin-top: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .css-label { padding: 4px 7px; border: 1px solid rgba(255,255,255,.22); border-radius: 7px; background: rgba(5,9,17,.72); color: white; font-size: 9px; white-space: nowrap; backdrop-filter: blur(4px); transform: translateY(-10px); }
+    #xrSlot #VRButton { position: static !important; width: auto !important; height: 38px !important; margin: 0 !important; padding: 0 12px !important; border: 1px solid var(--line) !important; border-radius: 11px !important; background: rgba(20, 29, 48, .75) !important; opacity: 1 !important; font-size: 10px !important; }
+    .mobile-menu { display: none; }
+
+    @media (max-width: 1000px) {
+      .topbar { left: 12px; right: 12px; width: auto; transform: none; }
+      .brand { min-width: auto; }
+      .brand small { display: none; }
+      .sidebar { width: min(360px, calc(100% - 24px)); transform: translateX(calc(100% + 24px)); }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-menu { display: grid; }
+      .bottom-status { max-width: calc(100% - 28px); }
+    }
+    @media (max-width: 640px) {
+      .topbar { top: max(8px, env(safe-area-inset-top)); left: 8px; right: 8px; padding: 7px; border-radius: 15px; }
+      .brand { padding-left: 2px; }
+      .brand strong { font-size: 12px; }
+      .brand-mark { width: 32px; height: 32px; }
+      .toolbar .desktop-only { display: none; }
+      .selection-card { top: 68px; left: 8px; padding: 9px 10px; width: 230px; }
+      .selection-card p { display: none; }
+      .bottom-status { left: 8px; bottom: max(8px, env(safe-area-inset-bottom)); gap: 4px; }
+      .stat-pill { padding: 5px 7px; font-size: 9px; }
+      .sidebar { top: 8px; right: 8px; bottom: 8px; width: calc(100% - 16px); }
+    }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+<div id="app">
+  <div id="viewport"></div>
+  <div id="labels"></div>
+  <div class="crosshair"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">3D</div>
+      <div><strong>Three.js Feature Lab</strong><small>r185.1 · Interactive WebGL Showcase</small></div>
+    </div>
+    <div class="toolbar">
+      <button class="icon-btn" id="resetView" title="카메라 초기화">⌂</button>
+      <button class="icon-btn active" id="playToggle" title="애니메이션 재생/정지">Ⅱ</button>
+      <button class="action-btn desktop-only" id="cameraToggle">원근 카메라</button>
+      <button class="action-btn desktop-only" id="focusSelected">선택 초점</button>
+      <button class="action-btn desktop-only" id="screenshotBtn">PNG 저장</button>
+      <span class="grow"></span>
+      <div id="xrSlot" class="desktop-only"></div>
+      <button class="icon-btn" id="fullscreenBtn" title="전체 화면">⛶</button>
+      <button class="icon-btn mobile-menu" id="menuBtn" title="설정 열기">☰</button>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <h1>기능 제어 패널</h1>
+      <p>장면을 클릭해 객체를 선택하고 W·E·R 키로 이동·회전·크기를 조절할 수 있다.</p>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="scene">장면</button>
+        <button class="tab-btn" data-tab="object">객체</button>
+        <button class="tab-btn" data-tab="effects">효과</button>
+        <button class="tab-btn" data-tab="io">입출력</button>
+      </div>
+    </div>
+    <div class="panel-scroll">
+      <section class="tab-panel active" id="tab-scene">
+        <div class="section">
+          <div class="section-title"><strong>렌더러·카메라</strong><span class="badge">Core</span></div>
+          <div class="control"><label>카메라</label><select id="cameraSelect"><option value="perspective">Perspective</option><option value="orthographic">Orthographic</option></select><span></span></div>
+          <div class="control"><label>시야각 FOV</label><input id="fov" type="range" min="30" max="100" value="55"><output id="fovOut">55°</output></div>
+          <div class="control"><label>노출</label><input id="exposure" type="range" min="0.2" max="2.5" step="0.05" value="1"><output id="exposureOut">1.00</output></div>
+          <div class="control"><label>픽셀 비율</label><input id="pixelRatio" type="range" min="0.5" max="2" step="0.25" value="1.5"><output id="pixelRatioOut">1.50</output></div>
+          <div class="switch-row"><span>OrbitControls 자동 회전</span><label class="switch"><input id="autoRotate" type="checkbox"><span class="slider"></span></label></div>
+          <div class="switch-row"><span>감쇠(Damping)</span><label class="switch"><input id="damping" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>배경·안개·환경</strong><span class="badge">Atmosphere</span></div>
+          <div class="control"><label>배경색</label><input id="bgColor" type="color" value="#07101f"><span></span></div>
+          <div class="control"><label>안개 유형</label><select id="fogType"><option value="none">없음</option><option value="linear">Linear Fog</option><option value="exp2" selected>FogExp2</option></select><span></span></div>
+          <div class="control"><label>안개 밀도</label><input id="fogDensity" type="range" min="0.002" max="0.06" step="0.002" value="0.018"><output id="fogDensityOut">0.018</output></div>
+          <div class="switch-row"><span>RoomEnvironment 반사</span><label class="switch"><input id="environment" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>바닥 그리드</span><label class="switch"><input id="gridToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>축 헬퍼</span><label class="switch"><input id="axesToggle" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>조명 시스템</strong><span class="badge">6종</span></div>
+          <div class="control"><label>주광 세기</label><input id="sunIntensity" type="range" min="0" max="8" step="0.1" value="3.2"><output id="sunIntensityOut">3.2</output></div>
+          <div class="control"><label>포인트광</label><input id="pointIntensity" type="range" min="0" max="50" step="1" value="18"><output id="pointIntensityOut">18</output></div>
+          <div class="control"><label>스포트광</label><input id="spotIntensity" type="range" min="0" max="80" step="1" value="26"><output id="spotIntensityOut">26</output></div>
+          <div class="switch-row"><span>그림자</span><label class="switch"><input id="shadowToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>조명 헬퍼</span><label class="switch"><input id="lightHelpers" type="checkbox"><span class="slider"></span></label></div>
+          <div class="switch-row"><span>3D 위치 음향</span><label class="switch"><input id="audioToggle" type="checkbox"><span class="slider"></span></label></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-object">
+        <div class="section">
+          <div class="section-title"><strong>선택 객체</strong><span class="badge" id="selectedBadge">없음</span></div>
+          <div class="button-grid three">
+            <button class="seg-btn active" data-transform="translate">이동 W</button>
+            <button class="seg-btn" data-transform="rotate">회전 E</button>
+            <button class="seg-btn" data-transform="scale">크기 R</button>
+          </div>
+          <div class="button-grid" style="margin-top:7px">
+            <button class="seg-btn" id="spaceToggle">World 공간</button>
+            <button class="seg-btn" id="detachTransform">기즈모 해제</button>
+          </div>
+          <div class="control"><label>기즈모 크기</label><input id="gizmoSize" type="range" min="0.5" max="2" step="0.1" value="1"><output id="gizmoSizeOut">1.0</output></div>
+          <div class="control"><label>재질 색상</label><input id="objectColor" type="color" value="#22d3ee"><span></span></div>
+          <div class="control"><label>금속성</label><input id="metalness" type="range" min="0" max="1" step="0.05" value="0.5"><output id="metalnessOut">0.50</output></div>
+          <div class="control"><label>거칠기</label><input id="roughness" type="range" min="0" max="1" step="0.05" value="0.35"><output id="roughnessOut">0.35</output></div>
+          <div class="button-grid">
+            <button class="seg-btn" id="cloneObject">복제</button>
+            <button class="seg-btn" id="deleteObject">삭제</button>
+          </div>
+          <p class="hint">그룹이나 특수 재질은 일부 재질 제어가 적용되지 않을 수 있다. Delete 키로도 삭제 가능하다.</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>애니메이션</strong><span class="badge">Mixer·Morph</span></div>
+          <div class="control"><label>재생 속도</label><input id="animSpeed" type="range" min="0" max="3" step="0.1" value="1"><output id="animSpeedOut">1.0×</output></div>
+          <div class="switch-row"><span>기하도형 회전</span><label class="switch"><input id="rotateObjects" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>파티클 흐름</span><label class="switch"><input id="particleMotion" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>Morph Target 변형</span><label class="switch"><input id="morphMotion" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>표시 레이어</strong><span class="badge">Layers</span></div>
+          <div class="switch-row"><span>기하도형 갤러리</span><label class="switch"><input id="galleryLayer" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>파티클</span><label class="switch"><input id="particleLayer" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>곡선·라인</span><label class="switch"><input id="curveLayer" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>인스턴싱</span><label class="switch"><input id="instanceLayer" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-effects">
+        <div class="section">
+          <div class="section-title"><strong>후처리 파이프라인</strong><span class="badge">Composer</span></div>
+          <div class="switch-row"><span>EffectComposer 사용</span><label class="switch"><input id="composerToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>Unreal Bloom</span><label class="switch"><input id="bloomToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="control"><label>Bloom 강도</label><input id="bloomStrength" type="range" min="0" max="2.5" step="0.05" value="0.55"><output id="bloomStrengthOut">0.55</output></div>
+          <div class="control"><label>Bloom 반경</label><input id="bloomRadius" type="range" min="0" max="1" step="0.05" value="0.35"><output id="bloomRadiusOut">0.35</output></div>
+          <div class="control"><label>Bloom 임계</label><input id="bloomThreshold" type="range" min="0" max="2" step="0.05" value="0.75"><output id="bloomThresholdOut">0.75</output></div>
+          <div class="switch-row"><span>RGB Shift</span><label class="switch"><input id="rgbToggle" type="checkbox"><span class="slider"></span></label></div>
+          <div class="control"><label>RGB 이동량</label><input id="rgbAmount" type="range" min="0" max="0.02" step="0.0005" value="0.003"><output id="rgbAmountOut">0.0030</output></div>
+          <div class="switch-row"><span>FXAA</span><label class="switch"><input id="fxaaToggle" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>재질·렌더링 효과</strong><span class="badge">PBR·Shader</span></div>
+          <div class="switch-row"><span>와이어프레임 전체 보기</span><label class="switch"><input id="wireframeToggle" type="checkbox"><span class="slider"></span></label></div>
+          <div class="switch-row"><span>로컬 클리핑</span><label class="switch"><input id="clippingToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="control"><label>클리핑 위치</label><input id="clippingPos" type="range" min="-2" max="2" step="0.05" value="0"><output id="clippingPosOut">0.00</output></div>
+          <div class="switch-row"><span>동적 큐브 반사</span><label class="switch"><input id="reflectionToggle" type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="switch-row"><span>CSS2D 라벨</span><label class="switch"><input id="labelToggle" type="checkbox" checked><span class="slider"></span></label></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>데모 바로가기</strong><span class="badge">Focus</span></div>
+          <div class="button-grid">
+            <button class="seg-btn demo-focus" data-focus="shader">ShaderMaterial</button>
+            <button class="seg-btn demo-focus" data-focus="morph">Morph Target</button>
+            <button class="seg-btn demo-focus" data-focus="lod">LOD</button>
+            <button class="seg-btn demo-focus" data-focus="reflection">CubeCamera</button>
+            <button class="seg-btn demo-focus" data-focus="instancing">InstancedMesh</button>
+            <button class="seg-btn demo-focus" data-focus="curve">Curve/Tube</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-io">
+        <div class="section">
+          <div class="section-title"><strong>3D 모델 불러오기</strong><span class="badge">Loaders</span></div>
+          <label class="file-label">GLB · OBJ · STL 파일 선택<input id="modelInput" type="file" accept=".glb,.obj,.stl"></label>
+          <p class="hint">GLB는 텍스처를 파일 내부에 포함할 수 있어 단일 파일 로딩에 적합하다. OBJ의 MTL·외부 텍스처는 이 샘플에서 자동 연결하지 않는다.</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>저장·내보내기</strong><span class="badge">Exporters</span></div>
+          <div class="button-grid">
+            <button class="seg-btn" id="exportGlb">선택 객체 GLB</button>
+            <button class="seg-btn" id="exportJson">장면 JSON</button>
+            <button class="seg-btn" id="screenshotBtn2">화면 PNG</button>
+            <button class="seg-btn" id="clearImported">불러온 모델 제거</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>실시간 렌더링 정보</strong><span class="badge">WebGL</span></div>
+          <div class="info-list">
+            <div class="info-item"><span>Three.js</span><span>r185.1</span></div>
+            <div class="info-item"><span>렌더러</span><span id="rendererInfo">확인 중</span></div>
+            <div class="info-item"><span>WebGL 버전</span><span id="webglInfo">확인 중</span></div>
+            <div class="info-item"><span>최대 텍스처</span><span id="textureInfo">-</span></div>
+            <div class="info-item"><span>선택 객체</span><span id="selectedInfo">없음</span></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>포함 기능</strong><span class="badge">30+</span></div>
+          <div class="feature-grid">
+            <div class="feature-card"><strong>Geometry</strong><span>Box, Sphere, TorusKnot, Capsule, Polyhedron 등</span></div>
+            <div class="feature-card"><strong>Materials</strong><span>Basic, Phong, Standard, Physical, Toon, Shader</span></div>
+            <div class="feature-card"><strong>Lights</strong><span>Ambient, Hemisphere, Directional, Point, Spot, RectArea</span></div>
+            <div class="feature-card"><strong>Interaction</strong><span>Orbit, Transform, Raycaster, Keyboard</span></div>
+            <div class="feature-card"><strong>Performance</strong><span>InstancedMesh, LOD, BufferGeometry</span></div>
+            <div class="feature-card"><strong>Effects</strong><span>Shadows, Fog, Bloom, RGB Shift, FXAA</span></div>
+            <div class="feature-card"><strong>Animation</strong><span>AnimationMixer, Morph Targets, Shader uniforms</span></div>
+            <div class="feature-card"><strong>I/O</strong><span>GLTF/OBJ/STL Loader, GLB/JSON Export</span></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><strong>실행 안내</strong><span class="badge">중요</span></div>
+          <p class="hint" style="margin:0;color:#a9b9d0">ES Module과 파일 로더의 브라우저 보안 정책 때문에 더블클릭보다 로컬 웹 서버 실행을 권장한다.<br><br><b style="color:#e2e8f0">Python:</b> <code>python -m http.server 8000</code><br><b style="color:#e2e8f0">Node:</b> <code>npx serve .</code></p>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <div class="selection-card">
+    <span class="eyebrow">Raycaster Selection</span>
+    <strong id="selectionName">객체를 클릭해 선택</strong>
+    <p id="selectionDescription">마우스 또는 터치로 오브젝트를 선택하면 TransformControls와 속성 편집 기능이 연결된다.</p>
+  </div>
+
+  <div class="bottom-status">
+    <span class="stat-pill">FPS <b id="fps">0</b></span>
+    <span class="stat-pill">Draw Calls <b id="calls">0</b></span>
+    <span class="stat-pill">Triangles <b id="triangles">0</b></span>
+    <span class="stat-pill">Objects <b id="objects">0</b></span>
+    <span class="stat-pill">Camera <b id="cameraStatus">Perspective</b></span>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="loading" id="loading"><div class="loader-box"><div class="loader-orbit"></div><strong>Three.js Feature Lab</strong><small>WebGL 장면을 구성하는 중...</small></div></div>
+</div>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { TransformControls } from 'three/addons/controls/TransformControls.js';
+  import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+  import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+  import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+  import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+  import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+  import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+  import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+  import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+  import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
+  import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+  import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+  const $ = (id) => document.getElementById(id);
+  const viewport = $('viewport');
+  const labelHost = $('labels');
+  const toastEl = $('toast');
+  const loadingEl = $('loading');
+
+  let toastTimer;
+  function toast(message) {
+    clearTimeout(toastTimer);
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Renderer, scene, cameras
+  // ──────────────────────────────────────────────────────────────
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x07101f);
+  scene.fog = new THREE.FogExp2(0x07101f, 0.018);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1;
+  renderer.localClippingEnabled = true;
+  renderer.xr.enabled = true;
+  viewport.appendChild(renderer.domElement);
+
+  const labelRenderer = new CSS2DRenderer();
+  labelRenderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  labelRenderer.domElement.style.position = 'absolute';
+  labelRenderer.domElement.style.inset = '0';
+  labelRenderer.domElement.style.pointerEvents = 'none';
+  labelHost.appendChild(labelRenderer.domElement);
+
+  const aspect = viewport.clientWidth / viewport.clientHeight;
+  const perspectiveCamera = new THREE.PerspectiveCamera(55, aspect, 0.1, 250);
+  perspectiveCamera.position.set(15, 10, 20);
+  const frustum = 12;
+  const orthographicCamera = new THREE.OrthographicCamera(-frustum * aspect, frustum * aspect, frustum, -frustum, 0.1, 250);
+  orthographicCamera.position.copy(perspectiveCamera.position);
+  orthographicCamera.zoom = 1.05;
+  orthographicCamera.updateProjectionMatrix();
+  let camera = perspectiveCamera;
+
+  const listener = new THREE.AudioListener();
+  camera.add(listener);
+
+  const orbit = new OrbitControls(camera, renderer.domElement);
+  orbit.enableDamping = true;
+  orbit.dampingFactor = 0.065;
+  orbit.target.set(0, 2, 0);
+  orbit.minDistance = 3;
+  orbit.maxDistance = 70;
+  orbit.maxPolarAngle = Math.PI * 0.49;
+  orbit.update();
+
+  const transform = new TransformControls(camera, renderer.domElement);
+  scene.add(transform.getHelper());
+  transform.setMode('translate');
+  transform.addEventListener('dragging-changed', (e) => orbit.enabled = !e.value);
+  transform.addEventListener('objectChange', () => updateSelectionBox());
+
+  // WebXR button
+  const vrButton = VRButton.createButton(renderer);
+  $('xrSlot').appendChild(vrButton);
+
+  // Environment map without external image assets
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const environmentTexture = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = environmentTexture;
+  pmrem.dispose();
+
+  // Scene roots / layers
+  const roots = {
+    gallery: new THREE.Group(),
+    particles: new THREE.Group(),
+    curves: new THREE.Group(),
+    instances: new THREE.Group(),
+    specials: new THREE.Group(),
+    imported: new THREE.Group(),
+    helpers: new THREE.Group()
+  };
+  roots.gallery.name = 'Geometry & Material Gallery';
+  roots.particles.name = 'Particles Layer';
+  roots.curves.name = 'Curves Layer';
+  roots.instances.name = 'Instancing Layer';
+  roots.specials.name = 'Special Features';
+  roots.imported.name = 'Imported Models';
+  roots.helpers.name = 'Helpers';
+  Object.values(roots).forEach((root) => scene.add(root));
+
+  const pickables = [];
+  const rotating = [];
+  const focusTargets = new Map();
+  const mixers = [];
+  let selected = null;
+  let animationEnabled = true;
+  let animationSpeed = 1;
+  let particleMotion = true;
+  let morphMotion = true;
+  let rotateMotion = true;
+  let dynamicReflection = true;
+
+  function markPickable(object, description = '') {
+    object.userData.pickable = true;
+    object.userData.description = description;
+    pickables.push(object);
+    object.traverse((child) => {
+      if (child.isMesh || child.isLine || child.isPoints || child.isSprite) {
+        child.userData.pickRoot = object;
+      }
+    });
+    return object;
+  }
+
+  function applyShadows(object) {
+    object.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+  }
+
+  function createLabel(text, target, y = 1.7) {
+    const el = document.createElement('div');
+    el.className = 'css-label';
+    el.textContent = text;
+    const label = new CSS2DObject(el);
+    label.position.set(0, y, 0);
+    target.add(label);
+    return label;
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Procedural textures
+  // ──────────────────────────────────────────────────────────────
+  function makeCanvasTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 512, 512);
+    grad.addColorStop(0, '#22d3ee');
+    grad.addColorStop(.5, '#2563eb');
+    grad.addColorStop(1, '#7c3aed');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.strokeStyle = 'rgba(255,255,255,.32)';
+    ctx.lineWidth = 8;
+    for (let i = -512; i < 1024; i += 64) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 512, 512); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(4,8,20,.72)';
+    ctx.beginPath(); ctx.roundRect(86, 176, 340, 160, 30); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '900 52px system-ui';
+    ctx.fillText('THREE.JS', 256, 245);
+    ctx.fillStyle = '#a5f3fc';
+    ctx.font = '600 22px system-ui';
+    ctx.fillText('CanvasTexture', 256, 286);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return texture;
+  }
+
+  function makeDataTexture() {
+    const size = 64;
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4;
+        const checker = ((x >> 3) + (y >> 3)) % 2;
+        data[i] = checker ? 255 : 24;
+        data[i + 1] = checker ? 112 : 215;
+        data[i + 2] = checker ? 67 : 255;
+        data[i + 3] = 255;
+      }
+    }
+    const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+    texture.needsUpdate = true;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(3, 2);
+    return texture;
+  }
+
+  const canvasTexture = makeCanvasTexture();
+  const dataTexture = makeDataTexture();
+
+  // ──────────────────────────────────────────────────────────────
+  // Ground and helper systems
+  // ──────────────────────────────────────────────────────────────
+  const groundMaterial = new THREE.MeshPhysicalMaterial({ color: 0x111827, roughness: 0.72, metalness: 0.12, clearcoat: 0.25, clearcoatRoughness: 0.7 });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMaterial);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  ground.name = 'Ground Plane';
+  scene.add(ground);
+
+  const grid = new THREE.GridHelper(100, 100, 0x38bdf8, 0x243244);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.24;
+  grid.position.y = 0.012;
+  roots.helpers.add(grid);
+  const axes = new THREE.AxesHelper(4);
+  axes.position.set(-8, 0.03, 7);
+  roots.helpers.add(axes);
+
+  // ──────────────────────────────────────────────────────────────
+  // Lights: Ambient, Hemisphere, Directional, Point, Spot, RectArea
+  // ──────────────────────────────────────────────────────────────
+  RectAreaLightUniformsLib.init();
+  const ambientLight = new THREE.AmbientLight(0x8aa6d8, 0.38);
+  scene.add(ambientLight);
+  const hemiLight = new THREE.HemisphereLight(0x8bd5ff, 0x1f1936, 0.7);
+  scene.add(hemiLight);
+
+  const sun = new THREE.DirectionalLight(0xfff0da, 3.2);
+  sun.position.set(8, 15, 7);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -18; sun.shadow.camera.right = 18; sun.shadow.camera.top = 18; sun.shadow.camera.bottom = -18;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 50;
+  sun.shadow.bias = -0.0004;
+  scene.add(sun);
+
+  const pointLight = new THREE.PointLight(0x22d3ee, 18, 28, 2);
+  pointLight.position.set(-7, 5, 2);
+  pointLight.castShadow = true;
+  pointLight.shadow.mapSize.set(1024, 1024);
+  scene.add(pointLight);
+
+  const spotLight = new THREE.SpotLight(0xa78bfa, 26, 45, Math.PI / 7, 0.35, 1.5);
+  spotLight.position.set(7, 12, -7);
+  spotLight.target.position.set(3, 0, -2);
+  spotLight.castShadow = true;
+  scene.add(spotLight, spotLight.target);
+
+  const rectLight = new THREE.RectAreaLight(0xff8a65, 8, 5, 3);
+  rectLight.position.set(-7, 6, -8);
+  rectLight.lookAt(-2, 1, -3);
+  scene.add(rectLight);
+
+  const sunHelper = new THREE.DirectionalLightHelper(sun, 1.5);
+  const pointHelper = new THREE.PointLightHelper(pointLight, .5);
+  const spotHelper = new THREE.SpotLightHelper(spotLight);
+  const rectHelper = new RectAreaLightHelper(rectLight);
+  [sunHelper, pointHelper, spotHelper].forEach(h => roots.helpers.add(h));
+  rectLight.add(rectHelper);
+  sunHelper.visible = pointHelper.visible = spotHelper.visible = rectHelper.visible = false;
+
+  // Procedural positional sound
+  const positionalAudio = new THREE.PositionalAudio(listener);
+  const audioContext = listener.context;
+  const audioBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 1.2, audioContext.sampleRate);
+  const channel = audioBuffer.getChannelData(0);
+  for (let i = 0; i < channel.length; i++) {
+    const t = i / audioContext.sampleRate;
+    channel[i] = Math.sin(2 * Math.PI * 220 * t) * 0.1 * (0.55 + 0.45 * Math.sin(2 * Math.PI * 1.5 * t));
+  }
+  positionalAudio.setBuffer(audioBuffer);
+  positionalAudio.setLoop(true);
+  positionalAudio.setRefDistance(5);
+  positionalAudio.setRolloffFactor(1.5);
+  positionalAudio.setVolume(0.35);
+  pointLight.add(positionalAudio);
+
+  // ──────────────────────────────────────────────────────────────
+  // Geometry and material gallery
+  // ──────────────────────────────────────────────────────────────
+  const materialSet = [
+    new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: .28, metalness: .72 }),
+    new THREE.MeshPhysicalMaterial({ color: 0x8b5cf6, roughness: .15, metalness: .35, clearcoat: 1, clearcoatRoughness: .08 }),
+    new THREE.MeshPhongMaterial({ color: 0xfb7185, shininess: 110, specular: 0xffffff }),
+    new THREE.MeshLambertMaterial({ color: 0x34d399 }),
+    new THREE.MeshNormalMaterial({ flatShading: false }),
+    new THREE.MeshToonMaterial({ color: 0xfbbf24 }),
+    new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: .82, opacity: 1, roughness: .08, metalness: 0, thickness: 1.2, ior: 1.45, transparent: true }),
+    new THREE.MeshStandardMaterial({ map: canvasTexture, roughness: .45, metalness: .1 }),
+    new THREE.MeshStandardMaterial({ map: dataTexture, roughness: .55, metalness: .25 })
+  ];
+
+  const geometryDefinitions = [
+    ['BoxGeometry', new THREE.BoxGeometry(2.3, 2.3, 2.3, 3, 3, 3)],
+    ['SphereGeometry', new THREE.SphereGeometry(1.45, 48, 32)],
+    ['ConeGeometry', new THREE.ConeGeometry(1.45, 3, 48, 4)],
+    ['TorusGeometry', new THREE.TorusGeometry(1.25, .45, 24, 72)],
+    ['TorusKnotGeometry', new THREE.TorusKnotGeometry(1.05, .32, 128, 18, 2, 3)],
+    ['CapsuleGeometry', new THREE.CapsuleGeometry(.9, 1.5, 10, 24)],
+    ['DodecahedronGeometry', new THREE.DodecahedronGeometry(1.45, 1)],
+    ['IcosahedronGeometry', new THREE.IcosahedronGeometry(1.45, 2)],
+    ['CanvasTexture Cube', new THREE.BoxGeometry(2.5, 2.5, 2.5)],
+  ];
+
+  geometryDefinitions.forEach(([name, geometry], i) => {
+    const row = Math.floor(i / 5);
+    const col = i % 5;
+    const material = materialSet[i % materialSet.length];
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set((col - 2) * 4.1, 1.7 + row * 3.7, -1.5 + row * 1.2);
+    mesh.name = name;
+    mesh.userData.originalMaterial = material;
+    applyShadows(mesh);
+    roots.gallery.add(mesh);
+    markPickable(mesh, `${name}와 ${material.type} 조합. 클릭 선택, W/E/R 변형 가능.`);
+    rotating.push({ object: mesh, speed: .15 + i * .018, axis: i % 2 ? 'y' : 'x' });
+    if (i === 0 || i === 4 || i === 8) createLabel(name, mesh, 1.8);
+  });
+
+  // Basic material / wireframe / line demonstration
+  const wireSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1.6, 18, 12),
+    new THREE.MeshBasicMaterial({ color: 0x60a5fa, wireframe: true, transparent: true, opacity: .55 })
+  );
+  wireSphere.position.set(-8.2, 1.8, -6.8);
+  wireSphere.name = 'MeshBasicMaterial Wireframe';
+  roots.gallery.add(wireSphere);
+  markPickable(wireSphere, '조명의 영향을 받지 않는 MeshBasicMaterial 와이어프레임 예제.');
+  rotating.push({ object: wireSphere, speed: .18, axis: 'y' });
+
+  // Clipping plane object
+  const clippingPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+  const clippedMaterial = new THREE.MeshPhysicalMaterial({ color: 0xf43f5e, roughness: .2, metalness: .65, clearcoat: 1, side: THREE.DoubleSide, clippingPlanes: [clippingPlane], clipShadows: true });
+  const clippedMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(1.35, .42, 160, 24), clippedMaterial);
+  clippedMesh.position.set(8.2, 2, -6.6);
+  clippedMesh.name = 'Local Clipping Torus Knot';
+  applyShadows(clippedMesh);
+  roots.specials.add(clippedMesh);
+  markPickable(clippedMesh, '사용자 정의 Plane으로 재질 일부를 잘라내는 로컬 클리핑 예제.');
+  createLabel('Local Clipping', clippedMesh, 2.2);
+  focusTargets.set('clipping', clippedMesh);
+
+  // ──────────────────────────────────────────────────────────────
+  // ShaderMaterial with animated uniforms
+  // ──────────────────────────────────────────────────────────────
+  const shaderUniforms = {
+    uTime: { value: 0 },
+    uColorA: { value: new THREE.Color(0x22d3ee) },
+    uColorB: { value: new THREE.Color(0x7c3aed) }
+  };
+  const shaderMaterial = new THREE.ShaderMaterial({
+    uniforms: shaderUniforms,
+    vertexShader: `
+      uniform float uTime;
+      varying vec2 vUv;
+      varying float vWave;
+      void main() {
+        vUv = uv;
+        vec3 p = position;
+        float wave = sin(p.y * 4.0 + uTime * 2.0) * 0.12 + cos(p.x * 3.0 + uTime) * 0.08;
+        p += normal * wave;
+        vWave = wave;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform vec3 uColorA;
+      uniform vec3 uColorB;
+      varying vec2 vUv;
+      varying float vWave;
+      void main() {
+        float bands = 0.5 + 0.5 * sin((vUv.y + vWave) * 18.0 - uTime * 2.2);
+        vec3 color = mix(uColorA, uColorB, bands);
+        float glow = 0.75 + 0.25 * sin(uTime + vUv.x * 8.0);
+        gl_FragColor = vec4(color * glow, 1.0);
+      }
+    `
+  });
+  const shaderMesh = new THREE.Mesh(new THREE.SphereGeometry(1.65, 64, 48), shaderMaterial);
+  shaderMesh.position.set(-7.8, 2, 7.3);
+  shaderMesh.name = 'Animated ShaderMaterial';
+  roots.specials.add(shaderMesh);
+  markPickable(shaderMesh, 'GLSL vertex/fragment shader와 시간 uniform을 사용하는 실시간 변형 예제.');
+  createLabel('ShaderMaterial + GLSL', shaderMesh, 2.2);
+  focusTargets.set('shader', shaderMesh);
+
+  // ──────────────────────────────────────────────────────────────
+  // Morph target animation
+  // ──────────────────────────────────────────────────────────────
+  const morphGeometry = new THREE.SphereGeometry(1.55, 48, 32);
+  const basePosition = morphGeometry.attributes.position;
+  const morphPositions = new Float32Array(basePosition.count * 3);
+  const tempV = new THREE.Vector3();
+  for (let i = 0; i < basePosition.count; i++) {
+    tempV.fromBufferAttribute(basePosition, i);
+    const scale = 1 + .38 * Math.sin(tempV.x * 5.2) * Math.cos(tempV.y * 4.4) * Math.sin(tempV.z * 5.7);
+    morphPositions[i * 3] = tempV.x * scale;
+    morphPositions[i * 3 + 1] = tempV.y * scale;
+    morphPositions[i * 3 + 2] = tempV.z * scale;
+  }
+  morphGeometry.morphAttributes.position = [new THREE.Float32BufferAttribute(morphPositions, 3)];
+  const morphMesh = new THREE.Mesh(morphGeometry, new THREE.MeshStandardMaterial({ color: 0x34d399, roughness: .28, metalness: .55, morphTargets: true }));
+  morphMesh.position.set(-3.7, 2, 7.3);
+  morphMesh.name = 'Morph Target Sphere';
+  applyShadows(morphMesh);
+  roots.specials.add(morphMesh);
+  markPickable(morphMesh, 'BufferGeometry의 morphAttributes와 morphTargetInfluences를 이용한 형태 보간 예제.');
+  createLabel('Morph Targets', morphMesh, 2.2);
+  focusTargets.set('morph', morphMesh);
+
+  // ──────────────────────────────────────────────────────────────
+  // AnimationMixer and keyframe tracks
+  // ──────────────────────────────────────────────────────────────
+  const mixerGroup = new THREE.Group();
+  mixerGroup.position.set(.3, 2, 7.3);
+  mixerGroup.name = 'AnimationMixer Group';
+  const mixerMesh = new THREE.Mesh(new THREE.OctahedronGeometry(1.3, 2), new THREE.MeshPhysicalMaterial({ color: 0xfbbf24, roughness: .18, metalness: .72, clearcoat: .8 }));
+  applyShadows(mixerMesh);
+  mixerGroup.add(mixerMesh);
+  roots.specials.add(mixerGroup);
+  markPickable(mixerGroup, 'VectorKeyframeTrack과 QuaternionKeyframeTrack을 AnimationMixer로 재생하는 예제.');
+  createLabel('AnimationMixer', mixerGroup, 2.1);
+
+  const times = [0, 1.5, 3, 4.5, 6];
+  const positionTrack = new THREE.VectorKeyframeTrack('.position', times, [0.3,2,7.3, 0.3,3.2,7.3, 0.3,2,7.3, 0.3,2.8,7.3, 0.3,2,7.3]);
+  const q1 = new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,0));
+  const q2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, Math.PI, 0));
+  const q3 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI * 2, Math.PI * 2, 0));
+  const quaternionTrack = new THREE.QuaternionKeyframeTrack('.quaternion', [0,3,6], [...q1.toArray(), ...q2.toArray(), ...q3.toArray()]);
+  const clip = new THREE.AnimationClip('Float & Rotate', 6, [positionTrack, quaternionTrack]);
+  const mixer = new THREE.AnimationMixer(mixerGroup);
+  mixer.clipAction(clip).play();
+  mixers.push(mixer);
+
+  // ──────────────────────────────────────────────────────────────
+  // InstancedMesh - 450 crystals
+  // ──────────────────────────────────────────────────────────────
+  const instanceCount = 450;
+  const instanceGeometry = new THREE.ConeGeometry(.13, .65, 5);
+  const instanceMaterial = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: .35, metalness: .5, emissive: 0x082f49, emissiveIntensity: .8 });
+  const instancedMesh = new THREE.InstancedMesh(instanceGeometry, instanceMaterial, instanceCount);
+  instancedMesh.name = `InstancedMesh (${instanceCount})`;
+  instancedMesh.castShadow = true;
+  instancedMesh.receiveShadow = true;
+  const dummy = new THREE.Object3D();
+  const instanceColor = new THREE.Color();
+  for (let i = 0; i < instanceCount; i++) {
+    const angle = i * 0.37;
+    const radius = 4.2 + (i % 31) * .075;
+    dummy.position.set(7 + Math.cos(angle) * radius, .25 + (i % 7) * .08, 7 + Math.sin(angle) * radius);
+    dummy.rotation.set((i % 5) * .18, angle, (i % 9) * .11);
+    const scale = .5 + (i % 13) / 13 * 1.8;
+    dummy.scale.set(scale, scale, scale);
+    dummy.updateMatrix();
+    instancedMesh.setMatrixAt(i, dummy.matrix);
+    instanceColor.setHSL(.48 + (i % 40) / 300, .78, .48 + (i % 5) * .025);
+    instancedMesh.setColorAt(i, instanceColor);
+  }
+  instancedMesh.instanceMatrix.needsUpdate = true;
+  if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
+  roots.instances.add(instancedMesh);
+  markPickable(instancedMesh, `${instanceCount}개의 오브젝트를 한 번의 InstancedMesh 드로우 구조로 표현한 성능 예제.`);
+  createLabel(`InstancedMesh × ${instanceCount}`, instancedMesh, 2.4);
+  focusTargets.set('instancing', instancedMesh);
+
+  // ──────────────────────────────────────────────────────────────
+  // Points particle system
+  // ──────────────────────────────────────────────────────────────
+  const particleCount = 2600;
+  const particlePositions = new Float32Array(particleCount * 3);
+  const particleColors = new Float32Array(particleCount * 3);
+  const colorA = new THREE.Color(0x22d3ee);
+  const colorB = new THREE.Color(0xa78bfa);
+  for (let i = 0; i < particleCount; i++) {
+    const r = 6 + Math.random() * 11;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    particlePositions[i * 3] = Math.sin(phi) * Math.cos(theta) * r;
+    particlePositions[i * 3 + 1] = Math.cos(phi) * r * .45 + 6;
+    particlePositions[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * r;
+    const c = colorA.clone().lerp(colorB, Math.random());
+    c.toArray(particleColors, i * 3);
+  }
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+  particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+  const particleMaterial = new THREE.PointsMaterial({ size: .075, vertexColors: true, transparent: true, opacity: .78, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true });
+  const particles = new THREE.Points(particleGeometry, particleMaterial);
+  particles.name = `BufferGeometry Points (${particleCount})`;
+  roots.particles.add(particles);
+
+  // Sprite billboard
+  function makeSpriteTexture(text) {
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(5,9,17,.82)'; ctx.beginPath(); ctx.roundRect(8, 8, 496, 164, 36); ctx.fill();
+    ctx.strokeStyle = '#67e8f9'; ctx.lineWidth = 5; ctx.stroke();
+    ctx.fillStyle = '#eaf1ff'; ctx.font = '800 44px system-ui'; ctx.textAlign = 'center'; ctx.fillText(text, 256, 108);
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; return texture;
+  }
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeSpriteTexture('Sprite + CanvasTexture'), transparent: true, depthTest: false }));
+  sprite.position.set(0, 8.5, -6);
+  sprite.scale.set(6, 2.1, 1);
+  sprite.name = 'Billboard Sprite';
+  roots.particles.add(sprite);
+
+  // ──────────────────────────────────────────────────────────────
+  // Curve, TubeGeometry, CatmullRomCurve3, dashed line
+  // ──────────────────────────────────────────────────────────────
+  const curvePoints = [];
+  for (let i = 0; i < 10; i++) curvePoints.push(new THREE.Vector3(-9 + i * 2, 1.2 + Math.sin(i * 1.4) * 1.2, 12 + Math.cos(i * .8) * 2));
+  const spline = new THREE.CatmullRomCurve3(curvePoints, false, 'centripetal');
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(spline, 180, .12, 10, false), new THREE.MeshStandardMaterial({ color: 0xfb7185, emissive: 0x4c0519, emissiveIntensity: .8, roughness: .3, metalness: .45 }));
+  tube.name = 'CatmullRomCurve3 TubeGeometry';
+  applyShadows(tube);
+  roots.curves.add(tube);
+  markPickable(tube, 'CatmullRomCurve3 경로를 따라 생성한 TubeGeometry 예제.');
+  focusTargets.set('curve', tube);
+  createLabel('Curve + TubeGeometry', tube, 3.2);
+
+  const linePoints = spline.getPoints(100).map(p => p.clone().add(new THREE.Vector3(0, .65, 0)));
+  const dashedLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(linePoints), new THREE.LineDashedMaterial({ color: 0xfde68a, dashSize: .35, gapSize: .18 }));
+  dashedLine.computeLineDistances();
+  dashedLine.name = 'LineDashedMaterial';
+  roots.curves.add(dashedLine);
+
+  // ──────────────────────────────────────────────────────────────
+  // LOD object
+  // ──────────────────────────────────────────────────────────────
+  const lod = new THREE.LOD();
+  const lodMaterials = [
+    new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: .25, metalness: .55 }),
+    new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: .4, metalness: .4 }),
+    new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: .6, metalness: .2 })
+  ];
+  const lodHigh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 5), lodMaterials[0]);
+  const lodMid = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 2), lodMaterials[1]);
+  const lodLow = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 0), lodMaterials[2]);
+  lod.addLevel(lodHigh, 0); lod.addLevel(lodMid, 13); lod.addLevel(lodLow, 25);
+  lod.position.set(4.5, 2, 7.3); lod.name = 'Level of Detail (LOD)';
+  applyShadows(lod);
+  roots.specials.add(lod);
+  markPickable(lod, '카메라 거리에 따라 고·중·저해상도 기하도형을 자동 교체하는 LOD 예제.');
+  createLabel('LOD: 거리별 메시 교체', lod, 2.3);
+  focusTargets.set('lod', lod);
+
+  // ──────────────────────────────────────────────────────────────
+  // Dynamic cube camera reflection
+  // ──────────────────────────────────────────────────────────────
+  const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter });
+  const cubeCamera = new THREE.CubeCamera(.1, 100, cubeRenderTarget);
+  const mirrorMaterial = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 1, roughness: .04, envMap: cubeRenderTarget.texture, clearcoat: 1 });
+  const mirrorBall = new THREE.Mesh(new THREE.SphereGeometry(1.7, 64, 48), mirrorMaterial);
+  mirrorBall.position.set(8.5, 2.1, 7.3);
+  mirrorBall.name = 'Dynamic CubeCamera Reflection';
+  applyShadows(mirrorBall);
+  roots.specials.add(mirrorBall, cubeCamera);
+  markPickable(mirrorBall, 'CubeCamera가 장면을 6방향 렌더링해 실시간 환경 반사를 만드는 예제.');
+  createLabel('CubeCamera Reflection', mirrorBall, 2.35);
+  focusTargets.set('reflection', mirrorBall);
+
+  // Terrain using direct BufferAttribute edits
+  const terrainGeometry = new THREE.PlaneGeometry(15, 10, 64, 48);
+  terrainGeometry.rotateX(-Math.PI / 2);
+  const terrainPos = terrainGeometry.attributes.position;
+  for (let i = 0; i < terrainPos.count; i++) {
+    const x = terrainPos.getX(i), z = terrainPos.getZ(i);
+    terrainPos.setY(i, .25 + Math.sin(x * .75) * Math.cos(z * .7) * .36 + Math.sin((x + z) * 1.6) * .08);
+  }
+  terrainGeometry.computeVertexNormals();
+  const terrain = new THREE.Mesh(terrainGeometry, new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: .82, metalness: .02, flatShading: false }));
+  terrain.position.set(-7, 0, -13);
+  terrain.name = 'Modified BufferGeometry Terrain';
+  terrain.receiveShadow = true;
+  roots.specials.add(terrain);
+  markPickable(terrain, 'PlaneGeometry의 position BufferAttribute를 직접 수정해 만든 절차적 지형.');
+
+  // ──────────────────────────────────────────────────────────────
+  // Postprocessing
+  // ──────────────────────────────────────────────────────────────
+  const composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(viewport.clientWidth, viewport.clientHeight), .55, .35, .75);
+  const rgbPass = new ShaderPass(RGBShiftShader);
+  rgbPass.uniforms.amount.value = .003;
+  rgbPass.enabled = false;
+  const outputPass = new OutputPass();
+  const fxaaPass = new ShaderPass(FXAAShader);
+  composer.addPass(renderPass);
+  composer.addPass(bloomPass);
+  composer.addPass(rgbPass);
+  composer.addPass(outputPass);
+  composer.addPass(fxaaPass);
+  let useComposer = true;
+
+  // Selection helper
+  const selectionBox = new THREE.BoxHelper(undefined, 0x67e8f9);
+  selectionBox.material.depthTest = false;
+  selectionBox.material.transparent = true;
+  selectionBox.material.opacity = .8;
+  selectionBox.renderOrder = 999;
+  selectionBox.visible = false;
+  scene.add(selectionBox);
+
+  function updateSelectionBox() {
+    if (!selected) { selectionBox.visible = false; return; }
+    selectionBox.setFromObject(selected);
+    selectionBox.visible = true;
+  }
+
+  function findMaterialTarget(object) {
+    let target = object;
+    if (!target?.isMesh) target = object?.getObjectByProperty('isMesh', true);
+    return target?.material ? target : null;
+  }
+
+  function setSelected(object) {
+    selected = object || null;
+    if (selected) {
+      transform.attach(selected);
+      updateSelectionBox();
+      const description = selected.userData.description || `${selected.type} 객체`;
+      $('selectionName').textContent = selected.name || selected.type;
+      $('selectionDescription').textContent = description;
+      $('selectedBadge').textContent = selected.type;
+      $('selectedInfo').textContent = selected.name || selected.type;
+      const materialTarget = findMaterialTarget(selected);
+      if (materialTarget && !Array.isArray(materialTarget.material)) {
+        const mat = materialTarget.material;
+        if (mat.color) $('objectColor').value = `#${mat.color.getHexString()}`;
+        if ('metalness' in mat) { $('metalness').value = mat.metalness; $('metalnessOut').value = Number(mat.metalness).toFixed(2); }
+        if ('roughness' in mat) { $('roughness').value = mat.roughness; $('roughnessOut').value = Number(mat.roughness).toFixed(2); }
+      }
+    } else {
+      transform.detach();
+      selectionBox.visible = false;
+      $('selectionName').textContent = '객체를 클릭해 선택';
+      $('selectionDescription').textContent = '마우스 또는 터치로 오브젝트를 선택하면 TransformControls와 속성 편집 기능이 연결된다.';
+      $('selectedBadge').textContent = '없음';
+      $('selectedInfo').textContent = '없음';
+    }
+  }
+
+  // Raycasting with pointer movement threshold to distinguish orbit drag
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let pointerDown = null;
+  renderer.domElement.addEventListener('pointerdown', e => pointerDown = { x: e.clientX, y: e.clientY });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!pointerDown || Math.hypot(e.clientX - pointerDown.x, e.clientY - pointerDown.y) > 6 || transform.dragging) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const visiblePickables = pickables.filter(o => o.parent && o.visible);
+    const hits = raycaster.intersectObjects(visiblePickables, true);
+    if (hits.length) {
+      const hit = hits[0].object;
+      setSelected(hit.userData.pickRoot || hit);
+    } else {
+      setSelected(null);
+    }
+  });
+
+  function focusObject(object) {
+    if (!object) { toast('초점을 맞출 객체가 없다.'); return; }
+    const box = new THREE.Box3().setFromObject(object);
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const radius = Math.max(sphere.radius, 1);
+    const direction = new THREE.Vector3(1, .65, 1).normalize();
+    camera.position.copy(sphere.center).add(direction.multiplyScalar(radius * 3.2));
+    orbit.target.copy(sphere.center);
+    if (camera.isOrthographicCamera) camera.zoom = Math.max(.4, 6 / radius);
+    camera.updateProjectionMatrix();
+    orbit.update();
+    setSelected(object.userData.pickable ? object : selected);
+  }
+
+  function resetView() {
+    camera.position.set(15, 10, 20);
+    orbit.target.set(0, 2, 0);
+    if (camera.isOrthographicCamera) camera.zoom = 1.05;
+    camera.updateProjectionMatrix();
+    orbit.update();
+    toast('카메라 시점을 초기화했다.');
+  }
+
+  function switchCamera(type) {
+    const next = type === 'orthographic' ? orthographicCamera : perspectiveCamera;
+    if (next === camera) return;
+    next.position.copy(camera.position);
+    next.quaternion.copy(camera.quaternion);
+    camera.remove(listener);
+    next.add(listener);
+    camera = next;
+    orbit.object = camera;
+    transform.camera = camera;
+    renderPass.camera = camera;
+    $('cameraSelect').value = type;
+    $('cameraToggle').textContent = camera.isPerspectiveCamera ? '원근 카메라' : '직교 카메라';
+    $('cameraStatus').textContent = camera.isPerspectiveCamera ? 'Perspective' : 'Orthographic';
+    camera.updateProjectionMatrix();
+    orbit.update();
+    toast(camera.isPerspectiveCamera ? 'PerspectiveCamera로 전환' : 'OrthographicCamera로 전환');
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // UI bindings
+  // ──────────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${btn.dataset.tab}`));
+  }));
+
+  $('menuBtn').addEventListener('click', () => $('sidebar').classList.toggle('open'));
+  $('resetView').addEventListener('click', resetView);
+  $('focusSelected').addEventListener('click', () => focusObject(selected));
+  $('cameraToggle').addEventListener('click', () => switchCamera(camera.isPerspectiveCamera ? 'orthographic' : 'perspective'));
+  $('cameraSelect').addEventListener('change', e => switchCamera(e.target.value));
+
+  $('playToggle').addEventListener('click', () => {
+    animationEnabled = !animationEnabled;
+    $('playToggle').textContent = animationEnabled ? 'Ⅱ' : '▶';
+    $('playToggle').classList.toggle('active', animationEnabled);
+    toast(animationEnabled ? '애니메이션 재생' : '애니메이션 일시정지');
+  });
+
+  function bindRange(id, outputId, callback, formatter = v => v) {
+    const input = $(id), output = $(outputId);
+    input.addEventListener('input', () => {
+      const value = Number(input.value);
+      if (output) output.value = formatter(value);
+      callback(value);
+    });
+  }
+  bindRange('fov', 'fovOut', v => { perspectiveCamera.fov = v; perspectiveCamera.updateProjectionMatrix(); }, v => `${v}°`);
+  bindRange('exposure', 'exposureOut', v => renderer.toneMappingExposure = v, v => v.toFixed(2));
+  bindRange('pixelRatio', 'pixelRatioOut', v => { renderer.setPixelRatio(v); composer.setPixelRatio(v); resize(); }, v => v.toFixed(2));
+  bindRange('fogDensity', 'fogDensityOut', v => { if (scene.fog?.isFogExp2) scene.fog.density = v; }, v => v.toFixed(3));
+  bindRange('sunIntensity', 'sunIntensityOut', v => sun.intensity = v, v => v.toFixed(1));
+  bindRange('pointIntensity', 'pointIntensityOut', v => pointLight.intensity = v, v => v.toFixed(0));
+  bindRange('spotIntensity', 'spotIntensityOut', v => spotLight.intensity = v, v => v.toFixed(0));
+  bindRange('gizmoSize', 'gizmoSizeOut', v => transform.setSize(v), v => v.toFixed(1));
+  bindRange('animSpeed', 'animSpeedOut', v => animationSpeed = v, v => `${v.toFixed(1)}×`);
+  bindRange('bloomStrength', 'bloomStrengthOut', v => bloomPass.strength = v, v => v.toFixed(2));
+  bindRange('bloomRadius', 'bloomRadiusOut', v => bloomPass.radius = v, v => v.toFixed(2));
+  bindRange('bloomThreshold', 'bloomThresholdOut', v => bloomPass.threshold = v, v => v.toFixed(2));
+  bindRange('rgbAmount', 'rgbAmountOut', v => rgbPass.uniforms.amount.value = v, v => v.toFixed(4));
+  bindRange('clippingPos', 'clippingPosOut', v => clippingPlane.constant = v, v => v.toFixed(2));
+
+  $('bgColor').addEventListener('input', e => {
+    const color = new THREE.Color(e.target.value);
+    scene.background = color;
+    if (scene.fog) scene.fog.color.copy(color);
+  });
+  $('fogType').addEventListener('change', e => {
+    const color = scene.background.clone();
+    if (e.target.value === 'none') scene.fog = null;
+    if (e.target.value === 'linear') scene.fog = new THREE.Fog(color, 18, 60);
+    if (e.target.value === 'exp2') scene.fog = new THREE.FogExp2(color, Number($('fogDensity').value));
+  });
+  $('environment').addEventListener('change', e => scene.environment = e.target.checked ? environmentTexture : null);
+  $('gridToggle').addEventListener('change', e => grid.visible = e.target.checked);
+  $('axesToggle').addEventListener('change', e => axes.visible = e.target.checked);
+  $('autoRotate').addEventListener('change', e => orbit.autoRotate = e.target.checked);
+  $('damping').addEventListener('change', e => orbit.enableDamping = e.target.checked);
+  $('shadowToggle').addEventListener('change', e => {
+    renderer.shadowMap.enabled = e.target.checked;
+    scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+  });
+  $('lightHelpers').addEventListener('change', e => [sunHelper, pointHelper, spotHelper, rectHelper].forEach(h => h.visible = e.target.checked));
+  $('audioToggle').addEventListener('change', async e => {
+    if (e.target.checked) {
+      await audioContext.resume();
+      if (!positionalAudio.isPlaying) positionalAudio.play();
+      toast('포인트 라이트 위치에서 3D 음향 재생');
+    } else if (positionalAudio.isPlaying) positionalAudio.stop();
+  });
+
+  document.querySelectorAll('[data-transform]').forEach(btn => btn.addEventListener('click', () => {
+    transform.setMode(btn.dataset.transform);
+    document.querySelectorAll('[data-transform]').forEach(b => b.classList.toggle('active', b === btn));
+  }));
+  $('spaceToggle').addEventListener('click', e => {
+    const next = transform.space === 'world' ? 'local' : 'world';
+    transform.setSpace(next);
+    e.currentTarget.textContent = next === 'world' ? 'World 공간' : 'Local 공간';
+  });
+  $('detachTransform').addEventListener('click', () => { transform.detach(); toast('변형 기즈모를 해제했다.'); });
+
+  function updateSelectedMaterial(prop, value) {
+    if (!selected) return;
+    const target = findMaterialTarget(selected);
+    if (!target || Array.isArray(target.material)) return toast('이 객체는 단일 재질 편집 대상이 아니다.');
+    const mat = target.material;
+    if (prop === 'color' && mat.color) mat.color.set(value);
+    if (prop in mat) mat[prop] = value;
+    mat.needsUpdate = true;
+  }
+  $('objectColor').addEventListener('input', e => updateSelectedMaterial('color', e.target.value));
+  bindRange('metalness', 'metalnessOut', v => updateSelectedMaterial('metalness', v), v => v.toFixed(2));
+  bindRange('roughness', 'roughnessOut', v => updateSelectedMaterial('roughness', v), v => v.toFixed(2));
+
+  $('cloneObject').addEventListener('click', () => {
+    if (!selected || selected === instancedMesh) return toast('복제할 일반 객체를 선택해라.');
+    const clone = selected.clone(true);
+    clone.position.x += 1.2;
+    clone.position.z += 1.2;
+    clone.name = `${selected.name || selected.type} Copy`;
+    selected.parent.add(clone);
+    markPickable(clone, '복제된 사용자 객체.');
+    applyShadows(clone);
+    setSelected(clone);
+    toast('선택 객체를 복제했다.');
+  });
+
+  function removeSelected() {
+    if (!selected) return;
+    const protectedObjects = [instancedMesh, tube, terrain, shaderMesh, morphMesh, lod, mirrorBall, clippedMesh, mixerGroup];
+    if (protectedObjects.includes(selected)) return toast('핵심 데모 객체는 삭제할 수 없다.');
+    const object = selected;
+    setSelected(null);
+    object.removeFromParent();
+    toast('선택 객체를 장면에서 삭제했다.');
+  }
+  $('deleteObject').addEventListener('click', removeSelected);
+
+  $('rotateObjects').addEventListener('change', e => rotateMotion = e.target.checked);
+  $('particleMotion').addEventListener('change', e => particleMotion = e.target.checked);
+  $('morphMotion').addEventListener('change', e => morphMotion = e.target.checked);
+  $('galleryLayer').addEventListener('change', e => roots.gallery.visible = e.target.checked);
+  $('particleLayer').addEventListener('change', e => roots.particles.visible = e.target.checked);
+  $('curveLayer').addEventListener('change', e => roots.curves.visible = e.target.checked);
+  $('instanceLayer').addEventListener('change', e => roots.instances.visible = e.target.checked);
+
+  $('composerToggle').addEventListener('change', e => useComposer = e.target.checked);
+  $('bloomToggle').addEventListener('change', e => bloomPass.enabled = e.target.checked);
+  $('rgbToggle').addEventListener('change', e => rgbPass.enabled = e.target.checked);
+  $('fxaaToggle').addEventListener('change', e => fxaaPass.enabled = e.target.checked);
+  $('clippingToggle').addEventListener('change', e => clippedMaterial.clippingPlanes = e.target.checked ? [clippingPlane] : []);
+  $('reflectionToggle').addEventListener('change', e => dynamicReflection = e.target.checked);
+  $('labelToggle').addEventListener('change', e => labelRenderer.domElement.style.display = e.target.checked ? '' : 'none');
+  $('wireframeToggle').addEventListener('change', e => {
+    scene.traverse(o => {
+      if (!o.isMesh || !o.material || o.material === shaderMaterial) return;
+      const materials = Array.isArray(o.material) ? o.material : [o.material];
+      materials.forEach(m => { if ('wireframe' in m) { m.wireframe = e.target.checked; m.needsUpdate = true; } });
+    });
+  });
+
+  document.querySelectorAll('.demo-focus').forEach(btn => btn.addEventListener('click', () => focusObject(focusTargets.get(btn.dataset.focus))));
+
+  // ──────────────────────────────────────────────────────────────
+  // Loaders and exporters
+  // ──────────────────────────────────────────────────────────────
+  const gltfLoader = new GLTFLoader();
+  const objLoader = new OBJLoader();
+  const stlLoader = new STLLoader();
+
+  function normalizeImported(object, filename) {
+    object.name = filename;
+    const box = new THREE.Box3().setFromObject(object);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const scale = 5 / maxDim;
+    object.scale.multiplyScalar(scale);
+    object.position.sub(center.multiplyScalar(scale));
+    object.position.y += 2.6;
+    object.position.z -= 7;
+    object.position.x += (roots.imported.children.length % 3 - 1) * 5.5;
+    object.traverse(child => {
+      if (child.isMesh) {
+        child.castShadow = child.receiveShadow = true;
+        if (!child.material) child.material = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: .45, metalness: .25 });
+      }
+    });
+    roots.imported.add(object);
+    markPickable(object, `사용자가 불러온 ${filename} 모델.`);
+    setSelected(object);
+    focusObject(object);
+    toast(`${filename} 모델을 불러왔다.`);
+  }
+
+  $('modelInput').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    try {
+      if (ext === 'glb') {
+        const buffer = await file.arrayBuffer();
+        gltfLoader.parse(buffer, '', gltf => normalizeImported(gltf.scene, file.name), err => { throw err; });
+      } else if (ext === 'obj') {
+        normalizeImported(objLoader.parse(await file.text()), file.name);
+      } else if (ext === 'stl') {
+        const geometry = stlLoader.parse(await file.arrayBuffer());
+        geometry.computeVertexNormals();
+        const mesh = new THREE.Mesh(geometry, new THREE.MeshPhysicalMaterial({ color: 0x94a3b8, roughness: .35, metalness: .55, clearcoat: .35 }));
+        normalizeImported(mesh, file.name);
+      } else toast('GLB, OBJ, STL 형식만 지원한다.');
+    } catch (error) {
+      console.error(error);
+      toast(`모델 로딩 실패: ${error.message || error}`);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  $('exportGlb').addEventListener('click', async () => {
+    if (!selected) return toast('GLB로 내보낼 객체를 먼저 선택해라.');
+    try {
+      const exporter = new GLTFExporter();
+      const result = await exporter.parseAsync(selected, { binary: true, onlyVisible: true, trs: true });
+      downloadBlob(new Blob([result], { type: 'model/gltf-binary' }), `${(selected.name || 'three-object').replace(/[^a-zA-Z0-9가-힣_-]/g, '_')}.glb`);
+      toast('선택 객체를 GLB로 내보냈다.');
+    } catch (error) {
+      console.error(error);
+      toast('이 객체의 재질 또는 구조는 GLB 변환을 지원하지 않을 수 있다.');
+    }
+  });
+
+  $('exportJson').addEventListener('click', () => {
+    const json = scene.toJSON();
+    downloadBlob(new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' }), 'threejs-scene.json');
+    toast('장면 Object3D JSON을 저장했다.');
+  });
+
+  function saveScreenshot() {
+    renderFrame();
+    renderer.domElement.toBlob(blob => {
+      if (blob) downloadBlob(blob, `threejs-feature-lab-${Date.now()}.png`);
+    }, 'image/png');
+    toast('WebGL 캔버스를 PNG로 저장했다. CSS2D 라벨은 포함되지 않는다.');
+  }
+  $('screenshotBtn').addEventListener('click', saveScreenshot);
+  $('screenshotBtn2').addEventListener('click', saveScreenshot);
+  $('clearImported').addEventListener('click', () => {
+    setSelected(null);
+    while (roots.imported.children.length) roots.imported.remove(roots.imported.children[0]);
+    toast('불러온 모델을 장면에서 제거했다.');
+  });
+
+  $('fullscreenBtn').addEventListener('click', async () => {
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+    else await document.exitFullscreen?.();
+  });
+
+  // Keyboard controls
+  window.addEventListener('keydown', e => {
+    if (e.target.matches('input, select, textarea')) return;
+    const key = e.key.toLowerCase();
+    if (key === 'w') transform.setMode('translate');
+    if (key === 'e') transform.setMode('rotate');
+    if (key === 'r') transform.setMode('scale');
+    if (key === 'f') focusObject(selected);
+    if (key === 'delete') removeSelected();
+    if (key === 'escape') { setSelected(null); $('sidebar').classList.remove('open'); }
+  });
+
+  // ──────────────────────────────────────────────────────────────
+  // Resize / info / render loop
+  // ──────────────────────────────────────────────────────────────
+  function resize() {
+    const width = viewport.clientWidth;
+    const height = viewport.clientHeight;
+    const a = width / height;
+    perspectiveCamera.aspect = a;
+    perspectiveCamera.updateProjectionMatrix();
+    orthographicCamera.left = -frustum * a;
+    orthographicCamera.right = frustum * a;
+    orthographicCamera.top = frustum;
+    orthographicCamera.bottom = -frustum;
+    orthographicCamera.updateProjectionMatrix();
+    renderer.setSize(width, height, false);
+    composer.setSize(width, height);
+    labelRenderer.setSize(width, height);
+    const pr = renderer.getPixelRatio();
+    fxaaPass.material.uniforms.resolution.value.set(1 / (width * pr), 1 / (height * pr));
+  }
+  window.addEventListener('resize', resize);
+  new ResizeObserver(resize).observe(viewport);
+  resize();
+
+  const gl = renderer.getContext();
+  const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+  $('rendererInfo').textContent = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+  $('webglInfo').textContent = renderer.capabilities.isWebGL2 ? 'WebGL 2' : 'WebGL 1';
+  $('textureInfo').textContent = `${renderer.capabilities.maxTextureSize}px`;
+
+  const clock = new THREE.Clock();
+  let elapsed = 0;
+  let frameCount = 0;
+  let lastFpsTime = performance.now();
+
+  function renderFrame() {
+    if (useComposer) composer.render(); else renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+  }
+
+  function animate() {
+    const delta = Math.min(clock.getDelta(), .05);
+    if (animationEnabled) {
+      const d = delta * animationSpeed;
+      elapsed += d;
+      shaderUniforms.uTime.value = elapsed;
+      if (rotateMotion) {
+        rotating.forEach((item, i) => {
+          item.object.rotation[item.axis] += d * item.speed;
+          item.object.rotation.y += d * (.07 + i * .002);
+        });
+        clippedMesh.rotation.y += d * .22;
+        instancedMesh.rotation.y += d * .035;
+      }
+      if (particleMotion) {
+        particles.rotation.y += d * .025;
+        particles.rotation.x = Math.sin(elapsed * .08) * .08;
+        sprite.position.y = 8.5 + Math.sin(elapsed * 1.4) * .35;
+      }
+      if (morphMotion && morphMesh.morphTargetInfluences) morphMesh.morphTargetInfluences[0] = .5 + .5 * Math.sin(elapsed * 1.3);
+      mixers.forEach(m => m.update(d));
+      clippingPlane.constant = Number($('clippingPos').value) + Math.sin(elapsed * .6) * .25;
+      pointLight.position.y = 5 + Math.sin(elapsed * .8) * 1.2;
+      pointLight.position.x = -7 + Math.cos(elapsed * .45) * 1.1;
+    }
+
+    orbit.update();
+    spotHelper.update();
+    sunHelper.update();
+    updateSelectionBox();
+
+    if (dynamicReflection && animationEnabled && frameCount % 3 === 0) {
+      mirrorBall.visible = false;
+      cubeCamera.position.copy(mirrorBall.position);
+      cubeCamera.update(renderer, scene);
+      mirrorBall.visible = true;
+    }
+
+    renderFrame();
+    frameCount++;
+    if (performance.now() - lastFpsTime >= 500) {
+      const seconds = (performance.now() - lastFpsTime) / 1000;
+      $('fps').textContent = Math.round(frameCount / seconds);
+      frameCount = 0;
+      lastFpsTime = performance.now();
+      $('calls').textContent = renderer.info.render.calls.toLocaleString();
+      $('triangles').textContent = renderer.info.render.triangles.toLocaleString();
+      $('objects').textContent = scene.children.length + pickables.filter(o => o.parent).length;
+    }
+  }
+  renderer.setAnimationLoop(animate);
+
+  // Initial selection and loading transition
+  setSelected(roots.gallery.children[4]);
+  setTimeout(() => loadingEl.classList.add('hide'), 500);
+  setTimeout(() => toast('오브젝트 클릭 · W/E/R 변형 · F 초점'), 850);
+</script>
+</body>
+</html>
