@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>d3-sankey</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .diagram-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .diagram-col {
+    flex: 1;
+    min-width: 280px;
+  }
+  .diagram-col h3 {
+    font-size: 13px;
+    color: #555;
+    margin: 0 0 6px;
+    text-align: center;
+  }
+  svg {
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .node-rect { cursor: grab; }
+  .node-rect:active { cursor: grabbing; }
+  .node-label {
+    font-size: 11px;
+    fill: #333;
+    pointer-events: none;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>d3-sankey 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>d3-sankey</strong>는 노드와 링크의 <strong>좌표만 계산</strong>해주는 산키 다이어그램
+    레이아웃 엔진입니다. 실제 그리기는 D3.js의 SVG 조작과 <code>sankeyLinkHorizontal()</code> path
+    생성기를 함께 써야 합니다 — 완성된 차트 라이브러리가 아니라 "배치 계산기"에 가깝습니다.
+    <ul>
+      <li><code>d3.sankey().nodeId().nodeWidth().nodePadding().extent()</code>로 레이아웃 설정</li>
+      <li>계산 결과 각 노드에 <code>x0,x1,y0,y1,depth,layer</code>, 각 링크에 <code>y0,y1,width</code> 부여</li>
+      <li>링크의 <code>width</code>는 <code>value</code>에 정확히 비례</li>
+      <li><code>sankey.update(graph)</code>로 노드를 옮긴 뒤 링크 경로를 다시 계산 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판·유통 흐름은 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. D3.js를 함께 사용했습니다 (CDN).
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 산키 다이어그램 + 값 비례 두께</h2>
+    <div class="desc">어선 → 위판장 → 도매상 → 소매/수출/산지직판으로 이어지는 가상 유통 흐름입니다. 링크 굵기는 value에 정확히 비례합니다 (500kg 링크가 300kg 링크보다 정확히 5/3배 굵음).</div>
+    <svg id="svg1" viewBox="0 0 640 380"></svg>
+    <div class="result-box" id="output1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const sankeyGen = d3.sankey()
+  .nodeId(d => d.id)
+  .nodeWidth(16)
+  .nodePadding(10)
+  .extent([[1, 1], [width - 1, height - 1]]);
+const graph = sankeyGen({ nodes, links });
+
+svg.selectAll('path').data(graph.links).join('path')
+  .attr('d', d3.sankeyLinkHorizontal())
+  .attr('stroke-width', d => Math.max(1, d.width)); // value에 비례</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 노드 정렬 방식 비교 (nodeAlign)</h2>
+    <div class="desc">'산지직판' 노드는 위판장에서 바로 갈라져 나가는 출고 링크가 없는 노드입니다. <code>sankeyLeft</code>는 원래 깊이(위판장 바로 다음 열)에 그대로 두지만, <code>sankeyJustify</code>는 다른 leaf 노드(소매·수출)처럼 맨 오른쪽 열로 강제로 밀어냅니다.</div>
+    <div class="diagram-row">
+      <div class="diagram-col">
+        <h3>sankeyLeft</h3>
+        <svg id="svg2a" viewBox="0 0 320 260"></svg>
+      </div>
+      <div class="diagram-col">
+        <h3>sankeyJustify</h3>
+        <svg id="svg2b" viewBox="0 0 320 260"></svg>
+      </div>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">d3.sankey().nodeAlign(d3.sankeyLeft)    // 산지직판이 자기 깊이(1열)에 남음
+d3.sankey().nodeAlign(d3.sankeyJustify) // 산지직판이 맨 오른쪽 열로 밀려남</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 노드 드래그로 위치 조정</h2>
+    <div class="desc">아무 노드나 위아래로 드래그해보세요. <code>sankey.update()</code>로 연결된 링크 경로가 실시간으로 다시 그려집니다.</div>
+    <svg id="svg3" viewBox="0 0 640 380"></svg>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">d3.drag().on('drag', (event, d) => {
+  const h = d.y1 - d.y0;
+  d.y0 = event.y - h / 2;
+  d.y1 = d.y0 + h;
+  sankeyGen.update(graph);           // 링크 y0/y1/width 재계산
+  linkSelection.attr('d', d3.sankeyLinkHorizontal());
+})</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 마우스오버 링크 강조</h2>
+    <div class="desc">노드 위에 마우스를 올리면 그 노드와 연결된 링크만 진하게, 나머지는 흐리게 표시됩니다.</div>
+    <svg id="svg4" viewBox="0 0 640 380"></svg>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">nodeSelection.on('mouseover', (event, d) => {
+  const related = new Set([...d.sourceLinks, ...d.targetLinks]);
+  linkSelection.attr('stroke-opacity', l => related.has(l) ? 0.8 : 0.08);
+});</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+  <script>
+    function suhyupFlowData() {
+      return {
+        nodes: [
+          { id: '어선A' }, { id: '어선B' }, { id: '위판장' },
+          { id: '도매상1' }, { id: '도매상2' }, { id: '소매' }, { id: '수출' }, { id: '산지직판' },
+        ],
+        links: [
+          { source: '어선A', target: '위판장', value: 500 },
+          { source: '어선B', target: '위판장', value: 300 },
+          { source: '위판장', target: '도매상1', value: 400 },
+          { source: '위판장', target: '도매상2', value: 300 },
+          { source: '위판장', target: '산지직판', value: 100 },
+          { source: '도매상1', target: '소매', value: 250 },
+          { source: '도매상1', target: '수출', value: 150 },
+          { source: '도매상2', target: '소매', value: 200 },
+          { source: '도매상2', target: '수출', value: 100 },
+        ],
+      };
+    }
+
+    const nodeColor = d3.scaleOrdinal(d3.schemeTableau10);
+
+    function renderSankey(svgSel, graph, { drag = false, hover = false, sankeyGen = null } = {}) {
+      svgSel.selectAll('*').remove();
+      const linkG = svgSel.append('g').attr('fill', 'none');
+      const linkSel = linkG.selectAll('path')
+        .data(graph.links)
+        .join('path')
+        .attr('d', d3.sankeyLinkHorizontal())
+        .attr('stroke', '#4f7dff')
+        .attr('stroke-opacity', 0.35)
+        .attr('stroke-width', (d) => Math.max(1, d.width));
+
+      const nodeG = svgSel.append('g');
+      const nodeSel = nodeG.selectAll('rect')
+        .data(graph.nodes)
+        .join('rect')
+        .attr('class', 'node-rect')
+        .attr('x', (d) => d.x0)
+        .attr('y', (d) => d.y0)
+        .attr('width', (d) => d.x1 - d.x0)
+        .attr('height', (d) => Math.max(1, d.y1 - d.y0))
+        .attr('fill', (d) => nodeColor(d.id));
+
+      svgSel.append('g').selectAll('text')
+        .data(graph.nodes)
+        .join('text')
+        .attr('class', 'node-label')
+        .attr('x', (d) => (d.x0 < 320 ? d.x1 + 6 : d.x0 - 6))
+        .attr('y', (d) => (d.y0 + d.y1) / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', (d) => (d.x0 < 320 ? 'start' : 'end'))
+        .text((d) => `${d.id} (${d.value})`);
+
+      if (hover) {
+        nodeSel.on('mouseover', function (event, d) {
+          const related = new Set([...d.sourceLinks, ...d.targetLinks]);
+          linkSel.attr('stroke-opacity', (l) => (related.has(l) ? 0.8 : 0.08));
+        });
+        svgSel.on('mouseleave', () => linkSel.attr('stroke-opacity', 0.35));
+      }
+
+      if (drag) {
+        const svgHeight = +svgSel.attr('viewBox').split(' ')[3];
+        nodeSel.call(
+          d3.drag().on('drag', function (event, d) {
+            const h = d.y1 - d.y0;
+            d.y0 = Math.max(0, Math.min(svgHeight - h, event.y - h / 2));
+            d.y1 = d.y0 + h;
+            d3.select(this).attr('y', d.y0);
+            svgSel.selectAll('text')
+              .filter((t) => t === d)
+              .attr('y', (d.y0 + d.y1) / 2);
+            sankeyGen.update(graph);
+            linkSel.attr('d', d3.sankeyLinkHorizontal());
+          })
+        );
+      }
+
+      return { linkSel, nodeSel };
+    }
+
+    // ---------- 1. 기본 렌더링 + 값 비례 두께 ----------
+    const sankeyGen1 = d3.sankey().nodeId((d) => d.id).nodeWidth(16).nodePadding(10).extent([[1, 1], [639, 379]]);
+    const graph1 = sankeyGen1(suhyupFlowData());
+    renderSankey(d3.select('#svg1'), graph1);
+    const link500 = graph1.links.find((l) => l.value === 500);
+    const link300 = graph1.links.find((l) => l.value === 300);
+    document.getElementById('output1').textContent =
+      `500kg 링크 굵기: ${link500.width.toFixed(2)}px, 300kg 링크 굵기: ${link300.width.toFixed(2)}px ` +
+      `→ 비율 ${(link500.width / link300.width).toFixed(3)} (실제 값 비율 500/300=${(500 / 300).toFixed(3)}과 일치)`;
+    document.getElementById('output1').classList.add('ok');
+
+    // ---------- 2. nodeAlign 비교 ----------
+    const sankeyLeft = d3.sankey().nodeId((d) => d.id).nodeAlign(d3.sankeyLeft).nodeWidth(14).nodePadding(8).extent([[1, 1], [319, 259]]);
+    const sankeyJustify = d3.sankey().nodeId((d) => d.id).nodeAlign(d3.sankeyJustify).nodeWidth(14).nodePadding(8).extent([[1, 1], [319, 259]]);
+    renderSankey(d3.select('#svg2a'), sankeyLeft(suhyupFlowData()));
+    renderSankey(d3.select('#svg2b'), sankeyJustify(suhyupFlowData()));
+
+    // ---------- 3. 노드 드래그 ----------
+    const sankeyGen3 = d3.sankey().nodeId((d) => d.id).nodeWidth(16).nodePadding(10).extent([[1, 1], [639, 379]]);
+    const graph3 = sankeyGen3(suhyupFlowData());
+    renderSankey(d3.select('#svg3'), graph3, { drag: true, sankeyGen: sankeyGen3 });
+
+    // ---------- 4. 마우스오버 강조 ----------
+    const sankeyGen4 = d3.sankey().nodeId((d) => d.id).nodeWidth(16).nodePadding(10).extent([[1, 1], [639, 379]]);
+    const graph4 = sankeyGen4(suhyupFlowData());
+    renderSankey(d3.select('#svg4'), graph4, { hover: true });
+  </script>
+</body>
+</html>
