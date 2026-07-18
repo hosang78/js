@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Plyr</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.8.4/dist/plyr.css" />
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .player-wrap { max-width: 480px; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .plyr { border-radius: 8px; overflow: hidden; }
+</style>
+</head>
+<body>
+
+  <h1>Plyr 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Plyr</strong>는 브라우저마다 제각각인 기본 video/audio 컨트롤 UI를, 어느 브라우저에서나
+    똑같이 보이는 깔끔한 커스텀 UI로 감싸주는 미디어 플레이어 라이브러리입니다.
+    <ul>
+      <li><code>new Plyr(selector)</code> 한 줄로 기존 <code>&lt;video&gt;</code>/<code>&lt;audio&gt;</code>를 커스텀 UI로 감쌈</li>
+      <li><code>&lt;track kind="captions"&gt;</code>(VTT 자막 파일)을 자동으로 인식해 자막 켜기/끄기 버튼 제공</li>
+      <li><code>player.play()</code>/<code>pause()</code>/<code>currentTime</code> 같은 JS API로 프로그램에서 직접 제어, <code>player.on('timeupdate', ...)</code>로 이벤트 구독</li>
+      <li><code>&lt;audio&gt;</code> 요소를 감싸면 영상용과는 다른 오디오 전용 UI 스킨이 자동으로 적용됨</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 영상은 실제 위판 홍보 자료가 아니라, ffmpeg로 직접 생성한 컬러바 테스트 패턴 영상
+      (440Hz 사인파 톤 포함)이며 자막 문구도 <strong>가상의 예시</strong>입니다. 다른 외부 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 비디오 플레이어</h2>
+    <div class="desc">기본 <code>&lt;video&gt;</code> 태그를 Plyr로 감싸면 재생/음량/설정/전체화면 버튼이 갖춰진 커스텀 UI가 자동으로 생성됩니다.</div>
+    <div class="player-wrap">
+      <video id="player1" playsinline controls poster="poster.jpg">
+        <source src="sample.webm" type="video/webm" />
+        <source src="sample.mp4" type="video/mp4" />
+      </video>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">&lt;video id="player1" controls poster="poster.jpg"&gt;
+  &lt;source src="sample.mp4" type="video/mp4" /&gt;
+&lt;/video&gt;
+
+new Plyr('#player1');</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 자막(캡션) 지원</h2>
+    <div class="desc">우측 하단 자막(CC) 버튼으로 VTT 자막 트랙을 켜고 끌 수 있습니다.</div>
+    <div class="player-wrap">
+      <video id="player2" playsinline controls poster="poster.jpg">
+        <source src="sample.webm" type="video/webm" />
+        <source src="sample.mp4" type="video/mp4" />
+        <track kind="captions" label="한국어" src="captions-ko.vtt" srclang="ko" default />
+      </video>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">&lt;video id="player2" controls&gt;
+  &lt;source src="sample.mp4" type="video/mp4" /&gt;
+  &lt;track kind="captions" label="한국어" src="captions-ko.vtt" srclang="ko" default /&gt;
+&lt;/video&gt;
+
+new Plyr('#player2', { captions: { active: true, language: 'ko' } });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. JS API로 재생 제어 + 이벤트 구독</h2>
+    <div class="desc">아래 버튼으로 플레이어를 직접 제어하고, 재생 진행 상황을 실시간으로 확인합니다.</div>
+    <div class="player-wrap">
+      <video id="player3" playsinline controls poster="poster.jpg">
+        <source src="sample.webm" type="video/webm" />
+        <source src="sample.mp4" type="video/mp4" />
+      </video>
+    </div>
+    <div class="controls">
+      <button id="playBtn3">재생</button>
+      <button class="ghost" id="pauseBtn3">일시정지</button>
+      <button class="ghost" id="seekBtn3">5초로 이동</button>
+    </div>
+    <div class="result-box" id="output3">이벤트 대기 중...</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const player = new Plyr('#player3');
+
+player.on('play', () => console.log('재생 시작'));
+player.on('timeupdate', () => console.log(player.currentTime));
+
+playBtn.addEventListener('click', () => player.play());
+seekBtn.addEventListener('click', () => { player.currentTime = 5; });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 오디오 플레이어 (다른 UI 스킨)</h2>
+    <div class="desc">같은 라이브러리로 <code>&lt;audio&gt;</code> 요소를 감싸면 영상용과는 다른, 오디오에 맞춘 컴팩트한 UI가 적용됩니다.</div>
+    <div class="player-wrap">
+      <audio id="player4" controls>
+        <source src="sample-audio.webm" type="audio/webm" />
+        <source src="sample-audio.m4a" type="audio/mp4" />
+      </audio>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">&lt;audio id="player4" controls&gt;
+  &lt;source src="sample-audio.mp3" type="audio/mpeg" /&gt;
+&lt;/audio&gt;
+
+new Plyr('#player4'); // video와 동일한 API, UI만 오디오용으로 자동 전환</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3.8.4/dist/plyr.min.js"></script>
+  <script>
+    const iconUrl = 'https://cdn.jsdelivr.net/npm/plyr@3.8.4/dist/plyr.svg';
+
+    // ---------- 1. 기본 비디오 플레이어 ----------
+    new Plyr('#player1', { iconUrl });
+
+    // ---------- 2. 자막 지원 ----------
+    new Plyr('#player2', { iconUrl, captions: { active: true, language: 'ko' } });
+
+    // ---------- 3. JS API + 이벤트 ----------
+    const player3 = new Plyr('#player3', { iconUrl });
+    const output3 = document.getElementById('output3');
+    let eventCount3 = 0;
+    player3.on('play', () => {
+      eventCount3++;
+      output3.textContent = `[재생 이벤트 발생] 현재 시각: ${player3.currentTime.toFixed(1)}초`;
+    });
+    player3.on('timeupdate', () => {
+      output3.textContent = `재생 중... 현재 시각: ${player3.currentTime.toFixed(1)}초 / ${player3.duration.toFixed(1)}초`;
+    });
+    player3.on('pause', () => {
+      output3.textContent = `일시정지됨. 현재 시각: ${player3.currentTime.toFixed(1)}초`;
+    });
+    document.getElementById('playBtn3').addEventListener('click', () => player3.play());
+    document.getElementById('pauseBtn3').addEventListener('click', () => player3.pause());
+    document.getElementById('seekBtn3').addEventListener('click', () => { player3.currentTime = 5; });
+
+    // ---------- 4. 오디오 플레이어 ----------
+    new Plyr('#player4', { iconUrl });
+  </script>
+</body>
+</html>
