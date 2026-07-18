@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Transformers.js 종합 기능 실험실</title>
+<style>
+:root{
+  --bg:#08111f;--panel:#0f1b2d;--panel2:#13233a;--line:#263a56;
+  --text:#eef5ff;--muted:#9db0c8;--accent:#ffd21e;--accent2:#50a8ff;
+  --ok:#44d19d;--warn:#ffb454;--bad:#ff6b7a;--shadow:0 14px 40px #0007
+}
+*{box-sizing:border-box}
+body{margin:0;background:
+ radial-gradient(circle at 10% 0%,#17355f 0,transparent 34rem),
+ radial-gradient(circle at 90% 5%,#43391455 0,transparent 26rem),var(--bg);
+ color:var(--text);font-family:Inter,system-ui,-apple-system,"Noto Sans KR",sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+header{position:sticky;top:0;z-index:20;background:#08111fdd;backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1500px;margin:auto;padding:16px}
+.top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:14px;background:var(--accent);display:grid;place-items:center;color:#111;font-size:27px;box-shadow:0 0 30px #ffd21e44}
+h1{font-size:clamp(21px,3vw,34px);margin:0}.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.statusbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{border:1px solid var(--line);background:#0d192b;padding:8px 11px;border-radius:999px;font-size:12px}
+.pill b{color:var(--accent)}
+.toolbar{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:8px;margin-top:14px}
+input,textarea,select{width:100%;color:var(--text);background:#091526;border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px #50a8ff22}
+button{border:0;border-radius:10px;padding:10px 13px;background:var(--accent);color:#161616;font-weight:800}
+button.secondary{background:#21334d;color:var(--text);border:1px solid #34506f}
+button.danger{background:#4a2030;color:#ffdce2;border:1px solid #7f3449}
+button:disabled{opacity:.48;cursor:not-allowed}
+.hero{margin:18px auto;max-width:1500px;padding:0 16px}
+.heroBox{background:linear-gradient(135deg,#142640dd,#0f1b2ddd);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+.heroGrid{display:grid;grid-template-columns:1.3fr .7fr;gap:18px}
+.hero h2{margin:0 0 9px;font-size:clamp(22px,4vw,42px)}
+.hero p{color:var(--muted);line-height:1.65;margin:0}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.metric{padding:14px;border-radius:14px;background:#091526;border:1px solid var(--line)}
+.metric strong{display:block;font-size:24px;color:var(--accent)}
+.nav{display:flex;gap:8px;overflow:auto;padding:0 16px 8px;max-width:1500px;margin:auto}
+.nav button{white-space:nowrap;background:#13233a;color:#d9e7f7;border:1px solid var(--line)}
+.nav button.active{background:var(--accent);color:#111}
+main{max-width:1500px;margin:auto;padding:10px 16px 60px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{grid-column:span 6;background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px #0004;min-width:0}
+.card.wide{grid-column:span 12}.card.third{grid-column:span 4}
+.cardHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.card h3{margin:0;font-size:18px}.desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.badge{font-size:11px;padding:5px 8px;border-radius:999px;background:#243a58;color:#bcd7fa;white-space:nowrap}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row button{flex:0 0 auto}
+.stack{display:grid;gap:9px}
+.output{min-height:92px;background:#06101d;border:1px solid #20334d;border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:360px;color:#d9e8fa;font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+.progress{height:7px;background:#08111f;border-radius:999px;overflow:hidden;border:1px solid #1d304a}
+.progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:.2s}
+.small{font-size:11px;color:var(--muted)}
+.preview{max-width:100%;max-height:330px;border-radius:12px;display:none;margin:auto;border:1px solid var(--line)}
+.canvasWrap{position:relative;display:inline-block;max-width:100%}
+.canvasWrap canvas{position:absolute;inset:0;width:100%;height:100%}
+.tags{display:flex;gap:7px;flex-wrap:wrap}
+.tag{padding:6px 9px;background:#172b45;border:1px solid #2d4868;border-radius:999px;font-size:12px}
+.log{position:fixed;right:16px;bottom:16px;width:min(520px,calc(100vw - 32px));max-height:44vh;background:#07111fee;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);z-index:30;display:none}
+.log.open{display:block}.logHead{display:flex;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+.logBody{padding:10px;overflow:auto;max-height:35vh;font:12px/1.55 monospace;white-space:pre-wrap}
+.toast{position:fixed;left:50%;bottom:25px;transform:translateX(-50%);background:#101d2e;border:1px solid var(--line);padding:11px 16px;border-radius:999px;z-index:50;display:none}
+.kbd{font-family:monospace;border:1px solid #4b6078;border-bottom-width:3px;border-radius:5px;padding:1px 5px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+.hidden{display:none!important}
+@media(max-width:950px){.toolbar{grid-template-columns:1fr 1fr}.heroGrid{grid-template-columns:1fr}.card,.card.third{grid-column:span 12}}
+@media(max-width:600px){.toolbar{grid-template-columns:1fr}.wrap{padding:12px}.hero{padding:0 12px}.card{padding:13px}.row{flex-wrap:wrap}.row>*{flex:1 1 100%}}
+</style>
+</head>
+<body>
+<header>
+ <div class="wrap">
+  <div class="top">
+   <div class="brand"><div class="logo">🤗</div><div><h1>Transformers.js 종합 기능 실험실</h1><div class="sub">서버 전송 없이 브라우저에서 직접 AI 모델 실행</div></div></div>
+   <div class="statusbar">
+    <span class="pill">라이브러리 <b>v3.8.1</b></span>
+    <span class="pill">WebGPU <b id="gpuState">확인 중</b></span>
+    <span class="pill">로드 모델 <b id="modelCount">0</b></span>
+    <button class="secondary" id="logToggle">실행 로그</button>
+   </div>
+  </div>
+  <div class="toolbar">
+   <input id="search" placeholder="기능 검색: 번역, 이미지, 임베딩...">
+   <select id="device"><option value="wasm">CPU / WASM</option><option value="webgpu">GPU / WebGPU</option></select>
+   <select id="dtype"><option value="q8">양자화 q8</option><option value="q4">양자화 q4</option><option value="fp16">FP16</option><option value="fp32">FP32</option></select>
+   <button class="secondary" id="envBtn">환경 정보</button>
+   <button class="danger" id="clearBtn">모델 메모리 해제</button>
+  </div>
+ </div>
+</header>
+
+<section class="hero">
+ <div class="heroBox heroGrid">
+  <div><h2>브라우저 안에서 돌아가는<br>다기능 AI 플레이그라운드</h2>
+   <p>감성 분석, 분류, 질의응답, 마스킹 예측, 요약, 번역, 생성, 임베딩 유사도, 이미지 분류·객체 탐지, 음성 인식과 자유 파이프라인을 한 페이지에 담았다. 각 기능의 <b>모델 로드</b> 버튼을 누를 때만 파일을 다운로드한다.</p>
+  </div>
+  <div class="metrics">
+   <div class="metric"><strong>12+</strong><span>실행형 AI 기능</span></div>
+   <div class="metric"><strong>100%</strong><span>클라이언트 추론</span></div>
+   <div class="metric"><strong>Lazy</strong><span>필요 시 모델 로드</span></div>
+   <div class="metric"><strong>WASM/GPU</strong><span>실행 장치 선택</span></div>
+  </div>
+ </div>
+</section>
+
+<nav class="nav" id="nav">
+ <button class="active" data-filter="all">전체</button><button data-filter="text">텍스트</button>
+ <button data-filter="embedding">임베딩</button><button data-filter="vision">이미지</button>
+ <button data-filter="audio">오디오</button><button data-filter="advanced">고급</button>
+</nav>
+
+<main><div class="grid" id="grid">
+
+<section class="card" data-cat="text" data-key="감성 분석 sentiment">
+ <div class="cardHead"><div><h3>1. 감성 분석</h3><div class="desc">긍정·부정 분류와 신뢰도 출력</div></div><span class="badge">sentiment-analysis</span></div>
+ <div class="stack">
+  <textarea id="sentText">Transformers.js로 브라우저에서 AI를 실행하니 정말 흥미롭습니다!</textarea>
+  <div class="row"><button onclick="runTask('sentiment')">분석 실행</button><button class="secondary" onclick="loadOnly('sentiment')">모델만 로드</button></div>
+  <div class="progress"><i id="p-sentiment"></i></div><div class="output" id="o-sentiment">실행 결과가 여기에 표시됩니다.</div>
+ </div>
+</section>
+
+<section class="card" data-cat="text" data-key="제로샷 분류 zero shot">
+ <div class="cardHead"><div><h3>2. 제로샷 분류</h3><div class="desc">학습하지 않은 사용자 정의 후보 라벨로 문장 분류</div></div><span class="badge">zero-shot-classification</span></div>
+ <div class="stack"><textarea id="zeroText">새로운 모바일 앱의 보안 취약점을 점검하고 접근통제를 강화했다.</textarea>
+  <input id="zeroLabels" value="정보보안, 인공지능, 금융, 수산업, 인사관리">
+  <button onclick="runTask('zero')">후보 라벨 분류</button><div class="progress"><i id="p-zero"></i></div><div class="output" id="o-zero">쉼표로 후보 라벨을 구분하세요.</div>
+ </div>
+</section>
+
+<section class="card" data-cat="text" data-key="질의응답 question answering">
+ <div class="cardHead"><div><h3>3. 문서 질의응답</h3><div class="desc">문맥에서 질문의 답 구간 추출</div></div><span class="badge">question-answering</span></div>
+ <div class="stack"><textarea id="qaContext">Transformers.js는 Hugging Face가 개발한 JavaScript 머신러닝 라이브러리다. 사전 학습된 Transformer 모델을 브라우저나 Node.js에서 실행할 수 있으며, 브라우저에서는 WASM 또는 WebGPU를 사용할 수 있다.</textarea>
+  <input id="qaQuestion" value="브라우저에서 어떤 실행 장치를 사용할 수 있나요?"><button onclick="runTask('qa')">답 찾기</button>
+  <div class="progress"><i id="p-qa"></i></div><div class="output" id="o-qa"></div>
+ </div>
+</section>
+
+<section class="card" data-cat="text" data-key="마스크 채우기 fill mask">
+ <div class="cardHead"><div><h3>4. 마스크 채우기</h3><div class="desc">문장 속 [MASK] 위치의 단어 후보 예측</div></div><span class="badge">fill-mask</span></div>
+ <div class="stack"><input id="maskText" value="The goal of life is [MASK]."><button onclick="runTask('mask')">단어 예측</button>
+ <div class="progress"><i id="p-mask"></i></div><div class="output" id="o-mask"></div></div>
+</section>
+
+<section class="card" data-cat="text" data-key="요약 summarization">
+ <div class="cardHead"><div><h3>5. 문서 요약</h3><div class="desc">긴 영문을 핵심 문장으로 축약</div></div><span class="badge">summarization</span></div>
+ <div class="stack"><textarea id="sumText">Artificial intelligence is changing how organizations process information and automate repetitive work. Small language models can now run directly in web browsers, which improves privacy because data does not need to be sent to a remote server. This approach also enables offline use after model files have been cached. However, model size, memory use, and device performance remain important constraints for production applications.</textarea>
+ <div class="row"><input id="sumLen" type="number" value="60" min="20" max="200"><button onclick="runTask('summary')">요약 실행</button></div>
+ <div class="progress"><i id="p-summary"></i></div><div class="output" id="o-summary"></div></div>
+</section>
+
+<section class="card" data-cat="text" data-key="번역 translation">
+ <div class="cardHead"><div><h3>6. 다국어 번역</h3><div class="desc">NLLB 모델 기반 언어 코드 지정 번역</div></div><span class="badge">translation</span></div>
+ <div class="stack"><textarea id="trText">인공지능은 반복 업무를 줄이고 더 중요한 판단을 돕습니다.</textarea>
+  <div class="row"><select id="srcLang"><option value="kor_Hang">한국어</option><option value="eng_Latn">영어</option><option value="fra_Latn">프랑스어</option><option value="jpn_Jpan">일본어</option></select>
+  <select id="tgtLang"><option value="eng_Latn">영어</option><option value="kor_Hang">한국어</option><option value="fra_Latn">프랑스어</option><option value="jpn_Jpan">일본어</option></select></div>
+  <button onclick="runTask('translate')">번역 실행</button><div class="progress"><i id="p-translate"></i></div><div class="output" id="o-translate"></div>
+ </div>
+</section>
+
+<section class="card" data-cat="text" data-key="텍스트 생성 generation">
+ <div class="cardHead"><div><h3>7. 텍스트 생성</h3><div class="desc">프롬프트 뒤의 텍스트를 자동 생성</div></div><span class="badge">text-generation</span></div>
+ <div class="stack"><textarea id="genText">The future of browser-based AI is</textarea>
+  <div class="row"><label class="small">새 토큰<input id="genTokens" type="number" value="40" min="5" max="150"></label><label class="small">온도<input id="temperature" type="number" value="0.8" min="0.1" max="2" step="0.1"></label></div>
+  <button onclick="runTask('generate')">생성 실행</button><div class="progress"><i id="p-generate"></i></div><div class="output" id="o-generate"></div>
+ </div>
+</section>
+
+<section class="card wide" data-cat="embedding" data-key="임베딩 유사도 feature extraction semantic similarity">
+ <div class="cardHead"><div><h3>8. 문장 임베딩·의미 유사도</h3><div class="desc">문장을 벡터로 변환하고 코사인 유사도 계산</div></div><span class="badge">feature-extraction</span></div>
+ <div class="stack"><div class="row"><textarea id="embA">브라우저에서 인공지능 모델을 실행한다.</textarea><textarea id="embB">웹 페이지 내부에서 AI 추론을 수행한다.</textarea></div>
+  <button onclick="runTask('embedding')">벡터 생성·비교</button><div class="progress"><i id="p-embedding"></i></div><div id="simTags" class="tags"></div><div class="output" id="o-embedding"></div>
+ </div>
+</section>
+
+<section class="card" data-cat="vision" data-key="이미지 분류 image classification">
+ <div class="cardHead"><div><h3>9. 이미지 분류</h3><div class="desc">업로드 이미지의 상위 클래스 예측</div></div><span class="badge">image-classification</span></div>
+ <div class="stack"><input id="imgClassFile" type="file" accept="image/*"><img id="imgClassPreview" class="preview">
+ <button onclick="runTask('imageClass')">이미지 분류</button><div class="progress"><i id="p-imageClass"></i></div><div class="output" id="o-imageClass"></div></div>
+</section>
+
+<section class="card" data-cat="vision" data-key="객체 탐지 object detection">
+ <div class="cardHead"><div><h3>10. 객체 탐지</h3><div class="desc">이미지 속 객체 위치·라벨·신뢰도 표시</div></div><span class="badge">object-detection</span></div>
+ <div class="stack"><input id="detectFile" type="file" accept="image/*"><div class="canvasWrap"><img id="detectPreview" class="preview"><canvas id="detectCanvas"></canvas></div>
+ <button onclick="runTask('detect')">객체 탐지</button><div class="progress"><i id="p-detect"></i></div><div class="output" id="o-detect"></div></div>
+</section>
+
+<section class="card" data-cat="audio" data-key="음성 인식 speech recognition whisper">
+ <div class="cardHead"><div><h3>11. 음성 인식</h3><div class="desc">오디오 파일을 텍스트로 변환하는 Whisper 데모</div></div><span class="badge">automatic-speech-recognition</span></div>
+ <div class="stack"><input id="audioFile" type="file" accept="audio/*"><audio id="audioPreview" controls style="width:100%"></audio>
+ <button onclick="runTask('speech')">음성→텍스트</button><div class="progress"><i id="p-speech"></i></div><div class="output" id="o-speech"></div></div>
+</section>
+
+<section class="card" data-cat="advanced" data-key="토크나이저 tokenizer">
+ <div class="cardHead"><div><h3>12. 토크나이저 관찰</h3><div class="desc">AutoTokenizer로 토큰 ID·디코딩 결과 확인</div></div><span class="badge">AutoTokenizer</span></div>
+ <div class="stack"><textarea id="tokText">Transformers.js는 브라우저에서 작동합니다.</textarea><input id="tokModel" value="Xenova/bert-base-multilingual-cased">
+ <button onclick="runTokenizer()">토큰화 실행</button><div class="progress"><i id="p-tokenizer"></i></div><div class="output" id="o-tokenizer"></div></div>
+</section>
+
+<section class="card wide" data-cat="advanced" data-key="자유 파이프라인 custom pipeline">
+ <div class="cardHead"><div><h3>13. 자유 파이프라인 콘솔</h3><div class="desc">지원 태스크·모델을 직접 지정해 pipeline() 호출</div></div><span class="badge">pipeline(task, model)</span></div>
+ <div class="stack"><div class="row"><input id="customTask" value="text-classification" placeholder="task"><input id="customModel" value="Xenova/distilbert-base-uncased-finetuned-sst-2-english" placeholder="model id"></div>
+ <textarea id="customInput">I enjoy building machine learning applications in JavaScript.</textarea>
+ <textarea id="customOptions" spellcheck="false">{"top_k": 3}</textarea>
+ <button onclick="runCustom()">파이프라인 실행</button><div class="progress"><i id="p-custom"></i></div><div class="output" id="o-custom"></div></div>
+</section>
+
+<section class="card wide" data-cat="advanced" data-key="환경 캐시 성능">
+ <div class="cardHead"><div><h3>14. 실행 환경·성능 계측</h3><div class="desc">브라우저 API, 메모리, 로드 모델, 최근 실행 시간 확인</div></div><span class="badge">Diagnostics</span></div>
+ <div class="row"><button class="secondary" onclick="showEnv()">환경 새로고침</button><button class="secondary" onclick="showModels()">로드 모델 목록</button><button class="secondary" onclick="exportLog()">로그 JSON 저장</button></div>
+ <div class="output" id="o-env"></div>
+</section>
+
+</div></main>
+<div class="log" id="log"><div class="logHead"><b>실행 로그</b><button class="secondary" id="logClose">닫기</button></div><div class="logBody" id="logBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { pipeline, env, AutoTokenizer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+
+const state={pipes:new Map(), tokenizers:new Map(), logs:[],lastTimes:{}};
+window.__state=state;
+
+const configs={
+ sentiment:{task:'sentiment-analysis',model:'Xenova/distilbert-base-uncased-finetuned-sst-2-english'},
+ zero:{task:'zero-shot-classification',model:'Xenova/mobilebert-uncased-mnli'},
+ qa:{task:'question-answering',model:'Xenova/distilbert-base-cased-distilled-squad'},
+ mask:{task:'fill-mask',model:'Xenova/bert-base-uncased'},
+ summary:{task:'summarization',model:'Xenova/distilbart-cnn-6-6'},
+ translate:{task:'translation',model:'Xenova/nllb-200-distilled-600M'},
+ generate:{task:'text-generation',model:'Xenova/distilgpt2'},
+ embedding:{task:'feature-extraction',model:'Xenova/all-MiniLM-L6-v2'},
+ imageClass:{task:'image-classification',model:'Xenova/vit-base-patch16-224'},
+ detect:{task:'object-detection',model:'Xenova/detr-resnet-50'},
+ speech:{task:'automatic-speech-recognition',model:'Xenova/whisper-tiny'}
+};
+
+function log(type,msg,data){
+ const row={time:new Date().toISOString(),type,msg,data};
+ state.logs.push(row);
+ if(state.logs.length>300) state.logs.shift();
+ document.querySelector('#logBody').textContent=state.logs.map(x=>`[${x.time.slice(11,19)}] ${x.type}: ${x.msg}${x.data?'\\n'+JSON.stringify(x.data,null,2):''}`).join('\\n');
+}
+function toast(s){const e=document.querySelector('#toast');e.textContent=s;e.style.display='block';setTimeout(()=>e.style.display='none',2200)}
+function out(id,v){document.querySelector('#o-'+id).textContent=typeof v==='string'?v:JSON.stringify(v,null,2)}
+function progress(id,v){document.querySelector('#p-'+id).style.width=Math.max(0,Math.min(100,v))+'%'}
+function opts(){
+ const device=document.querySelector('#device').value;
+ const dtype=document.querySelector('#dtype').value;
+ return {device,dtype};
+}
+async function getPipe(key,custom){
+ const c=custom||configs[key], signature=[c.task,c.model,opts().device,opts().dtype].join('|');
+ if(state.pipes.has(signature)) return state.pipes.get(signature);
+ progress(key,1); log('LOAD',`${c.task} / ${c.model}`);
+ try{
+  const p=await pipeline(c.task,c.model,{
+   ...opts(),
+   progress_callback:x=>{
+    const pct=x.progress??(x.status==='ready'?100:5);
+    progress(key,pct);
+    if(x.file) log('DOWNLOAD',`${x.status}: ${x.file}`,{progress:x.progress});
+   }
+  });
+  state.pipes.set(signature,p); updateCount(); progress(key,100);return p;
+ }catch(e){progress(key,0);throw e}
+}
+function updateCount(){document.querySelector('#modelCount').textContent=state.pipes.size+state.tokenizers.size}
+async function timed(key,fn){
+ const t=performance.now();
+ try{const r=await fn();state.lastTimes[key]=Math.round(performance.now()-t);log('DONE',key,{ms:state.lastTimes[key]});return r}
+ catch(e){log('ERROR',key,{message:e.message,stack:e.stack});out(key,'오류: '+e.message);throw e}
+}
+window.loadOnly=async key=>{try{await getPipe(key);toast('모델 로드 완료')}catch{}};
+
+window.runTask=async key=>{
+ try{
+  const p=await getPipe(key);
+  let r;
+  if(key==='sentiment') r=await timed(key,()=>p(document.querySelector('#sentText').value,{top_k:null}));
+  if(key==='zero') r=await timed(key,()=>p(document.querySelector('#zeroText').value,document.querySelector('#zeroLabels').value.split(',').map(x=>x.trim()),{multi_label:true}));
+  if(key==='qa') r=await timed(key,()=>p(document.querySelector('#qaQuestion').value,document.querySelector('#qaContext').value));
+  if(key==='mask') r=await timed(key,()=>p(document.querySelector('#maskText').value,{top_k:8}));
+  if(key==='summary') r=await timed(key,()=>p(document.querySelector('#sumText').value,{max_new_tokens:+document.querySelector('#sumLen').value}));
+  if(key==='translate') r=await timed(key,()=>p(document.querySelector('#trText').value,{src_lang:document.querySelector('#srcLang').value,tgt_lang:document.querySelector('#tgtLang').value,max_new_tokens:160}));
+  if(key==='generate') r=await timed(key,()=>p(document.querySelector('#genText').value,{max_new_tokens:+document.querySelector('#genTokens').value,temperature:+document.querySelector('#temperature').value,do_sample:true}));
+  if(key==='embedding'){
+   const a=await timed(key,()=>p(document.querySelector('#embA').value,{pooling:'mean',normalize:true}));
+   const b=await p(document.querySelector('#embB').value,{pooling:'mean',normalize:true});
+   const av=Array.from(a.data),bv=Array.from(b.data),sim=av.reduce((s,x,i)=>s+x*bv[i],0);
+   document.querySelector('#simTags').innerHTML=`<span class="tag">차원 ${av.length}</span><span class="tag">코사인 유사도 <b>${sim.toFixed(4)}</b></span>`;
+   r={similarity:sim,vectorA_preview:av.slice(0,12),vectorB_preview:bv.slice(0,12)};
+  }
+  if(key==='imageClass'){
+   const img=document.querySelector('#imgClassPreview'); if(!img.src) throw Error('이미지를 먼저 선택하세요.');
+   r=await timed(key,()=>p(img.src,{top_k:8}));
+  }
+  if(key==='detect'){
+   const img=document.querySelector('#detectPreview'); if(!img.src) throw Error('이미지를 먼저 선택하세요.');
+   r=await timed(key,()=>p(img.src,{threshold:.35,percentage:true})); drawBoxes(r);
+  }
+  if(key==='speech'){
+   const f=document.querySelector('#audioFile').files[0]; if(!f) throw Error('오디오 파일을 먼저 선택하세요.');
+   const audio=await decodeAudio(f);
+   r=await timed(key,()=>p(audio,{chunk_length_s:30,stride_length_s:5,return_timestamps:true}));
+  }
+  out(key,r);progress(key,100);
+ }catch(e){console.error(e)}
+};
+
+async function decodeAudio(file){
+ const ac=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+ const buf=await ac.decodeAudioData(await file.arrayBuffer());
+ const source=buf.getChannelData(0);
+ if(buf.sampleRate===16000)return source;
+ const ratio=buf.sampleRate/16000,len=Math.round(source.length/ratio),out=new Float32Array(len);
+ for(let i=0;i<len;i++)out[i]=source[Math.min(source.length-1,Math.round(i*ratio))];
+ return out;
+}
+function drawBoxes(results){
+ const img=document.querySelector('#detectPreview'),c=document.querySelector('#detectCanvas'),ctx=c.getContext('2d');
+ c.width=img.naturalWidth;c.height=img.naturalHeight;ctx.clearRect(0,0,c.width,c.height);
+ ctx.lineWidth=Math.max(2,c.width/300);ctx.font=`${Math.max(14,c.width/45)}px sans-serif`;
+ for(const x of results){
+  let {xmin,ymin,xmax,ymax}=x.box;
+  if(xmax<=1){xmin*=c.width;xmax*=c.width;ymin*=c.height;ymax*=c.height}
+  ctx.strokeStyle='#ffd21e';ctx.fillStyle='#ffd21e';ctx.strokeRect(xmin,ymin,xmax-xmin,ymax-ymin);
+  const label=`${x.label} ${(x.score*100).toFixed(1)}%`,w=ctx.measureText(label).width+10;
+  ctx.fillRect(xmin,Math.max(0,ymin-24),w,24);ctx.fillStyle='#111';ctx.fillText(label,xmin+5,Math.max(17,ymin-6));
+ }
+}
+
+window.runTokenizer=async()=>{
+ const key='tokenizer',model=document.querySelector('#tokModel').value.trim();
+ try{
+  progress(key,2);let tok=state.tokenizers.get(model);
+  if(!tok){tok=await AutoTokenizer.from_pretrained(model,{progress_callback:x=>progress(key,x.progress??5)});state.tokenizers.set(model,tok);updateCount()}
+  const text=document.querySelector('#tokText').value,encoded=tok(text),ids=Array.from(encoded.input_ids.data);
+  out(key,{model,text,token_count:ids.length,input_ids:ids,decoded:tok.decode(ids,{skip_special_tokens:false})});progress(key,100);
+ }catch(e){out(key,'오류: '+e.message);log('ERROR',key,{message:e.message})}
+};
+
+window.runCustom=async()=>{
+ const key='custom',task=document.querySelector('#customTask').value.trim(),model=document.querySelector('#customModel').value.trim();
+ try{
+  const p=await getPipe(key,{task,model});
+  let options={};try{options=JSON.parse(document.querySelector('#customOptions').value||'{}')}catch{throw Error('옵션 JSON 형식이 올바르지 않습니다.')}
+  const r=await timed(key,()=>p(document.querySelector('#customInput').value,options));out(key,r);progress(key,100);
+ }catch(e){out(key,'오류: '+e.message)}
+};
+
+window.showEnv=()=>{
+ const nav=navigator,mem=performance.memory;
+ const info={
+  transformers_js:'3.8.1', secure_context:isSecureContext,
+  user_agent:nav.userAgent, language:nav.language,
+  hardware_concurrency:nav.hardwareConcurrency, device_memory_gb:nav.deviceMemory??'미지원',
+  webgpu:!!nav.gpu, wasm:typeof WebAssembly!=='undefined',
+  cross_origin_isolated:crossOriginIsolated,
+  browser_cache:true, online:nav.onLine,
+  js_heap:mem?{used_mb:(mem.usedJSHeapSize/1048576).toFixed(1),limit_mb:(mem.jsHeapSizeLimit/1048576).toFixed(1)}:'미지원',
+  loaded_models:state.pipes.size+state.tokenizers.size,last_times_ms:state.lastTimes
+ };out('env',info);return info
+};
+window.showModels=()=>out('env',{pipelines:[...state.pipes.keys()],tokenizers:[...state.tokenizers.keys()]});
+window.exportLog=()=>{
+ const blob=new Blob([JSON.stringify(state.logs,null,2)],{type:'application/json'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download='transformers-js-log.json';a.click();URL.revokeObjectURL(a.href);
+};
+async function disposeAll(){
+ for(const p of state.pipes.values()){try{await p.dispose?.()}catch{}}
+ state.pipes.clear();state.tokenizers.clear();updateCount();toast('로드된 모델 참조를 해제했습니다.');log('SYSTEM','모델 메모리 해제');
+}
+document.querySelector('#clearBtn').onclick=disposeAll;
+document.querySelector('#envBtn').onclick=showEnv;
+document.querySelector('#logToggle').onclick=()=>document.querySelector('#log').classList.toggle('open');
+document.querySelector('#logClose').onclick=()=>document.querySelector('#log').classList.remove('open');
+document.querySelector('#device').onchange=e=>{
+ if(e.target.value==='webgpu'&&!navigator.gpu){toast('이 브라우저는 WebGPU를 지원하지 않아 WASM으로 되돌립니다.');e.target.value='wasm'}
+};
+for(const id of ['imgClass','detect']){
+ const input=document.querySelector('#'+id+'File'),img=document.querySelector('#'+id+'Preview');
+ input.onchange=()=>{const f=input.files[0];if(f){img.src=URL.createObjectURL(f);img.style.display='block';if(id==='detect')document.querySelector('#detectCanvas').getContext('2d').clearRect(0,0,9999,9999)}}
+}
+document.querySelector('#audioFile').onchange=e=>{const f=e.target.files[0];if(f)document.querySelector('#audioPreview').src=URL.createObjectURL(f)};
+document.querySelector('#search').oninput=e=>{
+ const q=e.target.value.toLowerCase();document.querySelectorAll('.card').forEach(c=>c.classList.toggle('hidden',!c.innerText.toLowerCase().includes(q)&&!c.dataset.key.includes(q)));
+};
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ const f=b.dataset.filter;document.querySelectorAll('.card').forEach(c=>c.classList.toggle('hidden',f!=='all'&&c.dataset.cat!==f));
+});
+document.querySelector('#gpuState').textContent=navigator.gpu?'지원':'미지원';
+if(!navigator.gpu)document.querySelector('#device').querySelector('[value=webgpu]').disabled=true;
+showEnv();log('SYSTEM','Transformers.js 실험실 초기화 완료');
+</script>
+</body></html>
