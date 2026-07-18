@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Jotai</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px; font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px; color: #a15c00; background: #fff6e5;
+    border: 1px solid #ffe0a3; border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+  }
+  .finding {
+    font-size: 12.5px; color: #0a5ea8; background: #eaf4ff;
+    border: 1px solid #cfe6ff; border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  input[type="number"], input[type="text"] {
+    font-size: 13px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fafbfc; width: 100px;
+  }
+  .state-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .state-box {
+    flex: 1; min-width: 150px; border: 1px solid #e5e5e5; border-radius: 10px;
+    padding: 12px 14px; background: #fafbfc;
+  }
+  .state-box .label { font-size: 11.5px; color: #888; margin-bottom: 4px; }
+  .state-box .value { font-size: 16px; font-weight: 600; color: #333; }
+  .state-box.normal .value { color: #0a7a4c; }
+  .state-box.warn .value { color: #b8860b; }
+  .log-box {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444;
+    margin-top: 8px; max-height: 140px; overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  .fav-item {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+    border-radius: 999px; background: #eef0f3; font-size: 12.5px; margin: 3px 4px 3px 0;
+  }
+  .fav-item.on { background: #fff6e5; color: #a15c00; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #eef0f3; color: #555; }
+  .badge.loading { background: #fff6e5; color: #a15c00; }
+  .badge.hasData { background: #eafff3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Jotai</h1>
+  <p>
+    Jotai는 상태를 <b>atom(원자)</b>이라는 아주 작은 단위로 쪼개서 관리하는 라이브러리입니다.
+    "하나의 큰 상태 객체"를 만드는 대신, 필요한 만큼 작은 atom을 여러 개 만들고 서로 조합합니다.
+    특히 <b>다른 atom들로부터 값을 자동으로 계산하는 파생(derived) atom</b>이 1급 개념으로 있는 게
+    특징입니다. 보통 React 훅과 함께 쓰이지만, 이 페이지는 <code>jotai/vanilla</code> API로 React
+    없이 순수 JS에서 사용하는 방법을 보여줍니다.
+  </p>
+  <ul>
+    <li><code>atom(초기값)</code>으로 최소 단위 상태를 정의, <code>createStore()</code>로 실행 컨텍스트 생성</li>
+    <li><code>atom((get) =&gt; ...)</code>로 다른 atom에서 값을 읽어 자동 계산되는 파생 atom</li>
+    <li>read와 write를 모두 정의하면 양방향으로 동작하는 "쓰기 가능한 파생 atom"도 가능</li>
+    <li>atom이 Promise를 반환하면 그 자체로 비동기 atom이 됨 (<code>loadable()</code>로 로딩 상태 확인)</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 위판·시세 데이터는 Jotai 기능 설명을 위한 <b>가상의 예시</b>이며, 실제
+    수협중앙회의 통계·조직·절차와 무관합니다. 다른 외부 API는 사용하지 않았습니다
+    (Jotai 2.20.2를 CDN에서 로드).
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 기본 atom + store — <code>get</code>/<code>set</code>/<code>sub</code></h2>
+  <p class="desc">
+    <code>atom(초기값)</code>으로 상태 하나를 만들고, <code>store.get(atom)</code>으로 읽고
+    <code>store.set(atom, 값)</code>으로 씁니다. <code>store.sub(atom, listener)</code>로 변경을 구독합니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box">
+      <div class="label">입찰가 (store.get(countAtom))</div>
+      <div class="value" id="s1-count">0</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s1-inc">+1,000원</button>
+    <button class="ghost" id="s1-reset">초기화</button>
+  </div>
+  <div class="log-box" id="s1-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { atom, createStore } from 'jotai/vanilla';
+
+const countAtom = atom(0);
+const store = createStore();
+
+store.sub(countAtom, () => {
+  console.log('변경됨:', store.get(countAtom));
+});
+
+store.set(countAtom, (c) => c + 1000); // 함수형 업데이트</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. 파생 atom (Derived/Computed Atom)</h2>
+  <p class="desc">
+    <code>atom((get) =&gt; ...)</code>처럼 read 함수만 주면, 그 안에서 참조한 다른 atom이 바뀔 때마다
+    <b>자동으로 다시 계산</b>되는 읽기 전용 atom이 됩니다. 별도의 수동 재계산 코드가 필요 없습니다.
+  </p>
+  <div class="controls">
+    <label>중량(kg): <input type="number" id="s2-weight" value="120" /></label>
+    <label>kg당 단가: <input type="number" id="s2-price" value="8000" step="500" /></label>
+    <button class="action" id="s2-apply">적용</button>
+  </div>
+  <div class="state-row">
+    <div class="state-box normal">
+      <div class="label">총 위판 금액 (파생 atom, 자동 계산)</div>
+      <div class="value" id="s2-total">960,000원</div>
+    </div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const weightAtom = atom(120);
+const priceAtom = atom(8000);
+
+// read 함수 안에서 다른 atom을 get()하면 의존성이 자동으로 추적됨
+const totalAtom = atom((get) => get(weightAtom) * get(priceAtom));
+
+store.sub(totalAtom, () => console.log('총액 갱신:', store.get(totalAtom)));
+store.set(weightAtom, 150); // totalAtom이 자동으로 재계산됨</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. 쓰기 가능한 파생 atom — 섭씨 ↔ 화씨 양방향 변환</h2>
+  <p class="desc">
+    read와 write를 모두 정의하면, "다른 atom에서 값을 계산해서 보여주지만, 이 atom에 직접 값을
+    쓰면 원본 atom을 역산해서 갱신하는" 양방향 atom을 만들 수 있습니다.
+  </p>
+  <div class="state-row">
+    <div class="state-box">
+      <div class="label">섭씨 (원본 atom)</div>
+      <div class="value" id="s3-celsius">20℃</div>
+    </div>
+    <div class="state-box">
+      <div class="label">화씨 (쓰기 가능한 파생 atom)</div>
+      <div class="value" id="s3-fahrenheit">68℉</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" data-c="5">섭씨 +5</button>
+    <button class="action" data-f="10">화씨 +10 (섭씨로 역산됨)</button>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const celsiusAtom = atom(20);
+const fahrenheitAtom = atom(
+  (get) => get(celsiusAtom) * 9 / 5 + 32,           // read: 섭씨 -&gt; 화씨
+  (get, set, newFahrenheit) => {                     // write: 화씨 -&gt; 섭씨로 역산
+    set(celsiusAtom, (newFahrenheit - 32) * 5 / 9);
+  }
+);
+
+store.set(fahrenheitAtom, 100); // celsiusAtom도 함께 갱신됨 (37.78)</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. 비동기 atom + <code>loadable()</code></h2>
+  <p class="desc">
+    atom의 read 함수가 Promise를 반환하면 그 자체로 비동기 atom이 됩니다.
+    <code>loadable()</code>로 감싸면 <code>{'{ state: "loading" | "hasData" | "hasError" }'}</code>
+    형태로 로딩 상태까지 함께 알 수 있습니다 (React의 Suspense 없이도 사용 가능).
+  </p>
+  <div class="state-row">
+    <div class="state-box" id="s4-state-box">
+      <div class="label">비동기 시세 조회 상태</div>
+      <div class="value" id="s4-state">-</div>
+    </div>
+    <div class="state-box">
+      <div class="label">조회된 시세</div>
+      <div class="value" id="s4-price">-</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s4-run">📡 시세 조회 시작</button>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const priceQueryAtom = atom(async () => {
+  const res = await fetch('/api/price'); // 예시: 실제로는 setTimeout으로 대체
+  return res.json();
+});
+
+const loadablePriceAtom = loadable(priceQueryAtom);
+
+const result = store.get(loadablePriceAtom);
+// result.state === 'loading' | 'hasData' | 'hasError'
+// result.state === 'hasData' 일 때 result.data 사용 가능</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. <code>atomWithStorage</code> + <code>selectAtom</code></h2>
+  <p class="desc">
+    <code>atomWithStorage</code>는 atom 값을 자동으로 localStorage에 저장·복원합니다.
+    즐겨찾기를 토글한 뒤 <b>이 페이지를 새로고침</b>해도 유지되는지 확인해보세요.
+    <code>selectAtom</code>은 객체 atom에서 특정 필드만 선택해 구독하므로, 관계없는 필드가
+    바뀔 때는 알림을 받지 않습니다.
+  </p>
+  <div class="finding">
+    💡 <b>확인된 동작:</b> <code>atomWithStorage</code>는 기본적으로 <b>구독(mount)이 걸려야</b>
+    localStorage를 읽어옵니다 — <code>store.get()</code>만으로 새 store를 만들면 저장된 값이 아니라
+    최초 기본값이 나옵니다. 마운트 없이도 즉시 복원하려면 <code>{ getOnInit: true }</code> 옵션을
+    명시해야 합니다. (아래 예제는 이 옵션을 사용합니다.)
+  </div>
+  <div class="controls">
+    <button class="action" data-fav="고등어">고등어</button>
+    <button class="action" data-fav="갈치">갈치</button>
+    <button class="action" data-fav="오징어">오징어</button>
+    <button class="action" data-fav="전갱이">전갱이</button>
+  </div>
+  <div id="s5-favorites"></div>
+  <div class="controls" style="margin-top:14px;">
+    <span style="font-size:12.5px;color:#777;">selectAtom 테스트: b값만 바꿔도 "a만 구독"한 리스너는 반응 안 함</span>
+  </div>
+  <div class="state-row">
+    <div class="state-box"><div class="label">a</div><div class="value" id="s5-a">0</div></div>
+    <div class="state-box"><div class="label">b</div><div class="value" id="s5-b">0</div></div>
+    <div class="state-box"><div class="label">"a만 구독"한 리스너 호출 횟수</div><div class="value" id="s5-a-calls">0</div></div>
+  </div>
+  <div class="controls">
+    <button class="ghost" id="s5-inc-b">b값 +1</button>
+    <button class="action" id="s5-inc-a">a값 +1</button>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { atomWithStorage, selectAtom, createJSONStorage } from 'jotai/vanilla/utils';
+
+const favoritesAtom = atomWithStorage(
+  'favorites', [], createJSONStorage(() => localStorage), { getOnInit: true }
+);
+store.set(favoritesAtom, (prev) => [...prev, '고등어']);
+
+const abAtom = atom({ a: 0, b: 0 });
+const aSliceAtom = selectAtom(abAtom, (s) => s.a); // a가 바뀔 때만 알림
+store.sub(aSliceAtom, () => console.log('a changed'));</pre>
+  </details>
+</section>
+
+<script type="module">
+  import { atom, createStore } from 'https://cdn.jsdelivr.net/npm/jotai@2.20.2/esm/vanilla.mjs';
+  import { atomWithStorage, selectAtom, loadable, createJSONStorage } from 'https://cdn.jsdelivr.net/npm/jotai@2.20.2/esm/vanilla/utils.mjs';
+
+  function nowStr() {
+    return new Date().toLocaleTimeString('ko-KR', { hour12: false });
+  }
+
+  // ---------- Section 1 ----------
+  (function () {
+    const countAtom = atom(0);
+    const store = createStore();
+    const countEl = document.getElementById('s1-count');
+    const logEl = document.getElementById('s1-log');
+
+    store.sub(countAtom, () => {
+      const v = store.get(countAtom);
+      countEl.textContent = v.toLocaleString() + '원';
+      const row = document.createElement('div');
+      row.textContent = `[${nowStr()}] count -> ${v.toLocaleString()}원`;
+      logEl.prepend(row);
+    });
+
+    document.getElementById('s1-inc').addEventListener('click', () => store.set(countAtom, (c) => c + 1000));
+    document.getElementById('s1-reset').addEventListener('click', () => store.set(countAtom, 0));
+  })();
+
+  // ---------- Section 2 ----------
+  (function () {
+    const weightAtom = atom(120);
+    const priceAtom = atom(8000);
+    const totalAtom = atom((get) => get(weightAtom) * get(priceAtom));
+    const store = createStore();
+    const totalEl = document.getElementById('s2-total');
+
+    store.sub(totalAtom, () => {
+      totalEl.textContent = store.get(totalAtom).toLocaleString() + '원';
+    });
+
+    document.getElementById('s2-apply').addEventListener('click', () => {
+      const w = Number(document.getElementById('s2-weight').value) || 0;
+      const p = Number(document.getElementById('s2-price').value) || 0;
+      store.set(weightAtom, w);
+      store.set(priceAtom, p);
+      totalEl.textContent = store.get(totalAtom).toLocaleString() + '원';
+    });
+  })();
+
+  // ---------- Section 3 ----------
+  (function () {
+    const celsiusAtom = atom(20);
+    const fahrenheitAtom = atom(
+      (get) => get(celsiusAtom) * 9 / 5 + 32,
+      (get, set, newFahrenheit) => set(celsiusAtom, (newFahrenheit - 32) * 5 / 9)
+    );
+    const store = createStore();
+    const celsiusEl = document.getElementById('s3-celsius');
+    const fahrenheitEl = document.getElementById('s3-fahrenheit');
+
+    function render() {
+      celsiusEl.textContent = Math.round(store.get(celsiusAtom) * 10) / 10 + '℃';
+      fahrenheitEl.textContent = Math.round(store.get(fahrenheitAtom) * 10) / 10 + '℉';
+    }
+    render();
+
+    document.querySelector('[data-c]').addEventListener('click', (e) => {
+      store.set(celsiusAtom, (c) => c + Number(e.target.dataset.c));
+      render();
+    });
+    document.querySelector('[data-f]').addEventListener('click', (e) => {
+      store.set(fahrenheitAtom, store.get(fahrenheitAtom) + Number(e.target.dataset.f));
+      render();
+    });
+  })();
+
+  // ---------- Section 4 ----------
+  (function () {
+    const stateEl = document.getElementById('s4-state');
+    const stateBox = document.getElementById('s4-state-box');
+    const priceEl = document.getElementById('s4-price');
+    const runBtn = document.getElementById('s4-run');
+
+    function fetchAuctionPrice() {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(8000 + Math.floor(Math.random() * 4000)), 800);
+      });
+    }
+
+    runBtn.addEventListener('click', () => {
+      runBtn.disabled = true;
+      const priceQueryAtom = atom(() => fetchAuctionPrice());
+      const loadablePriceAtom = loadable(priceQueryAtom);
+      const store = createStore();
+
+      function render() {
+        const result = store.get(loadablePriceAtom);
+        stateEl.textContent = result.state;
+        stateBox.className = 'state-box ' + (result.state === 'hasData' ? 'normal' : 'warn');
+        if (result.state === 'hasData') {
+          priceEl.textContent = result.data.toLocaleString() + '원/kg';
+          runBtn.disabled = false;
+        } else {
+          priceEl.textContent = '-';
+        }
+      }
+
+      const unsub = store.sub(loadablePriceAtom, render);
+      render();
+      // loadable은 프로미스가 끝나면 자동으로 재평가되지만, 최종 상태를 확실히 반영하기 위해
+      // 짧은 폴링으로 hasData 전환을 감지 (vanilla 환경에서 React 리렌더 트리거가 없기 때문)
+      const poll = setInterval(() => {
+        render();
+        if (store.get(loadablePriceAtom).state !== 'loading') {
+          clearInterval(poll);
+          unsub();
+        }
+      }, 100);
+    });
+  })();
+
+  // ---------- Section 5 ----------
+  (function () {
+    const favEl = document.getElementById('s5-favorites');
+    const favoritesAtom = atomWithStorage(
+      'js-dashboard-jotai-favorites', [],
+      createJSONStorage(() => localStorage),
+      { getOnInit: true }
+    );
+    const favStore = createStore();
+
+    function renderFav() {
+      const favs = favStore.get(favoritesAtom);
+      const names = ['고등어', '갈치', '오징어', '전갱이'];
+      favEl.innerHTML = names.map((n) => {
+        const on = favs.includes(n);
+        return `<span class="fav-item ${on ? 'on' : ''}">${on ? '★' : '☆'} ${n}</span>`;
+      }).join('');
+    }
+    favStore.sub(favoritesAtom, renderFav);
+    renderFav();
+
+    document.querySelectorAll('button[data-fav]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const name = btn.dataset.fav;
+        favStore.set(favoritesAtom, (prev) =>
+          prev.includes(name) ? prev.filter((f) => f !== name) : [...prev, name]
+        );
+      });
+    });
+
+    // selectAtom demo
+    const abAtom = atom({ a: 0, b: 0 });
+    const aSliceAtom = selectAtom(abAtom, (s) => s.a);
+    const abStore = createStore();
+    let aCalls = 0;
+    abStore.sub(aSliceAtom, () => {
+      aCalls++;
+      document.getElementById('s5-a-calls').textContent = aCalls;
+    });
+    abStore.sub(abAtom, () => {
+      document.getElementById('s5-a').textContent = abStore.get(abAtom).a;
+      document.getElementById('s5-b').textContent = abStore.get(abAtom).b;
+    });
+
+    document.getElementById('s5-inc-b').addEventListener('click', () => {
+      abStore.set(abAtom, (s) => ({ ...s, b: s.b + 1 }));
+    });
+    document.getElementById('s5-inc-a').addEventListener('click', () => {
+      abStore.set(abAtom, (s) => ({ ...s, a: s.a + 1 }));
+    });
+  })();
+</script>
+</body>
+</html>
