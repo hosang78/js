@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JSZip 종합 기능 샘플</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a33;
+      --panel2: #18213d;
+      --text: #edf2ff;
+      --muted: #aab7dc;
+      --line: rgba(255,255,255,.12);
+      --accent: #7dd3fc;
+      --accent2: #a7f3d0;
+      --danger: #fca5a5;
+      --warn: #fde68a;
+      --ok: #86efac;
+      --shadow: 0 18px 45px rgba(0,0,0,.35);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at top left, #1d2c5d 0, #0b1020 38%, #070a14 100%); color: var(--text); font-family: var(--sans); }
+    body { padding: 24px; }
+    a { color: var(--accent); }
+    h1, h2, h3 { margin: 0; line-height: 1.2; }
+    h1 { font-size: clamp(28px, 4vw, 48px); letter-spacing: -0.04em; }
+    h2 { font-size: 22px; letter-spacing: -0.02em; }
+    h3 { font-size: 16px; color: var(--accent2); margin-bottom: 8px; }
+    p { color: var(--muted); line-height: 1.65; }
+    .wrap { max-width: 1440px; margin: 0 auto; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 18px; align-items: stretch; margin-bottom: 18px; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025)); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .card-inner { padding: 22px; }
+    .hero .card-inner { min-height: 210px; display: flex; flex-direction: column; justify-content: space-between; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+    .badge { border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; color: var(--muted); background: rgba(255,255,255,.04); font-size: 13px; }
+    .badge strong { color: var(--text); }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 18px; }
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: rgba(0,0,0,.14); }
+    .section-title small { color: var(--muted); }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 0 0 7px; }
+    input, select, textarea, button { font: inherit; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%; border: 1px solid var(--line); color: var(--text); background: rgba(0,0,0,.22); border-radius: 12px; padding: 10px 12px; outline: none;
+    }
+    textarea { min-height: 88px; resize: vertical; font-family: var(--mono); font-size: 12px; line-height: 1.45; }
+    input[type="file"] { width: 100%; color: var(--muted); border: 1px dashed var(--line); padding: 14px; border-radius: 12px; background: rgba(0,0,0,.18); }
+    .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; align-items: end; }
+    .col-3 { grid-column: span 3; }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; }
+    button {
+      border: 1px solid rgba(255,255,255,.16); border-radius: 13px; padding: 10px 13px; color: #06111f; background: linear-gradient(180deg, #bae6fd, #67e8f9); cursor: pointer; font-weight: 700;
+      transition: transform .12s ease, filter .12s ease, opacity .12s ease;
+    }
+    button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    button:active { transform: translateY(0); }
+    button.secondary { background: rgba(255,255,255,.08); color: var(--text); }
+    button.good { background: linear-gradient(180deg, #bbf7d0, #86efac); color: #052e16; }
+    button.warn { background: linear-gradient(180deg, #fef3c7, #fde68a); color: #3a2a02; }
+    button.danger { background: linear-gradient(180deg, #fecaca, #fca5a5); color: #450a0a; }
+    button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .mini { padding: 7px 9px; border-radius: 10px; font-size: 12px; }
+    .dropzone { border: 1px dashed rgba(125,211,252,.45); background: rgba(125,211,252,.06); border-radius: 15px; min-height: 94px; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 18px; }
+    .dropzone.drag { background: rgba(167,243,208,.12); border-color: var(--accent2); color: var(--text); }
+    .table-wrap { overflow: auto; max-height: 420px; border: 1px solid var(--line); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 10px 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; }
+    th { position: sticky; top: 0; z-index: 1; background: #17213d; color: var(--accent2); }
+    tr { cursor: pointer; }
+    tbody tr:hover { background: rgba(125,211,252,.08); }
+    tr.selected { background: rgba(167,243,208,.12); }
+    .mono { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .stat { border: 1px solid var(--line); border-radius: 14px; padding: 13px; background: rgba(0,0,0,.18); }
+    .stat b { display: block; font-size: 20px; margin-bottom: 3px; }
+    .stat span { color: var(--muted); font-size: 12px; }
+    .progress { height: 12px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; border: 1px solid var(--line); }
+    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #7dd3fc, #a7f3d0); transition: width .1s linear; }
+    .preview { min-height: 240px; border: 1px solid var(--line); border-radius: 14px; background: rgba(0,0,0,.2); padding: 14px; overflow: auto; }
+    .preview pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--mono); font-size: 12px; color: #dbeafe; }
+    .preview img { max-width: 100%; max-height: 360px; display: block; border-radius: 10px; border: 1px solid var(--line); }
+    .log { height: 190px; overflow: auto; border: 1px solid var(--line); border-radius: 14px; background: rgba(0,0,0,.28); padding: 12px; font-family: var(--mono); font-size: 12px; color: #dbeafe; }
+    .log div { margin-bottom: 6px; }
+    .ok { color: var(--ok); }
+    .warn-text { color: var(--warn); }
+    .danger-text { color: var(--danger); }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .pill-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill { padding: 7px 9px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .footer-note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .sticky-tools { position: sticky; bottom: 0; background: rgba(12,18,36,.92); border-top: 1px solid var(--line); padding: 12px; backdrop-filter: blur(10px); margin: 0 -22px -22px; }
+    @media (max-width: 980px) {
+      body { padding: 14px; }
+      .hero, .grid, .split { grid-template-columns: 1fr; }
+      .span-4, .span-5, .span-6, .span-7, .span-8, .span-12, .col-3, .col-4, .col-6, .col-8, .col-12 { grid-column: auto; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .section-title { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="card">
+        <div class="card-inner">
+          <div>
+            <h1>JSZip 종합 기능 샘플</h1>
+            <p>브라우저에서 ZIP 파일을 만들고, 폴더와 파일을 추가하고, 압축 옵션을 바꾸고, 업로드한 ZIP을 읽고, 선택한 항목을 미리보고, 수정 후 다시 저장하는 실습 페이지입니다.</p>
+          </div>
+          <div class="badges">
+            <span class="badge"><strong>생성</strong> file · folder · comment</span>
+            <span class="badge"><strong>읽기</strong> loadAsync · async</span>
+            <span class="badge"><strong>탐색</strong> forEach · filter</span>
+            <span class="badge"><strong>수정</strong> remove · 재압축</span>
+            <span class="badge"><strong>출력</strong> blob · base64 · uint8array</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-inner">
+          <div>
+            <h2>실행 상태</h2>
+            <p id="libraryStatus">JSZip 로딩 확인 중...</p>
+          </div>
+          <div class="stat-grid">
+            <div class="stat"><b id="builderCount">0</b><span>생성 ZIP 항목</span></div>
+            <div class="stat"><b id="loadedCount">0</b><span>불러온 ZIP 항목</span></div>
+            <div class="stat"><b id="lastSize">-</b><span>최근 출력 크기</span></div>
+            <div class="stat"><b id="lastRatio">-</b><span>압축률</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card span-7">
+        <div class="section-title">
+          <div>
+            <h2>1. ZIP 만들기</h2>
+            <small>텍스트, JSON, CSV, HTML, 이미지, 한글 파일명, 빈 폴더 생성</small>
+          </div>
+          <div class="btns">
+            <button id="createDemoBtn">샘플 ZIP 구성</button>
+            <button id="clearBuilderBtn" class="secondary">초기화</button>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div class="row">
+            <div class="col-6">
+              <label for="customPath">가상 경로 / 파일명</label>
+              <input id="customPath" type="text" value="notes/user-note.txt" />
+            </div>
+            <div class="col-6">
+              <label for="customComment">파일 코멘트</label>
+              <input id="customComment" type="text" value="사용자가 직접 추가한 텍스트 파일" />
+            </div>
+            <div class="col-12">
+              <label for="customText">텍스트 내용</label>
+              <textarea id="customText">안녕하세요. 이 파일은 JSZip file(name, data, options)로 추가되었습니다.
+한글 파일명과 UTF-8 텍스트도 함께 테스트할 수 있습니다.</textarea>
+            </div>
+            <div class="col-12 btns">
+              <button id="addTextBtn" class="good">텍스트 파일 추가</button>
+              <button id="addFolderBtn" class="secondary">빈 폴더 추가</button>
+              <button id="removeDocsBtn" class="danger">docs/ 폴더 제거 테스트</button>
+            </div>
+          </div>
+          <hr style="border-color: var(--line); border-style: solid; border-width: 1px 0 0; margin: 18px 0;" />
+          <div class="split">
+            <div>
+              <h3>로컬 파일 추가</h3>
+              <input id="localFiles" type="file" multiple />
+              <p class="footer-note">여러 파일을 선택하면 <span class="mono">uploads/</span> 아래에 추가됩니다. 파일의 최종 수정일도 ZIP 항목 날짜로 반영합니다.</p>
+            </div>
+            <div>
+              <h3>폴더 통째로 추가</h3>
+              <input id="folderFiles" type="file" webkitdirectory directory multiple />
+              <p class="footer-note">지원 브라우저에서는 폴더 내부 상대 경로를 보존합니다.</p>
+            </div>
+          </div>
+          <div id="dropzone" class="dropzone" style="margin-top: 12px;">파일을 여기에 드래그하면 <span class="mono">drag-drop/</span> 폴더로 추가됩니다.</div>
+        </div>
+      </article>
+
+      <article class="card span-5">
+        <div class="section-title">
+          <div>
+            <h2>2. 압축·출력 옵션</h2>
+            <small>generateAsync 옵션과 진행률 콜백 확인</small>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div class="row">
+            <div class="col-6">
+              <label for="compressionMode">compression</label>
+              <select id="compressionMode">
+                <option value="DEFLATE" selected>DEFLATE 압축</option>
+                <option value="STORE">STORE 무압축</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="compressionLevel">compressionOptions.level</label>
+              <input id="compressionLevel" type="number" min="1" max="9" value="6" />
+            </div>
+            <div class="col-6">
+              <label for="outputType">type</label>
+              <select id="outputType">
+                <option value="blob" selected>blob</option>
+                <option value="base64">base64</option>
+                <option value="uint8array">uint8array</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="platformMode">platform</label>
+              <select id="platformMode">
+                <option value="DOS" selected>DOS</option>
+                <option value="UNIX">UNIX</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="zipComment">ZIP 코멘트</label>
+              <input id="zipComment" type="text" value="Generated by JSZip showcase page" />
+            </div>
+            <div class="col-12">
+              <label><input id="streamFiles" type="checkbox" /> streamFiles 사용</label>
+            </div>
+            <div class="col-12">
+              <div class="progress" aria-label="진행률"><div id="progressBar" class="bar"></div></div>
+              <p id="progressText" class="footer-note">대기 중</p>
+            </div>
+            <div class="col-12 btns">
+              <button id="generateBtn">ZIP 생성·다운로드</button>
+              <button id="generateOnlyBtn" class="secondary">생성만 하고 미리보기</button>
+              <button id="loadLastBtn" class="warn">최근 생성 ZIP 읽기</button>
+            </div>
+            <div class="col-12">
+              <label for="outputPreview">base64 / uint8array 출력 미리보기</label>
+              <textarea id="outputPreview" readonly placeholder="blob 타입은 다운로드용 Blob만 생성합니다."></textarea>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-12">
+        <div class="section-title">
+          <div>
+            <h2>3. 생성 ZIP 내부 구조</h2>
+            <small>forEach() 기반 항목 목록, 폴더/파일/코멘트/날짜 확인</small>
+          </div>
+          <div class="btns">
+            <button id="refreshBuilderBtn" class="secondary mini">목록 새로고침</button>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>경로</th><th>구분</th><th>날짜</th><th>코멘트</th></tr></thead>
+              <tbody id="builderTable"><tr><td colspan="4">아직 생성된 항목이 없습니다.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-5">
+        <div class="section-title">
+          <div>
+            <h2>4. ZIP 불러오기</h2>
+            <small>loadAsync()로 기존 ZIP 읽기</small>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div class="row">
+            <div class="col-12">
+              <label for="zipInput">ZIP 파일 선택</label>
+              <input id="zipInput" type="file" accept=".zip,application/zip,application/x-zip-compressed" />
+            </div>
+            <div class="col-12">
+              <label><input id="checkCRC" type="checkbox" /> checkCRC32 사용</label>
+              <p class="footer-note">CRC 검사는 오류 검출에는 유용하지만 큰 ZIP에서는 시간이 더 걸릴 수 있습니다.</p>
+            </div>
+            <div class="col-12">
+              <label for="base64Zip">Base64 ZIP 붙여넣기</label>
+              <textarea id="base64Zip" placeholder="generateAsync({type:'base64'}) 결과를 붙여넣고 아래 버튼을 누르세요."></textarea>
+            </div>
+            <div class="col-12 btns">
+              <button id="loadZipBtn">선택 ZIP 읽기</button>
+              <button id="loadBase64Btn" class="secondary">Base64 읽기</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-7">
+        <div class="section-title">
+          <div>
+            <h2>5. ZIP 탐색·검색</h2>
+            <small>forEach(), filter(), 항목 선택</small>
+          </div>
+          <div class="btns"><button id="repackBtn" class="good mini">수정본 재다운로드</button></div>
+        </div>
+        <div class="card-inner">
+          <div class="row" style="margin-bottom: 12px;">
+            <div class="col-8">
+              <label for="entrySearch">경로 검색</label>
+              <input id="entrySearch" type="text" placeholder="예: txt, data/, 한글" />
+            </div>
+            <div class="col-4">
+              <label for="entryTypeFilter">필터</label>
+              <select id="entryTypeFilter">
+                <option value="all">전체</option>
+                <option value="file">파일만</option>
+                <option value="dir">폴더만</option>
+                <option value="text">텍스트 후보</option>
+                <option value="image">이미지 후보</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>경로</th><th>구분</th><th>확장자</th><th>날짜</th><th>코멘트</th></tr></thead>
+              <tbody id="loadedTable"><tr><td colspan="5">ZIP을 먼저 불러오세요.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-7">
+        <div class="section-title">
+          <div>
+            <h2>6. 선택 항목 미리보기·추출</h2>
+            <small>JSZipObject.async('string'|'blob'|'uint8array') 사용</small>
+          </div>
+          <div class="btns">
+            <button id="extractBtn" class="secondary mini">선택 파일 다운로드</button>
+            <button id="previewBtn" class="mini">미리보기</button>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div id="selectedInfo" class="pill-list" style="margin-bottom: 12px;"><span class="pill">선택 항목 없음</span></div>
+          <div id="preview" class="preview"><pre>파일을 선택하면 텍스트, 이미지, 바이너리 헥스 덤프를 표시합니다.</pre></div>
+        </div>
+      </article>
+
+      <article class="card span-5">
+        <div class="section-title">
+          <div>
+            <h2>7. 불러온 ZIP 수정</h2>
+            <small>remove(), file() 조합으로 삭제·추가·이름변경</small>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div class="row">
+            <div class="col-12 btns">
+              <button id="deleteEntryBtn" class="danger">선택 항목 삭제</button>
+              <button id="renameEntryBtn" class="warn">선택 파일 이름변경</button>
+            </div>
+            <div class="col-12">
+              <label for="addedNote">추가할 메모 파일 내용</label>
+              <textarea id="addedNote">이 메모는 업로드한 ZIP에 나중에 추가되었습니다.
+_modified/added-note.txt 로 들어갑니다.</textarea>
+            </div>
+            <div class="col-12 btns">
+              <button id="addNoteBtn" class="good">메모 파일 추가</button>
+              <button id="addManifestBtn" class="secondary">manifest.json 자동 추가</button>
+            </div>
+            <div class="col-12">
+              <h3>지원 기능 요약</h3>
+              <div class="pill-list">
+                <span class="pill">폴더 생성</span><span class="pill">파일 추가</span><span class="pill">Blob 저장</span><span class="pill">한글 경로</span><span class="pill">ZIP 코멘트</span><span class="pill">파일 코멘트</span><span class="pill">DEFLATE</span><span class="pill">STORE</span><span class="pill">Base64</span><span class="pill">Uint8Array</span><span class="pill">CRC32 검사</span><span class="pill">드래그앤드롭</span><span class="pill">폴더 업로드</span><span class="pill">검색/필터</span><span class="pill">삭제/재압축</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card span-12">
+        <div class="section-title">
+          <div>
+            <h2>8. 로그·자가검증</h2>
+            <small>비동기 처리, 오류 메시지, 작업 이력</small>
+          </div>
+          <div class="btns">
+            <button id="selfTestBtn" class="good mini">자가검증 실행</button>
+            <button id="clearLogBtn" class="secondary mini">로그 지우기</button>
+          </div>
+        </div>
+        <div class="card-inner">
+          <div id="log" class="log"></div>
+          <div class="sticky-tools">
+            <p class="footer-note"><strong>주의:</strong> 브라우저 메모리 안에서 ZIP을 만들기 때문에 아주 큰 파일 또는 수천 개 이상의 항목은 탭이 느려질 수 있습니다. 원격 URL 파일 추가는 CORS 정책에 따라 실패할 수 있어 이 샘플에서는 로컬 파일 중심으로 구성했습니다.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      builderZip: null,
+      importedZip: null,
+      selectedEntryName: null,
+      lastOutput: null,
+      lastBlob: null,
+      lastFileName: 'jszip-showcase.zip',
+      lastUncompressed: 0
+    };
+
+    const textExt = new Set(['txt','md','json','csv','html','htm','xml','css','js','ts','log','yaml','yml','svg']);
+    const imageExt = new Set(['png','jpg','jpeg','gif','webp','bmp','svg']);
+
+    function nowTime() {
+      return new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    }
+
+    function log(message, type = '') {
+      const line = document.createElement('div');
+      line.className = type;
+      line.textContent = `[${nowTime()}] ${message}`;
+      $('log').prepend(line);
+    }
+
+    function assertJSZip() {
+      if (!window.JSZip) {
+        $('libraryStatus').innerHTML = '<span class="danger-text">JSZip 로딩 실패: 인터넷 또는 CDN 접근을 확인하세요.</span>';
+        return false;
+      }
+      $('libraryStatus').innerHTML = `JSZip <b>${JSZip.version}</b> 로딩 완료 · Blob 지원: <b>${JSZip.support.blob ? '가능' : '불가'}</b> · Uint8Array 지원: <b>${JSZip.support.uint8array ? '가능' : '불가'}</b>`;
+      return true;
+    }
+
+    function ensureBuilder() {
+      if (!state.builderZip) {
+        state.builderZip = new JSZip();
+        state.builderZip.comment = $('zipComment').value || '';
+      }
+      return state.builderZip;
+    }
+
+    function extOf(name) {
+      const clean = name.split('?')[0].split('#')[0];
+      const last = clean.split('/').pop() || '';
+      const idx = last.lastIndexOf('.');
+      return idx >= 0 ? last.slice(idx + 1).toLowerCase() : '';
+    }
+
+    function isTextCandidate(name) {
+      return textExt.has(extOf(name));
+    }
+
+    function isImageCandidate(name) {
+      return imageExt.has(extOf(name));
+    }
+
+    function prettyBytes(bytes) {
+      if (!Number.isFinite(bytes)) return '-';
+      const units = ['B','KB','MB','GB'];
+      let n = bytes;
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function safePath(path) {
+      return String(path || '').replace(/^\/+/, '').replace(/\.\.\//g, '').trim() || 'untitled.txt';
+    }
+
+    function createCanvasBlob() {
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 360;
+        const ctx = canvas.getContext('2d');
+        const grad = ctx.createLinearGradient(0, 0, 640, 360);
+        grad.addColorStop(0, '#1d4ed8');
+        grad.addColorStop(1, '#14b8a6');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 640, 360);
+        ctx.fillStyle = 'rgba(255,255,255,.16)';
+        for (let i = 0; i < 16; i++) {
+          ctx.beginPath();
+          ctx.arc(80 + i * 38, 90 + Math.sin(i) * 45, 22 + (i % 4) * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 38px system-ui, sans-serif';
+        ctx.fillText('JSZip PNG Blob', 42, 195);
+        ctx.font = '22px system-ui, sans-serif';
+        ctx.fillText(new Date().toLocaleString('ko-KR'), 44, 238);
+        canvas.toBlob(resolve, 'image/png');
+      });
+    }
+
+    async function createDemoZip() {
+      if (!assertJSZip()) return;
+      const zip = new JSZip();
+      zip.comment = $('zipComment').value || 'Generated by JSZip showcase page';
+      const today = new Date();
+      zip.file('README.txt', [
+        'JSZip 종합 기능 샘플',
+        '',
+        '- 텍스트 파일',
+        '- JSON / CSV / HTML',
+        '- PNG Blob 이미지',
+        '- 한글 파일명',
+        '- 빈 폴더',
+        '- ZIP 코멘트와 파일 코멘트',
+        '',
+        `생성 시각: ${today.toISOString()}`
+      ].join('\n'), { date: today, comment: '기본 안내 파일' });
+
+      const data = {
+        library: 'JSZip',
+        version: JSZip.version,
+        createdAt: today.toISOString(),
+        features: ['file', 'folder', 'remove', 'forEach', 'loadAsync', 'generateAsync', 'async'],
+        korean: '한글 텍스트와 파일명 테스트'
+      };
+      zip.folder('data').file('profile.json', JSON.stringify(data, null, 2), { date: today, comment: 'JSON 샘플' });
+      zip.folder('data').file('table.csv', '항목,값\n라이브러리,JSZip\n압축,DEFLATE\n출력,Blob/Base64/Uint8Array\n', { date: today, comment: 'CSV 샘플' });
+      zip.folder('docs').file('index.html', '<!doctype html><meta charset="utf-8"><h1>ZIP 내부 HTML</h1><p>JSZip으로 만든 HTML 파일입니다.</p>', { date: today, comment: 'HTML 샘플' });
+      zip.folder('문서').file('한글파일명.txt', '한글 경로와 파일명을 테스트합니다.\nUTF-8 문자열이 정상 표시되어야 합니다.', { date: today, comment: '유니코드 파일명' });
+      zip.file('empty-folder/', null, { dir: true, date: today, comment: '빈 폴더 항목' });
+
+      const imgBlob = await createCanvasBlob();
+      zip.folder('assets/images').file('generated-chart.png', imgBlob, { binary: true, date: today, comment: 'Canvas에서 만든 PNG Blob' });
+
+      state.builderZip = zip;
+      renderBuilderList();
+      log('샘플 ZIP 구조 생성 완료', 'ok');
+    }
+
+    function entriesOf(zip) {
+      const rows = [];
+      if (!zip) return rows;
+      zip.forEach((relativePath, file) => {
+        rows.push({ relativePath, file });
+      });
+      return rows.sort((a, b) => a.relativePath.localeCompare(b.relativePath, 'ko-KR'));
+    }
+
+    function renderBuilderList() {
+      const tbody = $('builderTable');
+      const rows = entriesOf(state.builderZip);
+      $('builderCount').textContent = rows.length;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="4">아직 생성된 항목이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(({ relativePath, file }) => `
+        <tr>
+          <td class="mono">${escapeHtml(relativePath)}</td>
+          <td>${file.dir ? '폴더' : '파일'}</td>
+          <td>${file.date ? escapeHtml(file.date.toLocaleString('ko-KR')) : '-'}</td>
+          <td>${escapeHtml(file.comment || '')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderLoadedList() {
+      const tbody = $('loadedTable');
+      const zip = state.importedZip;
+      const search = $('entrySearch').value.toLowerCase().trim();
+      const typeFilter = $('entryTypeFilter').value;
+      const rows = entriesOf(zip).filter(({ relativePath, file }) => {
+        if (search && !relativePath.toLowerCase().includes(search)) return false;
+        if (typeFilter === 'file' && file.dir) return false;
+        if (typeFilter === 'dir' && !file.dir) return false;
+        if (typeFilter === 'text' && (file.dir || !isTextCandidate(relativePath))) return false;
+        if (typeFilter === 'image' && (file.dir || !isImageCandidate(relativePath))) return false;
+        return true;
+      });
+      $('loadedCount').textContent = entriesOf(zip).length;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5">표시할 항목이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(({ relativePath, file }) => `
+        <tr data-name="${escapeAttr(relativePath)}" class="${state.selectedEntryName === relativePath ? 'selected' : ''}">
+          <td class="mono">${escapeHtml(relativePath)}</td>
+          <td>${file.dir ? '폴더' : '파일'}</td>
+          <td>${file.dir ? '-' : escapeHtml(extOf(relativePath) || '(없음)')}</td>
+          <td>${file.date ? escapeHtml(file.date.toLocaleString('ko-KR')) : '-'}</td>
+          <td>${escapeHtml(file.comment || '')}</td>
+        </tr>
+      `).join('');
+      [...tbody.querySelectorAll('tr[data-name]')].forEach((tr) => {
+        tr.addEventListener('click', () => selectEntry(tr.dataset.name));
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/'/g, '&#39;');
+    }
+
+    function selectEntry(name) {
+      state.selectedEntryName = name;
+      renderLoadedList();
+      const file = state.importedZip && state.importedZip.files[name];
+      if (!file) {
+        $('selectedInfo').innerHTML = '<span class="pill">선택 항목 없음</span>';
+        return;
+      }
+      $('selectedInfo').innerHTML = `
+        <span class="pill">경로: <span class="mono">${escapeHtml(name)}</span></span>
+        <span class="pill">구분: ${file.dir ? '폴더' : '파일'}</span>
+        <span class="pill">확장자: ${escapeHtml(extOf(name) || '-')}</span>
+        <span class="pill">날짜: ${file.date ? escapeHtml(file.date.toLocaleString('ko-KR')) : '-'}</span>
+      `;
+      $('preview').innerHTML = '<pre>미리보기 버튼을 누르세요.</pre>';
+    }
+
+    async function addTextFile() {
+      const zip = ensureBuilder();
+      const path = safePath($('customPath').value);
+      zip.file(path, $('customText').value, {
+        date: new Date(),
+        comment: $('customComment').value || '',
+        compression: $('compressionMode').value
+      });
+      renderBuilderList();
+      log(`텍스트 파일 추가: ${path}`, 'ok');
+    }
+
+    function addFolder() {
+      const zip = ensureBuilder();
+      let path = safePath($('customPath').value);
+      if (!path.endsWith('/')) path += '/';
+      zip.file(path, null, { dir: true, date: new Date(), comment: $('customComment').value || '빈 폴더' });
+      renderBuilderList();
+      log(`빈 폴더 추가: ${path}`, 'ok');
+    }
+
+    function removeDocsFolder() {
+      const zip = ensureBuilder();
+      zip.remove('docs');
+      renderBuilderList();
+      log('docs/ 폴더 제거 실행: 하위 파일까지 제거됩니다.', 'warn-text');
+    }
+
+    async function addFilesToBuilder(fileList, prefix, preserveRelativePath = false) {
+      const zip = ensureBuilder();
+      const files = [...fileList];
+      for (const file of files) {
+        const relative = preserveRelativePath && file.webkitRelativePath ? file.webkitRelativePath : file.name;
+        const path = safePath(`${prefix}/${relative}`);
+        zip.file(path, file, { binary: true, date: new Date(file.lastModified || Date.now()), comment: `local file: ${file.name}` });
+      }
+      renderBuilderList();
+      log(`${files.length}개 로컬 파일 추가: ${prefix}/`, 'ok');
+    }
+
+    async function estimateUncompressed(zip) {
+      let total = 0;
+      for (const { file } of entriesOf(zip)) {
+        if (!file.dir) {
+          const data = await file.async('uint8array');
+          total += data.byteLength;
+        }
+      }
+      return total;
+    }
+
+    async function generateZip(download = true) {
+      if (!assertJSZip()) return;
+      const zip = ensureBuilder();
+      const outputType = $('outputType').value;
+      const compression = $('compressionMode').value;
+      const level = Number($('compressionLevel').value || 6);
+      zip.comment = $('zipComment').value || '';
+      $('progressBar').style.width = '0%';
+      $('progressText').textContent = '생성 시작...';
+      $('outputPreview').value = '';
+      const options = {
+        type: outputType,
+        compression,
+        platform: $('platformMode').value,
+        streamFiles: $('streamFiles').checked,
+        mimeType: 'application/zip'
+      };
+      if (compression === 'DEFLATE') options.compressionOptions = { level };
+
+      const started = performance.now();
+      const uncompressed = await estimateUncompressed(zip);
+      state.lastUncompressed = uncompressed;
+      const result = await zip.generateAsync(options, (metadata) => {
+        const pct = Math.max(0, Math.min(100, metadata.percent || 0));
+        $('progressBar').style.width = `${pct.toFixed(1)}%`;
+        $('progressText').textContent = `${pct.toFixed(1)}% · ${metadata.currentFile || '마무리 중'}`;
+      });
+      const elapsed = performance.now() - started;
+      state.lastOutput = result;
+      state.lastFileName = `jszip-showcase-${Date.now()}.zip`;
+
+      let blob;
+      let outputBytes = 0;
+      if (outputType === 'blob') {
+        blob = result;
+        outputBytes = result.size;
+      } else if (outputType === 'base64') {
+        $('outputPreview').value = result.slice(0, 1200) + (result.length > 1200 ? '\n... 생략 ...' : '');
+        blob = base64ToBlob(result, 'application/zip');
+        outputBytes = blob.size;
+      } else if (outputType === 'uint8array') {
+        const u8 = result;
+        $('outputPreview').value = Array.from(u8.slice(0, 320)).map(v => v.toString(16).padStart(2, '0')).join(' ') + (u8.length > 320 ? '\n... 생략 ...' : '');
+        blob = new Blob([u8], { type: 'application/zip' });
+        outputBytes = u8.byteLength;
+      }
+      state.lastBlob = blob;
+      $('lastSize').textContent = prettyBytes(outputBytes);
+      const ratio = uncompressed ? (outputBytes / uncompressed) : 0;
+      $('lastRatio').textContent = uncompressed ? `${(ratio * 100).toFixed(1)}%` : '-';
+      $('progressText').textContent = `완료 · ${prettyBytes(outputBytes)} · ${elapsed.toFixed(0)}ms`;
+      log(`ZIP 생성 완료: 출력 ${prettyBytes(outputBytes)}, 원본 추정 ${prettyBytes(uncompressed)}, ${elapsed.toFixed(0)}ms`, 'ok');
+      if (download) downloadBlob(blob, state.lastFileName);
+    }
+
+    function base64ToBlob(base64, mime) {
+      const clean = base64.replace(/^data:.*?;base64,/, '').replace(/\s/g, '');
+      const binary = atob(clean);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    async function loadSelectedZip() {
+      const file = $('zipInput').files[0];
+      if (!file) {
+        log('ZIP 파일을 먼저 선택하세요.', 'danger-text');
+        return;
+      }
+      const data = await file.arrayBuffer();
+      await loadZipData(data, { checkCRC32: $('checkCRC').checked }, file.name);
+    }
+
+    async function loadBase64Zip() {
+      const base64 = $('base64Zip').value.trim();
+      if (!base64) {
+        log('Base64 ZIP 문자열이 비어 있습니다.', 'danger-text');
+        return;
+      }
+      await loadZipData(base64, { base64: true, checkCRC32: $('checkCRC').checked }, 'base64-input.zip');
+    }
+
+    async function loadLastGenerated() {
+      if (!state.lastBlob) {
+        log('최근 생성된 ZIP이 없습니다. 먼저 ZIP을 생성하세요.', 'danger-text');
+        return;
+      }
+      await loadZipData(await state.lastBlob.arrayBuffer(), { checkCRC32: $('checkCRC').checked }, state.lastFileName);
+    }
+
+    async function loadZipData(data, options, label) {
+      if (!assertJSZip()) return;
+      try {
+        const started = performance.now();
+        state.importedZip = await JSZip.loadAsync(data, options);
+        state.selectedEntryName = null;
+        renderLoadedList();
+        $('preview').innerHTML = '<pre>ZIP을 읽었습니다. 항목을 선택하세요.</pre>';
+        log(`ZIP 읽기 완료: ${label}, 항목 ${entriesOf(state.importedZip).length}개, ${(performance.now() - started).toFixed(0)}ms`, 'ok');
+      } catch (err) {
+        log(`ZIP 읽기 실패: ${err.message}`, 'danger-text');
+      }
+    }
+
+    async function previewSelected() {
+      const zip = state.importedZip;
+      const name = state.selectedEntryName;
+      if (!zip || !name || !zip.files[name]) {
+        log('미리볼 파일을 선택하세요.', 'danger-text');
+        return;
+      }
+      const file = zip.files[name];
+      if (file.dir) {
+        $('preview').innerHTML = '<pre>폴더 항목은 미리볼 내용이 없습니다.</pre>';
+        return;
+      }
+      const ext = extOf(name);
+      try {
+        if (isImageCandidate(name) && ext !== 'svg') {
+          const blob = await file.async('blob');
+          const url = URL.createObjectURL(blob);
+          $('preview').innerHTML = `<img alt="${escapeAttr(name)}" src="${url}"><p class="footer-note">이미지 Blob 미리보기 · ${prettyBytes(blob.size)}</p>`;
+          log(`이미지 미리보기: ${name}`, 'ok');
+        } else if (isTextCandidate(name)) {
+          const text = await file.async('string');
+          const shown = text.length > 20000 ? text.slice(0, 20000) + '\n\n... 20,000자 이후 생략 ...' : text;
+          $('preview').innerHTML = `<pre>${escapeHtml(shown)}</pre>`;
+          log(`텍스트 미리보기: ${name}`, 'ok');
+        } else {
+          const u8 = await file.async('uint8array');
+          const hex = Array.from(u8.slice(0, 512)).map(v => v.toString(16).padStart(2, '0')).join(' ');
+          $('preview').innerHTML = `<pre>바이너리 파일\n크기: ${prettyBytes(u8.byteLength)}\n\nHEX 512 bytes:\n${escapeHtml(hex)}${u8.length > 512 ? '\n... 생략 ...' : ''}</pre>`;
+          log(`바이너리 헥스 미리보기: ${name}`, 'ok');
+        }
+      } catch (err) {
+        log(`미리보기 실패: ${err.message}`, 'danger-text');
+      }
+    }
+
+    async function extractSelected() {
+      const zip = state.importedZip;
+      const name = state.selectedEntryName;
+      if (!zip || !name || !zip.files[name] || zip.files[name].dir) {
+        log('다운로드할 파일 항목을 선택하세요.', 'danger-text');
+        return;
+      }
+      const blob = await zip.files[name].async('blob');
+      downloadBlob(blob, name.split('/').pop() || 'extracted-file');
+      log(`선택 파일 다운로드: ${name}`, 'ok');
+    }
+
+    async function deleteEntry() {
+      const zip = state.importedZip;
+      const name = state.selectedEntryName;
+      if (!zip || !name) {
+        log('삭제할 항목을 선택하세요.', 'danger-text');
+        return;
+      }
+      zip.remove(name);
+      state.selectedEntryName = null;
+      renderLoadedList();
+      $('selectedInfo').innerHTML = '<span class="pill">선택 항목 없음</span>';
+      $('preview').innerHTML = '<pre>선택 항목이 삭제되었습니다.</pre>';
+      log(`항목 삭제: ${name}`, 'warn-text');
+    }
+
+    async function renameEntry() {
+      const zip = state.importedZip;
+      const name = state.selectedEntryName;
+      if (!zip || !name || !zip.files[name] || zip.files[name].dir) {
+        log('이름변경할 파일 항목을 선택하세요. 폴더는 이 샘플에서 제외했습니다.', 'danger-text');
+        return;
+      }
+      const next = prompt('새 경로/파일명을 입력하세요.', name.replace(/([^/]+)$/, 'renamed-$1'));
+      if (!next) return;
+      const oldFile = zip.files[name];
+      const data = await oldFile.async('uint8array');
+      zip.file(safePath(next), data, { binary: true, date: oldFile.date, comment: oldFile.comment || `renamed from ${name}` });
+      zip.remove(name);
+      state.selectedEntryName = safePath(next);
+      renderLoadedList();
+      selectEntry(state.selectedEntryName);
+      log(`파일 이름변경: ${name} → ${state.selectedEntryName}`, 'ok');
+    }
+
+    function addNoteToImported() {
+      const zip = state.importedZip;
+      if (!zip) {
+        log('수정할 ZIP을 먼저 불러오세요.', 'danger-text');
+        return;
+      }
+      zip.folder('_modified').file('added-note.txt', $('addedNote').value, { date: new Date(), comment: 'added after loadAsync' });
+      renderLoadedList();
+      log('_modified/added-note.txt 추가 완료', 'ok');
+    }
+
+    function addManifestToImported() {
+      const zip = state.importedZip;
+      if (!zip) {
+        log('수정할 ZIP을 먼저 불러오세요.', 'danger-text');
+        return;
+      }
+      const manifest = entriesOf(zip).map(({ relativePath, file }) => ({
+        path: relativePath,
+        dir: file.dir,
+        date: file.date ? file.date.toISOString() : null,
+        comment: file.comment || '',
+        ext: file.dir ? null : extOf(relativePath)
+      }));
+      zip.file('_modified/manifest.json', JSON.stringify({ generatedAt: new Date().toISOString(), count: manifest.length, entries: manifest }, null, 2), { date: new Date(), comment: 'auto generated manifest' });
+      renderLoadedList();
+      log('_modified/manifest.json 추가 완료', 'ok');
+    }
+
+    async function repackImported() {
+      const zip = state.importedZip;
+      if (!zip) {
+        log('재다운로드할 ZIP을 먼저 불러오세요.', 'danger-text');
+        return;
+      }
+      const compression = $('compressionMode').value;
+      const options = { type: 'blob', compression, platform: $('platformMode').value, streamFiles: $('streamFiles').checked };
+      if (compression === 'DEFLATE') options.compressionOptions = { level: Number($('compressionLevel').value || 6) };
+      const blob = await zip.generateAsync(options, (metadata) => {
+        $('progressBar').style.width = `${(metadata.percent || 0).toFixed(1)}%`;
+        $('progressText').textContent = `수정본 생성: ${(metadata.percent || 0).toFixed(1)}% · ${metadata.currentFile || ''}`;
+      });
+      state.lastBlob = blob;
+      $('lastSize').textContent = prettyBytes(blob.size);
+      downloadBlob(blob, `jszip-edited-${Date.now()}.zip`);
+      log(`수정본 ZIP 다운로드: ${prettyBytes(blob.size)}`, 'ok');
+    }
+
+    async function selfTest() {
+      try {
+        await createDemoZip();
+        await generateZip(false);
+        await loadLastGenerated();
+        const zip = state.importedZip;
+        const readme = await zip.file('README.txt').async('string');
+        if (!readme.includes('JSZip 종합 기능 샘플')) throw new Error('README 내용 검증 실패');
+        const hasKorean = !!zip.file('문서/한글파일명.txt');
+        if (!hasKorean) throw new Error('한글 파일명 검증 실패');
+        log('자가검증 성공: 생성 → 압축 → 읽기 → 텍스트 추출 → 한글 경로 확인', 'ok');
+      } catch (err) {
+        log(`자가검증 실패: ${err.message}`, 'danger-text');
+      }
+    }
+
+    function initEvents() {
+      $('createDemoBtn').addEventListener('click', createDemoZip);
+      $('clearBuilderBtn').addEventListener('click', () => { state.builderZip = new JSZip(); renderBuilderList(); log('생성 ZIP 초기화', 'warn-text'); });
+      $('addTextBtn').addEventListener('click', addTextFile);
+      $('addFolderBtn').addEventListener('click', addFolder);
+      $('removeDocsBtn').addEventListener('click', removeDocsFolder);
+      $('refreshBuilderBtn').addEventListener('click', renderBuilderList);
+      $('generateBtn').addEventListener('click', () => generateZip(true));
+      $('generateOnlyBtn').addEventListener('click', () => generateZip(false));
+      $('loadLastBtn').addEventListener('click', loadLastGenerated);
+      $('loadZipBtn').addEventListener('click', loadSelectedZip);
+      $('loadBase64Btn').addEventListener('click', loadBase64Zip);
+      $('entrySearch').addEventListener('input', renderLoadedList);
+      $('entryTypeFilter').addEventListener('change', renderLoadedList);
+      $('previewBtn').addEventListener('click', previewSelected);
+      $('extractBtn').addEventListener('click', extractSelected);
+      $('deleteEntryBtn').addEventListener('click', deleteEntry);
+      $('renameEntryBtn').addEventListener('click', renameEntry);
+      $('addNoteBtn').addEventListener('click', addNoteToImported);
+      $('addManifestBtn').addEventListener('click', addManifestToImported);
+      $('repackBtn').addEventListener('click', repackImported);
+      $('selfTestBtn').addEventListener('click', selfTest);
+      $('clearLogBtn').addEventListener('click', () => { $('log').innerHTML = ''; });
+      $('localFiles').addEventListener('change', (e) => addFilesToBuilder(e.target.files, 'uploads', false));
+      $('folderFiles').addEventListener('change', (e) => addFilesToBuilder(e.target.files, 'folders', true));
+
+      const dz = $('dropzone');
+      ['dragenter', 'dragover'].forEach((eventName) => dz.addEventListener(eventName, (e) => { e.preventDefault(); dz.classList.add('drag'); }));
+      ['dragleave', 'drop'].forEach((eventName) => dz.addEventListener(eventName, (e) => { e.preventDefault(); dz.classList.remove('drag'); }));
+      dz.addEventListener('drop', (e) => addFilesToBuilder(e.dataTransfer.files, 'drag-drop', false));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      assertJSZip();
+      initEvents();
+      state.builderZip = new JSZip();
+      renderBuilderList();
+      renderLoadedList();
+      log('페이지 준비 완료. “샘플 ZIP 구성”부터 눌러보세요.', 'ok');
+    });
+  </script>
+</body>
+</html>
