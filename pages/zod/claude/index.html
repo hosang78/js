@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Zod</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  .form-row label { width: 110px; color: #555; flex-shrink: 0; }
+  .form-row input, .form-row select {
+    flex: 1;
+    min-width: 120px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .item-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    align-items: center;
+  }
+  .item-row input { padding: 5px 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .item-row .sp { width: 100px; }
+  .item-row .wt { width: 90px; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .result-box.bad { background: #fff0f0; border-color: #f5c2c2; color: #b42318; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Zod 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Zod</strong>는 TypeScript 친화적인 스키마 검증 라이브러리입니다. 스키마를 한 번 정의하면
+    런타임 검증과 타입 추론을 동시에 얻을 수 있어, ajv(JSON 스키마 기반)보다 JS/TS 코드 안에서
+    직접 스키마를 짜는 스타일을 선호할 때 널리 쓰입니다.
+    <ul>
+      <li><code>z.object({...}).safeParse(data)</code>로 예외 없이 <code>{success, data|error}</code> 결과 받기</li>
+      <li>스키마 정의 시 <code>{ error: '메시지' }</code>로 필드별 커스텀 에러 메시지 지정</li>
+      <li><code>z.treeifyError()</code> / <code>z.prettifyError()</code>로 에러를 사람이 읽기 좋은 구조로 변환</li>
+      <li><code>.transform()</code>으로 타입 변환, <code>.refine()</code>으로 커스텀 비즈니스 규칙 검증</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 신고서 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. Zod는 브라우저용 번들을 따로 배포하지 않아(ESM 전용) jsdelivr의 ESM 변환
+      엔드포인트(<code>/+esm</code>)로 불러옵니다. 검증 중 실제로 확인한 점: v3에서 쓰이던
+      <code>required_error</code>/<code>invalid_type_error</code> 옵션과 <code>.format()</code>/
+      <code>.flatten()</code> 메서드는 v4에서 사라지고, 통합된 <code>error</code> 옵션과
+      <code>z.treeifyError()</code>/<code>z.prettifyError()</code> 함수로 대체되었습니다.
+      다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 스키마 + safeParse</h2>
+    <div class="desc">위판 신고서 스키마(항구명, 어종, 무게>0)를 만들고 아래 값으로 검증합니다.</div>
+    <div class="form-row"><label>항구명</label><input id="port1" value="가상 위판장 A" /></div>
+    <div class="form-row"><label>어종</label><input id="species1" value="고등어" /></div>
+    <div class="form-row"><label>무게(kg)</label><input id="weight1" value="120" /></div>
+    <div class="controls"><button class="action" id="validateBtn1">safeParse 실행</button></div>
+    <div class="result-box" id="output1">아직 검증 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const ReportSchema = z.object({
+  port: z.string(),
+  species: z.string(),
+  weightKg: z.number().positive(),
+});
+const result = ReportSchema.safeParse({ port, species, weightKg: Number(weight) });
+// result.success === true면 result.data, false면 result.error</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 커스텀 에러 메시지 + treeifyError / prettifyError</h2>
+    <div class="desc">이름을 비워두거나 나이에 숫자가 아닌 값을 넣고 검증해보세요. 필드별 한국어 에러 메시지가 두 가지 형태로 표시됩니다.</div>
+    <div class="form-row"><label>담당자 이름</label><input id="name2" value="" placeholder="비워두고 테스트해보세요" /></div>
+    <div class="form-row"><label>나이</label><input id="age2" value="abc" /></div>
+    <div class="controls"><button class="action" id="validateBtn2">safeParse 실행</button></div>
+    <div class="result-box" id="output2">아직 검증 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const NamedSchema = z.object({
+  name: z.string({ error: '이름은 문자열이어야 합니다' }).min(1, { error: '이름을 입력해주세요' }),
+  age: z.number({ error: '나이는 숫자여야 합니다' }).min(0),
+});
+const r = NamedSchema.safeParse({ name, age: Number(age) });
+if (!r.success) {
+  z.treeifyError(r.error);   // 필드별 트리 구조
+  z.prettifyError(r.error);  // 사람이 읽기 좋은 텍스트
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. transform + refine — 자동 변환 + 비즈니스 규칙</h2>
+    <div class="desc">문자열로 입력받은 무게를 숫자로 자동 변환(<code>transform</code>)하고, 0보다 커야 한다는 규칙을 <code>refine</code>으로 검증합니다.</div>
+    <div class="form-row"><label>무게(문자열)</label><input id="weightText3" value="85.5" /></div>
+    <div class="controls"><button class="action" id="validateBtn3">safeParse 실행</button></div>
+    <div class="result-box" id="output3">아직 검증 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const Schema = z.object({
+  weightText: z.string().transform((v) => Number(v)),
+}).refine((data) => data.weightText > 0, { error: '무게는 0보다 커야 합니다', path: ['weightText'] });
+const r = Schema.safeParse({ weightText: '85.5' });
+// r.data.weightText는 숫자 85.5 (문자열이 아님)</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 중첩 배열 + 정확한 에러 경로</h2>
+    <div class="desc">위판 신고서 안에 품목이 여러 개 배열로 들어갑니다. 몇 번째 품목의 어떤 필드가 잘못됐는지 <code>path</code>로 정확히 짚어냅니다.</div>
+    <div id="itemsWrap4">
+      <div class="item-row"><span class="sp">품목1</span><input class="item-species" value="갈치" /><input class="item-weight wt" value="50" /></div>
+      <div class="item-row"><span class="sp">품목2</span><input class="item-species" value="오징어" /><input class="item-weight wt" value="-3" /></div>
+    </div>
+    <div class="controls">
+      <button class="action" id="validateBtn4">safeParse 실행</button>
+      <button class="ghost" id="addItemBtn4">품목 추가</button>
+    </div>
+    <div class="result-box" id="output4">아직 검증 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const AuctionSchema = z.object({
+  port: z.string(),
+  items: z.array(z.object({
+    species: z.string(),
+    weightKg: z.number().positive(),
+  })).min(1),
+});
+// 실패 시: result.error.issues[0].path === ['items', 1, 'weightKg']
+// → "items 배열의 두 번째 항목(index 1)의 weightKg 필드가 문제"</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>5. discriminatedUnion — 결제 방식별 다른 필수 필드</h2>
+    <div class="desc">결제 방식을 바꿔보세요. '계좌이체'를 고르면 은행명이 필수가 되고, '현금'은 필요 없습니다.</div>
+    <div class="form-row">
+      <label>결제 방식</label>
+      <select id="method5">
+        <option value="cash">현금</option>
+        <option value="transfer">계좌이체</option>
+      </select>
+    </div>
+    <div class="form-row"><label>금액</label><input id="amount5" value="150000" /></div>
+    <div class="form-row" id="bankRow5" style="display:none;"><label>은행명</label><input id="bank5" value="" placeholder="비워두고 테스트해보세요" /></div>
+    <div class="controls"><button class="action" id="validateBtn5">safeParse 실행</button></div>
+    <div class="result-box" id="output5">아직 검증 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const PaymentSchema = z.discriminatedUnion('method', [
+  z.object({ method: z.literal('cash'), amount: z.number() }),
+  z.object({ method: z.literal('transfer'), amount: z.number(), bank: z.string() }),
+]);
+// method가 'transfer'인데 bank가 없으면 실패</pre>
+    </details>
+  </section>
+
+  <script type="module">
+    const { z } = await import('https://cdn.jsdelivr.net/npm/zod@4.4.3/+esm');
+
+    // ---------- 1. 기본 스키마 + safeParse ----------
+    const ReportSchema = z.object({
+      port: z.string().min(1, { error: '항구명을 입력해주세요' }),
+      species: z.string().min(1, { error: '어종을 입력해주세요' }),
+      weightKg: z.number({ error: '무게는 숫자여야 합니다' }).positive({ error: '무게는 0보다 커야 합니다' }),
+    });
+    document.getElementById('validateBtn1').addEventListener('click', () => {
+      const data = {
+        port: document.getElementById('port1').value,
+        species: document.getElementById('species1').value,
+        weightKg: Number(document.getElementById('weight1').value),
+      };
+      const result = ReportSchema.safeParse(data);
+      const output1 = document.getElementById('output1');
+      if (result.success) {
+        output1.textContent = `검증 통과: ${JSON.stringify(result.data)}`;
+        output1.classList.add('ok'); output1.classList.remove('bad');
+      } else {
+        output1.textContent = `검증 실패:\n${z.prettifyError(result.error)}`;
+        output1.classList.add('bad'); output1.classList.remove('ok');
+      }
+    });
+
+    // ---------- 2. 커스텀 에러 메시지 + treeifyError/prettifyError ----------
+    const NamedSchema = z.object({
+      name: z.string({ error: '이름은 문자열이어야 합니다' }).min(1, { error: '이름을 입력해주세요' }),
+      age: z.number({ error: '나이는 숫자여야 합니다' }).min(0, { error: '나이는 0 이상이어야 합니다' }),
+    });
+    document.getElementById('validateBtn2').addEventListener('click', () => {
+      const raw = { name: document.getElementById('name2').value, age: Number(document.getElementById('age2').value) };
+      // 빈 문자열을 숫자로 바꾸면 0이 되어 age 검증을 우회하므로, 원문이 숫자가 아니면 NaN 그대로 전달
+      raw.age = document.getElementById('age2').value === '' ? undefined : Number(document.getElementById('age2').value);
+      const result = NamedSchema.safeParse(raw);
+      const output2 = document.getElementById('output2');
+      if (result.success) {
+        output2.textContent = `검증 통과: ${JSON.stringify(result.data)}`;
+        output2.classList.add('ok'); output2.classList.remove('bad');
+      } else {
+        const tree = z.treeifyError(result.error);
+        const treeSummary = Object.entries(tree.properties || {})
+          .map(([key, val]) => `${key}: ${val.errors.join(', ')}`)
+          .join('\n');
+        output2.textContent =
+          `[treeifyError로 뽑은 필드별 에러]\n${treeSummary}\n\n[prettifyError 전체 텍스트]\n${z.prettifyError(result.error)}`;
+        output2.classList.add('bad'); output2.classList.remove('ok');
+      }
+    });
+
+    // ---------- 3. transform + refine ----------
+    const TransformSchema = z.object({
+      weightText: z.string().transform((v) => Number(v)),
+    }).refine((data) => Number.isFinite(data.weightText) && data.weightText > 0, {
+      error: '무게는 0보다 큰 숫자여야 합니다',
+      path: ['weightText'],
+    });
+    document.getElementById('validateBtn3').addEventListener('click', () => {
+      const result = TransformSchema.safeParse({ weightText: document.getElementById('weightText3').value });
+      const output3 = document.getElementById('output3');
+      if (result.success) {
+        output3.textContent = `검증 통과 — 변환된 값: ${result.data.weightText} (타입: ${typeof result.data.weightText})`;
+        output3.classList.add('ok'); output3.classList.remove('bad');
+      } else {
+        output3.textContent = `검증 실패: ${result.error.issues[0].message}`;
+        output3.classList.add('bad'); output3.classList.remove('ok');
+      }
+    });
+
+    // ---------- 4. 중첩 배열 + 에러 경로 ----------
+    const AuctionSchema = z.object({
+      port: z.string(),
+      items: z.array(z.object({
+        species: z.string().min(1, { error: '어종을 입력해주세요' }),
+        weightKg: z.number({ error: '무게는 숫자여야 합니다' }).positive({ error: '무게는 0보다 커야 합니다' }),
+      })).min(1, { error: '품목이 최소 1개 필요합니다' }),
+    });
+    document.getElementById('addItemBtn4').addEventListener('click', () => {
+      const wrap = document.getElementById('itemsWrap4');
+      const idx = wrap.children.length + 1;
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `<span class="sp">품목${idx}</span><input class="item-species" value="전복" /><input class="item-weight wt" value="10" />`;
+      wrap.appendChild(row);
+    });
+    document.getElementById('validateBtn4').addEventListener('click', () => {
+      const speciesEls = document.querySelectorAll('.item-species');
+      const weightEls = document.querySelectorAll('.item-weight');
+      const items = Array.from(speciesEls).map((el, i) => ({ species: el.value, weightKg: Number(weightEls[i].value) }));
+      const result = AuctionSchema.safeParse({ port: '가상 위판장 B', items });
+      const output4 = document.getElementById('output4');
+      if (result.success) {
+        output4.textContent = `검증 통과 — 품목 ${result.data.items.length}건`;
+        output4.classList.add('ok'); output4.classList.remove('bad');
+      } else {
+        const issue = result.error.issues[0];
+        const pathText = issue.path.join(' → ');
+        output4.textContent = `검증 실패\n문제 위치(path): [${pathText}]\n메시지: ${issue.message}\n\n전체:\n${z.prettifyError(result.error)}`;
+        output4.classList.add('bad'); output4.classList.remove('ok');
+      }
+    });
+
+    // ---------- 5. discriminatedUnion ----------
+    const PaymentSchema = z.discriminatedUnion('method', [
+      z.object({ method: z.literal('cash'), amount: z.number({ error: '금액은 숫자여야 합니다' }) }),
+      z.object({
+        method: z.literal('transfer'),
+        amount: z.number({ error: '금액은 숫자여야 합니다' }),
+        bank: z.string().min(1, { error: '계좌이체는 은행명이 필수입니다' }),
+      }),
+    ]);
+    const methodSelect5 = document.getElementById('method5');
+    const bankRow5 = document.getElementById('bankRow5');
+    methodSelect5.addEventListener('change', () => {
+      bankRow5.style.display = methodSelect5.value === 'transfer' ? 'flex' : 'none';
+    });
+    document.getElementById('validateBtn5').addEventListener('click', () => {
+      const method = methodSelect5.value;
+      const data = { method, amount: Number(document.getElementById('amount5').value) };
+      if (method === 'transfer') data.bank = document.getElementById('bank5').value;
+      const result = PaymentSchema.safeParse(data);
+      const output5 = document.getElementById('output5');
+      if (result.success) {
+        output5.textContent = `검증 통과: ${JSON.stringify(result.data)}`;
+        output5.classList.add('ok'); output5.classList.remove('bad');
+      } else {
+        output5.textContent = `검증 실패:\n${z.prettifyError(result.error)}`;
+        output5.classList.add('bad'); output5.classList.remove('ok');
+      }
+    });
+  </script>
+</body>
+</html>
