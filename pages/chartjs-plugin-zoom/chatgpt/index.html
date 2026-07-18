@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+  <title>chartjs-plugin-zoom 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #64748b;
+      --line: #dbe3ee;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --shadow: 0 12px 34px rgba(15, 23, 42, .08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0 0, rgba(37,99,235,.08), transparent 28rem),
+        var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, select, input { font: inherit; }
+    button { cursor: pointer; }
+    .app { max-width: 1500px; margin: 0 auto; padding: 22px; }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.45fr .75fr;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .hero-main, .hero-guide, .panel {
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(219,227,238,.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-main { padding: 28px; }
+    .hero-guide { padding: 24px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      color: #1d4ed8;
+      background: var(--accent-soft);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    h1 { margin: 14px 0 10px; font-size: clamp(28px, 4vw, 48px); line-height: 1.08; }
+    h2 { margin: 0 0 6px; font-size: 22px; }
+    h3 { margin: 0 0 12px; font-size: 17px; }
+    p { margin: 0; line-height: 1.65; }
+    .muted { color: var(--muted); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .chip {
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .guide-list { display: grid; gap: 10px; margin-top: 14px; }
+    .guide-item {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+    .guide-num {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: #0f172a; color: #fff; font-weight: 900;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 330px minmax(0,1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .sidebar { position: sticky; top: 14px; display: grid; gap: 14px; }
+    .panel { padding: 18px; }
+    .control-group {
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+    .control-group:first-of-type { border-top: 0; padding-top: 6px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .field { display: grid; gap: 6px; margin-bottom: 10px; }
+    label { font-size: 12px; font-weight: 800; color: #334155; }
+    select, input[type="number"], input[type="range"] {
+      width: 100%;
+    }
+    select, input[type="number"] {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 9px 10px;
+      color: var(--text);
+    }
+    .check {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 7px 0;
+      font-size: 13px; font-weight: 700;
+    }
+    .check input { width: 18px; height: 18px; }
+    .btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fff;
+      color: #1e293b;
+      padding: 10px 11px;
+      font-weight: 800;
+      transition: .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: #93c5fd; }
+    .btn.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+    .btn.dark { color: #fff; background: #0f172a; border-color: #0f172a; }
+    .btn.warn { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+    .main { min-width: 0; display: grid; gap: 18px; }
+    .chart-panel { padding: 0; overflow: hidden; }
+    .panel-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 14px; padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .status {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;
+    }
+    .badge {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .badge.on { color: var(--ok); background: #f0fdf4; border-color: #bbf7d0; }
+    .canvas-wrap { position: relative; height: 470px; padding: 14px 18px 18px; }
+    .canvas-wrap.small { height: 330px; }
+    .floating-help {
+      position: absolute;
+      z-index: 2;
+      left: 28px;
+      top: 22px;
+      padding: 7px 10px;
+      border-radius: 9px;
+      color: #334155;
+      background: rgba(255,255,255,.9);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 10px;
+      padding: 0 18px 18px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px;
+      background: #f8fafc;
+      min-width: 0;
+    }
+    .stat b { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+    .stat span { display: block; font-size: 13px; font-weight: 850; overflow-wrap: anywhere; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+    .toolbar .btn { padding: 8px 10px; font-size: 12px; }
+    .log {
+      height: 230px;
+      overflow: auto;
+      background: #07101f;
+      color: #d8e6ff;
+      border-radius: 13px;
+      padding: 12px;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .log-line { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .log-time { color: #7dd3fc; }
+    pre {
+      margin: 0;
+      overflow: auto;
+      border-radius: 13px;
+      padding: 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      max-height: 350px;
+    }
+    .feature-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .feature-table th, .feature-table td {
+      padding: 10px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top;
+    }
+    .feature-table th { color: #475569; background: #f8fafc; }
+    .kbd {
+      display: inline-block; min-width: 24px; padding: 2px 6px;
+      border: 1px solid #cbd5e1; border-bottom-width: 2px;
+      border-radius: 6px; background: #fff; font: 11px ui-monospace, monospace;
+      text-align: center;
+    }
+    .error {
+      display: none;
+      padding: 16px;
+      color: var(--danger);
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      white-space: pre-wrap;
+    }
+    footer { padding: 28px 4px 10px; color: var(--muted); font-size: 12px; text-align: center; }
+    @media (max-width: 1050px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 760px) {
+      .app { padding: 12px; }
+      .hero-main, .hero-guide, .panel { border-radius: 14px; }
+      .hero-main { padding: 21px; }
+      .sidebar, .grid2 { grid-template-columns: 1fr; }
+      .panel-head { flex-direction: column; }
+      .status { justify-content: flex-start; }
+      .canvas-wrap { height: 390px; padding: 8px 8px 14px; }
+      .canvas-wrap.small { height: 300px; }
+      .stats { grid-template-columns: 1fr 1fr; padding: 0 10px 12px; }
+      .floating-help { left: 16px; top: 14px; right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div id="errorBox" class="error"></div>
+
+  <section class="hero">
+    <div class="hero-main">
+      <span class="eyebrow">Chart.js + chartjs-plugin-zoom 2.2.0</span>
+      <h1>Zoom & Pan 종합 기능 실험실</h1>
+      <p class="muted">휠·드래그·핀치 확대, 마우스·터치 이동, 축별 모드, modifierKey, limits, 콜백, 명령형 API를 한 페이지에서 직접 시험하는 단일 HTML 샘플.</p>
+      <div class="chips">
+        <span class="chip">Wheel zoom</span><span class="chip">Drag zoom</span>
+        <span class="chip">Pinch zoom</span><span class="chip">Pan</span>
+        <span class="chip">Scale mode</span><span class="chip">Limits / minRange</span>
+        <span class="chip">Callbacks</span><span class="chip">Imperative API</span>
+      </div>
+    </div>
+    <aside class="hero-guide">
+      <h2>빠른 조작법</h2>
+      <div class="guide-list">
+        <div class="guide-item"><span class="guide-num">1</span><p><b>휠</b>로 확대·축소. 설정에 따라 Ctrl/Shift 키 요구.</p></div>
+        <div class="guide-item"><span class="guide-num">2</span><p><b>드래그 박스</b>로 원하는 구간 확대. 현재 기본값은 Shift+드래그.</p></div>
+        <div class="guide-item"><span class="guide-num">3</span><p><b>Alt+드래그</b>로 팬. 모바일에서는 한 손가락 이동, 두 손가락 핀치.</p></div>
+      </div>
+    </aside>
+  </section>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>실시간 설정</h2>
+        <p class="muted" style="font-size:12px">변경 즉시 메인 차트에 반영</p>
+
+        <div class="control-group">
+          <h3>방향·축 감지</h3>
+          <div class="row">
+            <div class="field">
+              <label for="zoomMode">Zoom mode</label>
+              <select id="zoomMode"><option>x</option><option>y</option><option selected>xy</option></select>
+            </div>
+            <div class="field">
+              <label for="panMode">Pan mode</label>
+              <select id="panMode"><option>x</option><option>y</option><option selected>xy</option></select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="zoomScaleMode">Zoom scaleMode</label>
+              <select id="zoomScaleMode"><option value="">없음</option><option>x</option><option>y</option><option>xy</option></select>
+            </div>
+            <div class="field">
+              <label for="panScaleMode">Pan scaleMode</label>
+              <select id="panScaleMode"><option value="">없음</option><option>x</option><option>y</option><option>xy</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>입력 방식</h3>
+          <div class="check"><span>휠 줌</span><input id="wheelEnabled" type="checkbox" checked></div>
+          <div class="check"><span>드래그 줌</span><input id="dragEnabled" type="checkbox" checked></div>
+          <div class="check"><span>핀치 줌</span><input id="pinchEnabled" type="checkbox" checked></div>
+          <div class="check"><span>팬</span><input id="panEnabled" type="checkbox" checked></div>
+          <div class="row" style="margin-top:8px">
+            <div class="field">
+              <label for="wheelKey">휠 modifier</label>
+              <select id="wheelKey"><option value="">없음</option><option>ctrl</option><option>alt</option><option>shift</option><option>meta</option></select>
+            </div>
+            <div class="field">
+              <label for="dragKey">드래그 modifier</label>
+              <select id="dragKey"><option value="">없음</option><option>ctrl</option><option>alt</option><option selected>shift</option><option>meta</option></select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="panKey">팬 modifier</label>
+            <select id="panKey"><option value="">없음</option><option>ctrl</option><option selected>alt</option><option>shift</option><option>meta</option></select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>감도·드래그 박스</h3>
+          <div class="field">
+            <label>휠 속도: <span id="speedValue">0.10</span></label>
+            <input id="wheelSpeed" type="range" min="0.02" max="0.4" step="0.02" value="0.10">
+          </div>
+          <div class="row">
+            <div class="field"><label>Pan threshold</label><input id="panThreshold" type="number" min="0" max="100" value="10"></div>
+            <div class="field"><label>Drag threshold</label><input id="dragThreshold" type="number" min="0" max="100" value="8"></div>
+          </div>
+          <div class="check"><span>드래그 비율 유지</span><input id="maintainAspect" type="checkbox"></div>
+          <div class="field">
+            <label for="drawTime">Drag drawTime</label>
+            <select id="drawTime">
+              <option>beforeDraw</option><option selected>beforeDatasetsDraw</option>
+              <option>afterDatasetsDraw</option><option>afterDraw</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>명령형 API</h3>
+          <div class="btns">
+            <button class="btn primary" data-api="zoomIn">확대 +</button>
+            <button class="btn primary" data-api="zoomOut">축소 −</button>
+            <button class="btn" data-api="panLeft">← 팬</button>
+            <button class="btn" data-api="panRight">팬 →</button>
+            <button class="btn" data-api="panUp">↑ 팬</button>
+            <button class="btn" data-api="panDown">팬 ↓</button>
+            <button class="btn warn" data-api="range">x=40~90</button>
+            <button class="btn dark" data-api="reset">전체 리셋</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>현재 설정 JSON</h3>
+        <pre id="configPreview"></pre>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section class="panel chart-panel">
+        <div class="panel-head">
+          <div>
+            <h2>1. 통합 인터랙티브 차트</h2>
+            <p class="muted">두 개의 Y축, 범위 제한, 모든 이벤트 콜백, API 상태 조회</p>
+          </div>
+          <div class="status">
+            <span id="zoomedBadge" class="badge">원본 상태</span>
+            <span id="gestureBadge" class="badge">대기</span>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button class="btn" id="presetX">X축 전용</button>
+          <button class="btn" id="presetY">Y축 전용</button>
+          <button class="btn" id="presetXY">XY 자유</button>
+          <button class="btn" id="presetScale">축 위에서만</button>
+          <button class="btn" id="presetReject">modifier 거부 시험</button>
+          <button class="btn dark" id="mainReset">리셋</button>
+        </div>
+        <div class="canvas-wrap">
+          <div class="floating-help">휠 확대 · Shift+드래그 구간 확대 · Alt+드래그 이동 · 더블클릭 리셋</div>
+          <canvas id="mainChart"></canvas>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>Zoom level</b><span id="zoomLevel">1.000</span></div>
+          <div class="stat"><b>X 범위</b><span id="xBounds">-</span></div>
+          <div class="stat"><b>Y 범위</b><span id="yBounds">-</span></div>
+          <div class="stat"><b>초기 bounds</b><span id="initialBounds">-</span></div>
+        </div>
+      </section>
+
+      <div class="grid2">
+        <section class="panel chart-panel">
+          <div class="panel-head">
+            <div><h2>2. 드래그 줌 전용</h2><p class="muted">박스 색상·테두리·threshold·aspect ratio</p></div>
+          </div>
+          <div class="toolbar">
+            <button class="btn" id="dragX">X 모드</button>
+            <button class="btn" id="dragXY">XY 모드</button>
+            <button class="btn" id="dragAspect">정사각 비율</button>
+            <button class="btn dark" id="dragReset">리셋</button>
+          </div>
+          <div class="canvas-wrap small"><canvas id="dragChart"></canvas></div>
+        </section>
+
+        <section class="panel chart-panel">
+          <div class="panel-head">
+            <div><h2>3. 카테고리 축 팬·줌</h2><p class="muted">막대 차트의 indexScale 처리와 minRange</p></div>
+          </div>
+          <div class="toolbar">
+            <button class="btn" id="barZoom">API 확대</button>
+            <button class="btn" id="barPan">API 팬</button>
+            <button class="btn dark" id="barReset">리셋</button>
+          </div>
+          <div class="canvas-wrap small"><canvas id="barChart"></canvas></div>
+        </section>
+      </div>
+
+      <section class="panel chart-panel">
+        <div class="panel-head">
+          <div><h2>4. 동기화된 두 차트</h2><p class="muted">한 차트의 X축 범위를 다른 차트에 전달하는 응용 예제</p></div>
+          <div class="status"><span class="badge on">Callback 기반 동기화</span></div>
+        </div>
+        <div class="toolbar">
+          <button class="btn" id="syncToggle">동기화: 켜짐</button>
+          <button class="btn dark" id="syncReset">둘 다 리셋</button>
+        </div>
+        <div class="grid2" style="padding:0 10px 12px">
+          <div class="canvas-wrap small"><canvas id="syncChartA"></canvas></div>
+          <div class="canvas-wrap small"><canvas id="syncChartB"></canvas></div>
+        </div>
+      </section>
+
+      <div class="grid2">
+        <section class="panel">
+          <h2>5. 이벤트 로그</h2>
+          <p class="muted" style="margin-bottom:12px">onZoomStart/Zoom/ZoomComplete/Rejected, Pan 이벤트 확인</p>
+          <div id="eventLog" class="log"></div>
+          <button class="btn" id="clearLog" style="margin-top:10px">로그 지우기</button>
+        </section>
+
+        <section class="panel">
+          <h2>6. 포함 기능</h2>
+          <table class="feature-table">
+            <thead><tr><th>영역</th><th>구현 항목</th></tr></thead>
+            <tbody>
+              <tr><td>Zoom</td><td>wheel, drag, pinch, mode, scaleMode, speed, modifierKey</td></tr>
+              <tr><td>Pan</td><td>enabled, mode, scaleMode, threshold, modifierKey</td></tr>
+              <tr><td>Drag box</td><td>backgroundColor, borderColor, borderWidth, drawTime, threshold, maintainAspectRatio</td></tr>
+              <tr><td>Limits</td><td>min, max, minRange, <code>'original'</code>, 다중 Y축</td></tr>
+              <tr><td>Events</td><td>start, progress, complete, rejected callbacks</td></tr>
+              <tr><td>API</td><td>zoom, zoomScale, pan, resetZoom, getZoomLevel, bounds 조회, 상태 판정</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2>사용 시 주의</h2>
+        <p class="muted">
+          팬·핀치 제스처에는 Hammer.js가 필요하다. 스크롤 페이지에서 휠 줌을 항상 활성화하면 페이지 스크롤과 충돌할 수 있으므로 실제 서비스에서는
+          <span class="kbd">Ctrl</span> 같은 modifierKey를 지정하는 편이 안전하다. 이 파일은 CDN을 사용하므로 최초 실행 시 인터넷 연결이 필요하다.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <footer>chartjs-plugin-zoom feature laboratory · 단일 HTML 샘플</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const errorBox = $('errorBox');
+  const charts = {};
+  let syncEnabled = true;
+  let syncing = false;
+  let lastProgressLog = 0;
+
+  function fail(message, error) {
+    const detail = error ? '\n\n' + (error.stack || error.message || error) : '';
+    errorBox.style.display = 'block';
+    errorBox.textContent = message + detail;
+    console.error(message, error || '');
+  }
+
+  if (!window.Chart) {
+    fail('Chart.js를 불러오지 못했다. 인터넷 연결 또는 CDN 접근 여부를 확인해줘.');
+    return;
+  }
+  if (!window.Hammer) {
+    fail('Hammer.js를 불러오지 못했다. 팬·핀치 기능이 정상 작동하지 않을 수 있다.');
+  }
+
+  Chart.defaults.font.family = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  Chart.defaults.color = '#475569';
+  Chart.defaults.animation.duration = 280;
+
+  function series(count, fn) {
+    return Array.from({length: count}, (_, i) => ({x: i, y: fn(i)}));
+  }
+  const dataA = series(180, i => 55 + Math.sin(i / 8) * 18 + Math.sin(i / 2.8) * 4 + i * 0.07);
+  const dataB = series(180, i => 36 + Math.cos(i / 11) * 12 + Math.sin(i / 4.5) * 6);
+  const volume = series(180, i => Math.round(120 + Math.abs(Math.sin(i / 6)) * 260 + (i % 17) * 6));
+
+  function timeStamp() {
+    return new Date().toLocaleTimeString('ko-KR', {hour12:false});
+  }
+  function addLog(name, detail = '', throttle = false) {
+    if (throttle) {
+      const now = performance.now();
+      if (now - lastProgressLog < 180) return;
+      lastProgressLog = now;
+    }
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    div.innerHTML = '<span class="log-time">[' + timeStamp() + ']</span> <b>' +
+      name + '</b>' + (detail ? ' · ' + detail : '');
+    $('eventLog').prepend(div);
+    while ($('eventLog').children.length > 80) $('eventLog').lastChild.remove();
+  }
+
+  function fmt(n) {
+    if (!Number.isFinite(n)) return '-';
+    return Math.abs(n) >= 100 ? n.toFixed(0) : n.toFixed(2);
+  }
+  function boundsText(scale) {
+    return scale ? fmt(scale.min) + ' ~ ' + fmt(scale.max) : '-';
+  }
+
+  function mainZoomOptions() {
+    const modifier = value => value || undefined;
+    return {
+      limits: {
+        x: {min: 0, max: 179, minRange: 8},
+        y: {min: 0, max: 115, minRange: 8},
+        y2: {min: 0, max: 650, minRange: 70}
+      },
+      pan: {
+        enabled: $('panEnabled').checked,
+        mode: $('panMode').value,
+        scaleMode: $('panScaleMode').value || undefined,
+        threshold: Number($('panThreshold').value),
+        modifierKey: modifier($('panKey').value),
+        onPanStart: ({chart, point}) => {
+          $('gestureBadge').textContent = '팬 시작';
+          $('gestureBadge').classList.add('on');
+          addLog('onPanStart', point ? 'x=' + fmt(point.x) + ', y=' + fmt(point.y) : '');
+        },
+        onPan: ({chart}) => {
+          updateState(chart);
+          addLog('onPan', boundsText(chart.scales.x), true);
+        },
+        onPanComplete: ({chart}) => {
+          $('gestureBadge').textContent = '팬 완료';
+          updateState(chart);
+          addLog('onPanComplete', 'X ' + boundsText(chart.scales.x));
+        },
+        onPanRejected: () => {
+          $('gestureBadge').textContent = '팬 거부';
+          addLog('onPanRejected', 'modifierKey 조건 확인');
+        }
+      },
+      zoom: {
+        mode: $('zoomMode').value,
+        scaleMode: $('zoomScaleMode').value || undefined,
+        wheel: {
+          enabled: $('wheelEnabled').checked,
+          speed: Number($('wheelSpeed').value),
+          modifierKey: modifier($('wheelKey').value)
+        },
+        drag: {
+          enabled: $('dragEnabled').checked,
+          modifierKey: modifier($('dragKey').value),
+          threshold: Number($('dragThreshold').value),
+          maintainAspectRatio: $('maintainAspect').checked,
+          backgroundColor: 'rgba(37, 99, 235, .16)',
+          borderColor: 'rgba(37, 99, 235, .9)',
+          borderWidth: 2,
+          drawTime: $('drawTime').value
+        },
+        pinch: {enabled: $('pinchEnabled').checked},
+        onZoomStart: ({point}) => {
+          $('gestureBadge').textContent = '줌 시작';
+          $('gestureBadge').classList.add('on');
+          addLog('onZoomStart', point ? 'x=' + fmt(point.x) + ', y=' + fmt(point.y) : '');
+        },
+        onZoom: ({chart}) => {
+          updateState(chart);
+          addLog('onZoom', 'level ' + chart.getZoomLevel().toFixed(3), true);
+        },
+        onZoomComplete: ({chart}) => {
+          $('gestureBadge').textContent = '줌 완료';
+          updateState(chart);
+          addLog('onZoomComplete', 'level ' + chart.getZoomLevel().toFixed(3));
+        },
+        onZoomRejected: () => {
+          $('gestureBadge').textContent = '줌 거부';
+          addLog('onZoomRejected', 'modifierKey 조건 확인');
+        }
+      }
+    };
+  }
+
+  function updateState(chart = charts.main) {
+    if (!chart) return;
+    const changed = typeof chart.isZoomedOrPanned === 'function' && chart.isZoomedOrPanned();
+    $('zoomedBadge').textContent = changed ? '확대/이동됨' : '원본 상태';
+    $('zoomedBadge').classList.toggle('on', changed);
+    $('zoomLevel').textContent = typeof chart.getZoomLevel === 'function' ? chart.getZoomLevel().toFixed(3) : '-';
+    $('xBounds').textContent = boundsText(chart.scales.x);
+    $('yBounds').textContent = boundsText(chart.scales.y);
+    if (typeof chart.getInitialScaleBounds === 'function') {
+      const b = chart.getInitialScaleBounds();
+      $('initialBounds').textContent = b.x ? fmt(b.x.min) + ' ~ ' + fmt(b.x.max) : '-';
+    }
+  }
+
+  const crosshairPlugin = {
+    id: 'sampleCrosshair',
+    afterEvent(chart, args) {
+      const e = args.event;
+      if (!e || e.type === 'mouseout') {
+        chart.$crosshair = null;
+        args.changed = true;
+        return;
+      }
+      if (e.x >= chart.chartArea.left && e.x <= chart.chartArea.right &&
+          e.y >= chart.chartArea.top && e.y <= chart.chartArea.bottom) {
+        chart.$crosshair = {x:e.x, y:e.y};
+        args.changed = true;
+      }
+    },
+    afterDraw(chart) {
+      if (!chart.$crosshair) return;
+      const {ctx, chartArea:{left,right,top,bottom}} = chart;
+      ctx.save();
+      ctx.setLineDash([4,4]);
+      ctx.strokeStyle = 'rgba(71,85,105,.45)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(chart.$crosshair.x, top);
+      ctx.lineTo(chart.$crosshair.x, bottom);
+      ctx.moveTo(left, chart.$crosshair.y);
+      ctx.lineTo(right, chart.$crosshair.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+  Chart.register(crosshairPlugin);
+
+  function createMainChart() {
+    charts.main = new Chart($('mainChart'), {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: '수온 추세', data: dataA, yAxisID: 'y',
+            borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.10)',
+            borderWidth: 2, pointRadius: 0, tension: .25, fill: true
+          },
+          {
+            label: '염도 지수', data: dataB, yAxisID: 'y',
+            borderColor: '#0f766e', borderWidth: 2, pointRadius: 0, tension: .2
+          },
+          {
+            label: '거래량', data: volume, yAxisID: 'y2',
+            borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.12)',
+            borderWidth: 1.5, pointRadius: 0, tension: .1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        normalized: true,
+        interaction: {mode:'nearest', intersect:false},
+        parsing: false,
+        scales: {
+          x: {
+            type:'linear', min:0, max:179,
+            title:{display:true, text:'관측 순번'},
+            grid:{color:'rgba(148,163,184,.14)'}
+          },
+          y: {
+            position:'left', min:0, max:115,
+            title:{display:true, text:'지수'},
+            grid:{color:'rgba(148,163,184,.14)'}
+          },
+          y2: {
+            position:'right', min:0, max:650,
+            title:{display:true, text:'거래량'},
+            grid:{drawOnChartArea:false}
+          }
+        },
+        plugins: {
+          legend:{position:'bottom'},
+          tooltip:{enabled:true},
+          zoom: mainZoomOptions()
+        }
+      }
+    });
+    $('mainChart').addEventListener('dblclick', () => {
+      charts.main.resetZoom('default');
+      updateState();
+      addLog('resetZoom', '더블클릭');
+    });
+    updateState();
+  }
+
+  function createDragChart() {
+    charts.drag = new Chart($('dragChart'), {
+      type:'scatter',
+      data:{datasets:[
+        {
+          label:'산점도 A',
+          data:series(110, i => 35 + Math.sin(i/7)*20 + (i%9)*1.3),
+          pointRadius:3, pointHoverRadius:6,
+          backgroundColor:'rgba(124,58,237,.62)'
+        },
+        {
+          label:'산점도 B',
+          data:series(110, i => 60 + Math.cos(i/9)*16 - (i%6)),
+          pointRadius:3, backgroundColor:'rgba(14,165,233,.58)'
+        }
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false, parsing:false,
+        scales:{x:{min:0,max:109}, y:{min:0,max:100}},
+        plugins:{
+          legend:{position:'bottom'},
+          zoom:{
+            limits:{x:{min:0,max:109,minRange:5},y:{min:0,max:100,minRange:8}},
+            pan:{enabled:true,mode:'xy',modifierKey:'alt'},
+            zoom:{
+              mode:'xy',
+              wheel:{enabled:false},
+              pinch:{enabled:true},
+              drag:{
+                enabled:true, threshold:6,
+                backgroundColor:'rgba(124,58,237,.16)',
+                borderColor:'#7c3aed', borderWidth:2,
+                drawTime:'afterDatasetsDraw'
+              },
+              onZoomComplete:({chart})=>addLog('drag chart zoom', boundsText(chart.scales.x))
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function createBarChart() {
+    const labels = Array.from({length: 30}, (_,i) => '지역 ' + String(i+1).padStart(2,'0'));
+    charts.bar = new Chart($('barChart'), {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          label:'생산량',
+          data:labels.map((_,i)=> 35 + ((i*17)%65) + Math.round(Math.sin(i)*12)),
+          backgroundColor:'rgba(14,116,144,.62)',
+          borderColor:'#0e7490', borderWidth:1
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{y:{beginAtZero:true}},
+        plugins:{
+          legend:{display:false},
+          zoom:{
+            limits:{x:{min:'original',max:'original',minRange:4},y:{min:0,max:130,minRange:20}},
+            pan:{enabled:true,mode:'x',threshold:5},
+            zoom:{mode:'x',wheel:{enabled:true,speed:.12},pinch:{enabled:true},drag:{enabled:false}}
+          }
+        }
+      }
+    });
+  }
+
+  function syncOptions(name) {
+    return {
+      responsive:true, maintainAspectRatio:false, parsing:false,
+      scales:{x:{type:'linear',min:0,max:179},y:{min:0,max:100}},
+      plugins:{
+        legend:{display:false},
+        zoom:{
+          limits:{x:{min:0,max:179,minRange:10},y:{min:0,max:100,minRange:10}},
+          pan:{
+            enabled:true,mode:'x',
+            onPan:({chart})=>syncRange(chart, name==='A' ? charts.syncB : charts.syncA)
+          },
+          zoom:{
+            mode:'x',wheel:{enabled:true,speed:.1},pinch:{enabled:true},drag:{enabled:false},
+            onZoom:({chart})=>syncRange(chart, name==='A' ? charts.syncB : charts.syncA)
+          }
+        }
+      }
+    };
+  }
+
+  function createSyncCharts() {
+    charts.syncA = new Chart($('syncChartA'), {
+      type:'line',
+      data:{datasets:[{data:dataA,label:'차트 A',borderColor:'#2563eb',pointRadius:0,borderWidth:2,tension:.2}]},
+      options:syncOptions('A')
+    });
+    charts.syncB = new Chart($('syncChartB'), {
+      type:'line',
+      data:{datasets:[{data:dataB,label:'차트 B',borderColor:'#dc2626',pointRadius:0,borderWidth:2,tension:.2}]},
+      options:syncOptions('B')
+    });
+  }
+
+  function syncRange(source, target) {
+    if (!syncEnabled || syncing || !source || !target) return;
+    syncing = true;
+    const x = source.scales.x;
+    target.zoomScale('x', {min:x.min, max:x.max}, 'none');
+    syncing = false;
+  }
+
+  function updateMainOptions() {
+    if (!charts.main) return;
+    charts.main.options.plugins.zoom = mainZoomOptions();
+    charts.main.update('none');
+    $('speedValue').textContent = Number($('wheelSpeed').value).toFixed(2);
+    $('configPreview').textContent = JSON.stringify({
+      pan: charts.main.options.plugins.zoom.pan,
+      zoom: charts.main.options.plugins.zoom.zoom,
+      limits: charts.main.options.plugins.zoom.limits
+    }, (key, value) => typeof value === 'function' ? '[callback]' : value, 2);
+    updateState();
+  }
+
+  document.querySelectorAll(
+    '#zoomMode,#panMode,#zoomScaleMode,#panScaleMode,#wheelEnabled,#dragEnabled,#pinchEnabled,#panEnabled,' +
+    '#wheelKey,#dragKey,#panKey,#wheelSpeed,#panThreshold,#dragThreshold,#maintainAspect,#drawTime'
+  ).forEach(el => el.addEventListener('input', updateMainOptions));
+
+  document.querySelectorAll('[data-api]').forEach(btn => btn.addEventListener('click', () => {
+    const chart = charts.main;
+    const action = btn.dataset.api;
+    if (action === 'zoomIn') chart.zoom({x:1.25,y:1.25}, 'default');
+    if (action === 'zoomOut') chart.zoom({x:.8,y:.8}, 'default');
+    if (action === 'panLeft') chart.pan({x:-55,y:0}, undefined, 'default');
+    if (action === 'panRight') chart.pan({x:55,y:0}, undefined, 'default');
+    if (action === 'panUp') chart.pan({x:0,y:-40}, undefined, 'default');
+    if (action === 'panDown') chart.pan({x:0,y:40}, undefined, 'default');
+    if (action === 'range') chart.zoomScale('x', {min:40,max:90}, 'default');
+    if (action === 'reset') chart.resetZoom('default');
+    updateState(chart);
+    addLog('API: ' + action, '실행');
+  }));
+
+  $('presetX').onclick = () => {
+    $('zoomMode').value='x'; $('panMode').value='x'; $('zoomScaleMode').value=''; $('panScaleMode').value='';
+    updateMainOptions(); addLog('preset','X축 전용');
+  };
+  $('presetY').onclick = () => {
+    $('zoomMode').value='y'; $('panMode').value='y'; $('zoomScaleMode').value=''; $('panScaleMode').value='';
+    updateMainOptions(); addLog('preset','Y축 전용');
+  };
+  $('presetXY').onclick = () => {
+    $('zoomMode').value='xy'; $('panMode').value='xy'; $('zoomScaleMode').value=''; $('panScaleMode').value='';
+    updateMainOptions(); addLog('preset','XY 자유');
+  };
+  $('presetScale').onclick = () => {
+    $('zoomMode').value='xy'; $('panMode').value='xy'; $('zoomScaleMode').value='xy'; $('panScaleMode').value='xy';
+    updateMainOptions(); addLog('preset','축 위에서만');
+  };
+  $('presetReject').onclick = () => {
+    $('wheelKey').value='ctrl'; $('dragKey').value='shift'; $('panKey').value='alt';
+    updateMainOptions(); addLog('preset','modifierKey 거부 이벤트 시험');
+  };
+  $('mainReset').onclick = () => { charts.main.resetZoom('default'); updateState(); addLog('resetZoom','메인'); };
+
+  $('dragX').onclick = () => {
+    charts.drag.options.plugins.zoom.zoom.mode='x';
+    charts.drag.options.plugins.zoom.zoom.drag.maintainAspectRatio=false;
+    charts.drag.update('none');
+  };
+  $('dragXY').onclick = () => {
+    charts.drag.options.plugins.zoom.zoom.mode='xy';
+    charts.drag.options.plugins.zoom.zoom.drag.maintainAspectRatio=false;
+    charts.drag.update('none');
+  };
+  $('dragAspect').onclick = () => {
+    charts.drag.options.plugins.zoom.zoom.mode='xy';
+    charts.drag.options.plugins.zoom.zoom.drag.maintainAspectRatio=true;
+    charts.drag.update('none');
+  };
+  $('dragReset').onclick = () => charts.drag.resetZoom('default');
+
+  $('barZoom').onclick = () => charts.bar.zoom({x:1.5,y:1}, 'default');
+  $('barPan').onclick = () => charts.bar.pan({x:90,y:0}, undefined, 'default');
+  $('barReset').onclick = () => charts.bar.resetZoom('default');
+
+  $('syncToggle').onclick = () => {
+    syncEnabled = !syncEnabled;
+    $('syncToggle').textContent = '동기화: ' + (syncEnabled ? '켜짐' : '꺼짐');
+    addLog('sync', syncEnabled ? '활성화' : '비활성화');
+  };
+  $('syncReset').onclick = () => {
+    syncing = true;
+    charts.syncA.resetZoom('none');
+    charts.syncB.resetZoom('none');
+    syncing = false;
+  };
+  $('clearLog').onclick = () => $('eventLog').innerHTML='';
+
+  try {
+    createMainChart();
+    createDragChart();
+    createBarChart();
+    createSyncCharts();
+    updateMainOptions();
+    addLog('초기화 완료', 'Chart.js ' + Chart.version + ' / zoom plugin 2.2.0');
+  } catch (error) {
+    fail('차트 초기화 중 오류가 발생했다.', error);
+  }
+})();
+</script>
+</body>
+</html>
