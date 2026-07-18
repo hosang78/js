@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>chartjs-plugin-datalabels 종합 기능 샘플</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{--bg:#f5f7fb;--panel:#fff;--text:#172033;--muted:#667085;--line:#e4e7ec;--brand:#3157d5;--brand2:#7c3aed;--shadow:0 12px 35px rgba(16,24,40,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#eef2ff 0,#f8fafc 340px);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;color:var(--text)}
+header{padding:52px 20px 32px;text-align:center}.eyebrow{display:inline-flex;padding:7px 12px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;letter-spacing:.08em}h1{margin:16px 0 10px;font-size:clamp(29px,5vw,50px);letter-spacing:-.04em}.lead{max-width:800px;margin:auto;color:var(--muted);line-height:1.7}.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:20px}.badge{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(16,24,40,.04)}
+main{width:min(1440px,calc(100% - 28px));margin:0 auto 80px}.toolbar{position:sticky;top:8px;z-index:20;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px;background:rgba(255,255,255,.9);backdrop-filter:blur(14px);border:1px solid rgba(228,231,236,.9);border-radius:16px;box-shadow:var(--shadow);margin-bottom:22px}.toolbar button,.toolbar a{border:0;border-radius:10px;padding:10px 13px;background:#eef2ff;color:#3730a3;font-weight:750;cursor:pointer;text-decoration:none}.toolbar button:hover,.toolbar a:hover{background:#dfe6ff}.toolbar .primary{background:var(--brand);color:#fff}.status{margin-left:auto;color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow);min-width:0}.card.wide{grid-column:1/-1}.card h2{font-size:18px;margin:0 0 4px}.desc{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 14px}.chart-wrap{position:relative;height:340px}.chart-wrap.tall{height:430px}.hint{margin-top:12px;padding:10px 12px;border-radius:11px;background:#f8fafc;color:#475467;font-size:12px;line-height:1.55;border:1px solid #eef2f6}.event-log{height:120px;overflow:auto;background:#101828;color:#d0d5dd;border-radius:12px;padding:11px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}.controls{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:10px;margin:14px 0}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:11px;font-weight:800;color:#475467}.field select,.field input{width:100%;border:1px solid #d0d5dd;border-radius:9px;padding:9px;background:#fff;color:#344054}.field input[type=color]{height:38px;padding:3px}.check{display:flex;align-items:center;gap:7px;padding-top:20px;font-size:12px}.check input{width:auto}.code{margin-top:12px;background:#0b1020;color:#dbeafe;border-radius:13px;padding:14px;overflow:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;max-height:240px}.feature-list{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.feature{padding:14px;border:1px solid var(--line);border-radius:13px;background:#fcfcfd}.feature b{display:block;font-size:13px;margin-bottom:5px}.feature span{font-size:11px;color:var(--muted);line-height:1.5}.footer-note{text-align:center;color:#667085;font-size:12px;margin-top:24px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.card.wide{grid-column:auto}.controls{grid-template-columns:repeat(2,1fr)}.feature-list{grid-template-columns:repeat(2,1fr)}.chart-wrap{height:310px}.toolbar{position:relative;top:auto}.status{width:100%;margin-left:0}}
+@media(max-width:480px){main{width:min(100% - 16px,1440px)}header{padding-top:35px}.card{padding:14px;border-radius:16px}.controls{grid-template-columns:1fr 1fr}.feature-list{grid-template-columns:1fr}.chart-wrap{height:290px}}
+</style>
+</head>
+<body>
+<header>
+  <span class="eyebrow">INTERACTIVE SHOWCASE</span>
+  <h1>chartjs-plugin-datalabels<br>종합 기능 샘플</h1>
+  <p class="lead">차트 위 값 표시를 넘어, 퍼센트 계산·다중 라벨·조건부 렌더링·위치 제어·스크립트형 스타일·겹침 처리·클릭 및 호버 이벤트를 한 페이지에서 직접 실험할 수 있다.</p>
+  <div class="badges"><span class="badge">Chart.js 4.5.1</span><span class="badge">Datalabels 2.2.0</span><span class="badge">반응형</span><span class="badge">단일 HTML</span><span class="badge">실시간 옵션 변경</span></div>
+</header>
+<main>
+  <nav class="toolbar">
+    <a href="#playground" class="primary">옵션 실험실</a><a href="#basic">기본</a><a href="#multi">다중 라벨</a><a href="#events">이벤트</a><a href="#features">기능표</a>
+    <button id="randomize">전체 데이터 랜덤</button><button id="toggleAll">전체 라벨 숨기기</button><button id="download">첫 차트 PNG</button><span class="status" id="status">8개 샘플 준비됨</span>
+  </nav>
+
+  <section class="grid">
+    <article class="card" id="basic"><h2>1. 막대 차트 — 기본값·단위·조건부 색상</h2><p class="desc">formatter로 단위를 붙이고, context를 이용해 값에 따라 글자색과 배경색을 변경한다.</p><div class="chart-wrap"><canvas id="barChart"></canvas></div><div class="hint">핵심: <b>formatter, color, backgroundColor, borderRadius, anchor, align, offset</b></div></article>
+    <article class="card"><h2>2. 도넛 차트 — 퍼센트·자동 숨김</h2><p class="desc">합계 대비 비율을 계산하고 작은 조각은 숨긴다. display: 'auto'로 겹치는 라벨도 줄인다.</p><div class="chart-wrap"><canvas id="doughnutChart"></canvas></div><div class="hint">핵심: <b>퍼센트 formatter, display 함수, textStroke, clamp</b></div></article>
+    <article class="card"><h2>3. 선 차트 — 회전·다중행·선택 표시</h2><p class="desc">최댓값·최솟값·마지막 값만 라벨을 표시하며 배열 반환으로 여러 줄 텍스트를 만든다.</p><div class="chart-wrap"><canvas id="lineChart"></canvas></div><div class="hint">핵심: <b>rotation, multiline formatter, 조건부 display, font 함수</b></div></article>
+    <article class="card"><h2>4. 가로 누적 막대 — 데이터셋별 재정의</h2><p class="desc">전역 플러그인 설정 위에 각 dataset의 datalabels 설정을 덮어쓴다.</p><div class="chart-wrap"><canvas id="stackedChart"></canvas></div><div class="hint">핵심: <b>dataset-level override, textAlign, padding, borderWidth</b></div></article>
+    <article class="card wide" id="multi"><h2>5. 다중 라벨 — index · name · value</h2><p class="desc">하나의 데이터 요소에 최대 세 개 라벨을 배치한다. labels 객체의 각 라벨은 독립적인 위치와 formatter를 가진다.</p><div class="chart-wrap tall"><canvas id="multiChart"></canvas></div><div class="hint">핵심: <b>labels: { index, name, value }</b> — 카테고리명, 데이터셋명, 실제 값을 서로 다른 위치에 표현</div></article>
+    <article class="card"><h2>6. 버블 차트 — 객체 데이터 formatter</h2><p class="desc">{x, y, r, name} 객체에서 원하는 필드를 꺼내 라벨을 만들고 반지름에 따라 글자 크기를 조절한다.</p><div class="chart-wrap"><canvas id="bubbleChart"></canvas></div><div class="hint">핵심: <b>object data, scriptable font, opacity, clip</b></div></article>
+    <article class="card"><h2>7. 겹침·클리핑·클램프 비교</h2><p class="desc">조밀한 산점도에서 display: 'auto', clip, clamp의 차이를 확인한다.</p><div class="chart-wrap"><canvas id="overlapChart"></canvas></div><div class="hint">핵심: <b>display: 'auto', clip, clamp</b></div></article>
+
+    <article class="card wide" id="events"><h2>8. 라벨 이벤트 — hover · leave · click</h2><p class="desc">라벨 위에 마우스를 올리거나 터치/클릭하면 context에 상태를 추가하고 즉시 다시 그린다.</p><div class="chart-wrap"><canvas id="eventChart"></canvas></div><div class="event-log" id="eventLog">이벤트 로그가 여기에 표시된다.</div></article>
+
+    <article class="card wide" id="playground"><h2>9. 실시간 옵션 실험실</h2><p class="desc">아래 컨트롤을 변경하면 동일 차트에 datalabels 옵션이 즉시 반영된다.</p>
+      <div class="controls">
+        <div class="field"><label>ANCHOR</label><select id="anchor"><option>center</option><option>start</option><option selected>end</option></select></div>
+        <div class="field"><label>ALIGN</label><select id="align"><option>center</option><option>start</option><option selected>end</option><option>top</option><option>right</option><option>bottom</option><option>left</option></select></div>
+        <div class="field"><label>OFFSET</label><input id="offset" type="range" min="0" max="30" value="8"><span id="offsetValue">8</span></div>
+        <div class="field"><label>ROTATION</label><input id="rotation" type="range" min="-90" max="90" value="0"><span id="rotationValue">0°</span></div>
+        <div class="field"><label>FONT SIZE</label><input id="fontSize" type="range" min="9" max="24" value="12"><span id="fontSizeValue">12px</span></div>
+        <div class="field"><label>TEXT COLOR</label><input id="textColor" type="color" value="#ffffff"></div>
+        <div class="field"><label>BACKGROUND</label><input id="backgroundColor" type="color" value="#3157d5"></div>
+        <div class="field"><label>BORDER RADIUS</label><input id="radius" type="range" min="0" max="20" value="6"><span id="radiusValue">6</span></div>
+        <label class="check"><input id="display" type="checkbox" checked> display</label>
+        <label class="check"><input id="clamp" type="checkbox"> clamp</label>
+        <label class="check"><input id="clip" type="checkbox"> clip</label>
+        <label class="check"><input id="stroke" type="checkbox"> textStroke</label>
+      </div>
+      <div class="chart-wrap"><canvas id="playgroundChart"></canvas></div><pre class="code" id="codePreview"></pre>
+    </article>
+
+    <article class="card wide" id="features"><h2>포함 기능 요약</h2><p class="desc">이 페이지에서 실제로 사용한 주요 옵션들이다.</p><div class="feature-list" id="featureList"></div></article>
+  </section>
+  <p class="footer-note">인터넷 연결 시 CDN에서 라이브러리를 불러온다. 내부망 사용 시 두 JS 파일을 내려받아 상대경로로 교체하면 된다.</p>
+</main>
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family='Inter, Pretendard, Noto Sans KR, system-ui, sans-serif';
+Chart.defaults.color='#475467';
+const charts=[]; let labelsVisible=true;
+const palette=['#3157d5','#7c3aed','#0891b2','#0f9f6e','#f59e0b','#ef4444','#ec4899','#64748b'];
+const comma=v=>Number(v).toLocaleString('ko-KR');
+function makeChart(id,config){const c=new Chart(document.getElementById(id),config);charts.push(c);return c}
+function basePlugins(title){return{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}},title:{display:false,text:title},tooltip:{mode:'index',intersect:false}}}
+
+const bar=makeChart('barChart',{type:'bar',data:{labels:['1월','2월','3월','4월','5월','6월'],datasets:[{label:'매출',data:[42,68,55,91,73,104],backgroundColor:palette[0],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28}},plugins:{...basePlugins(),datalabels:{anchor:'end',align:'end',offset:4,formatter:v=>comma(v)+'억',color:c=>c.raw>=90?'#b42318':'#344054',backgroundColor:c=>c.raw>=90?'#fee4e2':'#f2f4f7',borderRadius:6,padding:{top:5,right:7,bottom:5,left:7},font:{weight:800}}},scales:{y:{beginAtZero:true,grace:'15%',grid:{color:'#eef2f6'}},x:{grid:{display:false}}}}});
+
+makeChart('doughnutChart',{type:'doughnut',data:{labels:['온라인','대형마트','급식','수출','기타'],datasets:[{data:[38,27,18,11,6],backgroundColor:palette,borderWidth:3,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'52%',plugins:{...basePlugins(),datalabels:{display:c=>c.dataset.data[c.dataIndex]>=8?'auto':false,formatter:(v,c)=>{const sum=c.dataset.data.reduce((a,b)=>a+b,0);return c.chart.data.labels[c.dataIndex]+'\n'+(v/sum*100).toFixed(1)+'%'},color:'#fff',font:{weight:900,size:12},textAlign:'center',textStrokeColor:'rgba(0,0,0,.28)',textStrokeWidth:2,clamp:true}}}});
+
+makeChart('lineChart',{type:'line',data:{labels:['월','화','수','목','금','토','일'],datasets:[{label:'방문자',data:[120,170,142,230,198,260,221],borderColor:palette[1],backgroundColor:'rgba(124,58,237,.12)',fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#fff',pointBorderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:38,right:20}},plugins:{...basePlugins(),datalabels:{display:c=>{const d=c.dataset.data;return c.dataIndex===d.indexOf(Math.max(...d))||c.dataIndex===d.indexOf(Math.min(...d))||c.dataIndex===d.length-1},formatter:(v,c)=>[c.dataIndex===c.dataset.data.indexOf(Math.max(...c.dataset.data))?'최고':c.dataIndex===c.dataset.data.indexOf(Math.min(...c.dataset.data))?'최저':'최근',comma(v)+'명'],anchor:'end',align:'top',rotation:c=>c.dataIndex===6?-8:0,offset:7,backgroundColor:palette[1],color:'#fff',borderRadius:6,padding:6,textAlign:'center',font:c=>({size:c.dataIndex===6?13:11,weight:800})}},scales:{y:{beginAtZero:false,grace:'20%',grid:{color:'#eef2f6'}},x:{grid:{display:false}}}}});
+
+makeChart('stackedChart',{type:'bar',data:{labels:['본부 A','본부 B','본부 C','본부 D'],datasets:[{label:'완료',data:[44,38,51,29],backgroundColor:palette[3],datalabels:{anchor:'center',align:'center',color:'#fff',formatter:v=>'완료 '+v}},{label:'진행',data:[25,32,18,34],backgroundColor:palette[4],datalabels:{anchor:'center',align:'center',color:'#422006',formatter:v=>'진행 '+v}},{label:'대기',data:[12,9,16,14],backgroundColor:'#d0d5dd',datalabels:{anchor:'center',align:'center',color:'#344054',formatter:v=>v<12?'':`대기 ${v}`}}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{...basePlugins(),datalabels:{font:{weight:800,size:11},borderWidth:1,borderColor:'rgba(255,255,255,.5)',borderRadius:4,padding:4,textAlign:'center'}},scales:{x:{stacked:true,grid:{color:'#eef2f6'}},y:{stacked:true,grid:{display:false}}}}});
+
+makeChart('multiChart',{type:'bar',data:{labels:['디지털 전환','고객 경험','업무 자동화','데이터 품질','정보보호'],datasets:[{label:'현재',data:[62,70,58,67,81],backgroundColor:'rgba(49,87,213,.65)',borderRadius:7},{label:'목표',data:[85,88,90,86,94],backgroundColor:'rgba(124,58,237,.7)',borderRadius:7}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:44,bottom:18}},plugins:{...basePlugins(),datalabels:{labels:{index:{anchor:'end',align:'top',offset:22,color:'#667085',formatter:(v,c)=>c.chart.data.labels[c.dataIndex],font:{size:10,weight:700}},name:{anchor:'center',align:'center',color:'#fff',formatter:(v,c)=>c.dataset.label,font:{size:10,weight:700}},value:{anchor:'end',align:'top',offset:2,backgroundColor:c=>c.dataset.backgroundColor,color:'#fff',borderRadius:5,padding:5,formatter:v=>v+'점',font:{size:11,weight:900}}}}},scales:{y:{beginAtZero:true,max:110,grid:{color:'#eef2f6'}},x:{grid:{display:false},ticks:{display:false}}}}});
+
+makeChart('bubbleChart',{type:'bubble',data:{datasets:[{label:'프로젝트',data:[{x:15,y:72,r:18,name:'A'},{x:34,y:45,r:12,name:'B'},{x:52,y:83,r:22,name:'C'},{x:67,y:57,r:15,name:'D'},{x:83,y:91,r:24,name:'E'}],backgroundColor:palette.map(x=>x+'bb'),borderColor:palette,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{...basePlugins(),datalabels:{formatter:v=>v.name+'\n'+v.y+'점',color:'#fff',textAlign:'center',font:c=>({size:Math.max(10,Math.min(15,c.raw.r/1.5)),weight:900}),opacity:c=>c.raw.y<50?.65:1,clip:true}},scales:{x:{min:0,max:100,title:{display:true,text:'진척도'},grid:{color:'#eef2f6'}},y:{min:20,max:110,title:{display:true,text:'효과'},grid:{color:'#eef2f6'}}}}});
+
+const dense=Array.from({length:28},(_,i)=>({x:6+i*3.2+(i%2)*1.3,y:50+Math.sin(i*.72)*17+(i%4)*2,label:'P'+(i+1)}));
+makeChart('overlapChart',{type:'scatter',data:{datasets:[{label:'관측점',data:dense,pointRadius:5,backgroundColor:palette[2]}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:6},plugins:{...basePlugins(),datalabels:{display:'auto',formatter:v=>v.label,anchor:'end',align:'top',offset:3,backgroundColor:'rgba(255,255,255,.88)',borderColor:'#d0d5dd',borderWidth:1,borderRadius:4,padding:3,color:'#344054',font:{size:9,weight:700},clip:true,clamp:true}},scales:{x:{min:0,max:100,grid:{color:'#eef2f6'}},y:{min:20,max:85,grid:{color:'#eef2f6'}}}}});
+
+const log=document.getElementById('eventLog');function addLog(msg){const t=new Date().toLocaleTimeString('ko-KR');log.textContent=`[${t}] ${msg}\n`+log.textContent}
+makeChart('eventChart',{type:'bar',data:{labels:['기획','개발','검증','배포','운영'],datasets:[{label:'진행률',data:[93,78,66,52,41],backgroundColor:palette.slice(0,5),borderRadius:12}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},plugins:{...basePlugins(),datalabels:{anchor:'end',align:'end',offset:5,formatter:v=>v+'%',backgroundColor:c=>c.hovered?'#101828':c.dataset.backgroundColor[c.dataIndex],color:'#fff',borderRadius:c=>c.hovered?12:6,padding:c=>c.hovered?9:6,font:c=>({weight:900,size:c.hovered?15:12}),listeners:{enter:c=>{c.hovered=true;document.body.style.cursor='pointer';addLog(`enter: ${c.chart.data.labels[c.dataIndex]} / ${c.dataset.label}`);return true},leave:c=>{c.hovered=false;document.body.style.cursor='default';addLog(`leave: ${c.chart.data.labels[c.dataIndex]}`);return true},click:c=>{c.selected=!c.selected;c.dataset.backgroundColor[c.dataIndex]=c.selected?'#111827':palette[c.dataIndex];addLog(`click: ${c.chart.data.labels[c.dataIndex]} → ${c.selected?'선택':'해제'}`);return true}}}},scales:{y:{beginAtZero:true,max:110,grid:{color:'#eef2f6'}},x:{grid:{display:false}}}}});
+
+const pg=makeChart('playgroundChart',{type:'bar',data:{labels:['A','B','C','D','E','F'],datasets:[{label:'샘플 데이터',data:[18,42,31,64,53,76],backgroundColor:palette[0],borderRadius:7}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:45,right:25,left:10}},plugins:{...basePlugins(),datalabels:{}},scales:{y:{beginAtZero:true,grace:'20%',grid:{color:'#eef2f6'}},x:{grid:{display:false}}}}});
+
+const ids=['anchor','align','offset','rotation','fontSize','textColor','backgroundColor','radius','display','clamp','clip','stroke'];
+function updatePlayground(){const g=id=>document.getElementById(id);const o=pg.options.plugins.datalabels;o.anchor=g('anchor').value;o.align=g('align').value;o.offset=+g('offset').value;o.rotation=+g('rotation').value;o.color=g('textColor').value;o.backgroundColor=g('backgroundColor').value;o.borderRadius=+g('radius').value;o.padding=6;o.font={size:+g('fontSize').value,weight:'bold'};o.display=g('display').checked;o.clamp=g('clamp').checked;o.clip=g('clip').checked;o.textStrokeWidth=g('stroke').checked?2:0;o.textStrokeColor='#000';o.formatter=v=>v+'점';pg.update('none');g('offsetValue').textContent=o.offset;g('rotationValue').textContent=o.rotation+'°';g('fontSizeValue').textContent=o.font.size+'px';g('radiusValue').textContent=o.borderRadius;document.getElementById('codePreview').textContent=`plugins: {\n  datalabels: ${JSON.stringify({anchor:o.anchor,align:o.align,offset:o.offset,rotation:o.rotation,color:o.color,backgroundColor:o.backgroundColor,borderRadius:o.borderRadius,padding:o.padding,font:o.font,display:o.display,clamp:o.clamp,clip:o.clip,textStrokeWidth:o.textStrokeWidth,formatter:'value => value + "점"'},null,2)}\n}`}
+ids.forEach(id=>document.getElementById(id).addEventListener('input',updatePlayground));updatePlayground();
+
+document.getElementById('randomize').onclick=()=>{charts.forEach(c=>{c.data.datasets.forEach(ds=>{if(ds.data.every(v=>typeof v==='number'))ds.data=ds.data.map(()=>Math.round(15+Math.random()*90))});c.update()});document.getElementById('status').textContent='데이터를 무작위로 갱신함'};
+document.getElementById('toggleAll').onclick=e=>{labelsVisible=!labelsVisible;charts.forEach(c=>{c.options.plugins.datalabels.display=labelsVisible;c.update()});e.target.textContent=labelsVisible?'전체 라벨 숨기기':'전체 라벨 보이기';document.getElementById('status').textContent=labelsVisible?'전체 라벨 표시':'전체 라벨 숨김'};
+document.getElementById('download').onclick=()=>{const a=document.createElement('a');a.download='datalabels-bar-chart.png';a.href=bar.toBase64Image('image/png',1);a.click()};
+
+const features=[['formatter','값·퍼센트·객체 데이터·다중행 변환'],['display','boolean, 함수, auto 겹침 방지'],['anchor / align','요소 기준점과 라벨 정렬 방향'],['offset / rotation','거리와 회전 각도'],['color / opacity','고정값·배열·스크립트 함수'],['background / border','배경색, 테두리, 너비, 반경'],['font / padding','동적 글자 크기·굵기·내부 여백'],['textAlign / stroke','다중행 정렬과 외곽선'],['clamp / clip','보이는 영역 기준 고정 및 잘라내기'],['labels','하나의 요소에 복수 라벨'],['dataset override','데이터셋별 설정 재정의'],['listeners','enter, leave, click 이벤트'],['context','chart, dataset, dataIndex 접근'],['반응형','화면 크기에 따른 자동 리사이즈'],['동적 업데이트','옵션·데이터 변경 후 update()'],['PNG 내보내기','Chart.js toBase64Image 활용']];
+document.getElementById('featureList').innerHTML=features.map(([a,b])=>`<div class="feature"><b>${a}</b><span>${b}</span></div>`).join('');
+window.addEventListener('error',e=>{document.getElementById('status').textContent='오류: '+e.message});
+</script>
+</body>
+</html>
