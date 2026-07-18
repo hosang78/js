@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Supercluster 종합 기능 실습실</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQ3ynhJZnjFDN0Y6v7kP+oAq1N8gG7Y=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/supercluster@8.0.1/dist/supercluster.min.js"></script>
+
+  <style>
+    :root {
+      --bg:#07111f; --panel:#0e1b2d; --panel2:#13243a; --line:#263a55;
+      --text:#e7eef9; --muted:#93a4bb; --accent:#59d6c7; --accent2:#6ea8ff;
+      --danger:#ff6b7a; --warn:#ffcc66; --good:#70e29b; --shadow:0 12px 36px rgba(0,0,0,.32);
+    }
+    * { box-sizing:border-box; }
+    html, body { width:100%; height:100%; margin:0; overflow:hidden; font-family:Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    button, input, select, textarea { font:inherit; }
+    button { cursor:pointer; }
+    .app { height:100%; display:grid; grid-template-rows:58px 1fr 30px; }
+    header { display:flex; align-items:center; gap:14px; padding:0 16px; border-bottom:1px solid var(--line); background:linear-gradient(90deg,#0b1728,#10243b); z-index:1002; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:800; white-space:nowrap; }
+    .brand-badge { width:31px; height:31px; display:grid; place-items:center; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#07111f; font-weight:900; }
+    .brand small { color:var(--muted); font-weight:500; margin-left:4px; }
+    .header-actions { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    .status-pill { display:flex; align-items:center; gap:7px; border:1px solid var(--line); background:#0a1728; border-radius:999px; padding:7px 10px; color:var(--muted); font-size:12px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--good); box-shadow:0 0 12px var(--good); }
+
+    main { min-height:0; display:grid; grid-template-columns:340px minmax(300px,1fr) 390px; }
+    .sidebar { min-height:0; overflow:auto; background:var(--panel); border-right:1px solid var(--line); padding:12px; }
+    .rightbar { border-right:0; border-left:1px solid var(--line); }
+    .map-wrap { position:relative; min-width:0; min-height:0; }
+    #map { width:100%; height:100%; background:#101b29; }
+    .map-overlay { position:absolute; z-index:700; top:12px; left:12px; display:flex; flex-wrap:wrap; gap:7px; pointer-events:none; }
+    .chip { pointer-events:auto; border:1px solid rgba(255,255,255,.16); background:rgba(7,17,31,.88); backdrop-filter:blur(10px); padding:7px 10px; border-radius:9px; font-size:12px; box-shadow:var(--shadow); }
+    .map-help { position:absolute; z-index:700; left:12px; bottom:14px; max-width:360px; color:#d7e3f4; background:rgba(7,17,31,.88); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:9px 11px; font-size:12px; line-height:1.5; backdrop-filter:blur(10px); }
+
+    .section { border:1px solid var(--line); border-radius:12px; background:linear-gradient(180deg,var(--panel2),#0e1b2d); margin-bottom:10px; overflow:hidden; }
+    .section h3 { margin:0; padding:11px 12px; font-size:13px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }
+    .section-body { padding:11px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+    label { display:block; color:var(--muted); font-size:11px; margin-bottom:4px; }
+    input, select, textarea {
+      width:100%; color:var(--text); background:#091525; border:1px solid var(--line);
+      border-radius:8px; padding:8px; outline:none;
+    }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent2); box-shadow:0 0 0 3px rgba(110,168,255,.12); }
+    input[type="range"] { padding:0; }
+    input[type="checkbox"] { width:auto; accent-color:var(--accent); }
+    .range-row { display:grid; grid-template-columns:1fr 54px; gap:8px; align-items:center; }
+    .check-row { display:flex; gap:12px; flex-wrap:wrap; }
+    .check { display:flex; align-items:center; gap:6px; color:var(--text); font-size:12px; }
+    .btn {
+      border:1px solid var(--line); background:#152841; color:var(--text);
+      padding:8px 10px; border-radius:8px; font-size:12px; transition:.15s;
+    }
+    .btn:hover { transform:translateY(-1px); border-color:#49698f; background:#1b3353; }
+    .btn.primary { background:linear-gradient(135deg,#40cdbb,#4b8ef7); color:#04111d; border:0; font-weight:800; }
+    .btn.danger { background:#3a1823; color:#ff9baa; border-color:#6a293b; }
+    .btn.warn { background:#3a3018; color:#ffda79; border-color:#66572c; }
+    .btn.full { width:100%; }
+    .btn-group { display:flex; flex-wrap:wrap; gap:7px; }
+    .muted { color:var(--muted); font-size:11px; line-height:1.5; }
+    .value { color:var(--accent); font-weight:800; }
+    .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .stat { background:#091525; border:1px solid var(--line); border-radius:9px; padding:9px; }
+    .stat strong { display:block; font-size:18px; margin-top:3px; }
+    .stat small { color:var(--muted); }
+    .tabs { display:flex; border-bottom:1px solid var(--line); }
+    .tab { flex:1; border:0; padding:10px 5px; background:#0a1728; color:var(--muted); font-size:11px; }
+    .tab.active { color:var(--text); background:var(--panel2); box-shadow:inset 0 -2px var(--accent); }
+    .tab-panel { display:none; padding:10px; }
+    .tab-panel.active { display:block; }
+    pre {
+      margin:0; max-height:330px; overflow:auto; white-space:pre-wrap; word-break:break-word;
+      background:#07111f; border:1px solid var(--line); border-radius:9px; color:#bcd0ea; padding:10px;
+      font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;
+    }
+    .log-list { max-height:280px; overflow:auto; }
+    .log { border-bottom:1px solid var(--line); padding:8px 2px; font-size:11px; line-height:1.45; }
+    .log time { color:var(--muted); margin-right:6px; }
+    .log.ok b { color:var(--good); } .log.warn b { color:var(--warn); } .log.err b { color:var(--danger); }
+    .api-row { display:grid; grid-template-columns:1fr 104px; gap:7px; margin-bottom:7px; }
+    .api-row:last-child { margin-bottom:0; }
+    .badge { font-size:10px; color:#08131f; padding:2px 6px; border-radius:999px; background:var(--accent); }
+    footer { display:flex; align-items:center; gap:16px; padding:0 12px; color:var(--muted); font-size:11px; border-top:1px solid var(--line); background:#081321; }
+    footer span:last-child { margin-left:auto; }
+
+    .cluster-icon { background:transparent; border:0; }
+    .cluster-bubble {
+      display:grid; place-items:center; border-radius:50%; color:#07111f; font-weight:900;
+      border:3px solid rgba(255,255,255,.86); box-shadow:0 4px 18px rgba(0,0,0,.42);
+      transition:transform .12s;
+    }
+    .cluster-bubble:hover { transform:scale(1.1); }
+    .cluster-small { background:#64e2c8; }
+    .cluster-medium { background:#69a9ff; }
+    .cluster-large { background:#ffcc66; }
+    .cluster-huge { background:#ff7485; }
+    .point-icon { background:transparent; border:0; }
+    .point-dot { width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 2px 8px rgba(0,0,0,.45); }
+    .cat-port { background:#59d6c7; } .cat-market { background:#6ea8ff; }
+    .cat-farm { background:#ffcc66; } .cat-safety { background:#ff7e8a; }
+    .popup-title { font-weight:800; margin-bottom:5px; color:#102038; }
+    .popup-grid { display:grid; grid-template-columns:auto 1fr; gap:3px 8px; font-size:12px; color:#30445f; }
+    .leaflet-popup-content-wrapper { border-radius:10px; }
+    .selected-ring { filter:drop-shadow(0 0 5px #fff); transform:scale(1.35); }
+    #perfCanvas { width:100%; height:150px; background:#07111f; border:1px solid var(--line); border-radius:9px; }
+    .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .legend span { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--muted); }
+    .legend i { width:9px; height:9px; border-radius:50%; display:inline-block; }
+    .mobile-toggle { display:none; }
+
+    @media (max-width:1100px) {
+      main { grid-template-columns:310px 1fr; }
+      .rightbar { position:absolute; z-index:1001; right:0; top:58px; bottom:30px; width:390px; transform:translateX(100%); transition:.2s; box-shadow:var(--shadow); }
+      .rightbar.open { transform:translateX(0); }
+      .mobile-toggle { display:inline-flex; }
+    }
+    @media (max-width:760px) {
+      .app { grid-template-rows:52px 1fr 26px; }
+      header { padding:0 9px; }
+      .brand small, .status-pill { display:none; }
+      main { display:block; position:relative; }
+      .sidebar { position:absolute; z-index:1001; left:0; top:0; bottom:0; width:min(90vw,340px); transform:translateX(-100%); transition:.2s; box-shadow:var(--shadow); }
+      .sidebar.open { transform:translateX(0); }
+      .rightbar { top:0; bottom:0; width:min(92vw,390px); }
+      .map-wrap { width:100%; height:100%; }
+      .mobile-toggle { display:inline-flex; }
+      footer { font-size:9px; }
+      .map-help { max-width:calc(100% - 24px); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-badge">SC</div>
+      <div>Supercluster 실습실 <small>브라우저 포인트 클러스터링 종합 샘플</small></div>
+    </div>
+    <div class="header-actions">
+      <div class="status-pill"><span class="dot"></span><span id="libStatus">라이브러리 확인 중</span></div>
+      <button class="btn mobile-toggle" id="leftToggle">설정</button>
+      <button class="btn mobile-toggle" id="rightToggle">API</button>
+      <button class="btn" id="resetViewBtn">전국 보기</button>
+      <button class="btn primary" id="rebuildBtn">인덱스 재생성</button>
+    </div>
+  </header>
+
+  <main>
+    <aside class="sidebar" id="leftbar">
+      <section class="section">
+        <h3>데이터 세트 <span class="badge">GeoJSON</span></h3>
+        <div class="section-body">
+          <div class="grid2">
+            <div>
+              <label>프리셋</label>
+              <select id="preset">
+                <option value="korea">대한민국 혼합 분포</option>
+                <option value="seoul">수도권 밀집 분포</option>
+                <option value="coast">연안·항만 분포</option>
+                <option value="world">세계 주요 도시 분포</option>
+                <option value="identical">동일 좌표 스트레스</option>
+              </select>
+            </div>
+            <div>
+              <label>포인트 수</label>
+              <select id="pointCount">
+                <option>500</option><option selected>2000</option><option>10000</option><option>30000</option><option>100000</option>
+              </select>
+            </div>
+          </div>
+          <div class="btn-group" style="margin-top:8px">
+            <button class="btn primary" id="generateBtn">데이터 생성</button>
+            <button class="btn" id="addModeBtn">지도 클릭 추가: 꺼짐</button>
+            <button class="btn danger" id="clearBtn">전체 삭제</button>
+          </div>
+          <div class="grid2" style="margin-top:8px">
+            <button class="btn" id="exportBtn">GeoJSON 내보내기</button>
+            <label class="btn" style="margin:0;text-align:center;color:var(--text)">GeoJSON 불러오기<input type="file" id="importInput" accept=".json,.geojson,application/geo+json" hidden></label>
+          </div>
+          <p class="muted">속성: category, value, score, name. 생성 데이터는 고정 시드 난수를 사용해 조건 비교가 가능하다.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>Supercluster 옵션</h3>
+        <div class="section-body">
+          <div>
+            <label>radius: <span class="value" id="radiusLabel">60</span> px</label>
+            <div class="range-row"><input id="radius" type="range" min="10" max="160" step="5" value="60"><input id="radiusNum" type="number" min="1" max="300" value="60"></div>
+          </div>
+          <div class="grid2" style="margin-top:8px">
+            <div><label>minZoom</label><input id="minZoom" type="number" min="0" max="20" value="0"></div>
+            <div><label>maxZoom</label><input id="maxZoom" type="number" min="0" max="24" value="16"></div>
+            <div><label>minPoints</label><input id="minPoints" type="number" min="2" max="100" value="2"></div>
+            <div><label>extent</label><input id="extent" type="number" min="128" max="2048" step="128" value="512"></div>
+            <div><label>nodeSize</label><input id="nodeSize" type="number" min="4" max="256" step="4" value="64"></div>
+            <div><label>로그</label><select id="scLog"><option value="false">false</option><option value="true">true</option></select></div>
+          </div>
+          <div class="check-row" style="margin-top:9px">
+            <label class="check"><input type="checkbox" id="generateId" checked> generateId</label>
+            <label class="check"><input type="checkbox" id="useAggregate" checked> map/reduce 집계</label>
+            <label class="check"><input type="checkbox" id="autoRebuild"> 즉시 재생성</label>
+          </div>
+          <button class="btn primary full" id="applyOptionsBtn" style="margin-top:9px">옵션 적용 및 load()</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>데이터 필터</h3>
+        <div class="section-body">
+          <label>카테고리</label>
+          <div class="check-row">
+            <label class="check"><input class="catFilter" type="checkbox" value="port" checked> 항만</label>
+            <label class="check"><input class="catFilter" type="checkbox" value="market" checked> 시장</label>
+            <label class="check"><input class="catFilter" type="checkbox" value="farm" checked> 양식</label>
+            <label class="check"><input class="catFilter" type="checkbox" value="safety" checked> 안전</label>
+          </div>
+          <div style="margin-top:8px">
+            <label>최소 value: <span class="value" id="valueLabel">0</span></label>
+            <input id="minValue" type="range" min="0" max="1000" step="10" value="0">
+          </div>
+          <div style="margin-top:8px">
+            <label>이름 검색</label>
+            <input id="searchText" placeholder="예: 항만-12">
+          </div>
+          <div class="btn-group" style="margin-top:8px">
+            <button class="btn primary" id="filterBtn">필터 적용</button>
+            <button class="btn" id="resetFilterBtn">초기화</button>
+          </div>
+          <p class="muted">Supercluster 인덱스는 <b>load()</b> 후 불변이므로 필터 변경 시 새 인덱스를 만든다.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>표시 설정</h3>
+        <div class="section-body">
+          <div class="check-row">
+            <label class="check"><input type="checkbox" id="autoViewport" checked> 이동 시 갱신</label>
+            <label class="check"><input type="checkbox" id="showPoints" checked> 개별 포인트</label>
+            <label class="check"><input type="checkbox" id="showBounds"> 조회 BBOX</label>
+            <label class="check"><input type="checkbox" id="showLabels"> 포인트 이름</label>
+          </div>
+          <div class="grid2" style="margin-top:8px">
+            <div><label>조회 줌 방식</label><select id="zoomMode"><option value="map">지도 줌</option><option value="manual">수동 줌</option></select></div>
+            <div><label>수동 줌</label><input id="manualZoom" type="number" min="0" max="24" value="7"></div>
+          </div>
+          <button class="btn full" id="refreshBtn" style="margin-top:8px">현재 BBOX 조회</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="map-wrap">
+      <div id="map"></div>
+      <div class="map-overlay">
+        <div class="chip">줌 <b id="mapZoom">-</b></div>
+        <div class="chip">반환 <b id="visibleTotal">-</b></div>
+        <div class="chip">클러스터 <b id="visibleClusters">-</b></div>
+        <div class="chip">포인트 <b id="visiblePoints">-</b></div>
+        <div class="chip">조회 <b id="queryMs">-</b> ms</div>
+      </div>
+      <div class="map-help">클러스터 클릭: 확장 줌 · 포인트 클릭: 속성 확인 · Shift+드래그: 박스 줌 · “지도 클릭 추가” 활성화 후 빈 곳 클릭: 포인트 추가</div>
+    </section>
+
+    <aside class="sidebar rightbar" id="rightbar">
+      <section class="section">
+        <h3>실시간 지표</h3>
+        <div class="section-body">
+          <div class="stat-grid">
+            <div class="stat"><small>원본 포인트</small><strong id="rawCount">0</strong></div>
+            <div class="stat"><small>필터 포인트</small><strong id="filteredCount">0</strong></div>
+            <div class="stat"><small>load() 시간</small><strong><span id="loadMs">0</span><small> ms</small></strong></div>
+            <div class="stat"><small>메모리 추정</small><strong><span id="memoryEstimate">0</span><small> MB</small></strong></div>
+          </div>
+          <canvas id="perfCanvas" width="700" height="260" style="margin-top:9px"></canvas>
+          <div class="legend"><span><i style="background:#59d6c7"></i>load()</span><span><i style="background:#6ea8ff"></i>getClusters()</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h3>API 실험</h3>
+        <div class="section-body">
+          <div class="api-row"><button class="btn" id="worldClustersBtn">getClusters(세계)</button><input id="apiZoom" type="number" value="4" min="0" max="24" title="zoom"></div>
+          <div class="api-row"><button class="btn" id="viewportClustersBtn">getClusters(현재 BBOX)</button><span class="muted">현재 지도 범위</span></div>
+          <div class="api-row"><button class="btn" id="childrenBtn">getChildren()</button><input id="clusterIdInput" placeholder="cluster_id"></div>
+          <div class="api-row"><button class="btn" id="leavesBtn">getLeaves()</button><input id="leafLimit" type="number" value="10" min="1"></div>
+          <div class="grid2">
+            <div><label>leaves offset</label><input id="leafOffset" type="number" value="0" min="0"></div>
+            <div><label>선택 cluster_id</label><input id="selectedClusterId" readonly></div>
+          </div>
+          <div class="api-row" style="margin-top:7px"><button class="btn" id="expansionBtn">getClusterExpansionZoom()</button><span class="muted">선택 클러스터</span></div>
+          <div class="grid3">
+            <div><label>tile z</label><input id="tileZ" type="number" value="5" min="0"></div>
+            <div><label>tile x</label><input id="tileX" type="number" value="27" min="0"></div>
+            <div><label>tile y</label><input id="tileY" type="number" value="12" min="0"></div>
+          </div>
+          <button class="btn full" id="tileBtn" style="margin-top:7px">getTile(z, x, y)</button>
+          <button class="btn warn full" id="benchmarkBtn" style="margin-top:7px">전체 줌 벤치마크 0~maxZoom</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="tabs">
+          <button class="tab active" data-tab="result">API 결과</button>
+          <button class="tab" data-tab="selected">선택 객체</button>
+          <button class="tab" data-tab="logs">이벤트 로그</button>
+        </div>
+        <div class="tab-panel active" id="tab-result"><pre id="apiOutput">준비 중…</pre></div>
+        <div class="tab-panel" id="tab-selected"><pre id="selectedOutput">지도에서 클러스터 또는 포인트를 선택하세요.</pre></div>
+        <div class="tab-panel" id="tab-logs"><div class="log-list" id="logList"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    <span>Supercluster 8.0.1</span>
+    <span>Leaflet 1.9.4</span>
+    <span id="bboxText">BBOX -</span>
+    <span>외부 CDN 및 OpenStreetMap 타일 사용</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const state = {
+    raw: [], filtered: [], index: null, layer: null, bboxLayer: null,
+    selectedClusterId: null, addMode: false, perf: [], seed: 20260718,
+    lastClusters: [], markerByFeature: new Map()
+  };
+
+  function log(message, type='ok') {
+    const el = document.createElement('div');
+    el.className = `log ${type}`;
+    el.innerHTML = `<time>${new Date().toLocaleTimeString('ko-KR')}</time><b>${type.toUpperCase()}</b> ${escapeHtml(message)}`;
+    $('logList').prepend(el);
+    while ($('logList').children.length > 100) $('logList').lastChild.remove();
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function pretty(data, limit=50000) {
+    let s;
+    try { s = JSON.stringify(data, null, 2); } catch { s = String(data); }
+    return s.length > limit ? s.slice(0, limit) + `\n… (${s.length-limit}자 생략)` : s;
+  }
+  function showResult(title, data) {
+    $('apiOutput').textContent = `${title}\n${'='.repeat(Math.min(title.length,60))}\n${pretty(data)}`;
+    activateTab('result');
+  }
+  function activateTab(name) {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.toggle('active', x.id === `tab-${name}`));
+  }
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => activateTab(t.dataset.tab)));
+
+  if (typeof L === 'undefined' || typeof Supercluster === 'undefined') {
+    $('libStatus').textContent = 'CDN 로드 실패';
+    $('libStatus').parentElement.querySelector('.dot').style.background = '#ff6b7a';
+    alert('필수 라이브러리를 불러오지 못했습니다. 인터넷 연결 또는 CDN 차단 여부를 확인하세요.');
+    return;
+  }
+  $('libStatus').textContent = 'Supercluster 준비 완료';
+
+  const map = L.map('map', {
+    zoomControl:true, preferCanvas:true, worldCopyJump:true, minZoom:2, maxZoom:19
+  }).setView([36.2, 127.8], 7);
+
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19, attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  L.control.scale({imperial:false}).addTo(map);
+  state.layer = L.layerGroup().addTo(map);
+
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function gaussian(rng) {
+    let u=0,v=0;
+    while(!u) u=rng(); while(!v) v=rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+  const cats = ['port','market','farm','safety'];
+  const catKo = {port:'항만',market:'시장',farm:'양식',safety:'안전'};
+  const centers = {
+    korea:[[37.5665,126.978],[35.1796,129.0756],[35.8714,128.6014],[36.3504,127.3845],[35.1595,126.8526],[33.4996,126.5312],[37.4563,126.7052],[34.7604,127.6622],[35.2285,128.6811],[36.019,129.3435]],
+    seoul:[[37.5665,126.978],[37.3943,127.1112],[37.6584,126.832],[37.4563,126.7052],[37.2636,127.0286],[37.7381,127.0337]],
+    coast:[[37.7519,128.8761],[36.019,129.3435],[35.1796,129.0756],[34.7604,127.6622],[34.8118,126.3922],[35.106,129.032],[36.032,129.365],[33.4996,126.5312],[35.541,129.31],[37.4563,126.7052]],
+    world:[[37.5665,126.978],[35.6762,139.6503],[1.3521,103.8198],[51.5072,-0.1276],[48.8566,2.3522],[40.7128,-74.006],[34.0522,-118.2437],[-33.8688,151.2093],[25.2048,55.2708],[-23.5505,-46.6333]]
+  };
+
+  function makeFeature(lng, lat, i, rng, catOverride) {
+    const category = catOverride || cats[i % cats.length];
+    const value = Math.round(rng()*1000);
+    return {
+      type:'Feature',
+      id:i+1,
+      properties:{
+        name:`${catKo[category]}-${String(i+1).padStart(5,'0')}`,
+        category,
+        value,
+        score:+(rng()*100).toFixed(1),
+        active:rng()>.15,
+        createdAt:new Date(Date.UTC(2026,0,1)+Math.floor(rng()*180)*86400000).toISOString().slice(0,10)
+      },
+      geometry:{type:'Point',coordinates:[+lng.toFixed(6),+lat.toFixed(6)]}
+    };
+  }
+
+  function generateData() {
+    const count = +$('pointCount').value;
+    const preset = $('preset').value;
+    const rng = mulberry32(state.seed);
+    const points = [];
+    if (preset === 'identical') {
+      for (let i=0;i<count;i++) points.push(makeFeature(126.978,37.5665,i,rng));
+    } else {
+      const cs = centers[preset] || centers.korea;
+      for (let i=0;i<count;i++) {
+        const c = cs[Math.floor(rng()*cs.length)];
+        const spread = preset==='world' ? 2.4 : preset==='seoul' ? .09 : .25;
+        const lat = Math.max(-85, Math.min(85, c[0] + gaussian(rng)*spread));
+        const lngScale = Math.max(.2, Math.cos(c[0]*Math.PI/180));
+        let lng = c[1] + gaussian(rng)*spread/lngScale;
+        while(lng>180) lng-=360; while(lng<-180) lng+=360;
+        points.push(makeFeature(lng,lat,i,rng));
+      }
+    }
+    state.raw = points;
+    $('rawCount').textContent = points.length.toLocaleString();
+    applyFilter(true);
+    fitPreset(preset);
+    log(`${preset} 데이터 ${count.toLocaleString()}개 생성`);
+  }
+
+  function fitPreset(preset) {
+    if (preset==='world') map.setView([20,10],2);
+    else if (preset==='seoul' || preset==='identical') map.setView([37.52,126.98],10);
+    else map.setView([36.2,127.8],7);
+  }
+
+  function applyFilter(rebuild=true) {
+    const allowed = new Set([...document.querySelectorAll('.catFilter:checked')].map(x=>x.value));
+    const minV = +$('minValue').value;
+    const q = $('searchText').value.trim().toLowerCase();
+    state.filtered = state.raw.filter(f =>
+      allowed.has(f.properties.category) &&
+      +f.properties.value >= minV &&
+      (!q || String(f.properties.name).toLowerCase().includes(q))
+    );
+    $('filteredCount').textContent = state.filtered.length.toLocaleString();
+    if (rebuild) rebuildIndex();
+  }
+
+  function options() {
+    return {
+      minZoom:+$('minZoom').value,
+      maxZoom:+$('maxZoom').value,
+      minPoints:+$('minPoints').value,
+      radius:+$('radiusNum').value,
+      extent:+$('extent').value,
+      nodeSize:+$('nodeSize').value,
+      log:$('scLog').value === 'true',
+      generateId:$('generateId').checked,
+      ...($('useAggregate').checked ? {
+        map: props => ({
+          totalValue:+props.value || 0,
+          maxScore:+props.score || 0,
+          activeCount:props.active ? 1 : 0,
+          categoryCounts:{[props.category]:1}
+        }),
+        reduce: (acc,p) => {
+          acc.totalValue += p.totalValue;
+          acc.maxScore = Math.max(acc.maxScore,p.maxScore);
+          acc.activeCount += p.activeCount;
+          for (const [k,v] of Object.entries(p.categoryCounts||{})) {
+            acc.categoryCounts[k] = (acc.categoryCounts[k]||0)+v;
+          }
+        }
+      } : {})
+    };
+  }
+
+  function rebuildIndex() {
+    try {
+      const opts=options();
+      const t0=performance.now();
+      state.index = new Supercluster(opts).load(state.filtered);
+      const ms=performance.now()-t0;
+      $('loadMs').textContent=ms.toFixed(2);
+      $('memoryEstimate').textContent=((state.filtered.length*190)/1048576).toFixed(2);
+      state.perf.push({label:`load ${state.filtered.length}`,load:ms,query:0});
+      state.perf=state.perf.slice(-20);
+      drawPerf();
+      refreshClusters();
+      log(`load(${state.filtered.length.toLocaleString()} points) ${ms.toFixed(2)}ms`);
+    } catch(err) {
+      log(err.message,'err');
+      showResult('인덱스 생성 오류',{name:err.name,message:err.message,stack:err.stack});
+    }
+  }
+
+  function getBBox() {
+    const b=map.getBounds();
+    return [b.getWest(),b.getSouth(),b.getEast(),b.getNorth()];
+  }
+  function queryZoom() {
+    return $('zoomMode').value==='manual' ? +$('manualZoom').value : Math.floor(map.getZoom());
+  }
+
+  function refreshClusters() {
+    if (!state.index) return;
+    const bbox=getBBox(), z=queryZoom();
+    const t0=performance.now();
+    let items;
+    try { items=state.index.getClusters(bbox,z); }
+    catch(err) { log(err.message,'err'); return; }
+    const ms=performance.now()-t0;
+    state.lastClusters=items;
+    state.perf.push({label:`z${z}`,load:0,query:ms});
+    state.perf=state.perf.slice(-20);
+    render(items);
+    updateStats(items,ms,bbox,z);
+    drawPerf();
+  }
+
+  function render(items) {
+    state.layer.clearLayers();
+    state.markerByFeature.clear();
+    const showPoints=$('showPoints').checked, labels=$('showLabels').checked;
+    for (const f of items) {
+      const [lng,lat]=f.geometry.coordinates;
+      const p=f.properties||{};
+      if (p.cluster) {
+        const count=p.point_count;
+        const size=count<20?34:count<100?42:count<1000?52:62;
+        const cls=count<20?'small':count<100?'medium':count<1000?'large':'huge';
+        const icon=L.divIcon({
+          className:'cluster-icon',
+          html:`<div class="cluster-bubble cluster-${cls}" style="width:${size}px;height:${size}px">${p.point_count_abbreviated||count}</div>`,
+          iconSize:[size,size],iconAnchor:[size/2,size/2]
+        });
+        const marker=L.marker([lat,lng],{icon,keyboard:true,riseOnHover:true});
+        marker.on('click',()=>selectCluster(f,marker));
+        marker.bindTooltip(clusterTooltip(p),{direction:'top',offset:[0,-size/2],opacity:.95});
+        marker.addTo(state.layer);
+        state.markerByFeature.set(`c${p.cluster_id}`,marker);
+      } else if(showPoints) {
+        const cat=p.category||'port';
+        const label=labels?`<span style="position:absolute;left:17px;top:-3px;white-space:nowrap;background:#081321dd;color:white;padding:2px 5px;border-radius:4px;font-size:10px">${escapeHtml(p.name||'Point')}</span>`:'';
+        const icon=L.divIcon({
+          className:'point-icon',
+          html:`<div class="point-dot cat-${cat}">${label}</div>`,
+          iconSize:[14,14],iconAnchor:[7,7]
+        });
+        const marker=L.marker([lat,lng],{icon});
+        marker.on('click',()=>selectPoint(f,marker));
+        marker.addTo(state.layer);
+        state.markerByFeature.set(`p${f.id ?? p.name}`,marker);
+      }
+    }
+  }
+
+  function clusterTooltip(p) {
+    let s=`${(+p.point_count).toLocaleString()}개 포인트`;
+    if (p.totalValue != null) s+=`<br>value 합계 ${Math.round(p.totalValue).toLocaleString()}<br>최대 score ${(+p.maxScore).toFixed(1)}`;
+    return s;
+  }
+  function selectCluster(f,marker) {
+    const p=f.properties;
+    state.selectedClusterId=p.cluster_id;
+    $('selectedClusterId').value=p.cluster_id;
+    $('clusterIdInput').value=p.cluster_id;
+    $('selectedOutput').textContent=pretty(f);
+    activateTab('selected');
+    const expansion=state.index.getClusterExpansionZoom(p.cluster_id);
+    marker.bindPopup(`<div class="popup-title">클러스터 #${p.cluster_id}</div>
+      <div class="popup-grid"><b>포인트</b><span>${p.point_count.toLocaleString()}</span><b>확장 줌</b><span>${expansion}</span>
+      ${p.totalValue!=null?`<b>value 합계</b><span>${Math.round(p.totalValue).toLocaleString()}</span><b>활성 수</b><span>${p.activeCount}</span>`:''}</div>`).openPopup();
+    map.flyTo([f.geometry.coordinates[1],f.geometry.coordinates[0]],Math.min(expansion,19),{duration:.65});
+    log(`클러스터 ${p.cluster_id} 선택 → expansion zoom ${expansion}`);
+  }
+  function selectPoint(f,marker) {
+    $('selectedOutput').textContent=pretty(f);
+    activateTab('selected');
+    const p=f.properties;
+    marker.bindPopup(`<div class="popup-title">${escapeHtml(p.name||'포인트')}</div><div class="popup-grid">
+      <b>분류</b><span>${catKo[p.category]||p.category}</span><b>value</b><span>${p.value}</span>
+      <b>score</b><span>${p.score}</span><b>좌표</b><span>${f.geometry.coordinates.map(v=>v.toFixed(5)).join(', ')}</span></div>`).openPopup();
+  }
+
+  function updateStats(items,ms,bbox,z) {
+    const c=items.filter(x=>x.properties?.cluster).length;
+    $('mapZoom').textContent=map.getZoom().toFixed(1)+` / query ${z}`;
+    $('visibleTotal').textContent=items.length.toLocaleString();
+    $('visibleClusters').textContent=c.toLocaleString();
+    $('visiblePoints').textContent=(items.length-c).toLocaleString();
+    $('queryMs').textContent=ms.toFixed(3);
+    $('bboxText').textContent='BBOX '+bbox.map(v=>v.toFixed(3)).join(', ');
+    if ($('showBounds').checked) {
+      if(state.bboxLayer) state.bboxLayer.remove();
+      state.bboxLayer=L.rectangle([[bbox[1],bbox[0]],[bbox[3],bbox[2]]],{color:'#ffcc66',weight:2,fill:false,dashArray:'6 5'}).addTo(map);
+    } else if(state.bboxLayer) { state.bboxLayer.remove(); state.bboxLayer=null; }
+  }
+
+  function drawPerf() {
+    const canvas=$('perfCanvas'),ctx=canvas.getContext('2d');
+    const W=canvas.width,H=canvas.height,pad=30;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#07111f';ctx.fillRect(0,0,W,H);
+    const vals=state.perf.flatMap(x=>[x.load,x.query]);
+    const max=Math.max(1,...vals);
+    ctx.strokeStyle='#263a55';ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y=pad+(H-pad*2)*i/4;
+      ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-8,y);ctx.stroke();
+      ctx.fillStyle='#7f93ad';ctx.font='18px sans-serif';ctx.fillText((max*(1-i/4)).toFixed(max<10?2:0),2,y+5);
+    }
+    const n=Math.max(1,state.perf.length), step=(W-pad-12)/n;
+    state.perf.forEach((d,i)=>{
+      const x=pad+i*step+step*.18;
+      const bw=Math.max(3,step*.28);
+      if(d.load){
+        const h=(H-pad*2)*d.load/max;
+        ctx.fillStyle='#59d6c7';ctx.fillRect(x,H-pad-h,bw,h);
+      }
+      if(d.query){
+        const h=(H-pad*2)*d.query/max;
+        ctx.fillStyle='#6ea8ff';ctx.fillRect(x+bw,H-pad-h,bw,h);
+      }
+    });
+  }
+
+  function selectedId() {
+    const id=+$('clusterIdInput').value || +$('selectedClusterId').value;
+    if(!id) throw new Error('클러스터를 지도에서 선택하거나 cluster_id를 입력하세요.');
+    return id;
+  }
+
+  $('worldClustersBtn').onclick=()=>{
+    try {
+      const z=+$('apiZoom').value,t0=performance.now();
+      const r=state.index.getClusters([-180,-85,180,85],z);
+      showResult(`getClusters([-180,-85,180,85], ${z}) · ${(performance.now()-t0).toFixed(3)}ms · ${r.length}개`,r);
+    } catch(e){showResult('오류',{message:e.message});}
+  };
+  $('viewportClustersBtn').onclick=()=>{
+    const b=getBBox(),z=queryZoom(),r=state.index.getClusters(b,z);
+    showResult(`getClusters(${JSON.stringify(b.map(v=>+v.toFixed(5)))}, ${z}) · ${r.length}개`,r);
+  };
+  $('childrenBtn').onclick=()=>{
+    try { const id=selectedId(); showResult(`getChildren(${id})`,state.index.getChildren(id)); }
+    catch(e){showResult('getChildren 오류',{message:e.message});}
+  };
+  $('leavesBtn').onclick=()=>{
+    try {
+      const id=selectedId(),lim=+$('leafLimit').value,off=+$('leafOffset').value;
+      showResult(`getLeaves(${id}, ${lim}, ${off})`,state.index.getLeaves(id,lim,off));
+    } catch(e){showResult('getLeaves 오류',{message:e.message});}
+  };
+  $('expansionBtn').onclick=()=>{
+    try {
+      const id=selectedId(),z=state.index.getClusterExpansionZoom(id);
+      showResult(`getClusterExpansionZoom(${id})`,{cluster_id:id,expansionZoom:z});
+    } catch(e){showResult('getClusterExpansionZoom 오류',{message:e.message});}
+  };
+  $('tileBtn').onclick=()=>{
+    try {
+      const z=+$('tileZ').value,x=+$('tileX').value,y=+$('tileY').value;
+      showResult(`getTile(${z}, ${x}, ${y})`,state.index.getTile(z,x,y));
+    } catch(e){showResult('getTile 오류',{message:e.message});}
+  };
+  $('benchmarkBtn').onclick=()=>{
+    try {
+      const max=+$('maxZoom').value, rows=[];
+      for(let z=0;z<=max;z++){
+        const t0=performance.now(),r=state.index.getClusters([-180,-85,180,85],z),ms=performance.now()-t0;
+        const clusters=r.filter(x=>x.properties?.cluster).length;
+        rows.push({zoom:z,returned:r.length,clusters,points:r.length-clusters,ms:+ms.toFixed(4)});
+      }
+      showResult(`전체 줌 벤치마크 · 0~${max}`,rows);
+      log(`전체 줌 벤치마크 ${rows.length}단계 완료`);
+    } catch(e){showResult('벤치마크 오류',{message:e.message});}
+  };
+
+  $('generateBtn').onclick=generateData;
+  $('rebuildBtn').onclick=rebuildIndex;
+  $('applyOptionsBtn').onclick=rebuildIndex;
+  $('refreshBtn').onclick=refreshClusters;
+  $('filterBtn').onclick=()=>applyFilter(true);
+  $('resetViewBtn').onclick=()=>map.setView([36.2,127.8],7);
+  $('clearBtn').onclick=()=>{
+    state.raw=[];state.filtered=[];$('rawCount').textContent='0';$('filteredCount').textContent='0';rebuildIndex();log('전체 데이터 삭제','warn');
+  };
+  $('resetFilterBtn').onclick=()=>{
+    document.querySelectorAll('.catFilter').forEach(x=>x.checked=true);
+    $('minValue').value=0;$('valueLabel').textContent='0';$('searchText').value='';applyFilter(true);
+  };
+  $('addModeBtn').onclick=()=>{
+    state.addMode=!state.addMode;
+    $('addModeBtn').textContent=`지도 클릭 추가: ${state.addMode?'켜짐':'꺼짐'}`;
+    $('addModeBtn').classList.toggle('warn',state.addMode);
+    map.getContainer().style.cursor=state.addMode?'crosshair':'';
+  };
+  map.on('click',e=>{
+    if(!state.addMode)return;
+    const rng=mulberry32(state.seed+state.raw.length);
+    const f=makeFeature(e.latlng.lng,e.latlng.lat,state.raw.length,rng);
+    state.raw.push(f);$('rawCount').textContent=state.raw.length.toLocaleString();applyFilter(true);
+    log(`포인트 추가 ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
+  });
+
+  $('exportBtn').onclick=()=>{
+    const blob=new Blob([JSON.stringify({type:'FeatureCollection',features:state.raw},null,2)],{type:'application/geo+json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`supercluster-points-${Date.now()}.geojson`;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
+  $('importInput').onchange=async e=>{
+    try {
+      const obj=JSON.parse(await e.target.files[0].text());
+      const fs=(obj.type==='FeatureCollection'?obj.features:Array.isArray(obj)?obj:[]).filter(f=>f.geometry?.type==='Point');
+      if(!fs.length)throw new Error('Point Feature를 찾지 못했습니다.');
+      state.raw=fs.map((f,i)=>({...f,id:f.id??i+1,properties:{name:`Point-${i+1}`,category:'port',value:0,score:0,...f.properties}}));
+      $('rawCount').textContent=state.raw.length.toLocaleString();applyFilter(true);log(`GeoJSON ${state.raw.length}개 불러옴`);
+    } catch(err){log(err.message,'err');alert(err.message);}
+    e.target.value='';
+  };
+
+  $('radius').oninput=e=>{$('radiusNum').value=e.target.value;$('radiusLabel').textContent=e.target.value;maybeAuto();};
+  $('radiusNum').oninput=e=>{$('radius').value=e.target.value;$('radiusLabel').textContent=e.target.value;maybeAuto();};
+  $('minValue').oninput=e=>$('valueLabel').textContent=e.target.value;
+  function maybeAuto(){ if($('autoRebuild').checked) rebuildIndex(); }
+  ['minZoom','maxZoom','minPoints','extent','nodeSize','scLog','generateId','useAggregate'].forEach(id=>$(id).addEventListener('change',maybeAuto));
+  ['showPoints','showBounds','showLabels','zoomMode','manualZoom'].forEach(id=>$(id).addEventListener('change',refreshClusters));
+  map.on('moveend zoomend',()=>{if($('autoViewport').checked)refreshClusters();});
+
+  $('leftToggle').onclick=()=>{$('leftbar').classList.toggle('open');$('rightbar').classList.remove('open');};
+  $('rightToggle').onclick=()=>{$('rightbar').classList.toggle('open');$('leftbar').classList.remove('open');};
+  map.on('click',()=>{if(innerWidth<=760&&!state.addMode){$('leftbar').classList.remove('open');$('rightbar').classList.remove('open');}});
+
+  generateData();
+  showResult('Supercluster 준비 완료',{
+    availableMethods:['load(points)','getClusters(bbox, zoom)','getChildren(clusterId)','getLeaves(clusterId, limit, offset)','getClusterExpansionZoom(clusterId)','getTile(z,x,y)'],
+    options:options(),
+    note:'지도 이동·확대/축소, 옵션 변경, 필터, API 실험 패널을 사용하세요.'
+  });
+})();
+</script>
+</body>
+</html>
