@@ -36,6 +36,12 @@ const CATEGORY_ORDER = [
   { key: 'etc', label: '기타' },
 ];
 
+// 해양수산부 위판장 공공데이터 API (data.go.kr) - 개인 테스트용 일반 인증키
+// (브라우저 직접 호출은 CORS로 막히는 것을 실제 배포 환경에서 확인함 -> 서버 프록시 사용)
+const FISHERIES_SERVICE_KEY =
+  '4674758e1b04fbbb1328fce65624f80e978a04e3cdcbfb87200b813a7c386032';
+const FISHERIES_API_BASE = 'https://apis.data.go.kr/1192000';
+
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -128,6 +134,49 @@ app.get('/api/pages', requireAuthApi, (req, res) => {
   })).filter((group) => group.pages.length > 0);
 
   res.json(groups);
+});
+
+// 해양수산부 위판장 공공데이터 프록시 - 브라우저가 data.go.kr을 직접 호출하면 CORS로
+// 막힌다는 것을 실제 배포 환경(Failed to fetch)에서 확인해서, 서버가 대신 호출하고
+// 응답을 그대로 전달한다 (인증키는 서버에만 있음).
+async function proxyFisheriesApi(operation, allowedParams, res, query) {
+  const params = new URLSearchParams({
+    serviceKey: FISHERIES_SERVICE_KEY,
+    pageNo: query.pageNo || '1',
+    numOfRows: query.numOfRows || '10',
+    type: query.type === 'json' ? 'json' : 'xml',
+  });
+  for (const key of allowedParams) {
+    if (query[key]) params.set(key, query[key]);
+  }
+
+  try {
+    const upstream = await fetch(`${FISHERIES_API_BASE}/${operation}?${params.toString()}`);
+    const text = await upstream.text();
+    res.status(upstream.status);
+    res.set('Content-Type', upstream.headers.get('content-type') || 'text/plain; charset=utf-8');
+    res.send(text);
+  } catch (err) {
+    res.status(502).json({ error: '해양수산부 API 호출 실패', detail: err.message });
+  }
+}
+
+// 위판장 정보 (select0020List) - 산지조합/위판장 목록, 주소, 연락처
+app.get('/api/fisheries/market-info', requireAuthApi, (req, res) => {
+  proxyFisheriesApi('select0020List', ['csmtmktCode', 'csmtmktNm'], res, req.query);
+});
+
+// 위판장별 위탁 판매 현황 (select0040List) - baseDt(기준일자) 필수
+app.get('/api/fisheries/trade-status', requireAuthApi, (req, res) => {
+  if (!req.query.baseDt) {
+    return res.status(400).json({ error: 'baseDt(기준일자, YYYYMMDD)는 필수 파라미터입니다.' });
+  }
+  proxyFisheriesApi(
+    'select0040List',
+    ['baseDt', 'mxtrNm', 'csmtmktNm', 'mprcStdCode', 'mprcStdCodeNm'],
+    res,
+    req.query
+  );
 });
 
 // 개별 페이지 정적 파일 (iframe 로 로드됨) - 인증 필요

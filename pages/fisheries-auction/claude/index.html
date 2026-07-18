@@ -90,14 +90,14 @@
     <li><b>위판장 정보</b> (select0020List) — 산지조합명, 위판장명, 주소, 전화번호</li>
     <li><b>위판장별 위탁 판매 현황</b> (select0040List) — 위판일자별 수산물 품목·수량·중량·단가·금액</li>
     <li>위판장 목록에서 항목을 클릭하면 그 위판장명으로 바로 위판 현황을 연계 조회합니다</li>
-    <li>브라우저가 <b>data.go.kr을 직접 호출</b>합니다 (서버 프록시 없음)</li>
+    <li>브라우저에서 data.go.kr을 <b>직접 호출하면 CORS로 막히는 것을 실제 배포 환경에서 확인</b>해서, 이 앱의 서버(<code>/api/fisheries/*</code>)가 대신 호출합니다</li>
   </ul>
   <div class="disclaimer">
-    ⚠️ 개인 테스트 목적으로 발급받은 일반 인증키를 이 페이지 코드에 그대로 사용합니다(요청하신
-    대로 소스에 노출). data.go.kr 응답은 위·경도 좌표를 제공하지 않아 지도 대신 표로 표시합니다.
-    브라우저 환경에 따라 직접 호출이 막히면 각 섹션의 "응답 붙여넣기"를 펼쳐서 요청 URL을 새
-    탭에서 열어 나온 결과를 붙여넣으면 동일하게 표시됩니다. 아래 "원본 응답 보기"에서 실제로
-    어떤 응답이 왔는지 항상 확인할 수 있습니다.
+    ⚠️ 개인 테스트 목적으로 발급받은 일반 인증키를 서버 코드에 그대로 사용합니다(요청하신 대로
+    소스에 노출, 서버에서만 사용되어 브라우저로는 전달되지 않음). data.go.kr 응답은 위·경도
+    좌표를 제공하지 않아 지도 대신 표로 표시합니다. 혹시 서버 프록시 호출도 실패하면 각 섹션의
+    "응답 붙여넣기"를 펼쳐서 원본 URL을 새 탭에서 열어 나온 결과를 붙여넣으면 동일하게
+    표시됩니다. 아래 "원본 응답 보기"에서 실제로 어떤 응답이 왔는지 항상 확인할 수 있습니다.
   </div>
 </div>
 
@@ -318,9 +318,8 @@
   const s1Tbody = s1Table.querySelector('tbody');
   const s1UrlBox = document.getElementById('s1-url');
 
-  function buildMarketInfoUrl() {
+  function buildMarketInfoParams() {
     const params = new URLSearchParams({
-      serviceKey: SERVICE_KEY,
       pageNo: document.getElementById('s1-pageNo').value || '1',
       numOfRows: document.getElementById('s1-numOfRows').value || '10',
       type: 'xml',
@@ -329,6 +328,15 @@
     const csmtmktCode = document.getElementById('s1-csmtmktCode').value.trim();
     if (csmtmktNm) params.set('csmtmktNm', csmtmktNm);
     if (csmtmktCode) params.set('csmtmktCode', csmtmktCode);
+    return params;
+  }
+  // 실제 호출은 우리 서버 프록시로 (CORS 회피). 표시용/붙여넣기 안내용으로는 원본 URL도 보여준다.
+  function buildMarketInfoProxyUrl() {
+    return `/api/fisheries/market-info?${buildMarketInfoParams()}`;
+  }
+  function buildMarketInfoDirectUrl() {
+    const params = buildMarketInfoParams();
+    params.set('serviceKey', SERVICE_KEY);
     return `${API_BASE}/select0020List?${params}`;
   }
 
@@ -355,21 +363,20 @@
   }
 
   async function searchMarketInfo() {
-    const url = buildMarketInfoUrl();
-    s1UrlBox.textContent = url;
-    const items = await runQuery(url, s1Status, s1Raw);
+    s1UrlBox.textContent = buildMarketInfoDirectUrl();
+    const items = await runQuery(buildMarketInfoProxyUrl(), s1Status, s1Raw);
     if (!items) { s1Table.style.display = 'none'; return; }
     renderMarketRows(items);
   }
   document.getElementById('s1-search').addEventListener('click', searchMarketInfo);
-  document.getElementById('s1-open').addEventListener('click', () => window.open(buildMarketInfoUrl(), '_blank'));
+  document.getElementById('s1-open').addEventListener('click', () => window.open(buildMarketInfoDirectUrl(), '_blank'));
   document.getElementById('s1-apply-paste').addEventListener('click', () => {
     const text = document.getElementById('s1-paste').value;
     s1Raw.textContent = text || '(붙여넣은 내용 없음)';
     const items = applyParsed(parseFisheriesResponse(text), s1Status);
     if (items) renderMarketRows(items); else s1Table.style.display = 'none';
   });
-  s1UrlBox.textContent = buildMarketInfoUrl();
+  s1UrlBox.textContent = buildMarketInfoDirectUrl();
 
   // ---------- Section 2 ----------
   const s2Status = document.getElementById('s2-status');
@@ -378,11 +385,10 @@
   const s2Tbody = s2Table.querySelector('tbody');
   const s2UrlBox = document.getElementById('s2-url');
 
-  function buildTradeStatusUrl() {
+  function buildTradeStatusParams() {
     const baseDtRaw = document.getElementById('s2-baseDt').value; // YYYY-MM-DD
     const baseDt = baseDtRaw ? baseDtRaw.replace(/-/g, '') : '';
     const params = new URLSearchParams({
-      serviceKey: SERVICE_KEY,
       pageNo: document.getElementById('s2-pageNo').value || '1',
       numOfRows: document.getElementById('s2-numOfRows').value || '10',
       type: 'xml',
@@ -394,6 +400,15 @@
     if (mxtrNm) params.set('mxtrNm', mxtrNm);
     if (csmtmktNm) params.set('csmtmktNm', csmtmktNm);
     if (mprcStdCode) params.set('mprcStdCode', mprcStdCode);
+    return params;
+  }
+  // 실제 호출은 우리 서버 프록시로 (CORS 회피). 표시용/붙여넣기 안내용으로는 원본 URL도 보여준다.
+  function buildTradeStatusProxyUrl() {
+    return `/api/fisheries/trade-status?${buildTradeStatusParams()}`;
+  }
+  function buildTradeStatusDirectUrl() {
+    const params = buildTradeStatusParams();
+    params.set('serviceKey', SERVICE_KEY);
     return `${API_BASE}/select0040List?${params}`;
   }
 
@@ -424,21 +439,20 @@
       s2Status.innerHTML = '<div class="status-box error">기준일자를 선택해주세요.</div>';
       return;
     }
-    const url = buildTradeStatusUrl();
-    s2UrlBox.textContent = url;
-    const items = await runQuery(url, s2Status, s2Raw);
+    s2UrlBox.textContent = buildTradeStatusDirectUrl();
+    const items = await runQuery(buildTradeStatusProxyUrl(), s2Status, s2Raw);
     if (!items) { s2Table.style.display = 'none'; return; }
     renderTradeRows(items);
   }
   document.getElementById('s2-search').addEventListener('click', searchTradeStatus);
-  document.getElementById('s2-open').addEventListener('click', () => window.open(buildTradeStatusUrl(), '_blank'));
+  document.getElementById('s2-open').addEventListener('click', () => window.open(buildTradeStatusDirectUrl(), '_blank'));
   document.getElementById('s2-apply-paste').addEventListener('click', () => {
     const text = document.getElementById('s2-paste').value;
     s2Raw.textContent = text || '(붙여넣은 내용 없음)';
     const items = applyParsed(parseFisheriesResponse(text), s2Status);
     if (items) renderTradeRows(items); else s2Table.style.display = 'none';
   });
-  s2UrlBox.textContent = buildTradeStatusUrl();
+  s2UrlBox.textContent = buildTradeStatusDirectUrl();
 })();
 </script>
 </body>
