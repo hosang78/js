@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>chartjs-plugin-datalabels</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .chart-wrap {
+    width: 100%;
+    height: 320px;
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .chart-wrap.short { height: 180px; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>chartjs-plugin-datalabels 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>chartjs-plugin-datalabels</strong>는 <strong>Chart.js</strong> 위에 얹어 쓰는 공식
+    플러그인으로, 차트의 막대·조각·점마다 값을 텍스트 라벨로 자동으로 그려줍니다. 직접 캔버스에
+    텍스트를 그리는 코드를 작성할 필요가 없습니다.
+    <ul>
+      <li><code>Chart.register(ChartDataLabels)</code>로 전역 등록하면 모든 차트에 적용됨</li>
+      <li><code>formatter(value, context)</code>로 라벨 텍스트를 원하는 형식으로 가공 가능</li>
+      <li><code>display: 'auto'</code>로 설정하면 라벨끼리 겹칠 때 우선순위 낮은 라벨을 자동으로 숨김</li>
+      <li><code>listeners.click/enter/leave</code>로 라벨 자체에 마우스 상호작용 추가 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판·조합 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 차트 렌더링을 위해 <strong>Chart.js</strong>를 함께 사용했습니다 (CDN).
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 막대 차트 + 커스텀 포맷 라벨</h2>
+    <div class="desc"><code>formatter</code>로 값에 단위(kg)를 붙이고, <code>anchor: 'end'</code> + <code>align: 'top'</code>로 막대 위쪽에 라벨을 배치합니다.</div>
+    <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">new Chart(ctx, {
+  type: 'bar',
+  data: { labels: ['고등어','갈치','오징어'], datasets: [{ data: [1280, 640, 910] }] },
+  options: {
+    plugins: {
+      datalabels: {
+        anchor: 'end',
+        align: 'top',
+        formatter: (value) => value.toLocaleString('ko-KR') + 'kg',
+      },
+    },
+  },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 도넛 차트 + 퍼센티지 계산 &amp; 스타일 박스</h2>
+    <div class="desc"><code>formatter</code> 안에서 전체 합계 대비 비율을 직접 계산하고, <code>backgroundColor</code>/<code>borderRadius</code>로 라벨에 배경 박스를 입힙니다.</div>
+    <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">datalabels: {
+  formatter: (value, ctx) => {
+    const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+    return ((value / total) * 100).toFixed(1) + '%';
+  },
+  backgroundColor: '#fff',
+  borderRadius: 4,
+}</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 조밀한 데이터에서 겹침 자동 숨김 (display: 'auto')</h2>
+    <div class="desc">데이터 포인트 150개를 촘촘하게 넣은 같은 선 차트를 두 개 비교합니다. 위쪽은 <code>display: true</code>(전부 강제 표시)라 골짜기마다 숫자가 겹쳐 뭉개지고, 아래쪽은 <code>display: 'auto'</code>라 겹치는 라벨을 자동으로 솎아내 더 읽기 편합니다. (검증 중 실제로 확인: 완전히 라벨 개수를 줄이기보다, 겹친 자리의 뭉개짐을 줄여주는 방식으로 동작합니다.)</div>
+    <div class="chart-wrap short"><canvas id="chart3all"></canvas></div>
+    <div class="chart-wrap short"><canvas id="chart3auto"></canvas></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// 위: 강제로 전부 표시 → 겹치면 뭉개짐
+datalabels: { display: true, formatter: (v) => v }
+
+// 아래: 겹치는 라벨을 자동으로 숨김
+datalabels: { display: 'auto', formatter: (v) => v }</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 라벨 클릭 상호작용</h2>
+    <div class="desc">막대 위 라벨을 직접 클릭해보세요. <code>listeners.click</code>으로 클릭된 막대만 강조 색으로 바뀝니다.</div>
+    <div class="chart-wrap"><canvas id="chart4"></canvas></div>
+    <div class="result-box" id="output4">아직 클릭 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">datalabels: {
+  listeners: {
+    click: (context) => {
+      selectedIndex = context.dataIndex;
+      context.chart.update(); // 강조 색 반영을 위해 재렌더
+      return true; // 라벨 갱신 트리거
+    },
+  },
+}</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script>
+    Chart.register(ChartDataLabels);
+
+    // ---------- 1. 막대 차트 + 커스텀 포맷 ----------
+    new Chart(document.getElementById('chart1').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['고등어', '갈치', '오징어'],
+        datasets: [{ label: '위판량(kg)', data: [1280, 640, 910], backgroundColor: '#4f7dff' }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            formatter: (value) => value.toLocaleString('ko-KR') + 'kg',
+            color: '#222',
+            font: { weight: 'bold' },
+          },
+        },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+
+    // ---------- 2. 도넛 차트 + 퍼센티지 ----------
+    new Chart(document.getElementById('chart2').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['자율공판', '위탁판매', '직접거래'],
+        datasets: [{ data: [45, 30, 25], backgroundColor: ['#4f7dff', '#22c07a', '#e08a2e'] }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          datalabels: {
+            formatter: (value, ctx) => {
+              const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+              return ((value / total) * 100).toFixed(1) + '%';
+            },
+            backgroundColor: '#fff',
+            borderRadius: 4,
+            color: '#222',
+            font: { weight: 'bold' },
+          },
+        },
+      },
+    });
+
+    // ---------- 3. display:'auto' 비교 ----------
+    const denseLabels = Array.from({ length: 150 }, (_, i) => 'D' + i);
+    const denseData = Array.from({ length: 150 }, (_, i) => 50 + Math.round(30 * Math.sin(i / 3)));
+    const denseCommonOptions = (displayMode) => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      elements: { point: { radius: 2 } },
+      scales: { x: { ticks: { display: false } }, y: { ticks: { display: false } } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: displayMode, formatter: (v) => v, font: { size: 11 } },
+      },
+    });
+    new Chart(document.getElementById('chart3all').getContext('2d'), {
+      type: 'line',
+      data: { labels: denseLabels, datasets: [{ data: denseData, borderColor: '#4f7dff', borderWidth: 1.5 }] },
+      options: denseCommonOptions(true),
+    });
+    new Chart(document.getElementById('chart3auto').getContext('2d'), {
+      type: 'line',
+      data: { labels: denseLabels, datasets: [{ data: denseData, borderColor: '#4f7dff', borderWidth: 1.5 }] },
+      options: denseCommonOptions('auto'),
+    });
+
+    // ---------- 4. 라벨 클릭 상호작용 ----------
+    let selectedIndex = null;
+    const chart4Labels = ['1월', '2월', '3월', '4월'];
+    const chart4Data = [820, 1140, 690, 980];
+    const chart4 = new Chart(document.getElementById('chart4').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: chart4Labels,
+        datasets: [{
+          data: chart4Data,
+          backgroundColor: (ctx) => (ctx.dataIndex === selectedIndex ? '#e0524a' : '#4f7dff'),
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: 'end',
+            align: 'top',
+            formatter: (v) => v.toLocaleString('ko-KR'),
+            color: (ctx) => (ctx.dataIndex === selectedIndex ? '#e0524a' : '#222'),
+            font: { weight: 'bold' },
+            listeners: {
+              click: (context) => {
+                selectedIndex = context.dataIndex;
+                const output4 = document.getElementById('output4');
+                output4.textContent = `${chart4Labels[selectedIndex]} 라벨 클릭됨 — 위판량 ${chart4Data[selectedIndex].toLocaleString('ko-KR')}kg`;
+                output4.classList.add('ok');
+                context.chart.update();
+                return true;
+              },
+            },
+          },
+        },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+  </script>
+</body>
+</html>
