@@ -64,6 +64,17 @@
     overflow-x: auto; font-size: 11.5px; margin-top: 8px; white-space: pre-wrap; max-height: 300px; overflow-y: auto;
   }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #eef0f3; color: #555; }
+  details.fallback { margin-top: 10px; font-size: 12.5px; }
+  details.fallback summary { cursor: pointer; color: #777; }
+  details.fallback .fallback-body { margin-top: 8px; }
+  textarea.paste-box {
+    width: 100%; box-sizing: border-box; min-height: 90px; font-family: monospace; font-size: 11.5px;
+    padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc; resize: vertical;
+  }
+  .url-box {
+    font-family: monospace; font-size: 11px; word-break: break-all; background: #1a1d24; color: #9db3d8;
+    border-radius: 8px; padding: 8px 10px; margin-top: 6px;
+  }
 </style>
 </head>
 <body>
@@ -79,13 +90,14 @@
     <li><b>위판장 정보</b> (select0020List) — 산지조합명, 위판장명, 주소, 전화번호</li>
     <li><b>위판장별 위탁 판매 현황</b> (select0040List) — 위판일자별 수산물 품목·수량·중량·단가·금액</li>
     <li>위판장 목록에서 항목을 클릭하면 그 위판장명으로 바로 위판 현황을 연계 조회합니다</li>
+    <li>브라우저가 <b>data.go.kr을 직접 호출</b>합니다 (서버 프록시 없음)</li>
   </ul>
   <div class="disclaimer">
-    ⚠️ 개인 테스트 목적으로 발급받은 일반 인증키를 서버(<code>server.js</code>)에 두고, 브라우저는
-    이 앱의 서버(<code>/api/fisheries/*</code>)로만 요청합니다 (CORS 회피 + 인증키 비노출).
-    data.go.kr 응답은 위·경도 좌표를 제공하지 않아 지도 대신 표로 표시합니다.
-    <b>data.go.kr 서비스 자체가 현재 계정 설정 문제로 "Unexpected errors"를 반환하는 상태일 수
-    있습니다</b> — 아래 "원본 응답 보기"에서 실제로 어떤 응답이 오는지 항상 확인할 수 있습니다.
+    ⚠️ 개인 테스트 목적으로 발급받은 일반 인증키를 이 페이지 코드에 그대로 사용합니다(요청하신
+    대로 소스에 노출). data.go.kr 응답은 위·경도 좌표를 제공하지 않아 지도 대신 표로 표시합니다.
+    브라우저 환경에 따라 직접 호출이 막히면 각 섹션의 "응답 붙여넣기"를 펼쳐서 요청 URL을 새
+    탭에서 열어 나온 결과를 붙여넣으면 동일하게 표시됩니다. 아래 "원본 응답 보기"에서 실제로
+    어떤 응답이 왔는지 항상 확인할 수 있습니다.
   </div>
 </div>
 
@@ -108,6 +120,17 @@
     </table>
   </div>
   <div class="hint">💡 행을 클릭하면 아래 2번 섹션에서 해당 위판장의 위판 현황을 바로 조회합니다.</div>
+  <details class="fallback">
+    <summary>직접 호출이 안 되면: 응답 붙여넣기</summary>
+    <div class="fallback-body">
+      <div class="url-box" id="s1-url"></div>
+      <div class="controls">
+        <button class="ghost" id="s1-open">새 탭에서 열기</button>
+      </div>
+      <textarea class="paste-box" id="s1-paste" placeholder="위 URL을 새 탭에서 열어 나온 XML/JSON을 여기에 붙여넣으세요."></textarea>
+      <div class="controls"><button class="action" id="s1-apply-paste">붙여넣은 응답 적용</button></div>
+    </div>
+  </details>
   <details class="raw">
     <summary>원본 응답 보기 (디버그)</summary>
     <pre class="raw-box" id="s1-raw">아직 조회하지 않았습니다.</pre>
@@ -140,6 +163,17 @@
       <tbody></tbody>
     </table>
   </div>
+  <details class="fallback">
+    <summary>직접 호출이 안 되면: 응답 붙여넣기</summary>
+    <div class="fallback-body">
+      <div class="url-box" id="s2-url"></div>
+      <div class="controls">
+        <button class="ghost" id="s2-open">새 탭에서 열기</button>
+      </div>
+      <textarea class="paste-box" id="s2-paste" placeholder="위 URL을 새 탭에서 열어 나온 XML/JSON을 여기에 붙여넣으세요."></textarea>
+      <div class="controls"><button class="action" id="s2-apply-paste">붙여넣은 응답 적용</button></div>
+    </div>
+  </details>
   <details class="raw">
     <summary>원본 응답 보기 (디버그)</summary>
     <pre class="raw-box" id="s2-raw">아직 조회하지 않았습니다.</pre>
@@ -148,6 +182,10 @@
 
 <script>
 (function () {
+  // 개인 테스트용 일반 인증키 (data.go.kr) - 요청에 따라 클라이언트 코드에 그대로 둠
+  const SERVICE_KEY = '4674758e1b04fbbb1328fce65624f80e978a04e3cdcbfb87200b813a7c386032';
+  const API_BASE = 'https://apis.data.go.kr/1192000';
+
   const todayStr = new Date().toISOString().slice(0, 10);
   document.getElementById('s2-baseDt').value = todayStr;
 
@@ -161,67 +199,116 @@
   // select0020List / select0040List 공통 응답 형식:
   // <responseXml><header>...</header><body><item>...</item><item>...</item></body></responseXml>
   // (표준 data.go.kr 포맷과 달리 <items> 래퍼가 없고 루트가 <responseXml>)
-  function parseFisheriesXml(xmlText) {
-    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-    const parserError = doc.querySelector('parsererror');
-    if (parserError) {
-      return { ok: false, message: 'XML로 파싱할 수 없는 응답입니다 (아래 원본 응답 참고)', items: [] };
+  // 혹시 type=json 이거나 다른 트리 모양으로 올 경우까지 대비해 JSON도 방어적으로 처리한다.
+  function findItemsInObject(obj) {
+    const direct = [
+      obj?.responseXml?.body?.item, obj?.responseXml?.body?.items?.item,
+      obj?.response?.body?.item, obj?.response?.body?.items?.item,
+      obj?.body?.item, obj?.body?.items?.item,
+    ];
+    for (const candidate of direct) {
+      if (Array.isArray(candidate)) return candidate;
+      if (candidate && typeof candidate === 'object') return [candidate];
     }
-    const header = doc.querySelector('header');
-    const resultCode = header ? header.querySelector('resultCode')?.textContent : null;
-    const resultMsg = header ? header.querySelector('resultMsg')?.textContent : null;
-    const totalCount = header ? header.querySelector('totalCount')?.textContent : null;
-
-    if (resultCode && resultCode !== '00') {
-      const known = KNOWN_ERROR_CODES[resultCode];
-      return {
-        ok: false,
-        message: `API 에러 (코드 ${resultCode}): ${resultMsg || known || '알 수 없는 오류'}`,
-        items: [],
-      };
+    // 재귀적으로 'item' 키를 찾아본다 (구조가 다를 경우 대비)
+    const seen = new Set();
+    function walk(v) {
+      if (!v || typeof v !== 'object' || seen.has(v)) return null;
+      seen.add(v);
+      if (Array.isArray(v)) {
+        for (const x of v) { const r = walk(x); if (r) return r; }
+        return null;
+      }
+      for (const [k, x] of Object.entries(v)) {
+        if (k.toLowerCase() === 'item') {
+          if (Array.isArray(x)) return x;
+          if (x && typeof x === 'object') return [x];
+        }
+      }
+      for (const x of Object.values(v)) { const r = walk(x); if (r) return r; }
+      return null;
     }
-
-    const itemEls = Array.from(doc.querySelectorAll('body > item'));
-    const items = itemEls.map((itemEl) => {
-      const obj = {};
-      Array.from(itemEl.children).forEach((child) => {
-        obj[child.tagName] = child.textContent;
-      });
-      return obj;
-    });
-
-    if (!header && items.length === 0) {
-      return { ok: false, message: '알 수 없는 응답 형식입니다 (아래 원본 응답 참고)', items: [] };
-    }
-
-    return { ok: true, resultMsg, totalCount, items };
+    return walk(obj) || [];
   }
 
-  async function callProxy(path, statusEl, rawEl) {
+  function findHeaderInObject(obj) {
+    return obj?.responseXml?.header || obj?.response?.header || obj?.header || null;
+  }
+
+  function parseFisheriesResponse(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return { ok: false, message: '응답 내용이 없습니다.', items: [] };
+
+    if (trimmed.startsWith('<')) {
+      const doc = new DOMParser().parseFromString(trimmed, 'application/xml');
+      if (doc.querySelector('parsererror')) {
+        return { ok: false, message: 'XML로 파싱할 수 없는 응답입니다 (아래 원본 응답 참고)', items: [] };
+      }
+      const header = doc.querySelector('header');
+      const resultCode = header ? header.querySelector('resultCode')?.textContent : null;
+      const resultMsg = header ? header.querySelector('resultMsg')?.textContent : null;
+      const totalCount = header ? header.querySelector('totalCount')?.textContent : null;
+
+      if (resultCode && resultCode !== '00') {
+        const known = KNOWN_ERROR_CODES[resultCode];
+        return { ok: false, message: `API 에러 (코드 ${resultCode}): ${resultMsg || known || '알 수 없는 오류'}`, items: [] };
+      }
+
+      const itemEls = Array.from(doc.querySelectorAll('body > item'));
+      const items = itemEls.map((itemEl) => {
+        const obj = {};
+        Array.from(itemEl.children).forEach((child) => { obj[child.tagName] = child.textContent; });
+        return obj;
+      });
+
+      if (!header && items.length === 0) {
+        return { ok: false, message: '알 수 없는 응답 형식입니다 (아래 원본 응답 참고)', items: [] };
+      }
+      return { ok: true, resultMsg, totalCount, items };
+    }
+
+    // JSON 시도
+    let obj;
+    try { obj = JSON.parse(trimmed); } catch (e) {
+      return { ok: false, message: 'JSON도 XML도 아닌 응답입니다 (아래 원본 응답 참고)', items: [] };
+    }
+    const header = findHeaderInObject(obj);
+    const resultCode = header?.resultCode;
+    const resultMsg = header?.resultMsg;
+    if (resultCode && resultCode !== '00') {
+      const known = KNOWN_ERROR_CODES[resultCode];
+      return { ok: false, message: `API 에러 (코드 ${resultCode}): ${resultMsg || known || '알 수 없는 오류'}`, items: [] };
+    }
+    const items = findItemsInObject(obj);
+    return { ok: true, resultMsg, totalCount: header?.totalCount, items };
+  }
+
+  async function runQuery(url, statusEl, rawEl) {
     statusEl.innerHTML = '<div class="status-box">조회 중...</div>';
     rawEl.textContent = '요청 중...';
     try {
-      const res = await fetch(path);
+      const res = await fetch(url);
       const text = await res.text();
       rawEl.textContent = `HTTP ${res.status}\n\n${text}`;
       if (!res.ok) {
-        let msg = text;
-        try { msg = JSON.parse(text).error || text; } catch (e) { /* not json */ }
-        statusEl.innerHTML = `<div class="status-box error">요청 실패 (HTTP ${res.status}): ${msg}</div>`;
+        statusEl.innerHTML = `<div class="status-box error">요청 실패 (HTTP ${res.status}) — 아래 "응답 붙여넣기"를 시도해보세요.</div>`;
         return null;
       }
-      const parsed = parseFisheriesXml(text);
-      if (!parsed.ok) {
-        statusEl.innerHTML = `<div class="status-box error">${parsed.message}</div>`;
-        return null;
-      }
-      statusEl.innerHTML = `<div class="status-box ok">정상 응답 — 총 ${parsed.totalCount ?? parsed.items.length}건 중 ${parsed.items.length}건 표시</div>`;
-      return parsed.items;
+      return applyParsed(parseFisheriesResponse(text), statusEl);
     } catch (err) {
-      statusEl.innerHTML = `<div class="status-box error">네트워크 오류: ${err.message}</div>`;
+      statusEl.innerHTML = `<div class="status-box error">직접 호출 실패: ${err.message}<br/>브라우저/네트워크 환경 때문일 수 있습니다 — 아래 "응답 붙여넣기"를 펼쳐서 URL을 새 탭에서 열어보세요.</div>`;
       rawEl.textContent = '(요청 자체가 실패했습니다: ' + err.message + ')';
       return null;
     }
+  }
+
+  function applyParsed(parsed, statusEl) {
+    if (!parsed.ok) {
+      statusEl.innerHTML = `<div class="status-box error">${parsed.message}</div>`;
+      return null;
+    }
+    statusEl.innerHTML = `<div class="status-box ok">정상 응답 — 총 ${parsed.totalCount ?? parsed.items.length}건 중 ${parsed.items.length}건 표시</div>`;
+    return parsed.items;
   }
 
   // ---------- Section 1 ----------
@@ -229,9 +316,11 @@
   const s1Raw = document.getElementById('s1-raw');
   const s1Table = document.getElementById('s1-table');
   const s1Tbody = s1Table.querySelector('tbody');
+  const s1UrlBox = document.getElementById('s1-url');
 
-  async function searchMarketInfo() {
+  function buildMarketInfoUrl() {
     const params = new URLSearchParams({
+      serviceKey: SERVICE_KEY,
       pageNo: document.getElementById('s1-pageNo').value || '1',
       numOfRows: document.getElementById('s1-numOfRows').value || '10',
       type: 'xml',
@@ -240,10 +329,10 @@
     const csmtmktCode = document.getElementById('s1-csmtmktCode').value.trim();
     if (csmtmktNm) params.set('csmtmktNm', csmtmktNm);
     if (csmtmktCode) params.set('csmtmktCode', csmtmktCode);
+    return `${API_BASE}/select0020List?${params}`;
+  }
 
-    const items = await callProxy(`/api/fisheries/market-info?${params}`, s1Status, s1Raw);
-    if (!items) { s1Table.style.display = 'none'; return; }
-
+  function renderMarketRows(items) {
     s1Tbody.innerHTML = '';
     items.forEach((item) => {
       const tr = document.createElement('tr');
@@ -264,22 +353,36 @@
     });
     s1Table.style.display = items.length ? 'table' : 'none';
   }
+
+  async function searchMarketInfo() {
+    const url = buildMarketInfoUrl();
+    s1UrlBox.textContent = url;
+    const items = await runQuery(url, s1Status, s1Raw);
+    if (!items) { s1Table.style.display = 'none'; return; }
+    renderMarketRows(items);
+  }
   document.getElementById('s1-search').addEventListener('click', searchMarketInfo);
+  document.getElementById('s1-open').addEventListener('click', () => window.open(buildMarketInfoUrl(), '_blank'));
+  document.getElementById('s1-apply-paste').addEventListener('click', () => {
+    const text = document.getElementById('s1-paste').value;
+    s1Raw.textContent = text || '(붙여넣은 내용 없음)';
+    const items = applyParsed(parseFisheriesResponse(text), s1Status);
+    if (items) renderMarketRows(items); else s1Table.style.display = 'none';
+  });
+  s1UrlBox.textContent = buildMarketInfoUrl();
 
   // ---------- Section 2 ----------
   const s2Status = document.getElementById('s2-status');
   const s2Raw = document.getElementById('s2-raw');
   const s2Table = document.getElementById('s2-table');
   const s2Tbody = s2Table.querySelector('tbody');
+  const s2UrlBox = document.getElementById('s2-url');
 
-  async function searchTradeStatus() {
+  function buildTradeStatusUrl() {
     const baseDtRaw = document.getElementById('s2-baseDt').value; // YYYY-MM-DD
-    if (!baseDtRaw) {
-      s2Status.innerHTML = '<div class="status-box error">기준일자를 선택해주세요.</div>';
-      return;
-    }
-    const baseDt = baseDtRaw.replace(/-/g, ''); // YYYYMMDD
+    const baseDt = baseDtRaw ? baseDtRaw.replace(/-/g, '') : '';
     const params = new URLSearchParams({
+      serviceKey: SERVICE_KEY,
       pageNo: document.getElementById('s2-pageNo').value || '1',
       numOfRows: document.getElementById('s2-numOfRows').value || '10',
       type: 'xml',
@@ -291,10 +394,10 @@
     if (mxtrNm) params.set('mxtrNm', mxtrNm);
     if (csmtmktNm) params.set('csmtmktNm', csmtmktNm);
     if (mprcStdCode) params.set('mprcStdCode', mprcStdCode);
+    return `${API_BASE}/select0040List?${params}`;
+  }
 
-    const items = await callProxy(`/api/fisheries/trade-status?${params}`, s2Status, s2Raw);
-    if (!items) { s2Table.style.display = 'none'; return; }
-
+  function renderTradeRows(items) {
     s2Tbody.innerHTML = '';
     items.forEach((item) => {
       const tr = document.createElement('tr');
@@ -315,7 +418,27 @@
     });
     s2Table.style.display = items.length ? 'table' : 'none';
   }
+
+  async function searchTradeStatus() {
+    if (!document.getElementById('s2-baseDt').value) {
+      s2Status.innerHTML = '<div class="status-box error">기준일자를 선택해주세요.</div>';
+      return;
+    }
+    const url = buildTradeStatusUrl();
+    s2UrlBox.textContent = url;
+    const items = await runQuery(url, s2Status, s2Raw);
+    if (!items) { s2Table.style.display = 'none'; return; }
+    renderTradeRows(items);
+  }
   document.getElementById('s2-search').addEventListener('click', searchTradeStatus);
+  document.getElementById('s2-open').addEventListener('click', () => window.open(buildTradeStatusUrl(), '_blank'));
+  document.getElementById('s2-apply-paste').addEventListener('click', () => {
+    const text = document.getElementById('s2-paste').value;
+    s2Raw.textContent = text || '(붙여넣은 내용 없음)';
+    const items = applyParsed(parseFisheriesResponse(text), s2Status);
+    if (items) renderTradeRows(items); else s2Table.style.display = 'none';
+  });
+  s2UrlBox.textContent = buildTradeStatusUrl();
 })();
 </script>
 </body>
