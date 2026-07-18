@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>TensorFlow.js</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  #init-banner {
+    font-size: 13px; padding: 10px 16px; border-radius: 10px; margin-bottom: 20px;
+    border: 1px solid #dbe4ff; background: #f0f4ff; color: #33418a;
+  }
+  #init-banner.ready { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .stat-box { flex: 1; min-width: 140px; border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px 14px; background: #fafbfc; }
+  .stat-box .label { font-size: 11.5px; color: #888; margin-bottom: 4px; }
+  .stat-box .value { font-size: 15px; font-weight: 600; color: #333; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 10px; }
+  table.data-table th, table.data-table td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: right; }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table th { background: #f5f6f8; }
+  .log-box {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444;
+    margin-top: 8px; max-height: 160px; overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  canvas.loss-chart { border: 1px solid #eee; border-radius: 8px; background: #fafbfc; margin-top: 8px; }
+  .result-box {
+    background: #f0f4ff; border: 1px solid #dbe4ff; border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; color: #333; margin-top: 8px;
+    white-space: pre-wrap; word-break: break-all; font-family: monospace;
+  }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #eef0f3; color: #555; }
+  .badge.on { background: #eafff3; color: #0a7a4c; }
+  .badge.off { background: #ffeceb; color: #c0392b; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>TensorFlow.js</h1>
+  <p>
+    TensorFlow.js는 브라우저(또는 Node.js) 안에서 텐서 연산과 신경망 학습을 직접 실행하는 머신러닝
+    라이브러리입니다. 서버로 데이터를 보내지 않고, 사용자 기기의 CPU/GPU(WebGL)를 이용해 모델을
+    학습시키거나 추론할 수 있습니다.
+  </p>
+  <ul>
+    <li>NumPy와 비슷한 텐서 연산 API (사칙연산, 행렬곱, reshape, 브로드캐스팅)</li>
+    <li><code>tf.tidy()</code>로 중간 텐서를 자동 해제해 메모리 누수를 방지</li>
+    <li><code>tf.sequential()</code> + <code>model.fit()</code>으로 신경망을 브라우저에서 직접 학습</li>
+    <li>CPU/WebGL 등 여러 백엔드를 상황에 맞게 전환 가능</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 수온·어획량·품질 등급 데이터는 TensorFlow.js 기능 설명을 위한 <b>가상의 예시</b>이며,
+    실제 수협중앙회의 통계·조직·절차와 무관합니다. 다른 외부 API는 사용하지 않았습니다
+    (TensorFlow.js 4.22.0 UMD 빌드만 CDN에서 로드).
+  </div>
+</div>
+
+<div id="init-banner">⏳ TensorFlow.js 초기화 중...</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 텐서 기본 연산</h2>
+  <p class="desc">
+    <code>tf.tensor2d()</code>로 텐서를 만들고 사칙연산·행렬곱·reshape을 실행합니다. 2×2 위판량
+    텐서 두 개로 덧셈과 행렬곱을 비교해봅니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s1-run" disabled>▶ 텐서 연산 실행</button>
+  </div>
+  <div id="s1-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const a = tf.tensor2d([[1, 2], [3, 4]]);
+const b = tf.tensor2d([[5, 6], [7, 8]]);
+const sum = a.add(b);       // 원소별 덧셈
+const matmul = a.matMul(b); // 행렬곱
+const reshaped = a.reshape([4, 1]);
+console.log(await sum.data(), await matmul.data(), reshaped.shape);
+a.dispose(); b.dispose(); sum.dispose(); matmul.dispose(); reshaped.dispose();</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. <code>tf.tidy()</code> + 메모리 관리</h2>
+  <p class="desc">
+    텐서는 GPU/WASM 메모리를 직접 차지하기 때문에 <code>dispose()</code>로 명시적으로 해제해야 합니다.
+    <code>tf.tidy()</code>로 감싸면 콜백 안에서 만든 중간 텐서를 자동으로 정리해줍니다.
+    <code>tf.memory()</code>로 현재 살아있는 텐서 개수를 확인할 수 있습니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s2-leak" disabled>❌ tidy 없이 실행 (누수 발생)</button>
+    <button class="action" id="s2-tidy" disabled>✅ tidy로 실행 (자동 정리)</button>
+    <button class="ghost" id="s2-cleanup" disabled>🧹 누수된 텐서 정리</button>
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="label">현재 살아있는 텐서 수 (tf.memory().numTensors)</div><div class="value" id="s2-count">0</div></div>
+  </div>
+  <div class="log-box" id="s2-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">// 누수: 중간 텐서를 직접 관리해야 함
+const x = tf.tensor1d([1, 2, 3]);
+const y = x.square(); // dispose 안 하면 계속 남아있음
+
+// tf.tidy: 콜백이 끝나면 중간 텐서를 자동으로 dispose (반환값만 유지)
+const result = tf.tidy(() => {
+  const x = tf.tensor1d([1, 2, 3]);
+  const y = x.square();
+  return y.sum(); // 이 텐서만 살아남고 x, y는 자동 해제됨
+});</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. 선형 회귀 모델 학습 — 수온 → 위판 지수 예측</h2>
+  <p class="desc">
+    <code>tf.sequential()</code>로 레이어 1개짜리 간단한 모델을 만들고, <code>model.fit()</code>으로
+    실제 학습을 돌려봅니다. 에포크가 진행되며 손실(loss)이 줄어드는 걸 그래프로 확인할 수 있습니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s3-train" disabled>▶ 학습 시작 (100 epoch)</button>
+  </div>
+  <canvas class="loss-chart" id="s3-chart" width="600" height="160"></canvas>
+  <div class="stat-row">
+    <div class="stat-box"><div class="label">학습 후 예측: 수온 10℃일 때</div><div class="value" id="s3-pred">-</div></div>
+    <div class="stat-box"><div class="label">실제 정답 함수 (y = 2x + 1)</div><div class="value" id="s3-truth">21</div></div>
+  </div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const xs = tf.tensor1d([0, 1, 2, 3, 4, 5]);
+const ys = tf.tensor1d([1, 3, 5, 7, 9, 11]); // y = 2x + 1
+
+const model = tf.sequential();
+model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+model.compile({ optimizer: tf.train.sgd(0.01), loss: 'meanSquaredError' });
+
+await model.fit(xs, ys, {
+  epochs: 100,
+  callbacks: { onEpochEnd: (epoch, logs) => console.log(epoch, logs.loss) }
+});
+
+const prediction = model.predict(tf.tensor1d([10]));</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. 분류 신경망 — 품질 등급 분류</h2>
+  <p class="desc">
+    은닉층이 있는 신경망(<code>relu</code> → <code>softmax</code>)을 만들어 크기·무게 두 특성으로
+    "우수/보통" 두 등급을 분류하도록 학습시킵니다. 학습 후 새 데이터를 넣어 <code>predict()</code>로
+    확률을 확인합니다.
+  </p>
+  <div class="controls">
+    <button class="action" id="s4-train" disabled>▶ 분류 모델 학습 (50 epoch)</button>
+  </div>
+  <div id="s4-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const trainX = tf.tensor2d([[1,1],[1.5,1.2],[2,1.8], [8,8],[8.5,8.2],[9,9]]);
+const trainY = tf.tensor2d([[1,0],[1,0],[1,0], [0,1],[0,1],[0,1]]); // [우수, 보통] one-hot
+
+const model = tf.sequential();
+model.add(tf.layers.dense({ units: 8, activation: 'relu', inputShape: [2] }));
+model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
+model.compile({ optimizer: tf.train.adam(0.1), loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
+
+await model.fit(trainX, trainY, { epochs: 50 });
+const probs = model.predict(tf.tensor2d([[1.2, 1.1], [8.8, 8.9]]));</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. 백엔드 정보 + 행렬 크기별 연산 시간</h2>
+  <p class="desc">
+    TensorFlow.js는 CPU / WebGL(GPU) 등 여러 백엔드 중 실행 환경에 맞는 것을 선택합니다. 행렬 크기를
+    키워가며 연산 시간이 어떻게 늘어나는지 측정해봅니다.
+  </p>
+  <div class="disclaimer" style="margin-bottom:12px;">
+    💡 <b>확인된 동작:</b> <code>tf.setBackend()</code>는 전환에 실패해도 예외를 던지지 않고 조용히
+    <code>false</code>를 반환합니다(GPU가 없는 헤드리스 환경 등). <code>try/catch</code>만 믿으면
+    실패를 놓치기 쉬우니, 반환값과 <code>tf.getBackend()</code>를 함께 확인하는 게 안전합니다.
+  </div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="label">현재 백엔드</div><div class="value" id="s5-backend">-</div></div>
+    <div class="stat-box"><div class="label">WebGL 사용 가능</div><div class="value" id="s5-webgl">-</div></div>
+  </div>
+  <div class="controls">
+    <button class="action" id="s5-run" disabled>▶ 행렬 크기별 연산 시간 측정</button>
+  </div>
+  <div id="s5-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">console.log(tf.getBackend()); // 'cpu' 또는 'webgl'
+
+for (const size of [50, 200, 500]) {
+  const a = tf.randomNormal([size, size]);
+  const b = tf.randomNormal([size, size]);
+  const t0 = performance.now();
+  const r = a.matMul(b);
+  await r.data(); // 실제 연산 완료까지 대기
+  const elapsedMs = performance.now() - t0;
+  a.dispose(); b.dispose(); r.dispose();
+}
+
+// setBackend()는 실패해도 던지지 않고 boolean을 반환한다 — 반환값을 꼭 확인할 것
+const success = await tf.setBackend('webgl');
+await tf.ready();
+console.log(success, tf.getBackend()); // false여도 예외 없음</pre>
+  </details>
+</section>
+
+<script>
+(async function () {
+  const banner = document.getElementById('init-banner');
+
+  function enableButtons() {
+    document.querySelectorAll('button.action, button.ghost').forEach((btn) => { btn.disabled = false; });
+  }
+
+  await tf.ready();
+  banner.textContent = `✅ TensorFlow.js ${tf.version.tfjs} 준비 완료 (백엔드: ${tf.getBackend()})`;
+  banner.className = 'ready';
+  enableButtons();
+
+  // ---------- Section 1 ----------
+  document.getElementById('s1-run').addEventListener('click', async () => {
+    const resultEl = document.getElementById('s1-result');
+    const a = tf.tensor2d([[1, 2], [3, 4]]);
+    const b = tf.tensor2d([[5, 6], [7, 8]]);
+    const sum = a.add(b);
+    const matmul = a.matMul(b);
+    const reshaped = a.reshape([4, 1]);
+    const sumData = Array.from(await sum.data());
+    const matmulData = Array.from(await matmul.data());
+    resultEl.innerHTML =
+      `<div class="result-box">a = [[1,2],[3,4]], b = [[5,6],[7,8]]\n` +
+      `a.add(b)    = [[${sumData[0]}, ${sumData[1]}], [${sumData[2]}, ${sumData[3]}]]\n` +
+      `a.matMul(b) = [[${matmulData[0]}, ${matmulData[1]}], [${matmulData[2]}, ${matmulData[3]}]]\n` +
+      `a.reshape([4,1]).shape = [${reshaped.shape.join(', ')}]</div>`;
+    a.dispose(); b.dispose(); sum.dispose(); matmul.dispose(); reshaped.dispose();
+  });
+
+  // ---------- Section 2 ----------
+  (function () {
+    const countEl = document.getElementById('s2-count');
+    const logEl = document.getElementById('s2-log');
+    let leaked = [];
+
+    function log(msg) {
+      const row = document.createElement('div');
+      row.textContent = msg;
+      logEl.prepend(row);
+    }
+    function updateCount() {
+      countEl.textContent = tf.memory().numTensors;
+    }
+    updateCount();
+
+    document.getElementById('s2-leak').addEventListener('click', () => {
+      const x = tf.tensor1d([1, 2, 3]);
+      const y = x.square();
+      const z = y.sum();
+      leaked.push(x, y, z);
+      log(`tidy 없이 실행 → 텐서 3개 생성, dispose 안 함 (누수)`);
+      updateCount();
+    });
+
+    document.getElementById('s2-tidy').addEventListener('click', () => {
+      const before = tf.memory().numTensors;
+      const result = tf.tidy(() => {
+        const x = tf.tensor1d([1, 2, 3]);
+        const y = x.square();
+        return y.sum();
+      });
+      const after = tf.memory().numTensors;
+      log(`tf.tidy 실행 → 중간 텐서 자동 정리 (실행 전: ${before}개 → 실행 후: ${after}개, 반환값 1개만 증가)`);
+      result.dispose();
+      updateCount();
+    });
+
+    document.getElementById('s2-cleanup').addEventListener('click', () => {
+      leaked.forEach((t) => t.dispose());
+      log(`누수된 텐서 ${leaked.length}개 수동 정리`);
+      leaked = [];
+      updateCount();
+    });
+  })();
+
+  // ---------- Section 3 ----------
+  document.getElementById('s3-train').addEventListener('click', async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    const canvas = document.getElementById('s3-chart');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const xs = tf.tensor1d([0, 1, 2, 3, 4, 5]);
+    const ys = tf.tensor1d([1, 3, 5, 7, 9, 11]);
+
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+    model.compile({ optimizer: tf.train.sgd(0.01), loss: 'meanSquaredError' });
+
+    const losses = [];
+    await model.fit(xs, ys, {
+      epochs: 100,
+      callbacks: {
+        onEpochEnd: (epoch, logs) => {
+          losses.push(logs.loss);
+          if (epoch % 5 === 0 || epoch === 99) drawChart(ctx, canvas, losses);
+        }
+      }
+    });
+    drawChart(ctx, canvas, losses);
+
+    const pred = model.predict(tf.tensor1d([10]));
+    const predVal = (await pred.data())[0];
+    document.getElementById('s3-pred').textContent = predVal.toFixed(3);
+    xs.dispose(); ys.dispose(); pred.dispose();
+    btn.disabled = false;
+  });
+
+  function drawChart(ctx, canvas, losses) {
+    const w = canvas.width, h = canvas.height, pad = 24;
+    ctx.clearRect(0, 0, w, h);
+    if (!losses.length) return;
+    const maxLoss = Math.max(...losses, 0.01);
+    ctx.strokeStyle = '#4f7dff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    losses.forEach((loss, i) => {
+      const x = pad + (i / Math.max(losses.length - 1, 1)) * (w - pad * 2);
+      const y = h - pad - (loss / maxLoss) * (h - pad * 2);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.font = '11px monospace';
+    ctx.fillText('loss: ' + losses[losses.length - 1].toFixed(4), pad, 16);
+    ctx.fillText('epoch ' + (losses.length ? (losses.length - 1) * 1 : 0), w - 90, h - 6);
+  }
+
+  // ---------- Section 4 ----------
+  document.getElementById('s4-train').addEventListener('click', async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    const resultEl = document.getElementById('s4-result');
+    resultEl.innerHTML = '<div class="result-box">학습 중...</div>';
+
+    const trainX = tf.tensor2d([[1, 1], [1.5, 1.2], [2, 1.8], [8, 8], [8.5, 8.2], [9, 9]]);
+    const trainY = tf.tensor2d([[1, 0], [1, 0], [1, 0], [0, 1], [0, 1], [0, 1]]);
+
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 8, activation: 'relu', inputShape: [2] }));
+    model.add(tf.layers.dense({ units: 2, activation: 'softmax' }));
+    model.compile({ optimizer: tf.train.adam(0.1), loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
+
+    const history = await model.fit(trainX, trainY, { epochs: 50 });
+    const finalAcc = history.history.acc ? history.history.acc[history.history.acc.length - 1] : null;
+
+    const testX = tf.tensor2d([[1.2, 1.1], [8.8, 8.9]]);
+    const probs = model.predict(testX);
+    const probsData = Array.from(await probs.data());
+
+    const rows = [
+      { 입력: '(1.2, 1.1) — 작고 가벼움', 우수확률: probsData[0].toFixed(3), 보통확률: probsData[1].toFixed(3) },
+      { 입력: '(8.8, 8.9) — 크고 무거움', 우수확률: probsData[2].toFixed(3), 보통확률: probsData[3].toFixed(3) },
+    ];
+    let html = '<table class="data-table"><thead><tr><th>테스트 입력</th><th>우수 확률</th><th>보통 확률</th></tr></thead><tbody>';
+    rows.forEach((r) => {
+      html += `<tr><td>${r.입력}</td><td>${r.우수확률}</td><td>${r.보통확률}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    if (finalAcc !== null) html += `<div class="result-box">학습 마지막 에포크 정확도: ${(finalAcc * 100).toFixed(1)}%</div>`;
+    resultEl.innerHTML = html;
+
+    trainX.dispose(); trainY.dispose(); testX.dispose(); probs.dispose();
+    btn.disabled = false;
+  });
+
+  // ---------- Section 5 ----------
+  document.getElementById('s5-backend').textContent = tf.getBackend();
+  const webglSupported = Object.keys(tf.engine().registryFactory).includes('webgl');
+  document.getElementById('s5-webgl').innerHTML = webglSupported
+    ? '<span class="badge on">사용 가능</span>'
+    : '<span class="badge off">이 환경에서 미지원</span>';
+
+  document.getElementById('s5-run').addEventListener('click', async (e) => {
+    const btn = e.target;
+    btn.disabled = true;
+    const resultEl = document.getElementById('s5-result');
+    resultEl.innerHTML = '<div class="result-box">측정 중...</div>';
+
+    const sizes = [50, 200, 500];
+    const rows = [];
+    for (const size of sizes) {
+      const a = tf.randomNormal([size, size]);
+      const b = tf.randomNormal([size, size]);
+      const t0 = performance.now();
+      const r = a.matMul(b);
+      await r.data();
+      const elapsedMs = performance.now() - t0;
+      a.dispose(); b.dispose(); r.dispose();
+      rows.push({ size: `${size}×${size}`, elapsedMs: elapsedMs.toFixed(2) + 'ms' });
+    }
+
+    let webglNote = '';
+    if (webglSupported) {
+      // tf.setBackend()는 실패해도 예외를 던지지 않고 boolean을 반환한다 — try/catch가 아니라
+      // 반환값(그리고 이어서 getBackend())으로 실제 성공 여부를 확인해야 한다.
+      const success = await tf.setBackend('webgl');
+      await tf.ready();
+      const finalBackend = tf.getBackend();
+      if (success && finalBackend === 'webgl') {
+        webglNote = `<div class="result-box">WebGL 백엔드로 전환 성공 (현재: ${finalBackend})</div>`;
+        await tf.setBackend('cpu');
+        await tf.ready();
+      } else {
+        webglNote = `<div class="result-box">WebGL 백엔드 등록은 되어 있지만 이 환경(헤드리스/GPU 미지원)에서는 초기화에 실패해 CPU로 유지됩니다.\nsetBackend() 반환값: ${success}, 최종 백엔드: ${finalBackend}</div>`;
+      }
+    } else {
+      webglNote = '<div class="result-box">이 브라우저/환경에는 WebGL 백엔드가 등록되지 않아 CPU 백엔드로만 측정했습니다.</div>';
+    }
+
+    let html = '<table class="data-table"><thead><tr><th>행렬 크기</th><th>matMul 소요 시간</th></tr></thead><tbody>';
+    rows.forEach((r) => { html += `<tr><td>${r.size}</td><td>${r.elapsedMs}</td></tr>`; });
+    html += '</tbody></table>' + webglNote;
+    resultEl.innerHTML = html;
+    btn.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>
