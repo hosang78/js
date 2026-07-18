@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DuckDB-Wasm 종합 기능 실험실</title>
+<style>
+:root{--bg:#f4f6f8;--panel:#fff;--line:#d9e0e7;--text:#17212b;--muted:#65717e;--accent:#ffdd00;--accent2:#fff4a3;--dark:#20262d;--good:#11875d;--bad:#c73535;--code:#111820;--shadow:0 8px 24px rgba(30,42,54,.08)}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif}
+button,input,select,textarea{font:inherit} button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+header{background:var(--dark);color:#fff;padding:16px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:12px}.duck{width:44px;height:44px;border-radius:14px;background:var(--accent);display:grid;place-items:center;font-size:25px}.brand h1{font-size:20px;margin:0}.brand p{margin:2px 0 0;color:#bac4ce;font-size:12px}
+.statusbar{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.badge{padding:7px 10px;border-radius:999px;background:#333d47;color:#dbe2e8;font-size:12px}.badge.good{background:#153c31;color:#9ee3c8}.badge.warn{background:#4c4213;color:#ffe979}
+.layout{display:grid;grid-template-columns:290px minmax(0,1fr);min-height:0}.sidebar{background:#fff;border-right:1px solid var(--line);padding:16px;overflow:auto}.main{padding:16px;overflow:auto}
+.section-title{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 8px}.navbtn,.action{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 12px;text-align:left;margin:4px 0}.navbtn:hover,.action:hover{border-color:#9aa7b4;background:#fafbfc}.navbtn.active{background:var(--accent2);border-color:#d5ba00;font-weight:800}.action.primary{background:var(--accent);border-color:#d1b600;font-weight:800}.action.danger{color:var(--bad)}
+.drop{border:2px dashed #b8c2cc;border-radius:12px;padding:16px;text-align:center;color:var(--muted);background:#fafbfc}.drop.drag{border-color:#d1b600;background:#fff9c9}.small{font-size:12px;color:var(--muted)}
+.grid{display:grid;gap:14px}.grid.cols2{grid-template-columns:1.15fr .85fr}.grid.cols3{grid-template-columns:repeat(3,1fr)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}.panel-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}.panel-head h2,.panel-head h3{font-size:15px;margin:0}.panel-body{padding:14px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px}.btn:hover{background:#f6f8fa}.btn.primary{background:var(--accent);border-color:#d1b600;font-weight:800}.btn.dark{background:var(--dark);color:#fff;border-color:var(--dark)}.btn:disabled{opacity:.45;cursor:not-allowed}
+textarea.sql{width:100%;min-height:230px;background:var(--code);color:#e8edf2;border:0;border-radius:10px;padding:14px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px;line-height:1.55;resize:vertical;tab-size:2}
+select,input[type=text],input[type=number]{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff}.metric{padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff}.metric b{display:block;font-size:23px;margin-top:4px}.metric span{font-size:12px;color:var(--muted)}
+.tablewrap{overflow:auto;max-height:470px;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:8px 10px;border-bottom:1px solid #edf0f2;text-align:left;white-space:nowrap}th{position:sticky;top:0;background:#f5f7f9;z-index:1}tr:hover td{background:#fffce0}.null{color:#a05a5a;font-style:italic}.num{text-align:right;font-variant-numeric:tabular-nums}
+pre{background:var(--code);color:#d8e0e8;padding:12px;border-radius:10px;overflow:auto;white-space:pre-wrap;font-size:12px}.log{height:180px;overflow:auto;background:#0f151b;color:#c9d2db;padding:10px;border-radius:10px;font-family:ui-monospace,monospace;font-size:11px}.log .err{color:#ff8c8c}.log .ok{color:#77dfb2}.log .time{color:#8493a1}.hidden{display:none!important}.tabbar{display:flex;gap:6px;flex-wrap:wrap}.tab{border:0;background:#eef1f4;padding:7px 10px;border-radius:8px}.tab.active{background:var(--dark);color:#fff}.chart{width:100%;height:260px;border:1px solid var(--line);border-radius:10px;background:#fff}.callout{border-left:4px solid var(--accent);background:#fffbe0;padding:10px 12px;border-radius:8px;font-size:12px}.kv{display:grid;grid-template-columns:130px 1fr;gap:7px;font-size:12px}.kv b{color:var(--muted)}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid var(--line);max-height:none}.grid.cols2,.grid.cols3{grid-template-columns:1fr}.statusbar{margin-left:0}.main{padding:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="duck">🦆</div><div><h1>DuckDB-Wasm 종합 기능 실험실</h1><p>브라우저 안에서 실행되는 분석용 SQL 데이터베이스</p></div></div>
+  <div class="statusbar"><span id="engineStatus" class="badge warn">엔진 초기화 중</span><span id="versionBadge" class="badge">버전 확인 중</span><span id="bundleBadge" class="badge">번들 선택 중</span><span id="memoryBadge" class="badge">메모리 -</span></div>
+</header>
+<div class="layout">
+<aside class="sidebar">
+  <button class="action primary" id="initSampleBtn">샘플 데이터 다시 만들기</button>
+  <div class="section-title">데이터 불러오기</div>
+  <div id="dropZone" class="drop"><b>파일 놓기 또는 선택</b><br><span class="small">CSV · JSON · NDJSON · Parquet</span><br><input id="fileInput" type="file" multiple accept=".csv,.json,.ndjson,.parquet" style="margin-top:10px;max-width:100%"></div>
+  <div style="height:8px"></div>
+  <input id="remoteUrl" type="text" placeholder="CORS 허용 CSV/JSON/Parquet URL" style="width:100%">
+  <button class="action" id="remoteBtn">원격 파일 등록·조회</button>
+
+  <div class="section-title">기능 프리셋</div>
+  <div id="presetList"></div>
+
+  <div class="section-title">데이터베이스 작업</div>
+  <button class="action" id="refreshSchemaBtn">스키마·테이블 새로고침</button>
+  <button class="action" id="transactionBtn">트랜잭션 데모</button>
+  <button class="action" id="preparedBtn">Prepared Statement 데모</button>
+  <button class="action" id="streamBtn">스트리밍 쿼리 데모</button>
+  <button class="action" id="benchmarkBtn">100만 행 벤치마크</button>
+  <button class="action" id="extensionBtn">확장 기능 목록·JSON 로드</button>
+  <button class="action danger" id="resetBtn">DB 전체 초기화</button>
+  <p class="small">외부 CDN에서 DuckDB-Wasm 모듈·Worker·Wasm 파일을 내려받는다. 내부망에서는 해당 파일들을 로컬 경로로 바꿔야 한다.</p>
+</aside>
+<main class="main">
+<div class="grid cols3" style="margin-bottom:14px">
+ <div class="metric"><span>현재 테이블 수</span><b id="tableCount">0</b></div>
+ <div class="metric"><span>마지막 결과 행 수</span><b id="rowCount">0</b></div>
+ <div class="metric"><span>마지막 실행 시간</span><b id="elapsed">0 ms</b></div>
+</div>
+<div class="grid cols2">
+<section class="panel">
+ <div class="panel-head"><h2>SQL 편집기</h2><div class="toolbar"><select id="rowLimit"><option>50</option><option>100</option><option>500</option><option>1000</option></select><button class="btn" id="formatBtn">정리</button><button class="btn primary" id="runBtn">실행 Ctrl+Enter</button></div></div>
+ <div class="panel-body"><textarea id="sqlEditor" class="sql" spellcheck="false">SELECT * FROM sales ORDER BY order_date DESC LIMIT 50;</textarea><div class="small" style="margin-top:7px">여러 문장 실행 가능. 결과가 있는 마지막 문장을 표시한다.</div></div>
+</section>
+<section class="panel">
+ <div class="panel-head"><h2>데이터베이스 탐색기</h2><button class="btn" id="copySchemaBtn">복사</button></div>
+ <div class="panel-body"><div class="tabbar"><button class="tab active" data-tab="schema">스키마</button><button class="tab" data-tab="files">가상 파일</button><button class="tab" data-tab="info">엔진 정보</button></div><div id="schemaPane" style="margin-top:10px"></div><div id="filesPane" class="hidden" style="margin-top:10px"></div><div id="infoPane" class="hidden" style="margin-top:10px"></div></div>
+</section>
+</div>
+<section class="panel" style="margin-top:14px">
+ <div class="panel-head"><h2>쿼리 결과</h2><div class="toolbar"><button class="btn" id="copyResultBtn">TSV 복사</button><button class="btn" id="csvBtn">CSV 저장</button><button class="btn" id="jsonBtn">JSON 저장</button><button class="btn" id="parquetBtn">Parquet 저장</button></div></div>
+ <div class="panel-body">
+   <div class="tabbar"><button class="tab active" data-result="table">표</button><button class="tab" data-result="chart">차트</button><button class="tab" data-result="json">JSON</button><button class="tab" data-result="plan">실행 계획</button></div>
+   <div id="resultTablePane" style="margin-top:10px"><div class="callout">엔진이 준비되면 샘플 데이터가 자동 생성된다.</div></div>
+   <div id="resultChartPane" class="hidden" style="margin-top:10px"><canvas id="chartCanvas" class="chart"></canvas><div class="small" style="margin-top:7px">첫 번째 문자열/날짜 열을 범주, 첫 번째 숫자 열을 값으로 자동 사용한다.</div></div>
+   <div id="resultJsonPane" class="hidden" style="margin-top:10px"><pre id="jsonOutput">[]</pre></div>
+   <div id="resultPlanPane" class="hidden" style="margin-top:10px"><pre id="planOutput">실행 계획을 보려면 EXPLAIN 버튼 대신 프리셋 ‘실행 계획’을 선택하거나 SQL 앞에 EXPLAIN ANALYZE를 붙인다.</pre></div>
+ </div>
+</section>
+<div class="grid cols2" style="margin-top:14px">
+<section class="panel"><div class="panel-head"><h3>실행 로그</h3><button class="btn" id="clearLogBtn">지우기</button></div><div class="panel-body"><div id="log" class="log"></div></div></section>
+<section class="panel"><div class="panel-head"><h3>현재 샘플의 기능</h3></div><div class="panel-body"><div class="kv"><b>실행 구조</b><span>Web Worker + WebAssembly 비동기 연결</span><b>입출력</b><span>CSV, JSON/NDJSON, Parquet, Arrow 결과</span><b>SQL</b><span>CTE, 윈도 함수, PIVOT, GROUPING SETS, JSON, LIST/STRUCT, 정규식, 날짜 함수</span><b>분석 도구</b><span>스키마 조회, EXPLAIN ANALYZE, 스트리밍, Prepared Statement, 트랜잭션</span><b>내보내기</b><span>CSV, JSON, Parquet 파일 생성 후 브라우저 저장</span></div></div></section>
+</div>
+</main>
+</div></div>
+<script type="module">
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let duckdb, db, conn, currentRows=[], currentCols=[], currentSql='', workerUrl='';
+const presets=[
+ ['기본 조회',`SELECT * FROM sales ORDER BY order_date DESC LIMIT 50;`],
+ ['집계·HAVING',`SELECT region, category, COUNT(*) orders, ROUND(SUM(amount),2) revenue, ROUND(AVG(amount),2) avg_order\nFROM sales\nGROUP BY region, category\nHAVING SUM(amount) > 5000\nORDER BY revenue DESC;`],
+ ['CTE·조건부 집계',`WITH monthly AS (\n  SELECT date_trunc('month', order_date) month, region,\n         SUM(amount) revenue, SUM(CASE WHEN channel='온라인' THEN amount ELSE 0 END) online_revenue\n  FROM sales GROUP BY ALL\n)\nSELECT *, ROUND(online_revenue / NULLIF(revenue,0) * 100, 1) online_pct\nFROM monthly ORDER BY month, revenue DESC;`],
+ ['윈도 함수',`SELECT order_date, region, customer, amount,\n SUM(amount) OVER(PARTITION BY region ORDER BY order_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) running_total,\n RANK() OVER(PARTITION BY region ORDER BY amount DESC) amount_rank,\n AVG(amount) OVER(PARTITION BY region ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) moving_avg_5\nFROM sales ORDER BY region, order_date LIMIT 200;`],
+ ['PIVOT',`PIVOT sales ON category USING SUM(amount) GROUP BY region ORDER BY region;`],
+ ['UNPIVOT',`WITH p AS (PIVOT sales ON channel USING SUM(amount) GROUP BY region)\nUNPIVOT p ON columns(* EXCLUDE region) INTO NAME channel VALUE revenue;`],
+ ['GROUPING SETS',`SELECT region, category, SUM(amount) revenue, GROUPING_ID(region, category) level\nFROM sales\nGROUP BY GROUPING SETS ((region,category),(region),())\nORDER BY level, region, category;`],
+ ['ASOF JOIN',`SELECT s.order_date, s.product, s.amount, r.rate, ROUND(s.amount*r.rate,2) adjusted\nFROM sales s ASOF LEFT JOIN rates r ON s.order_date >= r.rate_date\nORDER BY s.order_date DESC LIMIT 100;`],
+ ['JSON 처리',`SELECT id, profile->>'name' name,\n CAST(profile->>'age' AS INTEGER) age,\n json_extract_string(profile, '$.tier') tier,\n json_array_length(profile->'interests') interest_count\nFROM customers ORDER BY age DESC;`],
+ ['LIST·STRUCT',`SELECT region,\n list(product ORDER BY amount DESC)[:5] top_products,\n struct_pack(revenue := ROUND(SUM(amount),2), orders := COUNT(*)) summary\nFROM sales GROUP BY region;`],
+ ['정규식·문자열',`SELECT customer, email,\n regexp_extract(email, '^[^@]+') account,\n regexp_extract(email, '@(.+)$', 1) domain,\n upper(replace(customer,' ', '_')) normalized\nFROM sales LIMIT 50;`],
+ ['날짜 시계열',`SELECT generate_series::DATE day,\n dayname(generate_series) weekday,\n week(generate_series) week_no,\n last_day(generate_series) month_end\nFROM generate_series(DATE '2026-01-01', DATE '2026-01-31', INTERVAL 1 DAY);`],
+ ['샘플링',`SELECT * FROM sales USING SAMPLE 10 PERCENT (reservoir, 42);`],
+ ['상관·분위수',`SELECT category,\n corr(quantity, amount) qty_amount_corr,\n median(amount) median_amount,\n quantile_cont(amount, [0.25,0.5,0.75,0.9]) percentiles,\n stddev_pop(amount) stddev\nFROM sales GROUP BY category;`],
+ ['ARG_MAX·TOP N',`SELECT region, arg_max(product, amount) highest_product, max(amount) highest_amount,\n max_by(customer, amount, 3) top_customers\nFROM sales GROUP BY region;`],
+ ['EXCLUDE·REPLACE',`SELECT * EXCLUDE(email), REPLACE(round(amount*1.1,2) AS amount)\nFROM sales LIMIT 20;`],
+ ['QUALIFY',`SELECT region, customer, amount, row_number() OVER(PARTITION BY region ORDER BY amount DESC) rn\nFROM sales QUALIFY rn <= 3 ORDER BY region, rn;`],
+ ['실행 계획',`EXPLAIN ANALYZE SELECT region, category, SUM(amount) revenue\nFROM sales WHERE order_date >= DATE '2026-03-01'\nGROUP BY region, category ORDER BY revenue DESC;`],
+ ['시스템 카탈로그',`SELECT table_schema, table_name, estimated_size, column_count, index_count\nFROM duckdb_tables() ORDER BY table_schema, table_name;`],
+ ['데이터 품질',`SELECT\n COUNT(*) rows, COUNT(DISTINCT id) unique_ids,\n COUNT(*) FILTER(WHERE amount IS NULL) null_amounts,\n COUNT(*) FILTER(WHERE amount < 0) negative_amounts,\n min(order_date) min_date, max(order_date) max_date\nFROM sales;`]
+];
+function log(msg,type=''){const d=document.createElement('div');d.className=type;d.innerHTML=`<span class="time">${new Date().toLocaleTimeString()}</span> ${escapeHtml(msg)}`;$('#log').append(d);$('#log').scrollTop=$('#log').scrollHeight}
+function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function safe(v){if(v===null||v===undefined)return null;if(typeof v==='bigint')return Number(v);if(v instanceof Date)return v.toISOString();if(ArrayBuffer.isView(v))return Array.from(v);if(typeof v==='object'){try{return JSON.parse(JSON.stringify(v,(_,x)=>typeof x==='bigint'?Number(x):x))}catch{return String(v)}}return v}
+async function init(){try{
+ $('#engineStatus').textContent='모듈 내려받는 중';
+ duckdb=await import('https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm');
+ const bundles=duckdb.getJsDelivrBundles(); const bundle=await duckdb.selectBundle(bundles);
+ $('#bundleBadge').textContent='번들 '+(bundle.mainModule.includes('eh')?'EH':'MVP');
+ workerUrl=URL.createObjectURL(new Blob([`importScripts("${bundle.mainWorker}");`],{type:'text/javascript'}));
+ const worker=new Worker(workerUrl); const logger=new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
+ db=new duckdb.AsyncDuckDB(logger,worker); await db.instantiate(bundle.mainModule,bundle.pthreadWorker); URL.revokeObjectURL(workerUrl);
+ conn=await db.connect(); const version=await db.getVersion();
+ $('#versionBadge').textContent='DuckDB '+version; $('#engineStatus').textContent='엔진 준비됨'; $('#engineStatus').className='badge good';
+ log('DuckDB-Wasm 초기화 완료: '+version,'ok'); await createSample(); await refreshAll();
+ }catch(e){$('#engineStatus').textContent='초기화 실패';$('#engineStatus').className='badge';log(e.stack||e.message,'err');$('#resultTablePane').innerHTML=`<div class="callout"><b>초기화 실패</b><br>${escapeHtml(e.message)}<br><br>file:// 직접 열기에서 Worker 정책 오류가 나면 간단한 로컬 웹서버로 열어라. 예: <code>python -m http.server 8000</code></div>`}}
+async function createSample(){
+ const sql=`DROP TABLE IF EXISTS sales; DROP TABLE IF EXISTS customers; DROP TABLE IF EXISTS rates;
+CREATE TABLE sales AS
+WITH base AS (
+ SELECT i id, DATE '2026-01-01' + ((i*17)%180)::INTEGER order_date,
+ ['서울','부산','인천','대전','광주','제주'][(i%6)+1] region,
+ ['수산물','가공식품','생활용품','장비'][(i%4)+1] category,
+ ['온라인','오프라인','모바일'][(i%3)+1] channel,
+ ['고등어','갈치','전복','김','어망','아이스박스','참치캔','새우'][(i%8)+1] product,
+ '고객 ' || lpad(((i%120)+1)::VARCHAR,3,'0') customer,
+ 'user'||((i%120)+1)||'@example'||(i%5)||'.com' email,
+ ((i*7)%9)+1 quantity,
+ round(20 + ((i*7919)%90000)/100.0,2) unit_price
+ FROM range(1,3001) t(i)
+)
+SELECT *, round(quantity*unit_price*(1-((id%5)*0.02)),2) amount,
+ CASE WHEN id%17=0 THEN NULL ELSE ['완료','배송중','주문접수','취소'][(id%4)+1] END status
+FROM base;
+CREATE TABLE customers AS
+SELECT i id, json_object('name','고객 '||lpad(i::VARCHAR,3,'0'),'age',20+(i%45),'tier',['Bronze','Silver','Gold','VIP'][(i%4)+1],'interests',['수산물','여행','요리'][(i%3)+1]) profile
+FROM range(1,121) t(i);
+CREATE TABLE rates AS SELECT d::DATE rate_date, round(0.90 + (row_number() over())*0.002,3) rate FROM generate_series(DATE '2026-01-01',DATE '2026-07-01',INTERVAL 14 DAY) t(d);`;
+ await conn.query(sql); log('샘플 테이블 sales 3,000행, customers 120행, rates 생성','ok');
+}
+async function execute(sql=currentSql||$('#sqlEditor').value){if(!conn)return; currentSql=sql; const t=performance.now(); try{
+ log('실행: '+sql.replace(/\s+/g,' ').slice(0,180)); const result=await conn.query(sql); const rows=result.toArray().map(r=>{const o={};for(const k of Object.keys(r))o[k]=safe(r[k]);return o}); currentRows=rows; currentCols=rows.length?Object.keys(rows[0]):result.schema.fields.map(f=>f.name);
+ const ms=performance.now()-t; $('#elapsed').textContent=ms.toFixed(1)+' ms';$('#rowCount').textContent=rows.length.toLocaleString();renderResult();renderChart();$('#jsonOutput').textContent=JSON.stringify(rows.slice(0,500),null,2);
+ if(/^\s*explain/i.test(sql)){ $('#planOutput').textContent=rows.map(r=>Object.values(r).join('\n')).join('\n'); activateResult('plan'); } else activateResult('table');
+ log(`완료: ${rows.length}행, ${ms.toFixed(1)} ms`,'ok'); updateMemory(); await refreshSchema();
+ }catch(e){$('#elapsed').textContent=(performance.now()-t).toFixed(1)+' ms';log(e.message,'err');$('#resultTablePane').innerHTML=`<div class="callout" style="border-left-color:var(--bad)"><b>SQL 오류</b><br><pre>${escapeHtml(e.message)}</pre></div>`}}
+function renderResult(){if(!currentRows.length){$('#resultTablePane').innerHTML='<div class="callout">실행 성공. 표시할 결과 행은 없다.</div>';return}const limit=Number($('#rowLimit').value);const rows=currentRows.slice(0,limit);let h='<div class="tablewrap"><table><thead><tr>'+currentCols.map(c=>`<th>${escapeHtml(c)}</th>`).join('')+'</tr></thead><tbody>';for(const r of rows){h+='<tr>'+currentCols.map(c=>{const v=r[c];let cls=typeof v==='number'?'num':'';if(v===null)return '<td class="null">NULL</td>';return `<td class="${cls}" title="${escapeHtml(typeof v==='object'?JSON.stringify(v):v)}">${escapeHtml(typeof v==='object'?JSON.stringify(v):v)}</td>`}).join('')+'</tr>'}h+='</tbody></table></div>';if(currentRows.length>limit)h+=`<p class="small">전체 ${currentRows.length.toLocaleString()}행 중 ${limit.toLocaleString()}행 표시</p>`;$('#resultTablePane').innerHTML=h}
+function renderChart(){const canvas=$('#chartCanvas'),ctx=canvas.getContext('2d'),dpr=devicePixelRatio||1,w=canvas.clientWidth||700,h=260;canvas.width=w*dpr;canvas.height=h*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);if(!currentRows.length)return;const keys=currentCols;const num=keys.find(k=>currentRows.some(r=>typeof r[k]==='number'));const label=keys.find(k=>k!==num);if(!num)return;const data=currentRows.slice(0,30).map((r,i)=>({label:String(r[label]??i+1),value:Number(r[num])||0}));const max=Math.max(...data.map(d=>Math.abs(d.value)),1),pad=38,bw=(w-pad*2)/data.length;ctx.strokeStyle='#ccd3da';ctx.beginPath();ctx.moveTo(pad,12);ctx.lineTo(pad,h-35);ctx.lineTo(w-10,h-35);ctx.stroke();data.forEach((d,i)=>{const bh=(Math.abs(d.value)/max)*(h-65);ctx.fillStyle='#ffdd00';ctx.fillRect(pad+i*bw+2,h-35-bh,Math.max(2,bw-4),bh);if(i%Math.ceil(data.length/8)===0){ctx.save();ctx.translate(pad+i*bw+bw/2,h-28);ctx.rotate(-.5);ctx.fillStyle='#586572';ctx.font='10px sans-serif';ctx.fillText(d.label.slice(0,14),0,0);ctx.restore()}});ctx.fillStyle='#17212b';ctx.font='11px sans-serif';ctx.fillText(num+' (최대 '+max.toLocaleString()+')',pad,11)}
+async function refreshSchema(){if(!conn)return;try{const r=await conn.query(`SELECT table_schema, table_name, table_type FROM information_schema.tables WHERE table_schema NOT IN ('information_schema','pg_catalog') ORDER BY 1,2`);const tables=r.toArray().map(x=>({schema:x.table_schema,name:x.table_name,type:x.table_type}));$('#tableCount').textContent=tables.length;let h='';for(const t of tables){const q=await conn.query(`SELECT column_name,data_type,is_nullable FROM information_schema.columns WHERE table_schema='${String(t.schema).replaceAll("'","''")}' AND table_name='${String(t.name).replaceAll("'","''")}' ORDER BY ordinal_position`);h+=`<details><summary><b>${escapeHtml(t.schema)}.${escapeHtml(t.name)}</b> <span class="small">${escapeHtml(t.type)}</span></summary><table><tbody>${q.toArray().map(c=>`<tr><td>${escapeHtml(c.column_name)}</td><td>${escapeHtml(c.data_type)}</td><td>${c.is_nullable==='YES'?'NULL':''}</td></tr>`).join('')}</tbody></table></details>`}$('#schemaPane').innerHTML=h||'<span class="small">테이블 없음</span>'}catch(e){log('스키마 조회 실패: '+e.message,'err')}}
+async function refreshFiles(){try{const files=await db.globFiles('*');$('#filesPane').innerHTML=files.length?`<table>${files.map(f=>`<tr><td>${escapeHtml(f.fileName||f.path||JSON.stringify(f))}</td><td>${escapeHtml(f.fileSize??'')}</td></tr>`).join('')}</table>`:'<span class="small">등록된 가상 파일 없음</span>'}catch(e){$('#filesPane').textContent=e.message}}
+async function refreshInfo(){try{const flags=await db.getFeatureFlags();const version=await db.getVersion();$('#infoPane').innerHTML=`<pre>${escapeHtml(JSON.stringify({version,featureFlags:flags,userAgent:navigator.userAgent,crossOriginIsolated,hardwareConcurrency:navigator.hardwareConcurrency},null,2))}</pre>`}catch(e){$('#infoPane').textContent=e.message}}
+async function refreshAll(){await Promise.all([refreshSchema(),refreshFiles(),refreshInfo()]);updateMemory()}
+function updateMemory(){if(performance.memory)$('#memoryBadge').textContent='JS '+(performance.memory.usedJSHeapSize/1048576).toFixed(1)+' MB';else $('#memoryBadge').textContent='메모리 API 미지원'}
+async function importFiles(files){for(const file of files){try{const ext=file.name.split('.').pop().toLowerCase(),safeName=file.name.replace(/[^a-zA-Z0-9가-힣_.-]/g,'_'),table=safeName.replace(/\.[^.]+$/,'').replace(/[^a-zA-Z0-9가-힣_]/g,'_');await db.registerFileBuffer(safeName,new Uint8Array(await file.arrayBuffer()));if(ext==='csv')await conn.insertCSVFromPath(safeName,{name:table,header:true,detect:true});else if(ext==='json'||ext==='ndjson')await conn.insertJSONFromPath(safeName,{name:table});else if(ext==='parquet')await conn.query(`CREATE OR REPLACE VIEW "${table.replaceAll('"','""')}" AS SELECT * FROM read_parquet('${safeName.replaceAll("'","''")}')`);else throw new Error('지원하지 않는 형식');log(`${file.name} → ${table} 등록 완료`,'ok');await execute(`SELECT * FROM "${table.replaceAll('"','""')}" LIMIT 100`)}catch(e){log(file.name+': '+e.message,'err')}}await refreshAll()}
+async function importRemote(){const url=$('#remoteUrl').value.trim();if(!url)return;try{const name=new URL(url).pathname.split('/').pop()||'remote_data';const ext=name.split('.').pop().toLowerCase();await db.registerFileURL(name,url,duckdb.DuckDBDataProtocol.HTTP,false);const table='remote_'+Date.now();if(ext==='parquet')await conn.query(`CREATE VIEW ${table} AS SELECT * FROM read_parquet('${name.replaceAll("'","''")}')`);else if(ext==='csv')await conn.query(`CREATE TABLE ${table} AS SELECT * FROM read_csv_auto('${name.replaceAll("'","''")}')`);else await conn.query(`CREATE TABLE ${table} AS SELECT * FROM read_json_auto('${name.replaceAll("'","''")}')`);log('원격 파일 등록 완료: '+url,'ok');await execute(`SELECT * FROM ${table} LIMIT 100`)}catch(e){log('원격 파일 오류(CORS 여부 확인): '+e.message,'err')}}
+async function transactionDemo(){try{await conn.query('BEGIN TRANSACTION');await conn.query(`INSERT INTO sales SELECT 999999,DATE '2026-07-18','서울','수산물','온라인','테스트상품','트랜잭션 고객','tx@example.com',1,100,100,'완료'`);const a=await conn.query('SELECT COUNT(*) n FROM sales WHERE id=999999');await conn.query('ROLLBACK');const b=await conn.query('SELECT COUNT(*) n FROM sales WHERE id=999999');currentRows=[{phase:'트랜잭션 내부',rows:Number(a.toArray()[0].n)},{phase:'ROLLBACK 이후',rows:Number(b.toArray()[0].n)}];currentCols=['phase','rows'];renderResult();renderChart();activateResult('table');log('BEGIN → INSERT → ROLLBACK 데모 완료','ok')}catch(e){try{await conn.query('ROLLBACK')}catch{}log(e.message,'err')}}
+async function preparedDemo(){try{const stmt=await conn.prepare('SELECT region, COUNT(*) orders, SUM(amount) revenue FROM sales WHERE amount >= ? AND category = ? GROUP BY region ORDER BY revenue DESC');const r=await stmt.query(500,'수산물');await stmt.close();currentRows=r.toArray().map(x=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,safe(v)])));currentCols=Object.keys(currentRows[0]||{});renderResult();renderChart();activateResult('table');log('Prepared Statement (?, ?) 실행 완료','ok')}catch(e){log(e.message,'err')}}
+async function streamDemo(){try{const reader=await conn.send(`SELECT i, sqrt(i) root, hash(i) hash_value FROM range(0,200000) t(i)`);let rows=[],batches=0;for await(const batch of reader){batches++;const names=batch.schema.fields.map(f=>f.name);for(let i=0;i<batch.numRows&&rows.length<200;i++){const row=batch.get(i),obj={};names.forEach((n,j)=>obj[n]=safe(row[n]??row[j]));rows.push(obj)}}currentRows=rows;currentCols=Object.keys(rows[0]||{});renderResult();renderChart();activateResult('table');log(`스트리밍 완료: ${batches}개 Arrow RecordBatch, 화면에는 200행만 표시`,'ok')}catch(e){log(e.message,'err')}}
+async function benchmark(){try{const tests=[['합계',`SELECT SUM(i) FROM range(1000000) t(i)`],['그룹 집계',`SELECT i%100 bucket, COUNT(*), AVG(sin(i)) FROM range(1000000) t(i) GROUP BY bucket`],['정렬 Top 10',`SELECT i, hash(i) h FROM range(1000000) t(i) ORDER BY h DESC LIMIT 10`]];const out=[];for(const [name,sql] of tests){const t=performance.now();await conn.query(sql);out.push({test:name,rows:1000000,ms:+(performance.now()-t).toFixed(2)})}currentRows=out;currentCols=Object.keys(out[0]);renderResult();renderChart();activateResult('table');log('100만 행 벤치마크 완료','ok')}catch(e){log(e.message,'err')}}
+async function extensionDemo(){await execute(`SELECT extension_name, loaded, installed, description FROM duckdb_extensions() ORDER BY loaded DESC, extension_name`);try{await conn.query('LOAD json');log('JSON 확장 로드 완료','ok')}catch(e){log('확장 로드: '+e.message,'err')}}
+async function exportViaCopy(format){if(!currentSql)return;const ext=format==='FORMAT PARQUET'?'parquet':format==='FORMAT JSON'?'json':'csv';const name=`duckdb_result_${Date.now()}.${ext}`;try{await conn.query(`COPY (${currentSql.replace(/;\s*$/,'')}) TO '${name}' (${format}${ext==='csv'?', HEADER TRUE':''})`);const buf=await db.copyFileToBuffer(name);download(new Blob([buf]),name);await db.dropFile(name);log(name+' 저장 완료','ok')}catch(e){log('내보내기 실패: '+e.message,'err')}}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function copyTSV(){const t=[currentCols.join('\t'),...currentRows.map(r=>currentCols.map(c=>r[c]??'').join('\t'))].join('\n');navigator.clipboard.writeText(t);log('결과를 TSV로 복사','ok')}
+function activateResult(name){$$('[data-result]').forEach(b=>b.classList.toggle('active',b.dataset.result===name));['table','chart','json','plan'].forEach(n=>$(`#result${n[0].toUpperCase()+n.slice(1)}Pane`).classList.toggle('hidden',n!==name))}
+function formatSQL(){let s=$('#sqlEditor').value.trim().replace(/\s+(FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|QUALIFY|UNION|WINDOW|JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|INNER JOIN|CROSS JOIN)\s+/gi,'\n$1 ');$('#sqlEditor').value=s}
+function setup(){presets.forEach(([name,sql],i)=>{const b=document.createElement('button');b.className='navbtn'+(i===0?' active':'');b.textContent=name;b.onclick=()=>{$$('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('#sqlEditor').value=sql};$('#presetList').append(b)});
+ $('#runBtn').onclick=()=>execute($('#sqlEditor').value);$('#sqlEditor').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();execute(e.target.value)}if(e.key==='Tab'){e.preventDefault();const s=e.target.selectionStart;e.target.setRangeText('  ',s,e.target.selectionEnd,'end')}};$('#formatBtn').onclick=formatSQL;$('#rowLimit').onchange=renderResult;
+ $('#fileInput').onchange=e=>importFiles(e.target.files);const dz=$('#dropZone');['dragenter','dragover'].forEach(n=>dz.addEventListener(n,e=>{e.preventDefault();dz.classList.add('drag')}));['dragleave','drop'].forEach(n=>dz.addEventListener(n,e=>{e.preventDefault();dz.classList.remove('drag')}));dz.addEventListener('drop',e=>importFiles(e.dataTransfer.files));
+ $('#remoteBtn').onclick=importRemote;$('#initSampleBtn').onclick=async()=>{await createSample();await refreshAll();await execute('SELECT * FROM sales ORDER BY order_date DESC LIMIT 50')};$('#refreshSchemaBtn').onclick=refreshAll;$('#transactionBtn').onclick=transactionDemo;$('#preparedBtn').onclick=preparedDemo;$('#streamBtn').onclick=streamDemo;$('#benchmarkBtn').onclick=benchmark;$('#extensionBtn').onclick=extensionDemo;
+ $('#resetBtn').onclick=async()=>{await conn.close();await db.reset();conn=await db.connect();currentRows=[];currentCols=[];renderResult();await refreshAll();log('데이터베이스 초기화 완료','ok')};
+ $('#copyResultBtn').onclick=copyTSV;$('#csvBtn').onclick=()=>exportViaCopy('FORMAT CSV');$('#jsonBtn').onclick=()=>exportViaCopy('FORMAT JSON');$('#parquetBtn').onclick=()=>exportViaCopy('FORMAT PARQUET');$('#clearLogBtn').onclick=()=>$('#log').innerHTML='';$('#copySchemaBtn').onclick=()=>navigator.clipboard.writeText($('#schemaPane').innerText);
+ $$('[data-result]').forEach(b=>b.onclick=()=>activateResult(b.dataset.result));$$('[data-tab]').forEach(b=>b.onclick=async()=>{$$('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));['schema','files','info'].forEach(n=>$(`#${n}Pane`).classList.toggle('hidden',n!==b.dataset.tab));if(b.dataset.tab==='files')await refreshFiles();if(b.dataset.tab==='info')await refreshInfo()});window.addEventListener('resize',renderChart)}
+setup();init();
+</script>
+</body></html>
