@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panzoom 종합 기능 샘플</title>
+  <script src="https://unpkg.com/@panzoom/panzoom@4.6.2/dist/panzoom.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --card2: #0b1220;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: #334155;
+      --accent: #38bdf8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1e3a8a 0, transparent 32rem), var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 32px 22px 18px;
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 44px); }
+    .lead { color: var(--muted); margin: 0; line-height: 1.6; }
+    main {
+      max-width: 1380px;
+      margin: 0 auto 60px;
+      padding: 0 22px;
+      display: grid;
+      gap: 18px;
+    }
+    .grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: linear-gradient(180deg, rgba(31,41,55,.98), rgba(15,23,42,.98));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 45px rgba(0,0,0,.28);
+      overflow: hidden;
+    }
+    .card h2, .card h3 { margin: 0; }
+    .card-head {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .card-body { padding: 18px; }
+    .toolbar, .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    button, select, input[type="range"] {
+      accent-color: var(--accent);
+    }
+    button, select {
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button:hover, select:hover { border-color: var(--accent); }
+    button.active { background: #075985; border-color: #7dd3fc; }
+    button.good { border-color: var(--good); }
+    button.warn { border-color: var(--warn); }
+    button.bad { border-color: var(--bad); }
+    label {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      background: rgba(15,23,42,.65);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+    .stage {
+      height: min(62vh, 620px);
+      min-height: 430px;
+      border: 1px solid #475569;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(148,163,184,.08) 1px, transparent 1px),
+        linear-gradient(rgba(148,163,184,.08) 1px, transparent 1px),
+        #020617;
+      background-size: 36px 36px;
+      position: relative;
+      touch-action: none;
+    }
+    #scene {
+      width: 920px;
+      min-height: 620px;
+      transform-origin: 50% 50%;
+      padding: 22px;
+      user-select: none;
+    }
+    .demo-board {
+      width: 880px;
+      min-height: 570px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #e0f2fe, #fef9c3 45%, #fee2e2);
+      color: #0f172a;
+      padding: 26px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.3);
+      border: 7px solid rgba(255,255,255,.7);
+    }
+    .demo-board h2 { font-size: 38px; margin-bottom: 12px; }
+    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .tile {
+      min-height: 110px;
+      background: rgba(255,255,255,.72);
+      border: 2px solid rgba(15,23,42,.14);
+      border-radius: 20px;
+      padding: 16px;
+    }
+    .tile b { display: block; font-size: 18px; margin-bottom: 6px; }
+    .mini-map {
+      margin-top: 18px;
+      height: 210px;
+      border-radius: 20px;
+      background: radial-gradient(circle at 20% 30%, #0ea5e9 0 5%, transparent 6%), radial-gradient(circle at 70% 65%, #f97316 0 6%, transparent 7%), radial-gradient(circle at 48% 45%, #22c55e 0 8%, transparent 9%), linear-gradient(135deg, #164e63, #052e16);
+      border: 3px solid #0f172a;
+      position: relative;
+      overflow: hidden;
+    }
+    .pin { position: absolute; width: 26px; height: 26px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #ef4444; border: 3px solid white; }
+    .pin::after { content: ''; position: absolute; width: 8px; height: 8px; background: white; border-radius: 50%; left: 6px; top: 6px; }
+    .pin.a { left: 120px; top: 70px; } .pin.b { left: 500px; top: 105px; background:#2563eb; } .pin.c { left: 720px; top: 50px; background:#16a34a; }
+    .panzoom-exclude {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: #111827;
+      color: white;
+      cursor: pointer;
+    }
+    .statbox {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stat {
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .stat span { display: block; color: var(--muted); font-size: 12px; }
+    .stat strong { display: block; font-size: 21px; margin-top: 4px; }
+    .log {
+      height: 210px;
+      overflow: auto;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .pill {
+      display: inline-block;
+      color: #bae6fd;
+      background: #082f49;
+      border: 1px solid #075985;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .split { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    @media (max-width: 900px) { .split { grid-template-columns: 1fr; } .tiles { grid-template-columns: 1fr; } }
+    .small-stage {
+      height: 310px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #475569;
+      background: #020617;
+      touch-action: none;
+      position: relative;
+    }
+    .canvas-area { cursor: move; }
+    #canvasTarget {
+      width: 520px;
+      height: 260px;
+      margin: 28px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, #f59e0b, #ec4899, #6366f1);
+      display: grid;
+      place-items: center;
+      font-size: 34px;
+      font-weight: 900;
+      color: white;
+      text-shadow: 0 2px 10px rgba(0,0,0,.45);
+    }
+    #svgTarget { width: 560px; height: 300px; }
+    .code {
+      white-space: pre-wrap;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 14px;
+      color: #c4b5fd;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      overflow: auto;
+    }
+    .hint { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .range-line { display: grid; grid-template-columns: 120px 1fr 42px; gap: 10px; align-items: center; margin: 8px 0; }
+    .range-line span { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Panzoom 종합 기능 샘플</h1>
+  <p class="lead">마우스 드래그, 휠 줌, 모바일 핀치 줌, 버튼 제어, 옵션 변경, 이벤트 로그, SVG, canvas 모드, 제외 영역, 커스텀 transform까지 한 페이지에서 확인하는 데모.</p>
+</header>
+<main>
+  <section class="grid">
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h2>1. 기본 Pan / Zoom 데모</h2>
+          <p class="hint">드래그로 이동, 휠로 확대/축소, 모바일에서는 두 손가락 핀치 가능.</p>
+        </div>
+        <span class="pill">HTML Element</span>
+      </div>
+      <div class="card-body">
+        <div class="toolbar" style="margin-bottom:12px">
+          <button id="zoomIn">확대 +</button>
+          <button id="zoomOut">축소 -</button>
+          <button id="reset" class="good">초기화</button>
+          <button id="zoomHalf">0.5배</button>
+          <button id="zoomTwo">2배</button>
+          <button id="panLeft">← 이동</button>
+          <button id="panRight">→ 이동</button>
+          <button id="centerPoint" class="warn">중앙 기준 2.5배</button>
+          <button id="silentZoom">조용한 확대</button>
+        </div>
+        <div class="toolbar" style="margin-bottom:12px">
+          <label>contain
+            <select id="containSelect">
+              <option value="">없음</option>
+              <option value="inside">inside</option>
+              <option value="outside">outside</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="panOnly"> 확대 시에만 이동</label>
+          <label><input type="checkbox" id="disablePan"> pan 끄기</label>
+          <label><input type="checkbox" id="disableZoom"> zoom 끄기</label>
+          <label><input type="checkbox" id="disableX"> X 이동 잠금</label>
+          <label><input type="checkbox" id="disableY"> Y 이동 잠금</label>
+        </div>
+        <div class="range-line"><span>minScale</span><input id="minScale" type="range" min="0.1" max="1" step="0.05" value="0.25"><b id="minScaleVal">0.25</b></div>
+        <div class="range-line"><span>maxScale</span><input id="maxScale" type="range" min="1" max="8" step="0.25" value="5"><b id="maxScaleVal">5</b></div>
+        <div class="range-line"><span>step</span><input id="step" type="range" min="0.05" max="1" step="0.05" value="0.3"><b id="stepVal">0.3</b></div>
+        <div class="stage" id="stage">
+          <div id="scene">
+            <div class="demo-board">
+              <h2>Panzoom 대상 영역</h2>
+              <p>이 카드 전체가 Panzoom 대상이다. 휠 줌은 커서 위치를 기준으로 작동한다.</p>
+              <div class="tiles">
+                <div class="tile"><b>pan()</b>절대 좌표 또는 relative 옵션으로 이동</div>
+                <div class="tile"><b>zoom()</b>원하는 배율로 직접 확대/축소</div>
+                <div class="tile"><b>zoomToPoint()</b>특정 화면 좌표를 기준으로 확대</div>
+                <div class="tile"><b>contain</b>inside / outside 경계 제한</div>
+                <div class="tile"><b>setOptions()</b>실행 중 옵션 변경</div>
+                <div class="tile"><b>events</b>start / change / pan / zoom / end / reset</div>
+              </div>
+              <div class="mini-map"><i class="pin a"></i><i class="pin b"></i><i class="pin c"></i></div>
+              <button class="panzoom-exclude" id="excludedButton">이 버튼은 panzoom-exclude: 클릭/드래그 제외</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <aside class="card">
+      <div class="card-head"><h2>상태 / 이벤트</h2><span class="pill">CustomEvent</span></div>
+      <div class="card-body">
+        <div class="statbox">
+          <div class="stat"><span>scale</span><strong id="scaleStat">1.00</strong></div>
+          <div class="stat"><span>x</span><strong id="xStat">0</strong></div>
+          <div class="stat"><span>y</span><strong id="yStat">0</strong></div>
+        </div>
+        <div class="toolbar" style="margin-bottom:12px">
+          <button id="readState">getPan / getScale</button>
+          <button id="clearLog">로그 지우기</button>
+          <button id="forcePan" class="bad">force pan</button>
+        </div>
+        <div class="log" id="log"></div>
+        <p class="hint">force pan은 pan 비활성화 상태에서도 메서드 호출 옵션으로 강제 이동하는 예시다.</p>
+      </div>
+    </aside>
+  </section>
+
+  <section class="split">
+    <article class="card">
+      <div class="card-head"><h2>2. canvas 옵션</h2><span class="pill">canvas: true</span></div>
+      <div class="card-body">
+        <p class="hint">대상 요소뿐 아니라 부모 영역 빈 곳을 드래그해도 이동한다.</p>
+        <div class="toolbar" style="margin-bottom:10px">
+          <button id="canvasIn">확대</button><button id="canvasOut">축소</button><button id="canvasReset">초기화</button>
+        </div>
+        <div class="small-stage canvas-area" id="canvasStage">
+          <div id="canvasTarget">Canvas Mode</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-head"><h2>3. SVG Panzoom</h2><span class="pill">SVGElement</span></div>
+      <div class="card-body">
+        <p class="hint">HTML 요소뿐 아니라 SVG 요소에도 적용 가능하다.</p>
+        <div class="toolbar" style="margin-bottom:10px">
+          <button id="svgIn">확대</button><button id="svgOut">축소</button><button id="svgReset">초기화</button>
+        </div>
+        <div class="small-stage" id="svgStage">
+          <svg id="svgTarget" viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#67e8f9"/><stop offset="1" stop-color="#c084fc"/></linearGradient></defs>
+            <rect width="560" height="300" fill="#020617"/>
+            <g id="svgZoomGroup">
+              <circle cx="120" cy="140" r="70" fill="url(#g)" opacity=".9"/>
+              <rect x="245" y="70" width="180" height="130" rx="24" fill="#facc15"/>
+              <path d="M80 250 C180 20, 360 280, 500 70" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round"/>
+              <text x="95" y="150" font-size="30" font-weight="800" fill="#0f172a">SVG</text>
+              <text x="270" y="145" font-size="24" font-weight="800" fill="#0f172a">Panzoom</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>4. 커스텀 transform / 핵심 코드</h2><span class="pill">setTransform</span></div>
+    <div class="card-body split">
+      <div>
+        <p class="hint">아래 사각형은 Panzoom의 scale/translate에 rotate를 추가한 예시다.</p>
+        <div class="toolbar" style="margin-bottom:10px">
+          <button id="customIn">확대</button><button id="customOut">축소</button><button id="customReset">초기화</button>
+        </div>
+        <div class="small-stage" id="customStage">
+          <div id="customTarget" style="width:360px;height:180px;margin:60px;border-radius:24px;background:#14b8a6;display:grid;place-items:center;font-size:28px;font-weight:900;color:#052e2b;">rotate + panzoom</div>
+        </div>
+      </div>
+      <pre class="code">const panzoom = Panzoom(element, {
+  maxScale: 5,
+  minScale: 0.25,
+  step: 0.3,
+  contain: 'outside',
+  excludeClass: 'panzoom-exclude'
+})
+
+// 휠 줌
+parent.addEventListener('wheel', panzoom.zoomWithWheel)
+
+// 상태 조회
+panzoom.getScale()
+panzoom.getPan()
+
+// 동적 옵션 변경
+panzoom.setOptions({ disableXAxis: true })
+
+// 이벤트
+el.addEventListener('panzoomchange', e => console.log(e.detail))</pre>
+    </div>
+  </section>
+</main>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (!window.Panzoom) {
+    alert('Panzoom CDN 로딩 실패: 인터넷 연결 또는 CDN 접근을 확인하세요.');
+    return;
+  }
+
+  const elem = document.getElementById('scene');
+  const stage = document.getElementById('stage');
+  const logEl = document.getElementById('log');
+  const scaleStat = document.getElementById('scaleStat');
+  const xStat = document.getElementById('xStat');
+  const yStat = document.getElementById('yStat');
+
+  const pz = Panzoom(elem, {
+    maxScale: 5,
+    minScale: 0.25,
+    step: 0.3,
+    contain: null,
+    cursor: 'grab',
+    excludeClass: 'panzoom-exclude',
+    animate: true,
+    duration: 180
+  });
+  stage.addEventListener('wheel', pz.zoomWithWheel);
+
+  function addLog(name, detail) {
+    const time = new Date().toLocaleTimeString();
+    const d = detail || { x: pz.getPan().x, y: pz.getPan().y, scale: pz.getScale() };
+    const line = `[${time}] ${name}  scale=${Number(d.scale).toFixed(2)}, x=${Math.round(d.x)}, y=${Math.round(d.y)}`;
+    logEl.insertAdjacentHTML('afterbegin', line.replace(/</g, '&lt;') + '<br>');
+    updateStats();
+  }
+  function updateStats() {
+    const pan = pz.getPan();
+    scaleStat.textContent = pz.getScale().toFixed(2);
+    xStat.textContent = Math.round(pan.x);
+    yStat.textContent = Math.round(pan.y);
+  }
+
+  ['panzoomstart','panzoomchange','panzoomzoom','panzoompan','panzoomend','panzoomreset'].forEach(name => {
+    elem.addEventListener(name, e => addLog(name, e.detail));
+  });
+
+  document.getElementById('zoomIn').onclick = () => pz.zoomIn();
+  document.getElementById('zoomOut').onclick = () => pz.zoomOut();
+  document.getElementById('reset').onclick = () => pz.reset();
+  document.getElementById('zoomHalf').onclick = () => pz.zoom(0.5, { animate: true });
+  document.getElementById('zoomTwo').onclick = () => pz.zoom(2, { animate: true });
+  document.getElementById('panLeft').onclick = () => pz.pan(-80, 0, { relative: true });
+  document.getElementById('panRight').onclick = () => pz.pan(80, 0, { relative: true });
+  document.getElementById('centerPoint').onclick = () => {
+    const r = stage.getBoundingClientRect();
+    pz.zoomToPoint(2.5, { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }, { animate: true });
+  };
+  document.getElementById('silentZoom').onclick = () => {
+    pz.zoom(Math.min(5, pz.getScale() + 0.5), { silent: true, animate: true });
+    updateStats();
+    logEl.insertAdjacentHTML('afterbegin', '[silent] 이벤트 없이 확대 실행<br>');
+  };
+  document.getElementById('readState').onclick = () => addLog('manual getPan/getScale');
+  document.getElementById('clearLog').onclick = () => logEl.innerHTML = '';
+  document.getElementById('forcePan').onclick = () => pz.pan(60, 40, { relative: true, force: true });
+  document.getElementById('excludedButton').onclick = () => alert('이 버튼은 Panzoom 드래그 대상에서 제외됨');
+
+  function setOptionFromControls() {
+    const minScale = Number(document.getElementById('minScale').value);
+    const maxScale = Number(document.getElementById('maxScale').value);
+    const step = Number(document.getElementById('step').value);
+    document.getElementById('minScaleVal').textContent = minScale;
+    document.getElementById('maxScaleVal').textContent = maxScale;
+    document.getElementById('stepVal').textContent = step;
+    pz.setOptions({
+      contain: document.getElementById('containSelect').value || null,
+      panOnlyWhenZoomed: document.getElementById('panOnly').checked,
+      disablePan: document.getElementById('disablePan').checked,
+      disableZoom: document.getElementById('disableZoom').checked,
+      disableXAxis: document.getElementById('disableX').checked,
+      disableYAxis: document.getElementById('disableY').checked,
+      minScale,
+      maxScale,
+      step
+    });
+    addLog('setOptions');
+  }
+  ['containSelect','panOnly','disablePan','disableZoom','disableX','disableY','minScale','maxScale','step']
+    .forEach(id => document.getElementById(id).addEventListener('input', setOptionFromControls));
+
+  const canvasTarget = document.getElementById('canvasTarget');
+  const canvasPz = Panzoom(canvasTarget, { canvas: true, maxScale: 4, minScale: .4, contain: 'outside' });
+  document.getElementById('canvasStage').addEventListener('wheel', canvasPz.zoomWithWheel);
+  document.getElementById('canvasIn').onclick = () => canvasPz.zoomIn();
+  document.getElementById('canvasOut').onclick = () => canvasPz.zoomOut();
+  document.getElementById('canvasReset').onclick = () => canvasPz.reset();
+
+  const svgGroup = document.getElementById('svgZoomGroup');
+  const svgPz = Panzoom(svgGroup, { maxScale: 5, minScale: .5, contain: 'outside' });
+  document.getElementById('svgStage').addEventListener('wheel', svgPz.zoomWithWheel);
+  document.getElementById('svgIn').onclick = () => svgPz.zoomIn();
+  document.getElementById('svgOut').onclick = () => svgPz.zoomOut();
+  document.getElementById('svgReset').onclick = () => svgPz.reset();
+
+  let customPz;
+  const customTarget = document.getElementById('customTarget');
+  customPz = Panzoom(customTarget, {
+    maxScale: 4,
+    minScale: .5,
+    setTransform: (target, { scale, x, y }) => {
+      customPz.setStyle('transform', `translate(${x}px, ${y}px) scale(${scale}) rotate(-4deg)`);
+    }
+  });
+  document.getElementById('customStage').addEventListener('wheel', customPz.zoomWithWheel);
+  document.getElementById('customIn').onclick = () => customPz.zoomIn();
+  document.getElementById('customOut').onclick = () => customPz.zoomOut();
+  document.getElementById('customReset').onclick = () => customPz.reset();
+
+  updateStats();
+  addLog('ready');
+});
+</script>
+</body>
+</html>
