@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Workbox</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .result-box.err { background: #fff0f0; border-color: #f5c2c2; color: #a11d1d; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Workbox 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>Workbox</strong>는 화면에 무언가를 그리는 라이브러리가 아니라, PWA(오프라인에서도
+    동작하는 웹앱)를 만들 때 쓰는 <strong>서비스워커용 캐싱 도구 모음</strong>입니다. 서비스워커는
+    브라우저와 네트워크 사이에서 요청을 가로채는 백그라운드 스크립트로, Workbox는 이 요청을
+    "언제 캐시에서, 언제 네트워크에서 응답할지" 정하는 전략을 몇 줄로 쉽게 설정하게 해줍니다.
+    <ul>
+      <li><code>navigator.serviceWorker.register()</code>로 서비스워커를 등록하면 설치 → 활성화 단계를 거침</li>
+      <li><code>workbox.precaching.precacheAndRoute()</code>로 지정한 파일을 설치 시점에 미리 캐시(프리캐싱)</li>
+      <li><code>workbox.strategies.StaleWhileRevalidate</code> 등으로 런타임에 요청되는 리소스의 캐싱 전략 지정</li>
+      <li>한 번 캐시된 리소스는 캐시 스토리지(Cache Storage)에 남아 오프라인 상태에서도 그대로 응답 가능</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지가 등록하는 서비스워커는 <code>pages/workbox/claude/</code> 경로에만 적용 범위(scope)가
+      한정되어 있어, 대시보드의 다른 페이지에는 전혀 영향을 주지 않습니다. 아래 위판 시세·공지
+      내용은 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의 자료가 아닙니다. 다른 외부 API는
+      사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 서비스워커 등록 + 생명주기 상태</h2>
+    <div class="desc">페이지가 열리면 자동으로 서비스워커를 등록합니다. 등록 상태를 확인해보세요.</div>
+    <div class="controls"><button id="checkRegBtn1">등록 상태 확인</button></div>
+    <div class="result-box" id="output1">확인 중...</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const reg = await navigator.serviceWorker.register('sw.js');
+await navigator.serviceWorker.ready;
+reg.active.state; // 'activated'
+reg.scope;        // 이 서비스워커가 적용되는 경로 범위</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 프리캐싱 (Precaching)</h2>
+    <div class="desc"><code>precache-sample.txt</code>는 서비스워커가 설치되는 시점에 미리 캐시됩니다. 방금 페이지가 로드되자마자 이미 캐시에 들어가 있어야 합니다.</div>
+    <div class="controls"><button id="checkPrecacheBtn2">프리캐시 확인</button></div>
+    <div class="result-box" id="output2">확인 전</div>
+    <details>
+      <summary>코드 보기 (서비스워커 내부)</summary>
+      <pre class="code-sample">workbox.precaching.precacheAndRoute([
+  { url: './precache-sample.txt', revision: '1' },
+]);
+// revision을 바꾸면 파일이 변경됐다고 판단해 다시 캐시함</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 런타임 캐싱 (StaleWhileRevalidate)</h2>
+    <div class="desc"><code>runtime-cached.json</code>은 프리캐시 대상이 아니라, 실제로 요청될 때 캐시됩니다. 버튼을 눌러 요청해보고, 캐시에 저장됐는지 확인하세요.</div>
+    <div class="controls"><button id="fetchBtn3">위판 시세 불러오기</button></div>
+    <div class="result-box" id="output3">아직 요청 안 함</div>
+    <details>
+      <summary>코드 보기 (서비스워커 내부)</summary>
+      <pre class="code-sample">workbox.routing.registerRoute(
+  ({ url }) => url.pathname.endsWith('/runtime-cached.json'),
+  new workbox.strategies.StaleWhileRevalidate({ cacheName: 'workbox-demo-runtime' })
+);
+// 캐시가 있으면 즉시 응답 + 동시에 백그라운드로 최신 버전을 받아 캐시 갱신</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 오프라인에서도 동작 확인</h2>
+    <div class="desc">
+      1~3번을 먼저 실행해 캐시를 채운 뒤, 브라우저 개발자 도구의 <strong>Network 탭 → Offline 체크 →
+      새로고침</strong>으로 실제 오프라인 상태를 만들어보세요. 캐시된 두 파일은 여전히 불러와지지만,
+      서비스워커가 다루지 않는 <code>not-cached.json</code>은 오프라인에서 실패하는 것을 비교해볼 수 있습니다.
+    </div>
+    <div class="controls"><button id="offlineTestBtn4">지금 상태에서 3개 파일 모두 요청</button></div>
+    <div class="result-box" id="output4">아직 확인 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">// 캐시된 파일은 오프라인에서도 정상 응답됨
+await fetch('precache-sample.txt');   // 성공 (프리캐시됨)
+await fetch('runtime-cached.json');   // 성공 (런타임 캐시됨, 한 번 요청한 적 있다면)
+await fetch('not-cached.json');       // 오프라인이면 실패 (서비스워커가 다루지 않는 파일)</pre>
+    </details>
+  </section>
+
+  <script>
+    let swRegistration = null;
+
+    async function registerSW() {
+      if (!('serviceWorker' in navigator)) {
+        document.getElementById('output1').textContent = '이 브라우저는 서비스워커를 지원하지 않습니다.';
+        return;
+      }
+      swRegistration = await navigator.serviceWorker.register('sw.js');
+      await navigator.serviceWorker.ready;
+    }
+    registerSW();
+
+    // ---------- 1. 등록 상태 확인 ----------
+    document.getElementById('checkRegBtn1').addEventListener('click', async () => {
+      const output1 = document.getElementById('output1');
+      if (!swRegistration) {
+        output1.textContent = '아직 등록되지 않음';
+        return;
+      }
+      await navigator.serviceWorker.ready;
+      output1.textContent =
+        `등록됨 · scope: ${swRegistration.scope}\n상태: ${swRegistration.active ? swRegistration.active.state : '없음'}`;
+      output1.classList.add('ok');
+    });
+
+    // ---------- 2. 프리캐시 확인 ----------
+    document.getElementById('checkPrecacheBtn2').addEventListener('click', async () => {
+      const output2 = document.getElementById('output2');
+      const cacheNames = await caches.keys();
+      let found = false;
+      for (const name of cacheNames) {
+        const cache = await caches.open(name);
+        const match = await cache.match('precache-sample.txt', { ignoreSearch: true });
+        if (match) found = true;
+      }
+      output2.textContent = found
+        ? `프리캐시됨 (캐시 스토리지: ${cacheNames.join(', ')})`
+        : '아직 캐시되지 않음 (서비스워커 설치가 끝날 때까지 잠시 후 다시 눌러보세요)';
+      output2.classList.toggle('ok', found);
+    });
+
+    // ---------- 3. 런타임 캐싱 ----------
+    document.getElementById('fetchBtn3').addEventListener('click', async () => {
+      const output3 = document.getElementById('output3');
+      const res = await fetch('runtime-cached.json');
+      const data = await res.json();
+      await new Promise((r) => setTimeout(r, 300));
+      const cache = await caches.open('workbox-demo-runtime');
+      const cached = await cache.match('runtime-cached.json');
+      output3.textContent =
+        `응답: ${JSON.stringify(data)}\n캐시 저장됨: ${!!cached}`;
+      output3.classList.toggle('ok', !!cached);
+    });
+
+    // ---------- 4. 오프라인 대비 상태 확인 ----------
+    document.getElementById('offlineTestBtn4').addEventListener('click', async () => {
+      const output4 = document.getElementById('output4');
+      const results = [];
+      for (const file of ['precache-sample.txt', 'runtime-cached.json', 'not-cached.json']) {
+        try {
+          const res = await fetch(file, { cache: 'no-store' });
+          results.push(`${file}: ${res.ok ? '성공' : '실패(' + res.status + ')'}`);
+        } catch (e) {
+          results.push(`${file}: 실패 (네트워크 오류 — 오프라인 상태이고 캐시에 없음)`);
+        }
+      }
+      output4.textContent = results.join('\n');
+    });
+  </script>
+</body>
+</html>
