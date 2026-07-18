@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Lit</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px; font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px; color: #a15c00; background: #fff6e5;
+    border: 1px solid #ffe0a3; border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .log-box {
+    background: #fafbfc; border: 1px solid #eee; border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444;
+    margin-top: 8px; max-height: 140px; overflow-y: auto;
+  }
+  .log-box div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  .log-box div:last-child { border-bottom: none; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Lit</h1>
+  <p>
+    Lit은 브라우저 표준 기능인 <b>웹 컴포넌트(Custom Elements + Shadow DOM)</b>를 가볍게 만들 수 있게
+    도와주는 라이브러리입니다. React처럼 상태가 바뀌면 화면이 자동으로 다시 그려지지만, 프레임워크
+    없이도 어느 사이트에나 그대로 갖다 붙일 수 있는 순수 브라우저 표준 커스텀 태그를 만든다는 게 특징입니다.
+  </p>
+  <ul>
+    <li><code>static properties</code>로 반응형 속성을 정의하면 값이 바뀔 때 자동으로 재렌더링</li>
+    <li><code>html</code> 태그드 템플릿 + <code>repeat</code>/<code>classMap</code>/<code>styleMap</code> 등 디렉티브</li>
+    <li>Shadow DOM으로 스타일이 컴포넌트 안에 캡슐화되어 외부와 충돌하지 않음</li>
+    <li>표준 <code>CustomEvent</code>로 컴포넌트 간 통신, <code>&lt;slot&gt;</code>으로 콘텐츠 재사용</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지의 위판·입찰 데이터는 Lit 기능 설명을 위한 <b>가상의 예시</b>이며, 실제 수협중앙회의
+    통계·조직·절차와 무관합니다. 다른 외부 API는 사용하지 않았습니다 (Lit 3.3.3을 CDN에서 로드).
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 반응형 속성 (Reactive Properties)</h2>
+  <p class="desc">
+    <code>static properties</code>로 선언한 속성이 바뀌면 Lit이 자동으로 <code>render()</code>를
+    다시 호출합니다. 직접 DOM을 조작할 필요가 없습니다.
+  </p>
+  <div id="s1-mount"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">class BidCounter extends LitElement {
+  static properties = { amount: { type: Number } };
+  constructor() { super(); this.amount = 0; }
+  render() {
+    return html`
+      &lt;span&gt;현재 입찰가: ${this.amount.toLocaleString()}원&lt;/span&gt;
+      &lt;button @click=${() => this.amount += 1000}&gt;+1,000원&lt;/button&gt;
+    `;
+  }
+}
+customElements.define('bid-counter', BidCounter);</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. 리스트 렌더링 — <code>repeat</code> + <code>classMap</code>/<code>styleMap</code></h2>
+  <p class="desc">
+    <code>repeat(items, keyFn, template)</code>은 각 항목을 고유 키로 추적해서, 순서가 바뀌거나
+    항목이 추가/삭제돼도 기존 DOM 노드를 최대한 재사용합니다. <code>classMap</code>/<code>styleMap</code>은
+    객체로 클래스·인라인 스타일을 동적으로 적용합니다.
+  </p>
+  <div id="s2-mount"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">class CatchList extends LitElement {
+  static properties = { items: { type: Array } };
+  render() {
+    return html`${repeat(this.items, (i) => i.id, (i) => html`
+      &lt;li class=${classMap({ active: i.active })}
+          style=${styleMap({ fontWeight: i.active ? 'bold' : 'normal' })}
+          @click=${() => this._toggle(i.id)}&gt;
+        ${i.name} — ${i.weight}kg
+      &lt;/li&gt;
+    `)}`;
+  }
+}</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. 커스텀 이벤트 — 자식 컴포넌트 → 부모</h2>
+  <p class="desc">
+    자식 컴포넌트는 표준 <code>CustomEvent</code>를 <code>dispatchEvent()</code>로 쏘아 올리고,
+    부모(또는 페이지 전체)는 일반 <code>addEventListener</code>로 받습니다. 프레임워크에 얽매이지 않는
+    표준 DOM 이벤트라, Lit 컴포넌트를 어떤 환경(React, Vue, 순수 HTML)에 넣어도 똑같이 동작합니다.
+  </p>
+  <div id="s3-mount"></div>
+  <div class="log-box" id="s3-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">class BidButton extends LitElement {
+  render() {
+    return html`&lt;button @click=${this._onClick}&gt;입찰하기&lt;/button&gt;`;
+  }
+  _onClick() {
+    this.dispatchEvent(new CustomEvent('bid-placed', {
+      detail: { amount: Math.floor(Math.random() * 5000) + 1000 },
+      bubbles: true, composed: true, // Shadow DOM 경계를 넘어 밖으로 전파
+    }));
+  }
+}
+
+// 부모(일반 페이지 스크립트)에서 수신
+document.getElementById('s3-mount').addEventListener('bid-placed', (e) => {
+  console.log('받은 입찰가:', e.detail.amount);
+});</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. <code>&lt;slot&gt;</code> — 라이트 DOM 콘텐츠 투영</h2>
+  <p class="desc">
+    <code>&lt;slot&gt;</code>을 쓰면 컴포넌트 바깥(라이트 DOM)에 작성한 콘텐츠를 컴포넌트 내부의
+    지정된 위치에 그대로 꽂아 넣을 수 있습니다. <code>name</code> 속성으로 여러 슬롯을 구분할 수
+    있어, 재사용 가능한 카드/패널 컴포넌트를 만들 때 유용합니다.
+  </p>
+  <div id="s4-mount"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">class InfoCard extends LitElement {
+  render() {
+    return html`
+      &lt;div class="card"&gt;
+        &lt;h3&gt;&lt;slot name="title"&gt;&lt;/slot&gt;&lt;/h3&gt;
+        &lt;div&gt;&lt;slot&gt;&lt;/slot&gt;&lt;/div&gt; &lt;!-- 기본 슬롯 --&gt;
+      &lt;/div&gt;
+    `;
+  }
+}
+customElements.define('info-card', InfoCard);</pre>
+    <pre class="code-sample">&lt;!-- 사용하는 쪽: 컴포넌트 내부 구조를 몰라도 콘텐츠만 채우면 됨 --&gt;
+&lt;info-card&gt;
+  &lt;span slot="title"&gt;오늘의 위판 요약&lt;/span&gt;
+  &lt;p&gt;고등어 120kg, 갈치 85kg이 위판되었습니다.&lt;/p&gt;
+&lt;/info-card&gt;</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. 라이프사이클 — <code>updated()</code> + attribute reflection</h2>
+  <p class="desc">
+    속성이 바뀔 때마다 Lit은 <code>updated(changedProperties)</code>를 호출해서 "무엇이 어떻게
+    바뀌었는지" 알려줍니다. <code>reflect: true</code>를 주면 속성값이 실제 HTML
+    attribute에도 동기화되어, CSS 선택자(<code>[status="done"]</code>)나 개발자 도구에서 바로 확인할 수
+    있습니다.
+  </p>
+  <div id="s5-mount"></div>
+  <div class="log-box" id="s5-log"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">class AuctionStatus extends LitElement {
+  static properties = {
+    status: { type: String, reflect: true }, // attribute와 동기화됨
+  };
+  constructor() { super(); this.status = 'waiting'; }
+  updated(changedProps) {
+    if (changedProps.has('status')) {
+      console.log(`상태 변경: ${changedProps.get('status')} → ${this.status}`);
+    }
+  }
+  render() { return html`&lt;span&gt;${this.status}&lt;/span&gt;`; }
+}
+// reflect:true 덕분에 실제 DOM에는 &lt;auction-status status="done"&gt;처럼 attribute가 붙는다</pre>
+  </details>
+</section>
+
+<script type="module">
+  import {
+    LitElement, html, css,
+  } from 'https://cdn.jsdelivr.net/npm/lit@3.3.3/index.js';
+  import { repeat } from 'https://cdn.jsdelivr.net/npm/lit@3.3.3/directives/repeat.js';
+  import { classMap } from 'https://cdn.jsdelivr.net/npm/lit@3.3.3/directives/class-map.js';
+  import { styleMap } from 'https://cdn.jsdelivr.net/npm/lit@3.3.3/directives/style-map.js';
+
+  const cardStyles = css`
+    :host { display: block; font-size: 13px; }
+    .box { border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; background: #fafbfc; }
+    button {
+      padding: 6px 12px; border: none; border-radius: 8px; background: #4f7dff;
+      color: #fff; cursor: pointer; font-size: 13px; margin-right: 6px;
+    }
+    button:hover { background: #3d67e0; }
+    button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  `;
+
+  // ---------- Section 1 ----------
+  class BidCounter extends LitElement {
+    static properties = { amount: { type: Number } };
+    static styles = cardStyles;
+    constructor() { super(); this.amount = 0; }
+    render() {
+      return html`
+        <div class="box">
+          <div style="margin-bottom:8px;font-size:15px;font-weight:600;">현재 입찰가: ${this.amount.toLocaleString()}원</div>
+          <button @click=${() => (this.amount += 1000)}>+1,000원</button>
+          <button @click=${() => (this.amount += 5000)}>+5,000원</button>
+          <button class="ghost" @click=${() => (this.amount = 0)}>초기화</button>
+        </div>
+      `;
+    }
+  }
+  customElements.define('bid-counter', BidCounter);
+  document.getElementById('s1-mount').appendChild(document.createElement('bid-counter'));
+
+  // ---------- Section 2 ----------
+  class CatchList extends LitElement {
+    static properties = { items: { type: Array } };
+    static styles = css`
+      ${cardStyles}
+      ul { list-style: none; margin: 0; padding: 0; }
+      li {
+        padding: 8px 12px; border-bottom: 1px solid #eee; cursor: pointer;
+        display: flex; justify-content: space-between;
+      }
+      li:last-child { border-bottom: none; }
+      li.active { background: #eafff3; color: #0a7a4c; }
+      li .hint { font-size: 11px; color: #999; }
+    `;
+    constructor() {
+      super();
+      this.items = [
+        { id: 1, name: '고등어', weight: 120, active: false },
+        { id: 2, name: '갈치', weight: 85, active: false },
+        { id: 3, name: '오징어', weight: 60, active: false },
+      ];
+    }
+    _toggle(id) {
+      this.items = this.items.map((i) => (i.id === id ? { ...i, active: !i.active } : i));
+    }
+    render() {
+      return html`
+        <div class="box">
+          <div style="font-size:12px;color:#888;margin-bottom:6px;">항목을 클릭하면 active 상태가 토글됩니다 (classMap + styleMap 적용)</div>
+          <ul>${repeat(this.items, (i) => i.id, (i) => html`
+            <li class=${classMap({ active: i.active })}
+                style=${styleMap({ fontWeight: i.active ? 'bold' : 'normal' })}
+                @click=${() => this._toggle(i.id)}>
+              <span>${i.name}</span><span class="hint">${i.weight}kg</span>
+            </li>
+          `)}</ul>
+        </div>
+      `;
+    }
+  }
+  customElements.define('catch-list', CatchList);
+  document.getElementById('s2-mount').appendChild(document.createElement('catch-list'));
+
+  // ---------- Section 3 ----------
+  class BidButton extends LitElement {
+    static styles = cardStyles;
+    render() {
+      return html`<button @click=${this._onClick}>🔨 입찰하기</button>`;
+    }
+    _onClick() {
+      const amount = Math.floor(Math.random() * 5000) * 10 + 1000;
+      this.dispatchEvent(new CustomEvent('bid-placed', {
+        detail: { amount },
+        bubbles: true,
+        composed: true,
+      }));
+    }
+  }
+  customElements.define('bid-button', BidButton);
+  const s3Mount = document.getElementById('s3-mount');
+  s3Mount.appendChild(document.createElement('bid-button'));
+  const s3Log = document.getElementById('s3-log');
+  s3Mount.addEventListener('bid-placed', (e) => {
+    const row = document.createElement('div');
+    row.textContent = `자식 컴포넌트로부터 CustomEvent 수신: bid-placed, amount = ${e.detail.amount.toLocaleString()}원`;
+    s3Log.prepend(row);
+  });
+
+  // ---------- Section 4 ----------
+  class InfoCard extends LitElement {
+    static styles = css`
+      ${cardStyles}
+      .card { border-left: 4px solid #4f7dff; padding-left: 12px; }
+      h3 { margin: 0 0 6px; font-size: 15px; }
+      div.body { color: #555; font-size: 13px; }
+    `;
+    render() {
+      return html`
+        <div class="box card">
+          <h3><slot name="title">(제목 없음)</slot></h3>
+          <div class="body"><slot></slot></div>
+        </div>
+      `;
+    }
+  }
+  customElements.define('info-card', InfoCard);
+  const s4Mount = document.getElementById('s4-mount');
+  const card1 = document.createElement('info-card');
+  card1.innerHTML = '<span slot="title">오늘의 위판 요약</span><p style="margin:0;">고등어 120kg, 갈치 85kg이 위판되었습니다. (가상 예시)</p>';
+  const card2 = document.createElement('info-card');
+  card2.innerHTML = '<span slot="title">공지</span><p style="margin:0;">이 카드 컴포넌트는 slot 덕분에 내용만 바꿔서 재사용됩니다.</p>';
+  s4Mount.style.display = 'grid';
+  s4Mount.style.gridTemplateColumns = '1fr 1fr';
+  s4Mount.style.gap = '12px';
+  s4Mount.appendChild(card1);
+  s4Mount.appendChild(card2);
+
+  // ---------- Section 5 ----------
+  class AuctionStatus extends LitElement {
+    static properties = { status: { type: String, reflect: true } };
+    static styles = css`
+      ${cardStyles}
+      span.pill { display:inline-block; padding:4px 12px; border-radius:999px; font-size:13px; background:#eef0f3; }
+      :host([status="loading"]) span.pill { background:#fff6e5; color:#a15c00; }
+      :host([status="done"]) span.pill { background:#eafff3; color:#0a7a4c; }
+    `;
+    constructor() { super(); this.status = 'waiting'; }
+    updated(changedProps) {
+      if (changedProps.has('status')) {
+        this.dispatchEvent(new CustomEvent('status-log', {
+          detail: `상태 변경: ${changedProps.get('status')} → ${this.status} (attribute: status="${this.getAttribute('status')}")`,
+          bubbles: true, composed: true,
+        }));
+      }
+    }
+    render() {
+      return html`<div class="box"><span class="pill">${this.status}</span></div>`;
+    }
+  }
+  customElements.define('auction-status', AuctionStatus);
+  const s5Mount = document.getElementById('s5-mount');
+  const statusEl = document.createElement('auction-status');
+  const controls = document.createElement('div');
+  controls.style.marginTop = '10px';
+  controls.innerHTML = `
+    <button id="s5-loading" style="padding:6px 12px;border:none;border-radius:8px;background:#4f7dff;color:#fff;cursor:pointer;font-size:13px;margin-right:6px;">loading으로 변경</button>
+    <button id="s5-done" style="padding:6px 12px;border:none;border-radius:8px;background:#4f7dff;color:#fff;cursor:pointer;font-size:13px;margin-right:6px;">done으로 변경</button>
+    <button id="s5-reset" style="padding:6px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#333;cursor:pointer;font-size:13px;">waiting으로 초기화</button>
+  `;
+  s5Mount.appendChild(statusEl);
+  s5Mount.appendChild(controls);
+  const s5Log = document.getElementById('s5-log');
+  s5Mount.addEventListener('status-log', (e) => {
+    const row = document.createElement('div');
+    row.textContent = e.detail;
+    s5Log.prepend(row);
+  });
+  controls.querySelector('#s5-loading').addEventListener('click', () => { statusEl.status = 'loading'; });
+  controls.querySelector('#s5-done').addEventListener('click', () => { statusEl.status = 'done'; });
+  controls.querySelector('#s5-reset').addEventListener('click', () => { statusEl.status = 'waiting'; });
+</script>
+</body>
+</html>
