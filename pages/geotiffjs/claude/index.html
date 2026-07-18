@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>geotiff.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { background: #3d67e0; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+  }
+  canvas {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 320px;
+    height: 320px;
+    cursor: crosshair;
+    image-rendering: auto;
+  }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>geotiff.js 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>geotiff.js</strong>는 <strong>GeoTIFF</strong> 파일 — 각 픽셀이 값(고도·수온·수심 등)과
+    지리적 위치 정보를 함께 담고 있는 위성·항공 관측용 래스터 파일 포맷 — 을 브라우저에서 직접
+    읽는 라이브러리입니다.
+    <ul>
+      <li><code>GeoTIFF.fromArrayBuffer()</code>로 파일을 열고, <code>getWidth()</code>/<code>getBoundingBox()</code>로 크기·좌표 범위 확인</li>
+      <li><code>readRasters()</code>로 실제 픽셀 값 배열을 통째로 읽어옴</li>
+      <li>읽어온 값을 색상으로 매핑해 <code>&lt;canvas&gt;</code>에 직접 시각화</li>
+      <li>이미지의 좌표 범위(bbox)를 이용해 위경도 ↔ 픽셀 좌표를 서로 변환</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 아래 예시에 쓰인 <code>depth-sample.tif</code>는 실제 해양 관측 자료가 아니라, 같은
+      geotiff.js의 <code>writeArrayBuffer()</code>로 직접 생성한 <strong>가상의 합성 수심 데이터</strong>입니다
+      (64×64 픽셀, 연안에서 먼바다로 갈수록 깊어지는 패턴 + 약간의 기복을 섞어 만듦).
+      좌표(부산 인근)도 가상의 예시이며 실제 위판장·해역 자료가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. GeoTIFF 파일 열기 + 메타데이터 읽기</h2>
+    <div class="desc">파일을 열어 이미지 크기, 좌표 범위(bbox), 해상도 등 메타데이터를 확인합니다.</div>
+    <div class="controls"><button id="loadBtn1">depth-sample.tif 열기</button></div>
+    <pre class="result-box" id="output1">아직 열지 않음</pre>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const response = await fetch('depth-sample.tif');
+const tiff = await GeoTIFF.fromArrayBuffer(await response.arrayBuffer());
+const image = await tiff.getImage();
+
+image.getWidth();         // 64
+image.getBoundingBox();   // [minLon, minLat, maxLon, maxLat]
+image.getResolution();    // [픽셀당 경도, 픽셀당 위도]</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 픽셀(래스터) 값 읽기</h2>
+    <div class="desc"><code>readRasters()</code>로 이미지 전체의 실제 값(이 예시에서는 가상의 수심, m)을 배열로 읽어옵니다.</div>
+    <div class="controls"><button id="readBtn2">픽셀 값 읽기</button></div>
+    <div class="result-box" id="output2">아직 읽지 않음</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const rasters = await image.readRasters();
+const band = rasters[0]; // 단일 밴드 (수심 값 배열)
+Math.min(...band); // 최솟값
+Math.max(...band); // 최댓값</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. Canvas에 시각화</h2>
+    <div class="desc">읽어온 값을 색상 그라데이션으로 매핑해 canvas에 그립니다(진할수록 깊은 수심).</div>
+    <canvas id="canvas3" width="64" height="64"></canvas>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const imgData = ctx.createImageData(width, height);
+for (let i = 0; i < band.length; i++) {
+  const t = (band[i] - min) / (max - min); // 0~1로 정규화
+  imgData.data[i * 4 + 2] = Math.round(150 + t * 100); // 값이 클수록 더 진한 파랑
+  imgData.data[i * 4 + 3] = 255;
+}
+ctx.putImageData(imgData, 0, 0);</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 좌표 ↔ 픽셀 변환</h2>
+    <div class="desc">위 3번 이미지를 클릭하면, 클릭한 지점의 위경도와 그 지점의 수심 값을 계산해서 보여줍니다.</div>
+    <canvas id="canvas4" width="64" height="64"></canvas>
+    <div class="result-box" id="output4">이미지를 클릭해보세요</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const [minX, minY, maxX, maxY] = image.getBoundingBox();
+const px = Math.floor(((lon - minX) / (maxX - minX)) * width);
+const py = Math.floor(((maxY - lat) / (maxY - minY)) * height);
+const depth = band[py * width + px];</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/geotiff@3.0.5/dist-browser/geotiff.js"></script>
+  <script>
+    let cachedImage = null;
+    let cachedBand = null;
+
+    async function loadTiff() {
+      if (cachedImage) return { image: cachedImage, band: cachedBand };
+      const response = await fetch('depth-sample.tif');
+      const arrayBuffer = await response.arrayBuffer();
+      const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+      cachedImage = await tiff.getImage();
+      const rasters = await cachedImage.readRasters();
+      cachedBand = rasters[0];
+      return { image: cachedImage, band: cachedBand };
+    }
+
+    function drawToCanvas(canvas, image, band) {
+      const ctx = canvas.getContext('2d');
+      const w = image.getWidth();
+      const h = image.getHeight();
+      const imgData = ctx.createImageData(w, h);
+      const min = Math.min(...band);
+      const max = Math.max(...band);
+      for (let i = 0; i < band.length; i++) {
+        const t = (band[i] - min) / (max - min);
+        imgData.data[i * 4] = Math.round(30 + t * 20);
+        imgData.data[i * 4 + 1] = Math.round(60 + t * 100);
+        imgData.data[i * 4 + 2] = Math.round(150 + t * 100);
+        imgData.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    // ---------- 1. 메타데이터 읽기 ----------
+    document.getElementById('loadBtn1').addEventListener('click', async () => {
+      const { image } = await loadTiff();
+      document.getElementById('output1').textContent =
+        `width: ${image.getWidth()}\nheight: ${image.getHeight()}\n` +
+        `bbox: [${image.getBoundingBox().map((v) => v.toFixed(4)).join(', ')}]\n` +
+        `resolution: [${image.getResolution().map((v) => v.toFixed(5)).join(', ')}]`;
+    });
+
+    // ---------- 2. 픽셀 값 읽기 ----------
+    document.getElementById('readBtn2').addEventListener('click', async () => {
+      const { band } = await loadTiff();
+      const min = Math.min(...band);
+      const max = Math.max(...band);
+      document.getElementById('output2').textContent =
+        `픽셀 수: ${band.length}개 · 최소 수심: ${min.toFixed(1)}m · 최대 수심: ${max.toFixed(1)}m`;
+    });
+
+    // ---------- 3. Canvas 시각화 ----------
+    loadTiff().then(({ image, band }) => {
+      drawToCanvas(document.getElementById('canvas3'), image, band);
+      drawToCanvas(document.getElementById('canvas4'), image, band);
+    });
+
+    // ---------- 4. 좌표 <-> 픽셀 변환 ----------
+    document.getElementById('canvas4').addEventListener('click', async (e) => {
+      const { image, band } = await loadTiff();
+      const rect = e.target.getBoundingClientRect();
+      const px = Math.floor(((e.clientX - rect.left) / rect.width) * image.getWidth());
+      const py = Math.floor(((e.clientY - rect.top) / rect.height) * image.getHeight());
+      const [minX, minY, maxX, maxY] = image.getBoundingBox();
+      const lon = minX + (px / image.getWidth()) * (maxX - minX);
+      const lat = maxY - (py / image.getHeight()) * (maxY - minY);
+      const depth = band[py * image.getWidth() + px];
+      document.getElementById('output4').textContent =
+        `경도 ${lon.toFixed(4)}, 위도 ${lat.toFixed(4)} (픽셀 ${px}, ${py}) — 가상 수심: ${depth.toFixed(1)}m`;
+    });
+  </script>
+</body>
+</html>
