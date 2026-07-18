@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Transformers.js</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .desc .en { color: #888; font-size: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  input[type="text"], textarea {
+    width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 10px;
+    border: 1px solid #ddd; border-radius: 8px; background: #fafbfc; font-family: inherit;
+  }
+  textarea { resize: vertical; }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px; white-space: nowrap;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  .progress-wrap {
+    margin-top: 10px; display: none;
+  }
+  .progress-wrap.active { display: block; }
+  .progress-bar-bg {
+    background: #eef0f3; border-radius: 999px; height: 8px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: #4f7dff; height: 100%; width: 0%; transition: width 0.2s;
+  }
+  .progress-label { font-size: 11.5px; color: #888; margin-top: 4px; }
+  .result-box {
+    background: #f0f4ff; border: 1px solid #dbe4ff; border-radius: 8px;
+    padding: 10px 12px; font-size: 13px; color: #333; margin-top: 10px;
+  }
+  .result-box.error { background: #ffeceb; border-color: #ffc9c5; color: #c0392b; font-family: monospace; white-space: pre-wrap; }
+  .score-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 13px; }
+  .score-label { min-width: 140px; }
+  .score-bar-bg { flex: 1; background: #eef0f3; border-radius: 999px; height: 14px; overflow: hidden; }
+  .score-bar-fill { background: #4f7dff; height: 100%; }
+  .score-val { min-width: 55px; text-align: right; font-family: monospace; font-size: 12px; color: #555; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #eafff3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+  label.field-label { font-size: 12px; color: #777; display: block; margin: 8px 0 4px; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Transformers.js</h1>
+  <p>
+    Transformers.js는 Hugging Face의 트랜스포머 모델을 <b>서버 없이 브라우저 안에서 직접</b> 실행하는
+    라이브러리입니다. 감정 분석, 문장 임베딩, 제로샷 분류, 질의응답 같은 실제 AI 모델 추론이 사용자의
+    기기(CPU, WebAssembly)에서 돌아가며, 입력한 텍스트는 어디로도 전송되지 않습니다.
+  </p>
+  <ul>
+    <li><code>pipeline(task, model)</code> 한 줄로 사전학습 모델을 불러와 바로 추론</li>
+    <li>모델 가중치는 최초 1회 Hugging Face Hub에서 내려받아 브라우저에 캐시됨 (이후 즉시 로딩)</li>
+    <li>감정 분석·임베딩·제로샷 분류·질의응답 등 다양한 NLP 태스크를 동일한 API로 처리</li>
+    <li>텍스트가 서버로 전송되지 않아 프라이버시에 유리 (완전히 클라이언트 사이드)</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ <b>각 섹션의 버튼을 누르면 실제 사전학습 모델(섹션당 약 30~90MB)을 Hugging Face Hub에서
+    다운로드합니다.</b> 최초 실행은 네트워크 속도에 따라 수 초~수십 초 걸릴 수 있고, 이후에는 브라우저
+    캐시(Cache API)로 즉시 로딩됩니다. 사용한 모델은 모두 영어 전용이라 예시 문장은 영어로 되어 있습니다
+    (다국어 모델도 존재하지만 크기가 더 큽니다). 이 페이지의 예시 문장·문맥은 Transformers.js 기능 설명을
+    위한 <b>가상의 내용</b>이며, 실제 수협중앙회의 통계·조직·절차와 무관합니다. 다른 외부 API는 사용하지
+    않았습니다 (Transformers.js 4.2.0을 CDN에서 로드, 모델 가중치만 Hugging Face Hub에서 받아옵니다).
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 감정 분석 (Sentiment Analysis)</h2>
+  <p class="desc">
+    <code>pipeline('sentiment-analysis')</code>로 문장의 긍정/부정을 분류합니다. 위판 후기를 영어로
+    입력해보세요.
+  </p>
+  <label class="field-label">리뷰 문장 (영어)</label>
+  <input type="text" id="s1-input" value="The mackerel I bought at this auction was incredibly fresh and well priced." />
+  <div class="controls">
+    <button class="action" id="s1-run">▶ 모델 불러오기 + 분석</button>
+  </div>
+  <div class="progress-wrap" id="s1-progress">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="s1-bar"></div></div>
+    <div class="progress-label" id="s1-progress-label"></div>
+  </div>
+  <div id="s1-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { pipeline } from '@huggingface/transformers';
+
+const classifier = await pipeline(
+  'sentiment-analysis',
+  'Xenova/distilbert-base-uncased-finetuned-sst-2-english'
+);
+const output = await classifier('I love transformers!');
+// [{ label: 'POSITIVE', score: 0.999788761138916 }]</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. 문장 임베딩 + 의미 유사도</h2>
+  <p class="desc">
+    <code>pipeline('feature-extraction')</code>으로 문장을 숫자 벡터(임베딩)로 바꾸고,
+    <code>cos_sim()</code>으로 두 문장이 의미적으로 얼마나 비슷한지 계산합니다. 단어가 달라도
+    의미가 비슷하면 유사도가 높게 나옵니다.
+  </p>
+  <label class="field-label">문장 A</label>
+  <input type="text" id="s2-input-a" value="The fish market was crowded this morning." />
+  <label class="field-label">문장 B</label>
+  <input type="text" id="s2-input-b" value="Many people gathered at the seafood auction today." />
+  <div class="controls">
+    <button class="action" id="s2-run">▶ 모델 불러오기 + 유사도 계산</button>
+  </div>
+  <div class="progress-wrap" id="s2-progress">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="s2-bar"></div></div>
+    <div class="progress-label" id="s2-progress-label"></div>
+  </div>
+  <div id="s2-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { pipeline, cos_sim } from '@huggingface/transformers';
+
+const extractor = await pipeline('feature-extraction', 'onnx-community/all-MiniLM-L6-v2-ONNX');
+const a = await extractor('sentence A', { pooling: 'mean', normalize: true });
+const b = await extractor('sentence B', { pooling: 'mean', normalize: true });
+const similarity = cos_sim(a.tolist()[0], b.tolist()[0]); // -1 ~ 1</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. 제로샷 분류 (Zero-Shot Classification)</h2>
+  <p class="desc">
+    <code>pipeline('zero-shot-classification')</code>은 미리 정해진 카테고리로 학습되지 않은 모델도
+    "이 라벨들 중 어디에 가장 가까운가?"를 즉석에서 판단합니다. 라벨을 자유롭게 바꿔서 실험해보세요.
+  </p>
+  <label class="field-label">분류할 문장 (영어)</label>
+  <input type="text" id="s3-input" value="My phone overheats every time I use the auction bidding app." />
+  <label class="field-label">후보 라벨 (쉼표로 구분)</label>
+  <input type="text" id="s3-labels" value="mobile app, billing, shipping, customer service" />
+  <div class="controls">
+    <button class="action" id="s3-run">▶ 모델 불러오기 + 분류</button>
+  </div>
+  <div class="progress-wrap" id="s3-progress">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="s3-bar"></div></div>
+    <div class="progress-label" id="s3-progress-label"></div>
+  </div>
+  <div id="s3-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { pipeline } from '@huggingface/transformers';
+
+const classifier = await pipeline('zero-shot-classification', 'Xenova/mobilebert-uncased-mnli');
+const text = 'My phone overheats every time I use the app.';
+const labels = ['mobile app', 'billing', 'shipping', 'customer service'];
+const output = await classifier(text, labels);
+// { sequence: '...', labels: [...정렬됨], scores: [...] }</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. 질의응답 (Question Answering)</h2>
+  <p class="desc">
+    <code>pipeline('question-answering')</code>은 긴 지문(context) 안에서 질문에 대한 답을 직접
+    찾아냅니다. 별도의 정답 목록 없이, 지문 자체에서 답이 되는 구간을 추출합니다.
+  </p>
+  <label class="field-label">지문 (영어)</label>
+  <textarea id="s4-context" rows="4">The auction starts at 6 a.m. every day except Sunday. Only registered members can place bids, and the highest bid wins each lot. Payments must be settled within 24 hours after the auction ends.</textarea>
+  <label class="field-label">질문 (영어)</label>
+  <input type="text" id="s4-question" value="What time does the auction start?" />
+  <div class="controls">
+    <button class="action" id="s4-run">▶ 모델 불러오기 + 질의응답</button>
+  </div>
+  <div class="progress-wrap" id="s4-progress">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="s4-bar"></div></div>
+    <div class="progress-label" id="s4-progress-label"></div>
+  </div>
+  <div id="s4-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">import { pipeline } from '@huggingface/transformers';
+
+const answerer = await pipeline('question-answering', 'Xenova/distilbert-base-uncased-distilled-squad');
+const question = 'Who was Jim Henson?';
+const context = 'Jim Henson was a nice puppet.';
+const output = await answerer(question, context);
+// { answer: 'a nice puppet', score: 0.5768911502526741 }</pre>
+  </details>
+</section>
+
+<script type="module">
+  import { pipeline, cos_sim } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js';
+
+  const pipelineCache = {};
+
+  function makeProgressHandler(prefix) {
+    const wrap = document.getElementById(`${prefix}-progress`);
+    const bar = document.getElementById(`${prefix}-bar`);
+    const label = document.getElementById(`${prefix}-progress-label`);
+    wrap.classList.add('active');
+    return (data) => {
+      if (data.status === 'initiate') {
+        label.textContent = `모델 파일 확인 중... (${data.file || ''})`;
+      } else if (data.status === 'download') {
+        label.textContent = `다운로드 시작: ${data.file || ''}`;
+      } else if (data.status === 'progress') {
+        const pct = Math.round(data.progress || 0);
+        bar.style.width = pct + '%';
+        const loadedMb = data.loaded ? (data.loaded / 1024 / 1024).toFixed(1) : '?';
+        const totalMb = data.total ? (data.total / 1024 / 1024).toFixed(1) : '?';
+        label.textContent = `${data.file || ''} — ${pct}% (${loadedMb}MB / ${totalMb}MB)`;
+      } else if (data.status === 'done') {
+        bar.style.width = '100%';
+        label.textContent = `완료: ${data.file || ''}`;
+      } else if (data.status === 'ready') {
+        label.textContent = '모델 준비 완료';
+      }
+    };
+  }
+
+  async function getPipeline(key, task, model, prefix) {
+    if (pipelineCache[key]) return pipelineCache[key];
+    const progress_callback = makeProgressHandler(prefix);
+    const p = await pipeline(task, model, { progress_callback });
+    pipelineCache[key] = p;
+    return p;
+  }
+
+  function setRunning(btn, running, label) {
+    btn.disabled = running;
+    btn.textContent = running ? '⏳ 처리 중...' : label;
+  }
+
+  function scoreBar(label, score) {
+    const pct = Math.round(score * 1000) / 10;
+    return `<div class="score-row">
+      <div class="score-label">${label}</div>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%"></div></div>
+      <div class="score-val">${pct}%</div>
+    </div>`;
+  }
+
+  // ---------- Section 1: sentiment-analysis ----------
+  document.getElementById('s1-run').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const resultEl = document.getElementById('s1-result');
+    setRunning(btn, true, '▶ 모델 불러오기 + 분석');
+    try {
+      const classifier = await getPipeline(
+        'sentiment', 'sentiment-analysis',
+        'Xenova/distilbert-base-uncased-finetuned-sst-2-english', 's1'
+      );
+      const text = document.getElementById('s1-input').value;
+      const output = await classifier(text);
+      const r = output[0];
+      const isPositive = r.label === 'POSITIVE';
+      resultEl.innerHTML = `<div class="result-box">
+        <span class="badge" style="${isPositive ? '' : 'background:#ffeceb;color:#c0392b;'}">${r.label}</span>
+        ${scoreBar('확신도', r.score)}
+      </div>`;
+    } catch (err) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${err.message}</div>`;
+    }
+    setRunning(btn, false, '▶ 모델 불러오기 + 분석');
+  });
+
+  // ---------- Section 2: feature-extraction + cos_sim ----------
+  document.getElementById('s2-run').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const resultEl = document.getElementById('s2-result');
+    setRunning(btn, true, '▶ 모델 불러오기 + 유사도 계산');
+    try {
+      const extractor = await getPipeline(
+        'embedding', 'feature-extraction', 'onnx-community/all-MiniLM-L6-v2-ONNX', 's2'
+      );
+      const textA = document.getElementById('s2-input-a').value;
+      const textB = document.getElementById('s2-input-b').value;
+      const [embA, embB] = await Promise.all([
+        extractor(textA, { pooling: 'mean', normalize: true }),
+        extractor(textB, { pooling: 'mean', normalize: true }),
+      ]);
+      const similarity = cos_sim(embA.tolist()[0], embB.tolist()[0]);
+      const pct = Math.round(((similarity + 1) / 2) * 1000) / 10; // -1~1 -> 0~100% 표시용
+      resultEl.innerHTML = `<div class="result-box">
+        <div>코사인 유사도: <b>${similarity.toFixed(4)}</b> (-1: 정반대 ~ 1: 완전히 동일한 의미)</div>
+        ${scoreBar('유사도(0~100 환산)', (similarity + 1) / 2)}
+        <div style="font-size:12px;color:#777;margin-top:4px;">임베딩 벡터 차원: ${embA.dims.join(' × ')}</div>
+      </div>`;
+    } catch (err) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${err.message}</div>`;
+    }
+    setRunning(btn, false, '▶ 모델 불러오기 + 유사도 계산');
+  });
+
+  // ---------- Section 3: zero-shot-classification ----------
+  document.getElementById('s3-run').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const resultEl = document.getElementById('s3-result');
+    setRunning(btn, true, '▶ 모델 불러오기 + 분류');
+    try {
+      const classifier = await getPipeline(
+        'zeroshot', 'zero-shot-classification', 'Xenova/mobilebert-uncased-mnli', 's3'
+      );
+      const text = document.getElementById('s3-input').value;
+      const labels = document.getElementById('s3-labels').value.split(',').map((s) => s.trim()).filter(Boolean);
+      const output = await classifier(text, labels);
+      let html = '<div class="result-box">';
+      output.labels.forEach((label, i) => {
+        html += scoreBar(label, output.scores[i]);
+      });
+      html += '</div>';
+      resultEl.innerHTML = html;
+    } catch (err) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${err.message}</div>`;
+    }
+    setRunning(btn, false, '▶ 모델 불러오기 + 분류');
+  });
+
+  // ---------- Section 4: question-answering ----------
+  document.getElementById('s4-run').addEventListener('click', async (e) => {
+    const btn = e.target;
+    const resultEl = document.getElementById('s4-result');
+    setRunning(btn, true, '▶ 모델 불러오기 + 질의응답');
+    try {
+      const answerer = await getPipeline(
+        'qa', 'question-answering', 'Xenova/distilbert-base-uncased-distilled-squad', 's4'
+      );
+      const context = document.getElementById('s4-context').value;
+      const question = document.getElementById('s4-question').value;
+      const output = await answerer(question, context);
+      resultEl.innerHTML = `<div class="result-box">
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px;">"${output.answer}"</div>
+        ${scoreBar('확신도', output.score)}
+      </div>`;
+    } catch (err) {
+      resultEl.innerHTML = `<div class="result-box error">오류: ${err.message}</div>`;
+    }
+    setRunning(btn, false, '▶ 모델 불러오기 + 질의응답');
+  });
+</script>
+</body>
+</html>
