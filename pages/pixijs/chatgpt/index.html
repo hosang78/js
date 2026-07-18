@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>PixiJS v8 종합 기능 실험실</title>
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#07101d;--panel:#0d1929;--panel2:#101f33;--line:#263a54;
+    --text:#eef6ff;--muted:#92a8c2;--accent:#43d9bd;--accent2:#78a9ff;
+    --warn:#ffcf66;--danger:#ff6b7a;--shadow:0 18px 50px rgba(0,0,0,.32);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Pretendard","Noto Sans KR",system-ui,sans-serif;overflow:hidden}
+  button,input,select,textarea{font:inherit}
+  button{color:inherit}
+  .app-shell{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(7,16,29,.94);backdrop-filter:blur(14px);z-index:5}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:40px;height:40px;border-radius:13px;background:conic-gradient(from 210deg,#43d9bd,#78a9ff,#a777ff,#43d9bd);box-shadow:0 0 26px rgba(67,217,189,.28);position:relative;flex:0 0 auto}
+  .logo:after{content:"PX";position:absolute;inset:4px;border-radius:10px;background:#07101d;display:grid;place-items:center;font-weight:900;font-size:12px;letter-spacing:.05em}
+  h1{font-size:18px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .subtitle{font-size:11px;color:var(--muted);margin-top:2px}
+  .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .btn,.icon-btn{border:1px solid var(--line);background:#102138;border-radius:10px;padding:8px 11px;cursor:pointer;transition:.16s ease;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+  .btn:hover,.icon-btn:hover{border-color:#4e729f;transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(135deg,#167b70,#245fa8);border-color:#3ea7a1}
+  .status-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:var(--muted);font-size:12px;background:#0b1727}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 12px currentColor}
+  .dot.ok{background:var(--accent)} .dot.bad{background:var(--danger)}
+
+  .workspace{min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr) 285px;gap:0}
+  aside{min-height:0;overflow:auto;background:var(--panel);border-right:1px solid var(--line)}
+  .right-panel{border-right:0;border-left:1px solid var(--line)}
+  .panel-head{position:sticky;top:0;background:rgba(13,25,41,.97);backdrop-filter:blur(8px);z-index:2;padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+  .panel-title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#a9bdd4;font-weight:800}
+  .panel-body{padding:12px}
+  .demo-list{display:grid;gap:7px}
+  .demo-btn{width:100%;display:grid;grid-template-columns:32px 1fr;gap:9px;align-items:center;text-align:left;border:1px solid transparent;border-radius:12px;padding:9px;background:transparent;color:#c7d7e8;cursor:pointer;transition:.16s}
+  .demo-btn:hover{background:#12253c;border-color:#263e5b}
+  .demo-btn.active{background:linear-gradient(135deg,rgba(67,217,189,.16),rgba(120,169,255,.12));border-color:#3d7f89;color:#fff}
+  .demo-num{height:28px;border-radius:8px;background:#182c44;display:grid;place-items:center;font-size:11px;color:#87a5c4;font-weight:800}
+  .demo-btn.active .demo-num{background:#1d766f;color:#dffff9}
+  .demo-name{font-size:13px;font-weight:750}
+  .demo-desc{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.3}
+
+  main{position:relative;min-width:0;min-height:0;background:#050b14;overflow:hidden;display:grid;grid-template-rows:minmax(0,1fr) auto}
+  #stage-wrap{position:relative;min-height:280px;overflow:hidden;background:radial-gradient(circle at 50% 45%,#11233b 0,#07101b 60%,#050a11 100%)}
+  #pixi-host{position:absolute;inset:0}
+  #pixi-host canvas{display:block;width:100%;height:100%;touch-action:none}
+  .canvas-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:flex-start;justify-content:space-between;padding:10px}
+  .scene-label{border:1px solid rgba(132,166,202,.26);background:rgba(5,12,22,.74);backdrop-filter:blur(8px);border-radius:10px;padding:8px 10px;box-shadow:var(--shadow)}
+  .scene-label b{display:block;font-size:12px}.scene-label span{font-size:10px;color:var(--muted)}
+  .stats{display:grid;grid-template-columns:repeat(3,auto);gap:6px}
+  .stat{min-width:58px;text-align:center;border:1px solid rgba(132,166,202,.25);background:rgba(5,12,22,.76);backdrop-filter:blur(8px);padding:6px 8px;border-radius:9px}
+  .stat strong{display:block;font-size:14px}.stat small{font-size:9px;color:var(--muted);text-transform:uppercase}
+  .bottom-bar{border-top:1px solid var(--line);background:#0b1726;padding:9px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .control-inline{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+  input[type=range]{accent-color:#43d9bd;width:120px}
+  .switch{position:relative;width:38px;height:22px;display:inline-block}
+  .switch input{display:none}.switch i{position:absolute;inset:0;background:#253950;border-radius:999px;cursor:pointer}.switch i:after{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s}.switch input:checked+i{background:#178478}.switch input:checked+i:after{transform:translateX(16px)}
+
+  .section{border:1px solid var(--line);background:var(--panel2);border-radius:13px;margin-bottom:10px;overflow:hidden}
+  .section h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#a9bdd4;margin:0;padding:10px 11px;border-bottom:1px solid var(--line);background:#0d1b2d}
+  .section-content{padding:10px}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px dashed rgba(130,158,190,.16)}
+  .kv:last-child{border-bottom:0}.kv span:first-child{color:var(--muted)}.kv strong{font-weight:750;max-width:150px;text-align:right;overflow:hidden;text-overflow:ellipsis}
+  .field{margin-bottom:10px}.field:last-child{margin-bottom:0}
+  .field label{font-size:10px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px}
+  .field input[type=range]{width:100%}
+  .field input[type=text],.field select{width:100%;background:#091525;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px}
+  .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .mini-btn{border:1px solid var(--line);background:#12243a;padding:7px 8px;border-radius:8px;font-size:10px;cursor:pointer}
+  .mini-btn:hover{border-color:#4d759d}
+  .feature-tags{display:flex;gap:5px;flex-wrap:wrap}.tag{font-size:9px;border:1px solid #2f4a69;border-radius:999px;padding:4px 6px;color:#a9c0da;background:#0b1828}
+  #event-log{font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:#91dfd1;max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+  .loading-cover{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:#07101d}
+  .loader-card{width:min(390px,86%);text-align:center;border:1px solid var(--line);border-radius:18px;background:#0d1929;padding:24px;box-shadow:var(--shadow)}
+  .spinner{width:46px;height:46px;margin:0 auto 14px;border:4px solid #243b57;border-top-color:#43d9bd;border-radius:50%;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+  .loader-card b{display:block;margin-bottom:6px}.loader-card p{font-size:12px;color:var(--muted);line-height:1.55;margin:0}
+  .error-box{border:1px solid #773745;background:#2b1119;color:#ffd8de;border-radius:10px;padding:10px;margin-top:12px;text-align:left;font-size:11px;white-space:pre-wrap;display:none}
+
+  @media(max-width:1050px){.workspace{grid-template-columns:215px minmax(0,1fr)}.right-panel{position:absolute;right:0;top:65px;bottom:0;width:290px;z-index:8;transform:translateX(100%);transition:.2s;box-shadow:-20px 0 45px rgba(0,0,0,.35)}.right-panel.open{transform:none}.right-toggle{display:inline-flex!important}}
+  @media(max-width:720px){html,body{overflow:auto}.app-shell{height:auto;min-height:100%}.workspace{display:block}.left-panel{position:fixed;z-index:9;left:0;top:65px;bottom:0;width:260px;transform:translateX(-100%);transition:.2s;box-shadow:20px 0 45px rgba(0,0,0,.38)}.left-panel.open{transform:none}main{height:calc(100vh - 65px)}.header-actions .status-pill{display:none}.menu-toggle{display:inline-flex!important}.stats{grid-template-columns:repeat(3,52px)}.stat{min-width:0;padding:5px}.scene-label{max-width:52%}.bottom-bar{gap:8px}.subtitle{display:none}}
+  .menu-toggle,.right-toggle{display:none}
+</style>
+</head>
+<body>
+<div class="app-shell">
+<header>
+  <div class="brand">
+    <div class="logo"></div>
+    <div><h1>PixiJS v8 종합 기능 실험실</h1><div class="subtitle">2D 렌더링 · 인터랙션 · 애니메이션 · 필터 · 파티클 · 렌더 텍스처</div></div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn menu-toggle" id="menu-toggle">☰ 장면</button>
+    <span class="status-pill"><i class="dot" id="engine-dot"></i><span id="engine-status">엔진 로딩 중</span></span>
+    <button class="btn" id="snapshot-btn">PNG 캡처</button>
+    <button class="btn" id="fullscreen-btn">전체화면</button>
+    <button class="icon-btn right-toggle" id="right-toggle">⚙ 제어</button>
+  </div>
+</header>
+<div class="workspace">
+  <aside class="left-panel" id="left-panel">
+    <div class="panel-head"><div class="panel-title">Demo scenes</div></div>
+    <div class="panel-body"><div class="demo-list" id="demo-list"></div></div>
+  </aside>
+
+  <main>
+    <div id="stage-wrap">
+      <div id="pixi-host"></div>
+      <div class="canvas-overlay">
+        <div class="scene-label"><b id="scene-title">초기화 중</b><span id="scene-subtitle">PixiJS 모듈을 불러오고 있다.</span></div>
+        <div class="stats">
+          <div class="stat"><strong id="fps">--</strong><small>FPS</small></div>
+          <div class="stat"><strong id="objects">--</strong><small>Objects</small></div>
+          <div class="stat"><strong id="drawcalls">--</strong><small>Renderer</small></div>
+        </div>
+      </div>
+      <div class="loading-cover" id="loading-cover">
+        <div class="loader-card"><div class="spinner"></div><b>PixiJS v8 불러오는 중</b><p>jsDelivr → unpkg 순서로 CDN 연결을 시도한다.<br>샘플 이미지는 페이지 내부에서 직접 생성한다.</p><div class="error-box" id="error-box"></div></div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn primary" id="play-btn">일시정지</button>
+      <button class="btn" id="reset-btn">장면 초기화</button>
+      <div class="control-inline">속도 <input id="speed" type="range" min="0" max="3" step="0.05" value="1"><b id="speed-val">1.00×</b></div>
+      <div class="control-inline">배경
+        <select id="bg-select"><option value="#07101d">딥 네이비</option><option value="#092b36">오션</option><option value="#24142f">퍼플</option><option value="#e9f1f7">라이트</option></select>
+      </div>
+      <div class="control-inline">해상도 <b id="resolution-info">--</b></div>
+    </div>
+  </main>
+
+  <aside class="right-panel" id="right-panel">
+    <div class="panel-head"><div class="panel-title">Inspector & controls</div></div>
+    <div class="panel-body">
+      <section class="section"><h3>현재 장면</h3><div class="section-content" id="scene-info"></div></section>
+      <section class="section"><h3>장면 제어</h3><div class="section-content" id="scene-controls"><div style="font-size:11px;color:var(--muted)">장면 로딩 후 제어 항목 표시</div></div></section>
+      <section class="section"><h3>이벤트 로그</h3><div class="section-content"><div id="event-log">[system] 초기화 대기</div></div></section>
+    </div>
+  </aside>
+</div>
+</div>
+
+<script type="module">
+const VERSION = '8.19.0';
+const CDN_CANDIDATES = [
+  `https://cdn.jsdelivr.net/npm/pixi.js@${VERSION}/dist/pixi.min.mjs`,
+  `https://cdn.jsdelivr.net/npm/pixi.js@${VERSION}/dist/pixi.mjs`,
+  `https://unpkg.com/pixi.js@${VERSION}/dist/pixi.mjs`
+];
+
+const $ = (s) => document.querySelector(s);
+const host = $('#pixi-host');
+const loadingCover = $('#loading-cover');
+const errorBox = $('#error-box');
+const logEl = $('#event-log');
+const sceneControls = $('#scene-controls');
+const sceneInfo = $('#scene-info');
+let PIXI, app, currentScene = 0, currentUpdate = null, currentCleanup = [], currentRebuild = null;
+let isPlaying = true, globalSpeed = 1, lastFpsUpdate = 0;
+const sharedTextures = new Map();
+
+function log(message){
+  const time = new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  logEl.textContent = `[${time}] ${message}\n` + logEl.textContent.split('\n').slice(0,16).join('\n');
+}
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+function rand(min,max){ return min + Math.random()*(max-min); }
+function hslToHex(h,s=75,l=58){
+  s/=100;l/=100;const k=n=>(n+h/30)%12;const a=s*Math.min(l,1-l);const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return (Math.round(255*f(0))<<16)+(Math.round(255*f(8))<<8)+Math.round(255*f(4));
+}
+function canvasTexture(key,w,h,draw){
+  if(sharedTextures.has(key)) return sharedTextures.get(key);
+  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');draw(ctx,w,h);
+  const t=PIXI.Texture.from(c); sharedTextures.set(key,t); return t;
+}
+function glowTexture(){
+  return canvasTexture('glow',96,96,(c,w,h)=>{const g=c.createRadialGradient(w/2,h/2,2,w/2,h/2,w/2);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.18,'rgba(103,233,218,.95)');g.addColorStop(.5,'rgba(38,138,255,.45)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});
+}
+function fishTexture(){
+  return canvasTexture('fish',120,80,(c,w,h)=>{c.clearRect(0,0,w,h);c.save();c.translate(8,8);c.fillStyle='#48d9c6';c.beginPath();c.ellipse(55,30,33,21,0,0,Math.PI*2);c.fill();c.fillStyle='#78a9ff';c.beginPath();c.moveTo(22,30);c.lineTo(0,10);c.lineTo(0,50);c.closePath();c.fill();c.fillStyle='#07101d';c.beginPath();c.arc(72,24,4,0,Math.PI*2);c.fill();c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=3;c.beginPath();c.arc(56,32,23,.3,2.4);c.stroke();c.restore();});
+}
+function checkerTexture(){
+  return canvasTexture('checker',96,96,(c,w,h)=>{c.fillStyle='#10223a';c.fillRect(0,0,w,h);for(let y=0;y<4;y++)for(let x=0;x<4;x++){c.fillStyle=(x+y)%2?'#173652':'#12403f';c.fillRect(x*24,y*24,24,24);}c.strokeStyle='rgba(255,255,255,.08)';for(let i=0;i<=96;i+=12){c.beginPath();c.moveTo(i,0);c.lineTo(i,96);c.stroke();c.beginPath();c.moveTo(0,i);c.lineTo(96,i);c.stroke();}});
+}
+function panelTexture(){
+  return canvasTexture('panel',90,90,(c,w,h)=>{const g=c.createLinearGradient(0,0,w,h);g.addColorStop(0,'#2c6d88');g.addColorStop(1,'#19364f');c.fillStyle=g;c.fillRect(0,0,w,h);c.strokeStyle='#77ead8';c.lineWidth=10;c.strokeRect(5,5,w-10,h-10);c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=2;c.strokeRect(12,12,w-24,h-24);});
+}
+function particleTexture(){
+  return canvasTexture('particle',24,24,(c,w,h)=>{const g=c.createRadialGradient(12,12,0,12,12,12);g.addColorStop(0,'#fff');g.addColorStop(.25,'#8bf7e7');g.addColorStop(1,'rgba(50,150,255,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});
+}
+function noiseTexture(){
+  return canvasTexture('noise',128,128,(c,w,h)=>{const img=c.createImageData(w,h);for(let i=0;i<img.data.length;i+=4){const v=Math.random()*255;img.data[i]=v;img.data[i+1]=255-v;img.data[i+2]=160;img.data[i+3]=255;}c.putImageData(img,0,0);});
+}
+function frameTextures(){
+  const arr=[]; for(let i=0;i<16;i++){
+    const key=`frame-${i}`;arr.push(canvasTexture(key,128,128,(c,w,h)=>{c.clearRect(0,0,w,h);const p=i/15;const r=18+35*Math.sin(p*Math.PI);const g=c.createRadialGradient(64,64,2,64,64,r);g.addColorStop(0,'#ffffff');g.addColorStop(.18,`hsl(${170+i*9} 95% 68%)`);g.addColorStop(.65,`hsla(${215+i*7} 90% 56% / .75)`);g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.beginPath();c.arc(64,64,r,0,Math.PI*2);c.fill();for(let k=0;k<8;k++){const a=k/8*Math.PI*2+p*.8;const rr=r+9+8*Math.sin(i*.8+k);c.fillStyle=`hsla(${170+k*18+i*4} 90% 70% / ${.4+.5*(1-p)})`;c.beginPath();c.arc(64+Math.cos(a)*rr,64+Math.sin(a)*rr,2+4*(1-p),0,Math.PI*2);c.fill();}}));
+  }return arr;
+}
+function roundedLabel(text,x,y,color=0x43d9bd){
+  const c=new PIXI.Container(); const bg=new PIXI.Graphics().roundRect(0,0,150,34,10).fill({color:0x0b1828,alpha:.9}).stroke({color,alpha:.8,width:1});
+  const t=new PIXI.Text({text,style:{fontFamily:'Arial, sans-serif',fontSize:12,fill:0xeef6ff,fontWeight:'700'}});t.anchor.set(.5);t.position.set(75,17);c.addChild(bg,t);c.position.set(x,y);return c;
+}
+function addGrid(){
+  const g=new PIXI.Graphics(); const w=app.screen.width,h=app.screen.height;
+  for(let x=0;x<w;x+=50) g.moveTo(x,0).lineTo(x,h);
+  for(let y=0;y<h;y+=50) g.moveTo(0,y).lineTo(w,y);
+  g.stroke({color:0x6a93bf,alpha:.08,width:1}); app.stage.addChild(g); return g;
+}
+function fitScale(baseW=900,baseH=600){ return Math.min(app.screen.width/baseW, app.screen.height/baseH); }
+function cleanupScene(){
+  currentCleanup.splice(0).forEach(fn=>{try{fn();}catch(e){}});
+  currentUpdate=null; currentRebuild=null;
+  if(!app) return;
+  const old=app.stage.removeChildren();
+  for(const child of old){ try{child.destroy({children:true,texture:false,textureSource:false});}catch(e){} }
+  app.stage.filters=null;app.stage.eventMode='auto';app.stage.hitArea=null;app.stage.sortableChildren=false;
+  sceneControls.innerHTML='';
+}
+function countObjects(node){ let n=0; if(node.children) for(const c of node.children){n++;n+=countObjects(c);} return n; }
+function infoHTML(items,tags=[]){
+  sceneInfo.innerHTML = items.map(([k,v])=>`<div class="kv"><span>${k}</span><strong>${v}</strong></div>`).join('') + `<div class="feature-tags" style="margin-top:10px">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+}
+function rangeControl(label,min,max,step,value,onInput){
+  const id='ctl-'+Math.random().toString(36).slice(2);const d=document.createElement('div');d.className='field';
+  d.innerHTML=`<label for="${id}"><span>${label}</span><b>${value}</b></label><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${value}">`;
+  const input=d.querySelector('input'),out=d.querySelector('b');input.addEventListener('input',()=>{out.textContent=input.value;onInput(Number(input.value),input);});sceneControls.appendChild(d);return input;
+}
+function textControl(label,value,onChange){
+  const d=document.createElement('div');d.className='field';d.innerHTML=`<label>${label}</label><input type="text" value="${value.replaceAll('"','&quot;')}">`;const i=d.querySelector('input');i.addEventListener('input',()=>onChange(i.value));sceneControls.appendChild(d);return i;
+}
+function buttonsControl(items){
+  const d=document.createElement('div');d.className='mini-grid';items.forEach(([name,fn])=>{const b=document.createElement('button');b.className='mini-btn';b.textContent=name;b.onclick=fn;d.appendChild(b);});sceneControls.appendChild(d);
+}
+
+const demos=[
+  {name:'장면 그래프',desc:'Container·transform·zIndex·cache',tags:['Application','Container','Transform','zIndex','cacheAsTexture'],build:sceneGraph},
+  {name:'Graphics 도형',desc:'도형·곡선·선·동적 드로잉',tags:['Graphics','Stroke','Curves','Dynamic'],build:sceneGraphics},
+  {name:'텍스트 시스템',desc:'Text·BitmapText·HTMLText',tags:['Text','BitmapText','HTMLText','Style'],build:sceneText},
+  {name:'스프라이트·타일',desc:'Texture·Sprite·Tiling·NineSlice',tags:['Texture','Sprite','TilingSprite','NineSlice'],build:sceneSprites},
+  {name:'프레임 애니메이션',desc:'AnimatedSprite·재생 제어',tags:['AnimatedSprite','Frames','Loop'],build:sceneAnimated},
+  {name:'포인터 인터랙션',desc:'클릭·드래그·호버·휠',tags:['Events','HitArea','Drag','Touch'],build:sceneInteraction},
+  {name:'필터·합성',desc:'Blur·ColorMatrix·Noise·Displacement',tags:['Filters','Blur','ColorMatrix','Noise'],build:sceneFilters},
+  {name:'마스크·렌더텍스처',desc:'Graphics mask·오프스크린 렌더링',tags:['Mask','RenderTexture','Extract'],build:sceneMaskRender},
+  {name:'고성능 파티클',desc:'ParticleContainer 대량 객체',tags:['ParticleContainer','Particle','Performance'],build:sceneParticles},
+  {name:'미니 게임',desc:'키보드·충돌·점수·게임 루프',tags:['Ticker','Keyboard','Collision','Game Loop'],build:sceneGame},
+  {name:'성능 부하 테스트',desc:'Sprite 수량·FPS·배치 확인',tags:['Batching','Sprites','FPS','Stress Test'],build:scenePerformance}
+];
+
+async function sceneGraph(){
+  addGrid();const root=new PIXI.Container();root.position.set(app.screen.width/2,app.screen.height/2);root.sortableChildren=true;app.stage.addChild(root);
+  const orbit=new PIXI.Graphics().circle(0,0,150).stroke({color:0x6fa9dd,alpha:.28,width:2});root.addChild(orbit);
+  const center=new PIXI.Sprite(glowTexture());center.anchor.set(.5);center.scale.set(1.6);center.tint=0x43d9bd;center.zIndex=5;root.addChild(center);
+  const fish=fishTexture();const nodes=[];
+  for(let i=0;i<8;i++){const group=new PIXI.Container();const s=new PIXI.Sprite(fish);s.anchor.set(.5);s.scale.set(.45);s.tint=hslToHex(i*45+155);const badge=new PIXI.Graphics().circle(0,0,31).fill({color:0x0d2137,alpha:.7}).stroke({color:s.tint,alpha:.8,width:2});group.addChild(badge,s);const a=i/8*Math.PI*2;group.position.set(Math.cos(a)*150,Math.sin(a)*150);group.rotation=a+Math.PI/2;group.zIndex=i;group.eventMode='static';group.cursor='pointer';group.on('pointertap',()=>{group.scale.set(1.35);log(`노드 ${i+1} pointertap`);});root.addChild(group);nodes.push(group);}
+  const label=roundedLabel('부모 Container',-75,-225);root.addChild(label); if(typeof label.cacheAsTexture==='function') label.cacheAsTexture();
+  let t=0;currentUpdate=(dt)=>{t+=dt*.02;root.rotation+=.0025*dt;center.rotation-=.01*dt;nodes.forEach((n,i)=>{n.scale.x+=(1-n.scale.x)*.06;n.scale.y+=(1-n.scale.y)*.06;n.alpha=.72+.28*Math.sin(t+i*.8);});};
+  rangeControl('그룹 회전 속도',-.03,.03,.001,.003,v=>currentUpdate=(dt)=>{t+=dt*.02;root.rotation+=v*dt;center.rotation-=.01*dt;nodes.forEach((n,i)=>{n.scale.x+=(1-n.scale.x)*.06;n.scale.y+=(1-n.scale.y)*.06;n.alpha=.72+.28*Math.sin(t+i*.8);});});
+  rangeControl('부모 스케일',.4,1.8,.05,1,v=>root.scale.set(v));
+  rangeControl('부모 기울기',-.8,.8,.05,0,v=>root.skew.set(v,0));
+  buttonsControl([['자식 순서 섞기',()=>{nodes.forEach(n=>n.zIndex=Math.random()*20);root.sortChildren();log('zIndex 재정렬');}],['캐시 갱신',()=>{if(typeof label.updateCacheTexture==='function')label.updateCacheTexture();log('cache texture 갱신');}]]);
+  infoHTML([['Scene', '계층형 궤도'],['Root children',root.children.length],['Renderer',app.renderer.constructor.name],['Cache API',typeof label.cacheAsTexture==='function'?'지원':'미지원']],demos[0].tags);
+}
+
+async function sceneGraphics(){
+  addGrid();const layer=new PIXI.Container();const s=fitScale();layer.scale.set(Math.max(.4,s));layer.position.set((app.screen.width-900*layer.scale.x)/2,(app.screen.height-580*layer.scale.y)/2);app.stage.addChild(layer);
+  const g=new PIXI.Graphics();
+  g.roundRect(30,40,190,110,22).fill({color:0x1d4c68,alpha:.9}).stroke({color:0x70ecd7,width:4});
+  g.circle(320,95,55).fill({color:0x7b61ff,alpha:.8}).stroke({color:0xffffff,alpha:.45,width:3});
+  g.ellipse(470,95,85,42).fill({color:0xff7d6b,alpha:.72});
+  g.star(650,95,7,58,28).fill({color:0xffcf66,alpha:.95}).stroke({color:0xffffff,alpha:.45,width:2});
+  g.moveTo(40,225).bezierCurveTo(190,115,230,335,385,215).stroke({color:0x43d9bd,width:8,cap:'round'});
+  g.moveTo(420,230).quadraticCurveTo(570,120,720,235).stroke({color:0x78a9ff,width:6,cap:'round'});
+  g.moveTo(760,230).arc(760,230,65,-Math.PI*.85,Math.PI*.75).stroke({color:0xff6b9d,width:10});
+  const poly=[70,350,180,310,260,380,165,455,65,420];g.poly(poly).fill({color:0x16a085,alpha:.72}).stroke({color:0xa9fff2,width:3});
+  g.regularPoly(410,385,62,6,Math.PI/6).fill({color:0x4263eb,alpha:.75});
+  try{
+    g.roundShape([{x:555,y:320,radius:12},{x:720,y:340,radius:20},{x:690,y:455,radius:16},{x:530,y:440,radius:8}],18).fill({color:0xb768e9,alpha:.68}).stroke({color:0xf1d4ff,width:3});
+  }catch(_){
+    g.poly([555,320,720,340,690,455,530,440]).fill({color:0xb768e9,alpha:.68}).stroke({color:0xf1d4ff,width:3});
+  }
+  const donut=new PIXI.Graphics().circle(820,390,54).fill({color:0x43d9bd,alpha:.8}).circle(820,390,25).cut();layer.addChild(g,donut);
+  if(PIXI.GraphicsContext){const sharedContext=new PIXI.GraphicsContext().star(0,0,5,12,5).fill(0xffcf66);for(let i=0;i<7;i++){const star=new PIXI.Graphics(sharedContext);star.position.set(75+i*55,520);layer.addChild(star);}}
+  const drawing=new PIXI.Graphics();layer.addChild(drawing);const pts=[];app.stage.eventMode='static';app.stage.hitArea=app.screen;
+  const onMove=e=>{const p=layer.toLocal(e.global);pts.push({x:p.x,y:p.y});if(pts.length>50)pts.shift();drawing.clear();if(pts.length>1){drawing.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))drawing.lineTo(q.x,q.y);drawing.stroke({color:0xffffff,alpha:.6,width:2});}};app.stage.on('pointermove',onMove);currentCleanup.push(()=>app.stage.off('pointermove',onMove));
+  let pulse=0;currentUpdate=dt=>{pulse+=.03*dt;g.alpha=.9+.1*Math.sin(pulse);};
+  rangeControl('전체 알파',.15,1,.05,1,v=>layer.alpha=v);
+  rangeControl('선 굵기 효과',0,18,1,2,v=>{drawing.clear();if(pts.length>1){drawing.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))drawing.lineTo(q.x,q.y);drawing.stroke({color:0xffffff,alpha:.7,width:v});}});
+  buttonsControl([['트레일 지우기',()=>{pts.length=0;drawing.clear();}],['도형 회전',()=>{g.rotation+=Math.PI/8;g.pivot.set(450,290);g.position.set(450,290);}]]);
+  infoHTML([['Primitives','9종'],['Curves','Bezier·Quadratic·Arc'],['Dynamic path','포인터 추적'],['Scale',layer.scale.x.toFixed(2)]],demos[1].tags);
+}
+
+async function sceneText(){
+  addGrid();const c=new PIXI.Container();c.position.set(40,50);app.stage.addChild(c);
+  const title=new PIXI.Text({text:'PixiJS Text',style:{fontFamily:'Arial, sans-serif',fontSize:54,fontWeight:'900',fill:0x43d9bd,stroke:{color:0x07342f,width:6},dropShadow:{color:0x000000,alpha:.55,blur:8,distance:7,angle:.8}}});c.addChild(title);
+  const paragraph=new PIXI.Text({text:'고품질 래스터 텍스트\n줄바꿈 · 정렬 · 자간 · 외곽선 · 그림자',style:{fontFamily:'Arial, sans-serif',fontSize:24,fill:0xeef6ff,letterSpacing:2,lineHeight:38,wordWrap:true,wordWrapWidth:520,align:'left'}});paragraph.position.set(5,95);c.addChild(paragraph);
+  let bitmap=null,html=null;
+  try{bitmap=new PIXI.BitmapText({text:'BITMAP TEXT 012345',style:{fontFamily:'Arial',fontSize:30,fill:0x78a9ff}});bitmap.position.set(5,220);c.addChild(bitmap);}catch(e){log('BitmapText 생성 제한: '+e.message);}
+  try{html=new PIXI.HTMLText({text:'<b>HTMLText</b> <span style="color:#ffcf66">rich</span> <i>format</i>',style:{fontFamily:'Arial',fontSize:28,fill:0xffffff}});html.position.set(5,280);c.addChild(html);}catch(e){log('HTMLText 생성 제한: '+e.message);}
+  const counter=new PIXI.Text({text:'Ticker 0000',style:{fontFamily:'monospace',fontSize:42,fontWeight:'700',fill:0xffcf66}});counter.position.set(5,350);c.addChild(counter);
+  const sample=new PIXI.Text({text:'회전·스케일·알파도 모든 DisplayObject와 동일',style:{fontFamily:'Arial',fontSize:18,fill:0xa9bdd4}});sample.anchor.set(.5);sample.position.set(Math.min(app.screen.width-200,650),180);c.addChild(sample);
+  let time=0;currentUpdate=dt=>{time+=dt;counter.text=`Ticker ${String(Math.floor(time)).padStart(4,'0')}`;sample.rotation=Math.sin(time*.02)*.08;sample.scale.set(1+.08*Math.sin(time*.03));};
+  textControl('본문 텍스트',paragraph.text,v=>paragraph.text=v);
+  rangeControl('제목 크기',20,90,1,54,v=>title.style.fontSize=v);
+  rangeControl('자간',-2,12,.5,2,v=>paragraph.style.letterSpacing=v);
+  rangeControl('줄바꿈 폭',180,800,10,520,v=>paragraph.style.wordWrapWidth=v);
+  buttonsControl([['왼쪽 정렬',()=>paragraph.style.align='left'],['가운데 정렬',()=>paragraph.style.align='center'],['색상 변경',()=>title.style.fill=hslToHex(Math.random()*360)],['내용 측정',()=>log(`Text bounds ${Math.round(paragraph.width)}×${Math.round(paragraph.height)}`)]]);
+  infoHTML([['Text','래스터 품질'],['BitmapText',bitmap?'생성됨':'환경 제한'],['HTMLText',html?'생성됨':'환경 제한'],['Dynamic update','매 프레임 카운터']],demos[2].tags);
+}
+
+async function sceneSprites(){
+  const tile=new PIXI.TilingSprite({texture:checkerTexture(),width:app.screen.width,height:app.screen.height});tile.alpha=.72;app.stage.addChild(tile);
+  const fish=fishTexture();const sprites=[];const c=new PIXI.Container();app.stage.addChild(c);
+  for(let i=0;i<28;i++){const s=new PIXI.Sprite(fish);s.anchor.set(.5);s.position.set(rand(80,Math.max(90,app.screen.width-80)),rand(70,Math.max(80,app.screen.height-70)));const sc=rand(.28,.65);s.scale.set(sc);s.tint=hslToHex(rand(150,320));s.alpha=rand(.55,1);if(i%6===0)s.blendMode='add';c.addChild(s);sprites.push({s,vx:rand(-1.2,1.2),vy:rand(-.8,.8)});}
+  let panel=null;if(PIXI.NineSliceSprite){panel=new PIXI.NineSliceSprite({texture:panelTexture(),leftWidth:18,topHeight:18,rightWidth:18,bottomHeight:18,width:260,height:95});panel.position.set(25,25);app.stage.addChild(panel);const t=new PIXI.Text({text:'NineSliceSprite\n모서리를 보존하며 확대',style:{fontFamily:'Arial',fontSize:16,fill:0xffffff,fontWeight:'700',align:'center'}});t.anchor.set(.5);t.position.set(155,72);app.stage.addChild(t);}
+  currentUpdate=dt=>{tile.tilePosition.x-=.35*dt;tile.tilePosition.y+=.18*dt;sprites.forEach(o=>{o.s.x+=o.vx*dt;o.s.y+=o.vy*dt;o.s.rotation+=.006*dt;if(o.s.x<-60)o.s.x=app.screen.width+60;if(o.s.x>app.screen.width+60)o.s.x=-60;if(o.s.y<-50)o.s.y=app.screen.height+50;if(o.s.y>app.screen.height+50)o.s.y=-50;});};
+  rangeControl('타일 스케일',.25,3,.05,1,v=>tile.tileScale.set(v));
+  rangeControl('타일 회전',-3.14,3.14,.05,0,v=>tile.tileRotation=v);
+  rangeControl('스프라이트 알파',.1,1,.05,1,v=>c.alpha=v);
+  if(panel) rangeControl('NineSlice 너비',140,500,10,260,v=>panel.width=v);
+  buttonsControl([['텍스처 교체',()=>{const t=glowTexture();sprites.forEach((o,i)=>{if(i%2===0)o.s.texture=t;});log('일부 Sprite.texture 교체');}],['색상 랜덤',()=>sprites.forEach(o=>o.s.tint=hslToHex(Math.random()*360))]]);
+  infoHTML([['Shared texture','CanvasSource'],['Sprites',sprites.length],['Blend mode','add 포함'],['NineSlice',panel?'지원':'미지원']],demos[3].tags);
+}
+
+async function sceneAnimated(){
+  addGrid();const frames=frameTextures();const anims=[];
+  for(let i=0;i<5;i++){const a=new PIXI.AnimatedSprite(frames);a.anchor.set(.5);a.position.set(app.screen.width*(i+1)/6,app.screen.height/2+Math.sin(i)*80);a.scale.set(rand(.8,1.45));a.animationSpeed=.18+i*.045;a.gotoAndPlay(i*3);a.tint=hslToHex(145+i*38);app.stage.addChild(a);anims.push(a);}
+  const label=new PIXI.Text({text:'Procedural frame animation',style:{fontFamily:'Arial',fontSize:26,fontWeight:'800',fill:0xffffff}});label.anchor.set(.5);label.position.set(app.screen.width/2,65);app.stage.addChild(label);
+  let bob=0;currentUpdate=dt=>{bob+=.025*dt;anims.forEach((a,i)=>{a.y=app.screen.height/2+Math.sin(bob+i*.85)*90;a.rotation+=.004*(i%2?1:-1)*dt;});};
+  rangeControl('애니메이션 속도',0,1,.01,.28,v=>anims.forEach((a,i)=>a.animationSpeed=v+i*.02));
+  rangeControl('전체 크기',.25,2.5,.05,1,v=>anims.forEach((a,i)=>a.scale.set(v*(.75+i*.1))));
+  buttonsControl([['재생',()=>anims.forEach(a=>a.play())],['정지',()=>anims.forEach(a=>a.stop())],['첫 프레임',()=>anims.forEach(a=>a.gotoAndStop(0))],['역방향',()=>anims.forEach(a=>a.animationSpeed*=-1)]]);
+  infoHTML([['Frame textures',frames.length],['AnimatedSprite',anims.length],['Source','Canvas generated'],['Loop','활성']],demos[4].tags);
+}
+
+async function sceneInteraction(){
+  addGrid();app.stage.eventMode='static';app.stage.hitArea=app.screen;
+  const spotlight=new PIXI.Graphics().circle(0,0,65).fill({color:0x43d9bd,alpha:.08}).stroke({color:0x43d9bd,alpha:.3,width:2});spotlight.position.set(app.screen.width/2,app.screen.height/2);app.stage.addChild(spotlight);
+  const cards=[];for(let i=0;i<6;i++){const c=new PIXI.Container();const bg=new PIXI.Graphics().roundRect(-62,-42,124,84,16).fill({color:hslToHex(155+i*35),alpha:.78}).stroke({color:0xffffff,alpha:.4,width:2});const tx=new PIXI.Text({text:`CARD ${i+1}`,style:{fontFamily:'Arial',fontSize:15,fontWeight:'900',fill:0xffffff}});tx.anchor.set(.5);c.addChild(bg,tx);c.position.set(app.screen.width*(i%3+1)/4,app.screen.height*(Math.floor(i/3)+1)/3);c.eventMode='static';c.cursor='grab';c.hitArea=new PIXI.Rectangle(-62,-42,124,84);let drag=false,offset=new PIXI.Point();c.on('pointerover',()=>{c.scale.set(1.08);log(`CARD ${i+1} hover`);}).on('pointerout',()=>{if(!drag)c.scale.set(1);}).on('pointerdown',e=>{drag=true;c.cursor='grabbing';const p=e.global;offset.set(c.x-p.x,c.y-p.y);c.alpha=.8;}).on('globalpointermove',e=>{if(drag){c.position.set(e.global.x+offset.x,e.global.y+offset.y);}}).on('pointerup',()=>{drag=false;c.cursor='grab';c.alpha=1;c.scale.set(1);}).on('pointerupoutside',()=>{drag=false;c.cursor='grab';c.alpha=1;c.scale.set(1);}).on('pointertap',()=>{bg.tint=Math.random()*0xffffff;log(`CARD ${i+1} tap`);});app.stage.addChild(c);cards.push(c);}
+  const move=e=>spotlight.position.copyFrom(e.global);app.stage.on('pointermove',move);currentCleanup.push(()=>app.stage.off('pointermove',move));
+  const wheel=e=>{e.preventDefault();const f=e.deltaY<0?1.08:.92;cards.forEach(c=>c.scale.set(clamp(c.scale.x*f,.5,2)));log(`wheel zoom ${f>1?'in':'out'}`);};app.canvas.addEventListener('wheel',wheel,{passive:false});currentCleanup.push(()=>app.canvas.removeEventListener('wheel',wheel));
+  currentUpdate=dt=>{spotlight.rotation+=.01*dt;};
+  rangeControl('카드 투명도',.2,1,.05,1,v=>cards.forEach(c=>c.alpha=v));
+  rangeControl('hitArea 확대',.5,2,.05,1,v=>cards.forEach(c=>c.hitArea=new PIXI.Rectangle(-62*v,-42*v,124*v,84*v)));
+  buttonsControl([['위치 리셋',()=>cards.forEach((c,i)=>c.position.set(app.screen.width*(i%3+1)/4,app.screen.height*(Math.floor(i/3)+1)/3))],['랜덤 배치',()=>cards.forEach(c=>c.position.set(rand(80,app.screen.width-80),rand(70,app.screen.height-70)))]]);
+  infoHTML([['Event mode','static'],['Events','hover·tap·drag'],['Hit test','Rectangle'],['Input','mouse·touch·pen']],demos[5].tags);
+}
+
+async function sceneFilters(){
+  const bg=new PIXI.TilingSprite({texture:checkerTexture(),width:app.screen.width,height:app.screen.height});bg.alpha=.35;app.stage.addChild(bg);
+  const target=new PIXI.Container();target.position.set(app.screen.width/2,app.screen.height/2);app.stage.addChild(target);
+  const orb=new PIXI.Sprite(glowTexture());orb.anchor.set(.5);orb.scale.set(3.5);target.addChild(orb);
+  for(let i=0;i<12;i++){const f=new PIXI.Sprite(fishTexture());f.anchor.set(.5);const a=i/12*Math.PI*2;f.position.set(Math.cos(a)*150,Math.sin(a)*120);f.rotation=a+Math.PI/2;f.scale.set(.42);f.tint=hslToHex(145+i*18);target.addChild(f);}
+  const blur=new PIXI.BlurFilter({strength:2,quality:3});const matrix=new PIXI.ColorMatrixFilter();const noise=new PIXI.NoiseFilter({noise:.06,seed:Math.random()});target.filters=[blur,matrix,noise];
+  let disp=null,dispSprite=null;if(PIXI.DisplacementFilter){dispSprite=new PIXI.Sprite(noiseTexture());dispSprite.anchor.set(.5);dispSprite.position.copyFrom(target.position);dispSprite.scale.set(4);dispSprite.alpha=.001;app.stage.addChild(dispSprite);try{disp=new PIXI.DisplacementFilter({sprite:dispSprite,scale:8});target.filters=[blur,matrix,noise,disp];}catch(e){log('DisplacementFilter 제한: '+e.message);}}
+  let hue=0;function updateMatrix(){matrix.reset();matrix.hue(hue,false);}
+  currentUpdate=dt=>{target.rotation+=.003*dt;noise.seed=Math.random();if(dispSprite){dispSprite.rotation+=.002*dt;dispSprite.x=target.x+Math.sin(performance.now()/800)*20;}};
+  rangeControl('Blur strength',0,24,.5,2,v=>blur.strength=v);
+  rangeControl('Hue rotate',-180,180,1,0,v=>{hue=v;updateMatrix();});
+  rangeControl('Noise',0,.6,.01,.06,v=>noise.noise=v);
+  if(disp) rangeControl('Displacement',0,80,1,8,v=>disp.scale.set(v));
+  buttonsControl([['흑백',()=>{matrix.reset();matrix.grayscale(.8,false);}],['세피아',()=>{matrix.reset();matrix.sepia(false);}],['초기화',()=>{matrix.reset();hue=0;}],['필터 순서 반전',()=>{target.filters=[...target.filters].reverse();log('필터 적용 순서 반전');}]]);
+  infoHTML([['Filter chain',target.filters.length],['Blur','Gaussian'],['Matrix','Hue·Gray·Sepia'],['Displacement',disp?'활성':'환경 제한']],demos[6].tags);
+}
+
+async function sceneMaskRender(){
+  addGrid();const source=new PIXI.Container();const pattern=new PIXI.TilingSprite({texture:checkerTexture(),width:380,height:300});source.addChild(pattern);for(let i=0;i<8;i++){const s=new PIXI.Sprite(fishTexture());s.anchor.set(.5);s.scale.set(.45);s.position.set(rand(45,335),rand(45,255));s.tint=hslToHex(140+i*30);source.addChild(s);}source.position.set(40,80);app.stage.addChild(source);
+  const mask=new PIXI.Graphics().circle(190,150,105).fill(0xffffff);source.addChild(mask);pattern.mask=mask;for(const child of source.children.slice(1,-1))child.mask=mask;
+  const maskOutline=new PIXI.Graphics().circle(190,150,105).stroke({color:0xffffff,alpha:.8,width:3});source.addChild(maskOutline);
+  const rt=PIXI.RenderTexture.create({width:380,height:300,resolution:1});const renderSource=new PIXI.Container();const rbg=new PIXI.Graphics().roundRect(0,0,380,300,28).fill({color:0x14304d,alpha:1});renderSource.addChild(rbg);const rtText=new PIXI.Text({text:'RenderTexture\nOff-screen snapshot',style:{fontFamily:'Arial',fontSize:34,fontWeight:'900',fill:0x43d9bd,align:'center'}});rtText.anchor.set(.5);rtText.position.set(190,150);renderSource.addChild(rtText);for(let i=0;i<18;i++){const p=new PIXI.Sprite(particleTexture());p.anchor.set(.5);p.position.set(rand(15,365),rand(15,285));p.scale.set(rand(.6,1.8));renderSource.addChild(p);}app.renderer.render({target:rt,container:renderSource});
+  const narrow=app.screen.width<760;const viewScale=narrow?Math.min(.68,(app.screen.width-30)/380):Math.min(1,Math.max(.55,(app.screen.width-480)/380));if(narrow)source.scale.set(viewScale);source.position.set(narrow?15:40,narrow?55:80);
+  const snapshot=new PIXI.Sprite(rt);snapshot.position.set(narrow?15:Math.max(440,app.screen.width-420),narrow?55+310*viewScale:80);snapshot.scale.set(viewScale);app.stage.addChild(snapshot);const frame=new PIXI.Graphics().roundRect(snapshot.x-4,snapshot.y-4,384*viewScale,304*viewScale,30*viewScale).stroke({color:0x78a9ff,width:Math.max(2,4*viewScale)});app.stage.addChild(frame);
+  let t=0;currentUpdate=dt=>{t+=.02*dt;mask.position.set(Math.sin(t)*55,Math.cos(t*.8)*35);maskOutline.position.copyFrom(mask.position);pattern.tilePosition.x+=.3*dt;};
+  rangeControl('마스크 반지름',35,150,1,105,v=>{mask.clear().circle(190,150,v).fill(0xffffff);maskOutline.clear().circle(190,150,v).stroke({color:0xffffff,alpha:.8,width:3});});
+  rangeControl('렌더 텍스처 알파',.1,1,.05,1,v=>snapshot.alpha=v);
+  buttonsControl([['RenderTexture 갱신',()=>{rtText.text='Updated\n'+new Date().toLocaleTimeString('ko-KR');app.renderer.render({target:rt,container:renderSource});log('오프스크린 렌더 갱신');}],['마스크 정지',()=>{currentUpdate=dt=>{pattern.tilePosition.x+=.3*dt;};}]]);
+  currentCleanup.push(()=>{try{rt.destroy(true);renderSource.destroy({children:true,texture:false,textureSource:false});}catch(e){}});
+  infoHTML([['Mask type','Graphics'],['Render target','RenderTexture'],['Texture size','380×300'],['Update','수동 렌더']],demos[7].tags);
+}
+
+async function sceneParticles(){
+  addGrid();const texture=particleTexture();let container,particles=[];let velocities=[];
+  if(PIXI.ParticleContainer&&PIXI.Particle){container=new PIXI.ParticleContainer({dynamicProperties:{position:true,rotation:true,scale:true,color:true}});app.stage.addChild(container);for(let i=0;i<1800;i++){const p=new PIXI.Particle({texture,x:rand(0,app.screen.width),y:rand(0,app.screen.height),scaleX:rand(.25,1.2),scaleY:rand(.25,1.2),rotation:rand(0,6.28),tint:hslToHex(rand(140,245)),alpha:rand(.25,1)});container.addParticle(p);particles.push(p);velocities.push({x:rand(-.7,.7),y:rand(-.7,.7)});}}else{container=new PIXI.Container();app.stage.addChild(container);for(let i=0;i<600;i++){const p=new PIXI.Sprite(texture);p.anchor.set(.5);p.position.set(rand(0,app.screen.width),rand(0,app.screen.height));p.scale.set(rand(.25,1.2));p.tint=hslToHex(rand(140,245));container.addChild(p);particles.push(p);velocities.push({x:rand(-.7,.7),y:rand(-.7,.7)});}}
+  let gravity=0;currentUpdate=dt=>{for(let i=0;i<particles.length;i++){const p=particles[i],v=velocities[i];v.y+=gravity*.002*dt;p.x+=v.x*dt;p.y+=v.y*dt;p.rotation+=.008*dt;if(p.x<0)p.x=app.screen.width;if(p.x>app.screen.width)p.x=0;if(p.y<0){p.y=app.screen.height;v.y=Math.abs(v.y);}if(p.y>app.screen.height){p.y=0;v.y=-Math.abs(v.y);}}};
+  rangeControl('중력',-2,4,.1,0,v=>gravity=v);
+  rangeControl('이동 배율',0,4,.1,1,v=>velocities.forEach(o=>{const a=Math.atan2(o.y,o.x),m=v;o.x=Math.cos(a)*m;o.y=Math.sin(a)*m;}));
+  rangeControl('컨테이너 알파',.1,1,.05,1,v=>container.alpha=v);
+  buttonsControl([['폭발',()=>{const cx=app.screen.width/2,cy=app.screen.height/2;particles.forEach((p,i)=>{const a=Math.atan2(p.y-cy,p.x-cx),m=rand(.5,4);velocities[i].x=Math.cos(a)*m;velocities[i].y=Math.sin(a)*m;});}],['색상 파동',()=>particles.forEach((p,i)=>p.tint=hslToHex((i/particles.length)*240+120))]]);
+  infoHTML([['Container',PIXI.ParticleContainer?'ParticleContainer':'Container fallback'],['Particles',particles.length],['Dynamic props','position·rotation·scale·color'],['Texture','공유 24×24']],demos[8].tags);
+}
+
+async function sceneGame(){
+  addGrid();const player=new PIXI.Sprite(fishTexture());player.anchor.set(.5);player.scale.set(.55);player.position.set(app.screen.width/2,app.screen.height/2);app.stage.addChild(player);
+  const goal=new PIXI.Sprite(glowTexture());goal.anchor.set(.5);goal.scale.set(.85);goal.position.set(rand(60,app.screen.width-60),rand(60,app.screen.height-60));app.stage.addChild(goal);
+  const obstacles=[];for(let i=0;i<9;i++){const o=new PIXI.Graphics().roundRect(-35,-22,70,44,10).fill({color:hslToHex(10+i*25),alpha:.75}).stroke({color:0xffffff,alpha:.25,width:2});o.position.set(rand(60,app.screen.width-60),rand(70,app.screen.height-60));app.stage.addChild(o);obstacles.push(o);}
+  const scoreText=new PIXI.Text({text:'SCORE 0',style:{fontFamily:'monospace',fontSize:24,fontWeight:'900',fill:0xffcf66}});scoreText.position.set(18,55);app.stage.addChild(scoreText);const help=new PIXI.Text({text:'방향키 / WASD · 화면 터치 위치로 이동',style:{fontFamily:'Arial',fontSize:13,fill:0xa9bdd4}});help.position.set(18,88);app.stage.addChild(help);
+  const keys=new Set();let score=0,speed=4.2,target=null;
+  const kd=e=>{keys.add(e.key.toLowerCase());if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase()))e.preventDefault();};const ku=e=>keys.delete(e.key.toLowerCase());window.addEventListener('keydown',kd);window.addEventListener('keyup',ku);currentCleanup.push(()=>{window.removeEventListener('keydown',kd);window.removeEventListener('keyup',ku);});
+  app.stage.eventMode='static';app.stage.hitArea=app.screen;const tap=e=>{target={x:e.global.x,y:e.global.y};};app.stage.on('pointerdown',tap);currentCleanup.push(()=>app.stage.off('pointerdown',tap));
+  function collides(a,b,aw,ah,bw,bh){return Math.abs(a.x-b.x)<(aw+bw)/2&&Math.abs(a.y-b.y)<(ah+bh)/2;}
+  currentUpdate=dt=>{let dx=0,dy=0;if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;if(target&&!dx&&!dy){const vx=target.x-player.x,vy=target.y-player.y,d=Math.hypot(vx,vy);if(d>6){dx=vx/d;dy=vy/d;}else target=null;}if(dx||dy){const len=Math.hypot(dx,dy);dx/=len;dy/=len;const ox=player.x,oy=player.y;player.x=clamp(player.x+dx*speed*dt,35,app.screen.width-35);player.y=clamp(player.y+dy*speed*dt,35,app.screen.height-35);player.rotation=Math.atan2(dy,dx);if(obstacles.some(o=>collides(player,o,52,32,70,44))){player.position.set(ox,oy);player.tint=0xff6677;}else player.tint=0xffffff;}goal.rotation+=.02*dt;goal.scale.set(.8+.12*Math.sin(performance.now()/180));if(Math.hypot(player.x-goal.x,player.y-goal.y)<45){score++;scoreText.text=`SCORE ${score}`;goal.position.set(rand(60,app.screen.width-60),rand(60,app.screen.height-60));goal.tint=hslToHex(Math.random()*360);log(`목표 획득, 점수 ${score}`);}};
+  rangeControl('이동 속도',1,10,.2,4.2,v=>speed=v);
+  buttonsControl([['점수 초기화',()=>{score=0;scoreText.text='SCORE 0';}],['장애물 재배치',()=>obstacles.forEach(o=>o.position.set(rand(60,app.screen.width-60),rand(70,app.screen.height-60)))]]);
+  infoHTML([['Input','Keyboard·Pointer'],['Collision','AABB'],['Game loop','Ticker'],['Score',score]],demos[9].tags);
+}
+
+async function scenePerformance(){
+  const bg=new PIXI.TilingSprite({texture:checkerTexture(),width:app.screen.width,height:app.screen.height});bg.alpha=.25;app.stage.addChild(bg);const container=new PIXI.Container();app.stage.addChild(container);const texture=fishTexture();let items=[],count=1500,move=true;
+  function populate(n){const old=container.removeChildren();old.forEach(x=>x.destroy());items=[];for(let i=0;i<n;i++){const s=new PIXI.Sprite(texture);s.anchor.set(.5);s.scale.set(rand(.08,.24));s.position.set(rand(0,app.screen.width),rand(0,app.screen.height));s.tint=hslToHex(rand(120,330));s.rotation=rand(0,6.28);container.addChild(s);items.push({s,vx:rand(-.7,.7),vy:rand(-.7,.7)});}count=n;log(`${n.toLocaleString()} sprites 생성`);}
+  populate(count);currentUpdate=dt=>{bg.tilePosition.x+=.15*dt;if(!move)return;for(const o of items){o.s.x+=o.vx*dt;o.s.y+=o.vy*dt;if(o.s.x<0)o.s.x=app.screen.width;if(o.s.x>app.screen.width)o.s.x=0;if(o.s.y<0)o.s.y=app.screen.height;if(o.s.y>app.screen.height)o.s.y=0;}};
+  rangeControl('Sprite 수량',100,10000,100,1500,v=>populate(v));
+  rangeControl('전체 알파',.1,1,.05,1,v=>container.alpha=v);
+  buttonsControl([['이동 ON/OFF',()=>{move=!move;log(`CPU 이동 계산 ${move?'ON':'OFF'}`);}],['정적 캐시',()=>{if(typeof container.cacheAsTexture==='function'){container.cacheAsTexture();move=false;log('Container cacheAsTexture 적용');}}],['캐시 해제',()=>{if(typeof container.cacheAsTexture==='function'){container.cacheAsTexture(false);log('cacheAsTexture 해제');}}],['랜덤 재배치',()=>items.forEach(o=>o.s.position.set(rand(0,app.screen.width),rand(0,app.screen.height)))]]);
+  infoHTML([['Sprites',count.toLocaleString()],['Texture count','1 shared'],['CPU movement','ON'],['Purpose','배치·FPS 관찰']],demos[10].tags);
+}
+
+async function buildScene(index,{silent=false}={}){
+  if(!app)return;currentScene=clamp(index,0,demos.length-1);cleanupScene();const demo=demos[currentScene];
+  $('#scene-title').textContent=demo.name;$('#scene-subtitle').textContent=demo.desc;document.querySelectorAll('.demo-btn').forEach((b,i)=>b.classList.toggle('active',i===currentScene));
+  try{await demo.build();if(!silent)log(`장면 전환: ${demo.name}`);}catch(err){console.error(err);log(`장면 오류: ${err.message}`);const t=new PIXI.Text({text:`장면 실행 오류\n${err.message}`,style:{fontFamily:'monospace',fontSize:18,fill:0xff8899,wordWrap:true,wordWrapWidth:Math.max(300,app.screen.width-80)}});t.position.set(40,90);app.stage.addChild(t);}
+  $('#left-panel').classList.remove('open');
+}
+
+function buildDemoList(){const list=$('#demo-list');list.innerHTML='';demos.forEach((d,i)=>{const b=document.createElement('button');b.className='demo-btn';b.innerHTML=`<span class="demo-num">${String(i+1).padStart(2,'0')}</span><span><span class="demo-name">${d.name}</span><span class="demo-desc">${d.desc}</span></span>`;b.onclick=()=>buildScene(i);list.appendChild(b);});}
+
+async function init(){
+  buildDemoList();let lastErr;for(const url of CDN_CANDIDATES){try{PIXI=await import(url);log(`모듈 로드 성공: ${url}`);break;}catch(e){lastErr=e;log(`CDN 실패: ${url.split('/')[2]}`);}}
+  if(!PIXI){errorBox.style.display='block';errorBox.textContent='PixiJS 모듈을 불러오지 못했다.\n\n'+(lastErr?.message||'네트워크 또는 보안 정책을 확인해줘.');$('#engine-dot').className='dot bad';$('#engine-status').textContent='로드 실패';return;}
+  const {Application}=PIXI;app=new Application();
+  try{await app.init({resizeTo:host,background:'#07101d',antialias:true,autoDensity:true,resolution:Math.min(window.devicePixelRatio||1,2),preference:'webgl'});}catch(e){errorBox.style.display='block';errorBox.textContent='렌더러 초기화 실패\n'+e.message;$('#engine-dot').className='dot bad';$('#engine-status').textContent='초기화 실패';return;}
+  host.appendChild(app.canvas);app.stage.sortableChildren=true;loadingCover.style.display='none';$('#engine-dot').className='dot ok';$('#engine-status').textContent=`PixiJS ${VERSION}`;$('#resolution-info').textContent=`${app.renderer.resolution}×`;
+  let frames=0,acc=0;app.ticker.add(ticker=>{const dt=ticker.deltaTime*globalSpeed;if(isPlaying&&currentUpdate)currentUpdate(dt);frames++;acc+=ticker.deltaMS;if(acc>500){const fps=Math.round(frames*1000/acc);$('#fps').textContent=fps;frames=0;acc=0;$('#objects').textContent=countObjects(app.stage);$('#drawcalls').textContent=app.renderer.constructor.name.replace('Renderer','');}});
+  await buildScene(0);
+  let resizeTimer;const ro=new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(app&&app.screen.width>0)buildScene(currentScene,{silent:true});},250);});ro.observe(host);
+}
+
+$('#play-btn').onclick=()=>{isPlaying=!isPlaying;$('#play-btn').textContent=isPlaying?'일시정지':'재생';log(`Ticker animation ${isPlaying?'재생':'정지'}`);};
+$('#reset-btn').onclick=()=>buildScene(currentScene);
+$('#speed').oninput=e=>{globalSpeed=Number(e.target.value);$('#speed-val').textContent=globalSpeed.toFixed(2)+'×';};
+$('#bg-select').onchange=e=>{if(app)app.renderer.background.color=e.target.value;};
+$('#snapshot-btn').onclick=()=>{if(!app)return;try{const a=document.createElement('a');a.download=`pixijs-scene-${currentScene+1}.png`;a.href=app.canvas.toDataURL('image/png');a.click();log('Canvas PNG 캡처');}catch(e){log('캡처 실패: '+e.message);}};
+$('#fullscreen-btn').onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(e){log('전체화면 실패: '+e.message);}};
+$('#menu-toggle').onclick=()=>$('#left-panel').classList.toggle('open');
+$('#right-toggle').onclick=()=>$('#right-panel').classList.toggle('open');
+window.addEventListener('error',e=>log('window error: '+e.message));window.addEventListener('unhandledrejection',e=>log('promise error: '+(e.reason?.message||e.reason)));
+init();
+</script>
+</body>
+</html>
