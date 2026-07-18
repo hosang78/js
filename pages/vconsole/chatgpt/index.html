@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>vConsole 종합 기능 샘플</title>
+
+  <!-- vConsole CDN: 필요 시 @latest 대신 특정 버전으로 고정 가능 -->
+  <script src="https://cdn.jsdelivr.net/npm/vconsole@latest/dist/vconsole.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: #334155;
+      --accent: #60a5fa;
+      --good: #34d399;
+      --bad: #fb7185;
+      --warn: #fbbf24;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(96,165,250,.22), transparent 36rem),
+        linear-gradient(135deg, #020617, #0f172a 48%, #111827);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 26px 18px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(14px);
+      background: rgba(2, 6, 23, .78);
+      border-bottom: 1px solid rgba(148, 163, 184, .2);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 7vw, 42px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    main {
+      padding: 14px 14px 120px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .notice {
+      border: 1px solid rgba(96,165,250,.35);
+      background: rgba(15,23,42,.75);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin: 12px 0 16px;
+      line-height: 1.55;
+      color: #bfdbfe;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .card {
+      border: 1px solid rgba(148, 163, 184, .22);
+      background: rgba(15, 23, 42, .84);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.2);
+      min-height: 176px;
+    }
+
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
+
+    .card p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, select, input {
+      border: 1px solid rgba(148, 163, 184, .28);
+      background: rgba(30, 41, 59, .95);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      min-height: 40px;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    button.danger { background: rgba(127,29,29,.8); }
+    button.good { background: rgba(6,78,59,.85); }
+    button.warn { background: rgba(113,63,18,.85); }
+
+    .output {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(2,6,23,.75);
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: 12px;
+      min-height: 54px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(96,165,250,.16);
+      color: #bfdbfe;
+      font-size: 12px;
+      border: 1px solid rgba(96,165,250,.26);
+      margin: 3px 4px 3px 0;
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini-item {
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(30,41,59,.65);
+      border: 1px solid rgba(148,163,184,.18);
+      font-size: 13px;
+    }
+
+    .demo-box {
+      width: 100%;
+      min-height: 88px;
+      border-radius: 14px;
+      border: 1px dashed rgba(148,163,184,.45);
+      display: grid;
+      place-items: center;
+      background: rgba(30,41,59,.35);
+      transition: .25s;
+      text-align: center;
+      padding: 12px;
+      color: #dbeafe;
+    }
+
+    .demo-box.active {
+      background: rgba(16,185,129,.18);
+      border-color: rgba(52,211,153,.65);
+      transform: scale(1.02);
+    }
+
+    footer {
+      color: var(--muted);
+      text-align: center;
+      padding: 20px 12px 34px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 640px) {
+      header { padding-top: 20px; }
+      main { padding-left: 10px; padding-right: 10px; }
+      .card { padding: 14px; }
+      button { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>vConsole 종합 기능 샘플</h1>
+    <p class="sub">
+      오른쪽 아래 vConsole 버튼을 열고 아래 기능 버튼을 눌러 보세요.
+      Log / System / Network / Element / Storage / 커스텀 패널 동작을 한 페이지에서 확인합니다.
+    </p>
+  </header>
+
+  <main>
+    <div class="notice">
+      실행 팁: 모바일 브라우저에서 더 유용합니다. PC에서도 열리지만 vConsole은 원래 모바일 웹 디버깅용입니다.
+      외부 API 호출은 네트워크 환경이나 CORS 정책에 따라 실패할 수 있으며, 실패도 Network 패널에서 확인할 수 있습니다.
+    </div>
+
+    <section class="grid">
+      <article class="card">
+        <h2>1. vConsole 초기화 / 제거 / 재생성</h2>
+        <p>인스턴스 생성, 버전 확인, destroy, 라이트/다크 테마 재초기화를 확인합니다.</p>
+        <div class="buttons">
+          <button onclick="showVConsoleInfo()">버전/옵션 로그</button>
+          <button class="danger" onclick="destroyVConsole()">destroy()</button>
+          <button class="good" onclick="recreateVConsole('dark')">다크 재생성</button>
+          <button onclick="recreateVConsole('light')">라이트 재생성</button>
+        </div>
+        <div id="initOut" class="output">초기화 대기...</div>
+      </article>
+
+      <article class="card">
+        <h2>2. 콘솔 로그 타입</h2>
+        <p>log/info/debug/warn/error/table/assert/count/time/group/trace/styled log를 출력합니다.</p>
+        <div class="buttons">
+          <button onclick="runBasicLogs()">기본 로그</button>
+          <button onclick="runAdvancedLogs()">고급 로그</button>
+          <button class="warn" onclick="console.clear(); print('logOut','console.clear() 실행')">로그 clear</button>
+        </div>
+        <div id="logOut" class="output">버튼을 누르면 vConsole Log 패널에 출력됩니다.</div>
+      </article>
+
+      <article class="card">
+        <h2>3. Network: Fetch / XHR / 실패 요청</h2>
+        <p>성공 GET, POST, XHR, 의도적 실패 요청을 만들어 Network 패널 상세를 확인합니다.</p>
+        <div class="buttons">
+          <button onclick="fetchGet()">Fetch GET</button>
+          <button onclick="fetchPost()">Fetch POST</button>
+          <button onclick="xhrGet()">XHR GET</button>
+          <button class="danger" onclick="fetchFail()">실패 요청</button>
+        </div>
+        <div id="netOut" class="output">Network 패널을 열고 요청 목록을 확인하세요.</div>
+      </article>
+
+      <article class="card">
+        <h2>4. Storage: local/session/cookie</h2>
+        <p>LocalStorage, SessionStorage, Cookie 값을 생성·수정·삭제하고 Storage 패널에서 확인합니다.</p>
+        <div class="buttons">
+          <button onclick="writeStorage()">저장</button>
+          <button onclick="readStorage()">읽기</button>
+          <button class="danger" onclick="clearStorageDemo()">삭제</button>
+        </div>
+        <div id="storageOut" class="output">Storage 패널에서 값 변화를 확인하세요.</div>
+      </article>
+
+      <article class="card">
+        <h2>5. Element: DOM 동적 변경</h2>
+        <p>DOM 추가, 속성 변경, 스타일 변경을 수행합니다. Element 패널에서 구조가 바뀌는지 확인합니다.</p>
+        <div class="buttons">
+          <button onclick="addDomItem()">DOM 추가</button>
+          <button onclick="toggleDomStyle()">스타일 토글</button>
+          <button class="danger" onclick="resetDomDemo()">초기화</button>
+        </div>
+        <div id="domBox" class="demo-box" data-state="idle">Element 패널에서 이 박스를 검사하세요.</div>
+        <div id="domList" class="mini-list"></div>
+      </article>
+
+      <article class="card">
+        <h2>6. 성능 / 타이머 / 메모리 힌트</h2>
+        <p>performance.now, console.time/timeEnd, 반복 작업, 리소스 목록 일부를 출력합니다.</p>
+        <div class="buttons">
+          <button onclick="runPerformanceDemo()">성능 측정</button>
+          <button onclick="runLongTaskDemo()">반복 작업</button>
+        </div>
+        <div id="perfOut" class="output">System 패널과 Log 패널을 함께 확인하세요.</div>
+      </article>
+
+      <article class="card">
+        <h2>7. 에러 캡처 / Promise rejection</h2>
+        <p>try/catch 에러, 전역 error, unhandledrejection을 발생시켜 에러 추적을 확인합니다.</p>
+        <div class="buttons">
+          <button onclick="handledError()">처리된 에러</button>
+          <button class="danger" onclick="globalError()">전역 에러</button>
+          <button class="danger" onclick="promiseRejection()">Promise 실패</button>
+        </div>
+        <div id="errorOut" class="output">Error 로그와 stack trace를 확인하세요.</div>
+      </article>
+
+      <article class="card">
+        <h2>8. 커맨드라인 테스트용 상태</h2>
+        <p>vConsole 명령창에서 <code>demoState</code>, <code>document.body.dataset</code> 등을 직접 조회해보세요.</p>
+        <div class="buttons">
+          <button onclick="updateDemoState()">상태 갱신</button>
+          <button onclick="exposeHelper()">헬퍼 노출</button>
+        </div>
+        <div id="stateOut" class="output">window.demoState를 확인하세요.</div>
+      </article>
+
+      <article class="card">
+        <h2>9. 커스텀 플러그인 패널</h2>
+        <p>vConsolePlugin API가 사용 가능한 경우 샘플 패널을 추가합니다. 이벤트/버튼/로그를 패널에 표시합니다.</p>
+        <div class="buttons">
+          <button onclick="addCustomPlugin()">커스텀 패널 추가</button>
+          <button onclick="writePluginLog()">패널 로그 추가</button>
+        </div>
+        <div id="pluginOut" class="output">Custom 패널 지원 여부를 확인합니다.</div>
+      </article>
+
+      <article class="card">
+        <h2>10. 기기 / 브라우저 정보</h2>
+        <p>UserAgent, 화면 크기, 네트워크 타입, 언어, 터치 지원 여부를 로그로 출력합니다.</p>
+        <div class="buttons">
+          <button onclick="deviceInfo()">기기 정보 출력</button>
+          <button onclick="copyDiagnostics()">진단 JSON 생성</button>
+        </div>
+        <div id="deviceOut" class="output">디버깅 시 복사할 진단 정보를 생성합니다.</div>
+      </article>
+
+      <article class="card">
+        <h2>11. 이미지 / 리소스 로딩 확인</h2>
+        <p>이미지 로딩 성공과 실패를 발생시켜 Network와 Console에서 확인합니다.</p>
+        <div class="buttons">
+          <button onclick="loadGoodImage()">정상 이미지</button>
+          <button class="danger" onclick="loadBadImage()">깨진 이미지</button>
+        </div>
+        <div id="imageOut" class="output">이미지 요청 로그가 출력됩니다.</div>
+        <div id="imageSlot" class="mini-list"></div>
+      </article>
+
+      <article class="card">
+        <h2>12. 실전 시나리오: 폼 검증</h2>
+        <p>입력값 검증, 경고 로그, 실패 원인 객체 출력, 성공 이벤트 추적을 확인합니다.</p>
+        <div class="row">
+          <input id="nameInput" placeholder="이름 입력" />
+          <button onclick="validateFormDemo()">검증</button>
+        </div>
+        <div id="formOut" class="output">빈 값으로 검증하면 warn/error가 출력됩니다.</div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    개발 완료 후 운영 배포본에서는 vConsole을 반드시 제거하거나 개발 환경에서만 조건부 로드하세요.
+  </footer>
+
+  <script>
+    let vc = null;
+    let customPlugin = null;
+    let pluginLogs = [];
+    let domCount = 0;
+
+    window.demoState = {
+      page: 'vConsole full sample',
+      createdAt: new Date().toISOString(),
+      clicks: 0,
+      lastAction: null
+    };
+
+    function print(id, msg, data) {
+      const el = document.getElementById(id);
+      const text = typeof data === 'undefined'
+        ? msg
+        : msg + '\n' + JSON.stringify(data, null, 2);
+      el.textContent = text;
+    }
+
+    function mark(action) {
+      window.demoState.clicks += 1;
+      window.demoState.lastAction = action;
+      window.demoState.lastAt = new Date().toISOString();
+      document.body.dataset.lastAction = action;
+    }
+
+    function initVConsole(theme) {
+      if (!window.VConsole) {
+        print('initOut', 'vConsole 스크립트를 불러오지 못했습니다. CDN 접근 가능 여부를 확인하세요.');
+        return null;
+      }
+
+      vc = new window.VConsole({
+        theme: theme || 'dark',
+        onReady: function() {
+          console.info('[vConsole]', 'ready');
+        },
+        onClearLog: function() {
+          console.info('[vConsole]', 'log cleared');
+        }
+      });
+
+      console.log('[vConsole sample] initialized', {
+        version: vc.version,
+        theme: theme || 'dark',
+        time: new Date().toLocaleString()
+      });
+
+      print('initOut', 'vConsole 초기화 완료', {
+        version: vc.version,
+        theme: theme || 'dark'
+      });
+      return vc;
+    }
+
+    window.addEventListener('error', function(event) {
+      console.error('[window.onerror]', {
+        message: event.message,
+        filename: event.filename,
+        line: event.lineno,
+        col: event.colno,
+        error: event.error && event.error.stack
+      });
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      console.error('[unhandledrejection]', event.reason);
+    });
+
+    initVConsole('dark');
+
+    function showVConsoleInfo() {
+      mark('showVConsoleInfo');
+      if (!vc) return print('initOut', '현재 vConsole 인스턴스가 없습니다.');
+      console.log('[vConsole info]', {
+        version: vc.version,
+        option: vc.option,
+        hasAddPlugin: typeof vc.addPlugin === 'function',
+        hasDestroy: typeof vc.destroy === 'function'
+      });
+      print('initOut', 'vConsole 정보 출력 완료', {
+        version: vc.version,
+        optionKeys: Object.keys(vc.option || {})
+      });
+    }
+
+    function destroyVConsole() {
+      mark('destroyVConsole');
+      if (vc && typeof vc.destroy === 'function') {
+        vc.destroy();
+        vc = null;
+        print('initOut', 'vConsole.destroy() 실행 완료. 다시 보려면 재생성 버튼을 누르세요.');
+      } else {
+        print('initOut', '제거할 vConsole 인스턴스가 없습니다.');
+      }
+    }
+
+    function recreateVConsole(theme) {
+      mark('recreateVConsole:' + theme);
+      if (vc && typeof vc.destroy === 'function') vc.destroy();
+      initVConsole(theme);
+    }
+
+    function runBasicLogs() {
+      mark('runBasicLogs');
+      console.log('console.log: 일반 로그', { a: 1, b: true });
+      console.info('console.info: 정보 로그');
+      console.debug('console.debug: 디버그 로그');
+      console.warn('console.warn: 경고 로그');
+      console.error('console.error: 에러 로그 예시');
+      console.log('%c styled log %c 색상/굵기 테스트', 'color:#60a5fa;font-weight:bold;', 'color:#34d399;');
+      print('logOut', '기본 로그 출력 완료');
+    }
+
+    function runAdvancedLogs() {
+      mark('runAdvancedLogs');
+      console.group('console.group: 사용자 객체');
+      console.table([
+        { id: 1, name: '로그', enabled: true },
+        { id: 2, name: '네트워크', enabled: true },
+        { id: 3, name: '스토리지', enabled: true }
+      ]);
+      console.assert(1 === 2, 'console.assert 실패 예시', { expected: 2, actual: 1 });
+      console.count('demo-count');
+      console.count('demo-count');
+      console.time('demo-timer');
+      for (let i = 0; i < 100000; i++) Math.sqrt(i);
+      console.timeEnd('demo-timer');
+      console.trace('console.trace 호출 위치');
+      console.groupEnd();
+      print('logOut', '고급 로그 출력 완료: group/table/assert/count/time/trace');
+    }
+
+    async function fetchGet() {
+      mark('fetchGet');
+      print('netOut', 'Fetch GET 요청 중...');
+      console.time('fetch-get');
+      try {
+        const res = await fetch('https://jsonplaceholder.typicode.com/todos/1?source=vconsole-demo');
+        const json = await res.json();
+        console.timeEnd('fetch-get');
+        console.log('[fetch GET result]', json);
+        print('netOut', 'Fetch GET 성공', json);
+      } catch (err) {
+        console.error('[fetch GET failed]', err);
+        print('netOut', 'Fetch GET 실패: ' + err.message);
+      }
+    }
+
+    async function fetchPost() {
+      mark('fetchPost');
+      print('netOut', 'Fetch POST 요청 중...');
+      try {
+        const payload = { title: 'vConsole demo', body: 'POST sample', userId: 1 };
+        const res = await fetch('https://jsonplaceholder.typicode.com/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        console.log('[fetch POST result]', json);
+        print('netOut', 'Fetch POST 성공', json);
+      } catch (err) {
+        console.error('[fetch POST failed]', err);
+        print('netOut', 'Fetch POST 실패: ' + err.message);
+      }
+    }
+
+    function xhrGet() {
+      mark('xhrGet');
+      print('netOut', 'XHR GET 요청 중...');
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'https://jsonplaceholder.typicode.com/users/1?source=xhr');
+      xhr.onload = function() {
+        console.log('[XHR result]', xhr.status, xhr.responseText.slice(0, 120));
+        print('netOut', 'XHR GET 완료: status ' + xhr.status + '\n' + xhr.responseText.slice(0, 240));
+      };
+      xhr.onerror = function() {
+        console.error('[XHR failed]');
+        print('netOut', 'XHR 실패');
+      };
+      xhr.send();
+    }
+
+    async function fetchFail() {
+      mark('fetchFail');
+      print('netOut', '실패 요청 중...');
+      try {
+        await fetch('https://invalid.vconsole-demo.example/not-found-' + Date.now());
+      } catch (err) {
+        console.error('[intentional network error]', err);
+        print('netOut', '의도적 실패 요청 완료: Network/Error 확인\n' + err.message);
+      }
+    }
+
+    function writeStorage() {
+      mark('writeStorage');
+      const now = new Date().toISOString();
+      localStorage.setItem('vconsole_demo_local', JSON.stringify({ savedAt: now, type: 'localStorage' }));
+      sessionStorage.setItem('vconsole_demo_session', JSON.stringify({ savedAt: now, type: 'sessionStorage' }));
+      document.cookie = 'vconsole_demo_cookie=' + encodeURIComponent(now) + '; max-age=3600; path=/';
+      console.log('[storage write]', { localStorage, sessionStorage, cookie: document.cookie });
+      print('storageOut', '스토리지 저장 완료', {
+        local: localStorage.getItem('vconsole_demo_local'),
+        session: sessionStorage.getItem('vconsole_demo_session'),
+        cookie: document.cookie
+      });
+    }
+
+    function readStorage() {
+      mark('readStorage');
+      const data = {
+        local: localStorage.getItem('vconsole_demo_local'),
+        session: sessionStorage.getItem('vconsole_demo_session'),
+        cookie: document.cookie
+      };
+      console.table([data]);
+      print('storageOut', '스토리지 읽기 완료', data);
+    }
+
+    function clearStorageDemo() {
+      mark('clearStorageDemo');
+      localStorage.removeItem('vconsole_demo_local');
+      sessionStorage.removeItem('vconsole_demo_session');
+      document.cookie = 'vconsole_demo_cookie=; max-age=0; path=/';
+      console.warn('[storage cleared]');
+      print('storageOut', '샘플 스토리지 삭제 완료');
+    }
+
+    function addDomItem() {
+      mark('addDomItem');
+      domCount += 1;
+      const item = document.createElement('div');
+      item.className = 'mini-item';
+      item.dataset.index = String(domCount);
+      item.innerHTML = '<strong>동적 DOM #' + domCount + '</strong><br><span class="pill">data-index=' + domCount + '</span><span class="pill">' + new Date().toLocaleTimeString() + '</span>';
+      document.getElementById('domList').prepend(item);
+      console.log('[DOM added]', item);
+    }
+
+    function toggleDomStyle() {
+      mark('toggleDomStyle');
+      const box = document.getElementById('domBox');
+      box.classList.toggle('active');
+      box.dataset.state = box.classList.contains('active') ? 'active' : 'idle';
+      box.textContent = '현재 상태: ' + box.dataset.state + ' / ' + new Date().toLocaleTimeString();
+      console.log('[DOM style toggled]', box.dataset);
+    }
+
+    function resetDomDemo() {
+      mark('resetDomDemo');
+      domCount = 0;
+      document.getElementById('domList').innerHTML = '';
+      const box = document.getElementById('domBox');
+      box.className = 'demo-box';
+      box.dataset.state = 'idle';
+      box.textContent = 'Element 패널에서 이 박스를 검사하세요.';
+      console.warn('[DOM reset]');
+    }
+
+    function runPerformanceDemo() {
+      mark('runPerformanceDemo');
+      const start = performance.now();
+      console.time('performance-demo');
+      const rows = [];
+      for (let i = 0; i < 5000; i++) {
+        rows.push({ i, value: Math.sin(i) * Math.random() });
+      }
+      console.timeEnd('performance-demo');
+      const end = performance.now();
+      const resources = performance.getEntriesByType('resource').slice(-5).map(r => ({
+        name: r.name.slice(0, 70),
+        duration: Math.round(r.duration)
+      }));
+      console.log('[performance]', { durationMs: +(end - start).toFixed(2), resources });
+      print('perfOut', '성능 측정 완료', {
+        durationMs: +(end - start).toFixed(2),
+        recentResources: resources
+      });
+    }
+
+    function runLongTaskDemo() {
+      mark('runLongTaskDemo');
+      const start = performance.now();
+      let sum = 0;
+      for (let i = 0; i < 1500000; i++) sum += Math.sqrt(i);
+      const ms = +(performance.now() - start).toFixed(2);
+      console.warn('[long loop done]', { ms, sum: Math.round(sum) });
+      print('perfOut', '반복 작업 완료', { ms, sum: Math.round(sum) });
+    }
+
+    function handledError() {
+      mark('handledError');
+      try {
+        JSON.parse('{ bad json');
+      } catch (err) {
+        console.error('[handled error]', err);
+        print('errorOut', 'try/catch로 처리된 에러 출력 완료\n' + err.message);
+      }
+    }
+
+    function globalError() {
+      mark('globalError');
+      print('errorOut', '전역 에러를 발생시킵니다. Log 패널을 확인하세요.');
+      setTimeout(function() {
+        undefinedFunctionForVConsoleDemo();
+      }, 30);
+    }
+
+    function promiseRejection() {
+      mark('promiseRejection');
+      print('errorOut', 'Unhandled Promise rejection을 발생시킵니다.');
+      Promise.reject(new Error('vConsole demo unhandled rejection'));
+    }
+
+    function updateDemoState() {
+      mark('updateDemoState');
+      window.demoState.random = Math.random();
+      window.demoState.viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        dpr: window.devicePixelRatio
+      };
+      console.log('[demoState updated]', window.demoState);
+      print('stateOut', 'window.demoState 갱신 완료', window.demoState);
+    }
+
+    function exposeHelper() {
+      mark('exposeHelper');
+      window.demoHelper = {
+        ping: function() {
+          console.log('[demoHelper.ping]', new Date().toISOString());
+          return 'pong';
+        },
+        makeError: function() {
+          throw new Error('demoHelper.makeError()');
+        },
+        state: window.demoState
+      };
+      console.info('[helper exposed] try demoHelper.ping() in command line');
+      print('stateOut', 'window.demoHelper 노출 완료: vConsole 명령창에서 demoHelper.ping() 실행 가능');
+    }
+
+    function addCustomPlugin() {
+      mark('addCustomPlugin');
+
+      if (!vc) {
+        print('pluginOut', '먼저 vConsole을 재생성하세요.');
+        return;
+      }
+
+      if (!window.VConsole || !window.VConsole.VConsolePlugin) {
+        console.warn('[custom plugin]', 'VConsolePlugin API를 찾지 못했습니다. 버전에 따라 API가 다를 수 있습니다.');
+        print('pluginOut', '현재 로드된 vConsole에서 VConsolePlugin API를 찾지 못했습니다.');
+        return;
+      }
+
+      if (customPlugin) {
+        print('pluginOut', '이미 커스텀 패널이 추가되어 있습니다.');
+        return;
+      }
+
+      customPlugin = new window.VConsole.VConsolePlugin('demo_plugin', 'Demo');
+      customPlugin.on('renderTab', function(callback) {
+        callback('<div style="padding:10px;">Demo Plugin</div>');
+      });
+      customPlugin.on('render', function(callback) {
+        callback(
+          '<div style="padding:12px;line-height:1.6;">' +
+          '<h3 style="margin:0 0 8px;">vConsole Custom Plugin</h3>' +
+          '<p>아래 페이지 버튼으로 로그를 추가한 뒤 이 패널을 다시 열어보세요.</p>' +
+          '<div id="demoPluginBody">' + pluginLogs.map(function(x) { return '<div>• ' + x + '</div>'; }).join('') + '</div>' +
+          '</div>'
+        );
+      });
+      customPlugin.on('addTool', function(callback) {
+        callback([
+          {
+            name: 'Alert',
+            onClick: function() {
+              alert('vConsole custom tool clicked');
+            }
+          },
+          {
+            name: 'Log',
+            onClick: function() {
+              console.log('[custom plugin tool clicked]');
+            }
+          }
+        ]);
+      });
+
+      vc.addPlugin(customPlugin);
+      console.info('[custom plugin added]');
+      print('pluginOut', '커스텀 Demo 패널 추가 완료. vConsole 하단 탭을 확인하세요.');
+    }
+
+    function writePluginLog() {
+      mark('writePluginLog');
+      const line = new Date().toLocaleTimeString() + ' / action=' + window.demoState.lastAction;
+      pluginLogs.push(line);
+      console.log('[plugin log]', line);
+      print('pluginOut', '플러그인 로그 추가', pluginLogs);
+    }
+
+    function deviceInfo() {
+      mark('deviceInfo');
+      const info = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        cookieEnabled: navigator.cookieEnabled,
+        online: navigator.onLine,
+        connection: navigator.connection ? {
+          effectiveType: navigator.connection.effectiveType,
+          downlink: navigator.connection.downlink,
+          rtt: navigator.connection.rtt
+        } : 'navigator.connection 미지원',
+        screen: {
+          width: screen.width,
+          height: screen.height,
+          availWidth: screen.availWidth,
+          availHeight: screen.availHeight,
+          devicePixelRatio: window.devicePixelRatio
+        },
+        touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      };
+      console.table([info]);
+      console.log('[device info]', info);
+      print('deviceOut', '기기 정보 출력 완료', info);
+    }
+
+    function copyDiagnostics() {
+      mark('copyDiagnostics');
+      const data = {
+        time: new Date().toISOString(),
+        url: location.href,
+        state: window.demoState,
+        ua: navigator.userAgent,
+        viewport: {
+          width: innerWidth,
+          height: innerHeight,
+          dpr: devicePixelRatio
+        },
+        storage: {
+          local: localStorage.getItem('vconsole_demo_local'),
+          session: sessionStorage.getItem('vconsole_demo_session'),
+          cookie: document.cookie
+        }
+      };
+      console.log('[diagnostics json]', data);
+      print('deviceOut', '진단 JSON 생성 완료', data);
+    }
+
+    function loadGoodImage() {
+      mark('loadGoodImage');
+      const img = new Image();
+      img.alt = '정상 로딩 이미지';
+      img.style.maxWidth = '100%';
+      img.style.borderRadius = '12px';
+      img.onload = function() {
+        console.log('[image loaded]', img.src);
+        print('imageOut', '정상 이미지 로딩 완료');
+      };
+      img.onerror = function() {
+        console.error('[image load failed]', img.src);
+        print('imageOut', '정상 이미지 로딩 실패');
+      };
+      img.src = 'https://dummyimage.com/640x220/1f2937/e5e7eb.png&text=vConsole+Network+Image+' + Date.now();
+      document.getElementById('imageSlot').innerHTML = '';
+      document.getElementById('imageSlot').appendChild(img);
+    }
+
+    function loadBadImage() {
+      mark('loadBadImage');
+      const img = new Image();
+      img.alt = '실패 이미지';
+      img.onload = function() {
+        console.log('[unexpected image loaded]', img.src);
+      };
+      img.onerror = function() {
+        console.error('[broken image expected]', img.src);
+        print('imageOut', '깨진 이미지 요청 완료. Network/Error 확인');
+      };
+      img.src = 'https://invalid.vconsole-demo.example/broken-image-' + Date.now() + '.png';
+      document.getElementById('imageSlot').innerHTML = '<div class="mini-item">깨진 이미지 요청 생성됨</div>';
+    }
+
+    function validateFormDemo() {
+      mark('validateFormDemo');
+      const input = document.getElementById('nameInput');
+      const value = input.value.trim();
+
+      console.group('[form validation]');
+      console.log('raw value:', input.value);
+      console.log('trimmed value:', value);
+
+      if (!value) {
+        const reason = {
+          field: 'name',
+          code: 'REQUIRED',
+          message: '이름은 필수입니다.'
+        };
+        console.warn('[validation warning]', reason);
+        console.error('[validation failed]', reason);
+        print('formOut', '검증 실패', reason);
+        console.groupEnd();
+        return;
+      }
+
+      const result = {
+        ok: true,
+        name: value,
+        length: value.length,
+        at: new Date().toISOString()
+      };
+      console.info('[validation success]', result);
+      print('formOut', '검증 성공', result);
+      console.groupEnd();
+    }
+  </script>
+</body>
+</html>
