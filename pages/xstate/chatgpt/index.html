@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>XState v5 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg:#0b1020; --panel:#121a2d; --panel2:#17223b; --line:#2b3a5c;
+      --text:#eaf0ff; --muted:#9aabd0; --accent:#7dd3fc; --good:#86efac;
+      --warn:#fde68a; --bad:#fda4af; --purple:#c4b5fd;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#08101f,#11182b 45%,#0c1325);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,select{font:inherit}
+    button{border:1px solid var(--line);background:#1b2948;color:var(--text);padding:.58rem .78rem;border-radius:10px;cursor:pointer}
+    button:hover{border-color:var(--accent);transform:translateY(-1px)}
+    button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    input,select{background:#0d1528;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:.55rem .65rem}
+    code,pre{font-family:"SFMono-Regular",Consolas,monospace}
+    header{padding:28px 22px 18px;max-width:1500px;margin:auto}
+    h1{margin:0 0 8px;font-size:clamp(1.8rem,4vw,3.2rem)}
+    header p{margin:0;color:var(--muted);max-width:900px;line-height:1.65}
+    .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .badge{padding:5px 9px;border:1px solid var(--line);border-radius:999px;color:var(--accent);font-size:.82rem}
+    main{max-width:1500px;margin:auto;padding:0 22px 48px}
+    .tabs{display:flex;gap:8px;overflow:auto;padding:8px 0 16px;position:sticky;top:0;background:rgba(11,16,32,.9);backdrop-filter:blur(12px);z-index:10}
+    .tabs button.active{background:var(--accent);color:#07101f;border-color:var(--accent);font-weight:800}
+    .page{display:none}.page.active{display:block}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{grid-column:span 6;background:rgba(18,26,45,.94);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 15px 35px rgba(0,0,0,.18)}
+    .card.wide{grid-column:span 12}.card.third{grid-column:span 4}
+    .card h2,.card h3{margin:0 0 6px}.card p{color:var(--muted);line-height:1.55;margin:.25rem 0 .8rem}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
+    .status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+    .kv{background:#0c1426;border:1px solid #223253;border-radius:10px;padding:9px;min-width:0}
+    .kv b{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+    .kv span{display:block;overflow-wrap:anywhere}
+    .state-pill{display:inline-flex;padding:6px 10px;border-radius:999px;background:#23365c;color:var(--accent);font-weight:800}
+    .diagram{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;background:#0c1426;border-radius:12px;border:1px dashed var(--line)}
+    .node{padding:9px 12px;border:1px solid var(--line);border-radius:10px;color:var(--muted)}
+    .node.active{background:var(--accent);color:#061120;border-color:var(--accent);font-weight:900}
+    .arrow{color:var(--muted)}
+    .log{height:190px;overflow:auto;background:#070d19;border:1px solid #22304c;border-radius:10px;padding:10px;font-size:.8rem;line-height:1.55;white-space:pre-wrap}
+    .code{max-height:330px;overflow:auto;background:#070d19;border:1px solid #22304c;border-radius:10px;padding:12px;color:#c9d7ff;font-size:.78rem;line-height:1.5;white-space:pre}
+    .feature-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+    .feature{background:#101a30;border-left:3px solid var(--purple);padding:10px;border-radius:8px}
+    .progress{height:12px;background:#0a1120;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+    .progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--good));width:0;transition:width .2s}
+    .regions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .region{padding:12px;background:#0d1629;border:1px solid var(--line);border-radius:12px}
+    .todo{display:flex;justify-content:space-between;gap:8px;padding:9px;border-bottom:1px solid #263656}
+    .muted{color:var(--muted)} .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+    footer{color:var(--muted);text-align:center;padding:28px}
+    @media(max-width:900px){.card,.card.third{grid-column:span 12}.status{grid-template-columns:1fr 1fr}.regions{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>XState v5 종합 기능 실험실</h1>
+  <p>유한 상태 머신, 계층·병렬 상태, context와 assign, guard, entry/exit/action, eventless·지연 전이, Promise/Callback Actor, spawn, history, final/output, persistence, tags/meta, matches/can을 직접 조작하는 단일 HTML 샘플.</p>
+  <div class="badges"><span class="badge">XState 5.31.0</span><span class="badge">ES Module CDN</span><span class="badge">프레임워크 없음</span><span class="badge">외부 API 없음</span></div>
+</header>
+<main>
+  <nav class="tabs" id="tabs"></nav>
+  <section id="pages"></section>
+</main>
+<footer>브라우저 개발자 도구 콘솔에서도 전체 snapshot과 actor 동작을 확인할 수 있다.</footer>
+
+<script type="module">
+import {
+  setup, createMachine, createActor, assign, fromPromise, fromCallback,
+  sendTo, raise, enqueueActions, stopChild
+} from 'https://esm.sh/xstate@5.31.0';
+
+const $ = (s, root=document) => root.querySelector(s);
+const esc = v => JSON.stringify(v, null, 2);
+const now = () => new Date().toLocaleTimeString('ko-KR', {hour12:false});
+const demos = [];
+const addDemo = (id, title, subtitle, html, init) => demos.push({id,title,subtitle,html,init});
+const logTo = (el, msg) => { el.textContent = `[${now()}] ${msg}\n` + el.textContent; };
+const snapshotSummary = s => ({
+  value:s.value, context:s.context, status:s.status, output:s.output,
+  tags:[...(s.tags || [])], children:Object.keys(s.children || {})
+});
+const renderCode = obj => esc(obj);
+
+function machinePanel(root, actor, names=[]) {
+  const stateEl = $('[data-state]',root), ctxEl=$('[data-context]',root), statusEl=$('[data-status]',root), logEl=$('[data-log]',root);
+  actor.subscribe(s => {
+    if(stateEl) stateEl.textContent = typeof s.value === 'string' ? s.value : JSON.stringify(s.value);
+    if(ctxEl) ctxEl.textContent = esc(s.context);
+    if(statusEl) statusEl.textContent = s.status;
+    root.querySelectorAll('[data-node]').forEach(n=>{
+      const val=n.dataset.node;
+      n.classList.toggle('active', s.matches ? s.matches(val) : false);
+    });
+    root.querySelectorAll('[data-event]').forEach(b=>{
+      try{ b.disabled = s.can ? !s.can({type:b.dataset.event}) : false; }catch{}
+    });
+    if(logEl) logTo(logEl, `snapshot ${esc(snapshotSummary(s))}`);
+  });
+  root.addEventListener('click', e=>{
+    const b=e.target.closest('[data-event]'); if(!b)return;
+    const extra=b.dataset.payload ? JSON.parse(b.dataset.payload) : {};
+    actor.send({type:b.dataset.event,...extra});
+    if(logEl) logTo(logEl, `send ${b.dataset.event}`);
+  });
+  actor.start();
+  return actor;
+}
+
+addDemo('basic','1. 기본 FSM','createMachine · createActor · send · subscribe · matches · can',`
+<div class="grid">
+ <article class="card wide">
+  <h2>신호등 유한 상태 머신</h2><p>이벤트로만 상태가 이동하며, 현재 상태에서 허용되지 않은 버튼은 snapshot.can()으로 비활성화된다.</p>
+  <div class="diagram"><span class="node" data-node="red">red</span><span class="arrow">→ TIMER →</span><span class="node" data-node="green">green</span><span class="arrow">→ TIMER →</span><span class="node" data-node="yellow">yellow</span></div>
+  <div class="controls"><button data-event="TIMER">TIMER</button><button data-event="RESET">RESET</button></div>
+  <div class="status"><div class="kv"><b>state.value</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div><div class="kv"><b>matches('green')</b><span id="basic-match"></span></div><div class="kv"><b>can(TIMER)</b><span id="basic-can"></span></div></div>
+ </article>
+ <article class="card"><h3>이벤트·스냅샷 로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>핵심 코드</h3><pre class="code">const machine = createMachine({
+  initial: 'red',
+  states: {
+    red: { on: { TIMER: 'green' } },
+    green: { on: { TIMER: 'yellow' } },
+    yellow: { on: { TIMER: 'red' } }
+  }
+});
+const actor = createActor(machine).start();
+actor.send({ type: 'TIMER' });</pre></article>
+</div>`, root=>{
+ const m=createMachine({id:'traffic',initial:'red',states:{red:{on:{TIMER:'green'}},green:{on:{TIMER:'yellow'}},yellow:{on:{TIMER:'red'}},},on:{RESET:'.red'}});
+ const a=machinePanel(root,createActor(m));
+ a.subscribe(s=>{ $('#basic-match',root).textContent=s.matches('green');$('#basic-can',root).textContent=s.can({type:'TIMER'});});
+});
+
+addDemo('context','2. Context·Guard·Action','setup · assign · guard params · entry/exit · raise · enqueueActions',`
+<div class="grid">
+ <article class="card wide">
+  <h2>승인 한도 워크플로</h2><p>금액을 context에 저장하고, guard가 승인 경로를 선택한다. entry/exit와 raise, enqueueActions도 로그에 표시된다.</p>
+  <div class="controls"><input id="amount" type="number" value="500" min="0"><button id="submit-amount">신청</button><button data-event="APPROVE">승인</button><button data-event="REJECT">반려</button><button data-event="RESET">초기화</button></div>
+  <div class="diagram"><span class="node" data-node="editing">editing</span><span>→</span><span class="node" data-node="autoApproved">autoApproved</span><span>/</span><span class="node" data-node="review">review</span><span>→</span><span class="node" data-node="approved">approved</span><span>/</span><span class="node" data-node="rejected">rejected</span></div>
+  <div class="status"><div class="kv"><b>state</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div><div class="kv" style="grid-column:span 2"><b>context</b><pre data-context></pre></div></div>
+ </article>
+ <article class="card"><h3>실행 로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>사용 기능</h3><div class="feature-list"><div class="feature">assign() 불변 context 갱신</div><div class="feature">guard 조건 분기</div><div class="feature">entry / exit actions</div><div class="feature">raise() 내부 이벤트</div><div class="feature">enqueueActions() 조건부 액션</div><div class="feature">setup() 구현 등록</div></div></article>
+</div>`, root=>{
+ const log=$('[data-log]',root);
+ const machine=setup({
+  guards:{isSmall:({event})=>event.amount<=1000},
+  actions:{
+   entered:({event})=>logTo(log,`entry 이벤트=${event.type}`),
+   exited:()=>logTo(log,'exit editing'),
+   audit:({context})=>logTo(log,`감사 기록: ${context.amount}원`),
+   notify:({context})=>logTo(log,`알림: ${context.decision}`)
+  }
+ }).createMachine({
+  id:'approval',initial:'editing',
+  context:{amount:0,decision:'미결',audits:0},
+  states:{
+   editing:{entry:'entered',exit:'exited',on:{SUBMIT:[
+    {guard:'isSmall',target:'autoApproved',actions:assign({amount:({event})=>event.amount,decision:'자동승인'})},
+    {target:'review',actions:assign({amount:({event})=>event.amount,decision:'검토필요'})}
+   ]}},
+   autoApproved:{entry:[assign({audits:({context})=>context.audits+1}),'audit',raise({type:'NOTIFY'})],on:{NOTIFY:{actions:'notify'},RESET:'editing'}},
+   review:{on:{APPROVE:{target:'approved',actions:enqueueActions(({enqueue})=>{enqueue.assign({decision:'수동승인',audits:({context})=>context.audits+1});enqueue('audit');})},REJECT:{target:'rejected',actions:assign({decision:'반려'})},RESET:'editing'}},
+   approved:{entry:'notify',on:{RESET:'editing'}}, rejected:{entry:'notify',on:{RESET:'editing'}}
+  }
+ });
+ const actor=machinePanel(root,createActor(machine));
+ $('#submit-amount',root).onclick=()=>actor.send({type:'SUBMIT',amount:Number($('#amount',root).value)});
+});
+
+addDemo('hierarchy','3. 계층·History','compound state · nested states · shallow history · state IDs · absolute target',`
+<div class="grid">
+ <article class="card wide">
+  <h2>미디어 플레이어와 이전 하위 상태 복원</h2><p>active 안에 playing/paused가 중첩된다. 정지 후 재개하면 history 상태가 직전 하위 상태를 복원한다.</p>
+  <div class="controls"><button data-event="POWER">전원</button><button data-event="PLAY">재생</button><button data-event="PAUSE">일시정지</button><button data-event="STOP">정지</button><button data-event="RESUME">History로 재개</button><button data-event="FAIL">오류</button><button data-event="RECOVER">복구</button></div>
+  <div class="diagram"><span class="node" data-node="off">off</span><span>⇄</span><span class="node" data-node="active">active</span><span class="node" data-node="active.playing">playing</span><span class="node" data-node="active.paused">paused</span><span class="node" data-node="error">error</span></div>
+  <div class="status"><div class="kv"><b>state.value</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div><div class="kv" style="grid-column:span 2"><b>context</b><pre data-context></pre></div></div>
+ </article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>구조</h3><pre class="code">active: {
+  initial: 'paused',
+  states: {
+    hist: { type: 'history', history: 'shallow' },
+    playing: { on: { PAUSE: 'paused' } },
+    paused: { on: { PLAY: 'playing' } }
+  },
+  on: { STOP: 'off' }
+},
+off: { on: { RESUME: 'active.hist' } }</pre></article>
+</div>`, root=>{
+ const m=createMachine({id:'player',initial:'off',context:{recoveries:0},states:{
+  off:{on:{POWER:'active',RESUME:'active.hist'}},
+  active:{initial:'paused',states:{hist:{type:'history',history:'shallow'},playing:{on:{PAUSE:'paused'}},paused:{on:{PLAY:'playing'}}},on:{POWER:'off',STOP:'off',FAIL:'#player.error'}},
+  error:{on:{RECOVER:{target:'#player.off',actions:assign({recoveries:({context})=>context.recoveries+1})}}}
+ }});
+ machinePanel(root,createActor(m));
+});
+
+addDemo('parallel','4. 병렬 상태','type: parallel · 다중 region · 복합 state.value',`
+<div class="grid">
+ <article class="card wide">
+  <h2>스마트 홈 병렬 상태</h2><p>조명, 보안, 온도 세 영역이 동시에 독립적인 상태를 가진다.</p>
+  <div class="regions">
+   <div class="region"><h3>조명</h3><div class="controls"><button data-event="LIGHT_ON">켜기</button><button data-event="LIGHT_OFF">끄기</button></div><div class="diagram"><span class="node" data-node='lighting.off'>off</span><span class="node" data-node='lighting.on'>on</span></div></div>
+   <div class="region"><h3>보안</h3><div class="controls"><button data-event="ARM">경계</button><button data-event="DISARM">해제</button></div><div class="diagram"><span class="node" data-node='security.disarmed'>disarmed</span><span class="node" data-node='security.armed'>armed</span></div></div>
+   <div class="region"><h3>온도</h3><div class="controls"><button data-event="HEAT">난방</button><button data-event="COOL">냉방</button><button data-event="IDLE">대기</button></div><div class="diagram"><span class="node" data-node='climate.idle'>idle</span><span class="node" data-node='climate.heating'>heating</span><span class="node" data-node='climate.cooling'>cooling</span></div></div>
+  </div>
+  <div class="status"><div class="kv" style="grid-column:span 3"><b>병렬 state.value</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div></div>
+ </article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>핵심</h3><pre class="code">type: 'parallel',
+states: {
+  lighting: { initial: 'off', states: { ... } },
+  security: { initial: 'disarmed', states: { ... } },
+  climate:  { initial: 'idle', states: { ... } }
+}</pre></article>
+</div>`, root=>{
+ const m=createMachine({id:'home',type:'parallel',states:{
+  lighting:{initial:'off',states:{off:{on:{LIGHT_ON:'on'}},on:{on:{LIGHT_OFF:'off'}}}},
+  security:{initial:'disarmed',states:{disarmed:{on:{ARM:'armed'}},armed:{on:{DISARM:'disarmed'}}}},
+  climate:{initial:'idle',states:{idle:{on:{HEAT:'heating',COOL:'cooling'}},heating:{on:{COOL:'cooling',IDLE:'idle'}},cooling:{on:{HEAT:'heating',IDLE:'idle'}}}}
+ }});
+ machinePanel(root,createActor(m));
+});
+
+addDemo('automatic','5. 자동 전이','always · after · delayed transitions · cancel on exit',`
+<div class="grid">
+ <article class="card wide">
+  <h2>세션 타이머</h2><p>검증 상태는 always로 즉시 분기하고, 활동 상태는 after로 자동 만료된다. 로그아웃하면 예약된 지연 전이는 취소된다.</p>
+  <div class="controls"><label>이름 <input id="username" value="홍길동"></label><button id="login">LOGIN</button><button data-event="ACTIVITY">활동 연장</button><button data-event="LOGOUT">로그아웃</button></div>
+  <div class="diagram"><span class="node" data-node="loggedOut">loggedOut</span><span class="node" data-node="validating">validating</span><span class="node" data-node="active">active</span><span class="node" data-node="expired">expired</span><span class="node" data-node="invalid">invalid</span></div>
+  <div class="progress"><i id="session-bar"></i></div>
+  <div class="status"><div class="kv"><b>state</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div><div class="kv" style="grid-column:span 2"><b>context</b><pre data-context></pre></div></div>
+ </article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>핵심 코드</h3><pre class="code">validating: {
+  always: [
+    { guard: 'hasName', target: 'active' },
+    { target: 'invalid' }
+  ]
+},
+active: {
+  after: { 5000: 'expired' },
+  on: { ACTIVITY: { target: 'active', reenter: true } }
+}</pre></article>
+</div>`, root=>{
+ let timer;
+ const m=setup({guards:{hasName:({context})=>context.name.trim().length>0}}).createMachine({
+  initial:'loggedOut',context:{name:'',startedAt:null},
+  states:{
+   loggedOut:{on:{LOGIN:{target:'validating',actions:assign({name:({event})=>event.name})}}},
+   validating:{always:[{guard:'hasName',target:'active'},{target:'invalid'}]},
+   active:{entry:assign({startedAt:()=>Date.now()}),after:{5000:'expired'},on:{ACTIVITY:{target:'active',reenter:true},LOGOUT:'loggedOut'}},
+   expired:{on:{LOGIN:{target:'validating',actions:assign({name:({event})=>event.name})},LOGOUT:'loggedOut'}},
+   invalid:{on:{LOGIN:{target:'validating',actions:assign({name:({event})=>event.name})},LOGOUT:'loggedOut'}}
+  }});
+ const actor=machinePanel(root,createActor(m));
+ $('#login',root).onclick=()=>actor.send({type:'LOGIN',name:$('#username',root).value});
+ actor.subscribe(s=>{
+  clearInterval(timer); const bar=$('#session-bar',root);
+  if(s.matches('active')) timer=setInterval(()=>{bar.style.width=Math.min(100,(Date.now()-s.context.startedAt)/50)+'%'},50); else bar.style.width='0%';
+ });
+});
+
+addDemo('promise','6. Promise Actor','fromPromise · invoke · input · onDone · onError · cancellation',`
+<div class="grid">
+ <article class="card wide">
+  <h2>비동기 데이터 로더</h2><p>Promise actor에 input을 전달한다. 성공·실패·취소 경로를 모두 실험할 수 있다.</p>
+  <div class="controls"><button data-event="LOAD" data-payload='{"fail":false}'>성공 요청</button><button data-event="LOAD" data-payload='{"fail":true}'>실패 요청</button><button data-event="CANCEL">취소</button><button data-event="RESET">초기화</button></div>
+  <div class="diagram"><span class="node" data-node="idle">idle</span><span class="node" data-node="loading">loading</span><span class="node" data-node="success">success</span><span class="node" data-node="failure">failure</span></div>
+  <div class="status"><div class="kv"><b>state</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div><div class="kv" style="grid-column:span 2"><b>context</b><pre data-context></pre></div></div>
+ </article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>핵심 코드</h3><pre class="code">actors: {
+  loadData: fromPromise(async ({ input, signal }) => {
+    await delay(1200, signal);
+    if (input.fail) throw new Error('의도적 실패');
+    return { id: crypto.randomUUID() };
+  })
+},
+loading: {
+  invoke: {
+    src: 'loadData',
+    input: ({ context }) => ({ fail: context.fail }),
+    onDone: { target: 'success' },
+    onError: { target: 'failure' }
+  }
+}</pre></article>
+</div>`, root=>{
+ const delay=(ms,signal)=>new Promise((res,rej)=>{const id=setTimeout(res,ms);signal?.addEventListener('abort',()=>{clearTimeout(id);rej(new DOMException('Aborted','AbortError'))})});
+ const m=setup({actors:{loadData:fromPromise(async({input,signal})=>{await delay(1200,signal);if(input.fail)throw new Error('의도적 실패');return {id:crypto.randomUUID(),message:'데이터 로드 완료'};})}}).createMachine({
+  initial:'idle',context:{fail:false,data:null,error:null},
+  states:{
+   idle:{on:{LOAD:{target:'loading',actions:assign({fail:({event})=>event.fail,data:null,error:null})}}},
+   loading:{invoke:{src:'loadData',input:({context})=>({fail:context.fail}),onDone:{target:'success',actions:assign({data:({event})=>event.output})},onError:{target:'failure',actions:assign({error:({event})=>String(event.error)})}},on:{CANCEL:'idle'}},
+   success:{on:{RESET:'idle',LOAD:{target:'loading',actions:assign({fail:({event})=>event.fail,data:null,error:null})}}},
+   failure:{on:{RESET:'idle',LOAD:{target:'loading',actions:assign({fail:({event})=>event.fail,data:null,error:null})}}}
+  }});
+ machinePanel(root,createActor(m));
+});
+
+addDemo('callback','7. Callback Actor','fromCallback · sendBack · receive · sendTo · actor lifecycle',`
+<div class="grid">
+ <article class="card wide">
+  <h2>양방향 타이머 Actor</h2><p>Callback actor가 부모에 TICK을 보내고, 부모는 sendTo로 자식에게 속도 변경 메시지를 보낸다.</p>
+  <div class="controls"><button data-event="START">시작</button><button data-event="FASTER">빠르게</button><button data-event="SLOWER">느리게</button><button data-event="STOP">정지</button><button data-event="RESET">초기화</button></div>
+  <div class="status"><div class="kv"><b>state</b><span data-state></span></div><div class="kv"><b>status</b><span data-status></span></div><div class="kv"><b>ticks</b><span id="ticks"></span></div><div class="kv"><b>interval</b><span id="interval"></span></div></div>
+ </article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>Actor 특성</h3><div class="feature-list"><div class="feature">상태 진입 시 invoke 시작</div><div class="feature">상태 이탈 시 자동 정리</div><div class="feature">sendBack → 부모 이벤트</div><div class="feature">receive ← 부모 메시지</div><div class="feature">sendTo('ticker', event)</div></div></article>
+</div>`, root=>{
+ const ticker=fromCallback(({sendBack,receive})=>{
+  let ms=700, id;
+  const start=()=>{clearInterval(id);id=setInterval(()=>sendBack({type:'TICK',at:Date.now()}),ms)}; start();
+  receive(e=>{if(e.type==='SET_INTERVAL'){ms=e.ms;start();}});
+  return()=>clearInterval(id);
+ });
+ const m=setup({actors:{ticker}}).createMachine({
+  initial:'idle',context:{ticks:0,ms:700},
+  states:{
+   idle:{on:{START:'running',RESET:{actions:assign({ticks:0,ms:700})}}},
+   running:{invoke:{id:'ticker',src:'ticker'},on:{
+    TICK:{actions:assign({ticks:({context})=>context.ticks+1})},
+    FASTER:{actions:[assign({ms:({context})=>Math.max(100,context.ms-150)}),sendTo('ticker',({context})=>({type:'SET_INTERVAL',ms:Math.max(100,context.ms-150)}))]},
+    SLOWER:{actions:[assign({ms:({context})=>Math.min(2000,context.ms+150)}),sendTo('ticker',({context})=>({type:'SET_INTERVAL',ms:Math.min(2000,context.ms+150)}))]},
+    STOP:'idle',RESET:{target:'idle',actions:assign({ticks:0,ms:700})}
+   }}
+  }});
+ const a=machinePanel(root,createActor(m));
+ a.subscribe(s=>{$('#ticks',root).textContent=s.context.ticks;$('#interval',root).textContent=s.context.ms+' ms'});
+});
+
+addDemo('spawn','8. Spawn 동적 Actor','spawn in assign · dynamic actor collection · child snapshots · stopChild',`
+<div class="grid">
+ <article class="card wide">
+  <h2>동적 카운터 Actor 목록</h2><p>필요할 때 자식 actor를 생성하고 각각 독립적으로 이벤트를 받는다. 제거 시 stopChild로 종료한다.</p>
+  <div class="controls"><button id="add-counter">카운터 추가</button><button id="clear-counters">전체 제거</button></div>
+  <div id="counter-list"></div>
+  <div class="status"><div class="kv"><b>부모 state</b><span data-state></span></div><div class="kv"><b>자식 수</b><span id="child-count"></span></div><div class="kv" style="grid-column:span 2"><b>children IDs</b><span id="child-ids"></span></div></div>
+ </article>
+ <article class="card"><h3>부모 로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>핵심 코드</h3><pre class="code">ADD: {
+  actions: assign({
+    counters: ({ context, spawn }) => {
+      const ref = spawn(counterMachine, { id });
+      return [...context.counters, { id, ref }];
+    }
+  })
+}</pre></article>
+</div>`, root=>{
+ const counterMachine=createMachine({context:({input})=>({count:input?.start??0}),on:{INC:{actions:assign({count:({context})=>context.count+1})},DEC:{actions:assign({count:({context})=>context.count-1})}}});
+ const parent=createMachine({
+  context:{counters:[]},
+  on:{
+   ADD:{actions:assign({counters:({context,spawn})=>{const id='counter-'+crypto.randomUUID().slice(0,6);return [...context.counters,{id,ref:spawn(counterMachine,{id,input:{start:0}})}]}})},
+   REMOVE:{actions:[stopChild(({event})=>event.id),assign({counters:({context,event})=>context.counters.filter(c=>c.id!==event.id)})]}
+  }
+ });
+ const actor=machinePanel(root,createActor(parent)); const list=$('#counter-list',root); let unsubs=[];
+ function draw(s){
+  unsubs.forEach(u=>u.unsubscribe?.());unsubs=[];list.innerHTML='';
+  s.context.counters.forEach(c=>{
+   const row=document.createElement('div');row.className='todo';
+   row.innerHTML=`<span><b>${c.id}</b> <span class="muted" data-count>0</span></span><span><button data-inc>＋</button> <button data-dec>－</button> <button data-remove>삭제</button></span>`;
+   $('[data-inc]',row).onclick=()=>c.ref.send({type:'INC'}); $('[data-dec]',row).onclick=()=>c.ref.send({type:'DEC'}); $('[data-remove]',row).onclick=()=>actor.send({type:'REMOVE',id:c.id});
+   const sub=c.ref.subscribe(cs=>$('[data-count]',row).textContent=`count=${cs.context.count}`);unsubs.push(sub); const cs=c.ref.getSnapshot();$('[data-count]',row).textContent=`count=${cs.context.count}`;
+   list.append(row);
+  });
+  $('#child-count',root).textContent=s.context.counters.length; $('#child-ids',root).textContent=s.context.counters.map(c=>c.id).join(', ')||'없음';
+ }
+ actor.subscribe(draw); $('#add-counter',root).onclick=()=>actor.send({type:'ADD'});
+ $('#clear-counters',root).onclick=()=>actor.getSnapshot().context.counters.forEach(c=>actor.send({type:'REMOVE',id:c.id}));
+});
+
+addDemo('final','9. Final·Output','final state · onDone · machine output · actor status done',`
+<div class="grid">
+ <article class="card wide">
+  <h2>3단계 주문 완료 머신</h2><p>중첩 머신이 final에 도달하면 부모의 onDone이 실행된다. 최상위 final에서는 actor status와 output을 확인한다.</p>
+  <div class="controls"><button data-event="NEXT">다음</button><button data-event="CANCEL">취소</button><button id="restart-final">새 Actor로 재시작</button></div>
+  <div class="diagram"><span class="node" data-node="checkout.address">주소</span><span class="node" data-node="checkout.payment">결제</span><span class="node" data-node="checkout.confirm">확인</span><span class="node" data-node="completed">완료</span><span class="node" data-node="cancelled">취소</span></div>
+  <div class="status"><div class="kv"><b>state</b><span data-state></span></div><div class="kv"><b>actor status</b><span data-status></span></div><div class="kv"><b>output</b><span id="final-output"></span></div><div class="kv"><b>context</b><pre data-context></pre></div></div>
+ </article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+ <article class="card"><h3>핵심</h3><pre class="code">checkout: {
+  initial: 'address',
+  states: {
+    address: { on: { NEXT: 'payment' } },
+    payment: { on: { NEXT: 'confirm' } },
+    confirm: { on: { NEXT: 'finished' } },
+    finished: { type: 'final' }
+  },
+  onDone: 'completed'
+},
+completed: { type: 'final' },
+output: ({ context }) => ({ orderId: context.orderId })</pre></article>
+</div>`, root=>{
+ let actor;
+ const m=createMachine({
+  context:{orderId:'ORD-'+Math.floor(Math.random()*90000+10000)},
+  initial:'checkout',
+  states:{
+   checkout:{initial:'address',states:{address:{on:{NEXT:'payment'}},payment:{on:{NEXT:'confirm'}},confirm:{on:{NEXT:'finished'}},finished:{type:'final'}},onDone:'completed',on:{CANCEL:'#order.cancelled'}},
+   completed:{type:'final'},cancelled:{type:'final'}
+  },id:'order',output:({context})=>({orderId:context.orderId,finishedAt:new Date().toISOString()})
+ });
+ function start(){actor=createActor(m);machinePanel(root,actor);actor.subscribe(s=>$('#final-output',root).textContent=esc(s.output));}
+ start(); root.addEventListener('click',e=>{const b=e.target.closest('[data-event]');if(b)actor.send({type:b.dataset.event})});
+ $('#restart-final',root).onclick=()=>start();
+});
+
+addDemo('persistence','10. Persistence·Introspection','getPersistedSnapshot · restore snapshot · tags · meta · getMeta · hasTag',`
+<div class="grid">
+ <article class="card wide">
+  <h2>상태 저장·복원 및 메타데이터</h2><p>현재 스냅샷을 직렬화해 localStorage에 저장하고 새 actor에 복원한다. tags와 meta도 함께 확인한다.</p>
+  <div class="controls"><button data-event="EDIT">편집</button><button data-event="SAVE">저장</button><button data-event="PUBLISH">게시</button><button data-event="ARCHIVE">보관</button><button id="persist-save">localStorage 저장</button><button id="persist-restore">복원</button><button id="persist-clear">삭제</button></div>
+  <div class="status"><div class="kv"><b>state</b><span data-state></span></div><div class="kv"><b>tags</b><span id="persist-tags"></span></div><div class="kv"><b>hasTag('editable')</b><span id="persist-hastag"></span></div><div class="kv"><b>meta</b><pre id="persist-meta"></pre></div></div>
+ </article>
+ <article class="card"><h3>persisted snapshot</h3><pre class="code" id="persist-json"></pre></article>
+ <article class="card"><h3>로그</h3><pre class="log" data-log></pre></article>
+</div>`, root=>{
+ let actor, sub;
+ const m=createMachine({id:'doc',initial:'draft',context:{revision:1},states:{
+  draft:{tags:['editable','unpublished'],meta:{label:'초안',icon:'📝'},on:{EDIT:{actions:assign({revision:({context})=>context.revision+1})},SAVE:'review'}},
+  review:{tags:['readonly','unpublished'],meta:{label:'검토',requiresApproval:true},on:{EDIT:'draft',PUBLISH:'published'}},
+  published:{tags:['readonly','public'],meta:{label:'게시됨'},on:{ARCHIVE:'archived'}},
+  archived:{tags:['readonly'],meta:{label:'보관됨'}}
+ }});
+ function bind(a){
+  actor=a; machinePanel(root,actor);
+  actor.subscribe(s=>{$('#persist-tags',root).textContent=[...s.tags].join(', ');$('#persist-hastag',root).textContent=s.hasTag('editable');$('#persist-meta',root).textContent=esc(s.getMeta());$('#persist-json',root).textContent=esc(actor.getPersistedSnapshot());});
+ }
+ bind(createActor(m));
+ $('#persist-save',root).onclick=()=>{const p=actor.getPersistedSnapshot();localStorage.setItem('xstate-demo-snapshot',JSON.stringify(p));$('#persist-json',root).textContent=esc(p)};
+ $('#persist-restore',root).onclick=()=>{const raw=localStorage.getItem('xstate-demo-snapshot');if(!raw)return alert('저장된 스냅샷이 없습니다.');actor.stop();bind(createActor(m,{snapshot:JSON.parse(raw)}));};
+ $('#persist-clear',root).onclick=()=>{localStorage.removeItem('xstate-demo-snapshot');$('#persist-json',root).textContent='저장 데이터 삭제됨'};
+});
+
+addDemo('reference','11. 기능 지도','샘플에 포함된 API와 추가 확장 포인트',`
+<div class="grid">
+ <article class="card wide">
+  <h2>포함 기능</h2>
+  <div class="feature-list">
+   ${[
+    'createMachine / setup','createActor / start / stop','send / subscribe / getSnapshot','state.value / context / status / output',
+    'matches / can / hasTag / getMeta','initial / compound / parallel / final','nested states / state IDs / absolute targets','history shallow',
+    'context / assign / actor input','guards / guarded transition arrays','entry / exit / transition actions','raise / enqueueActions',
+    'always(eventless) / after(delayed)','reenter와 지연 전이 재예약','invoke / fromPromise / onDone / onError','AbortSignal 기반 Promise 취소',
+    'fromCallback / sendBack / receive','sendTo와 invoked actor 통신','spawn 동적 자식 actor / stopChild','getPersistedSnapshot / snapshot 복원',
+    'tags / meta / descriptions 개념','브라우저 UI와 snapshot 시각화'
+   ].map(x=>`<div class="feature">${x}</div>`).join('')}
+  </div>
+ </article>
+ <article class="card"><h3>추가로 확장 가능한 기능</h3><p>fromObservable/RxJS actor, fromTransition actor, emit 이벤트, inspect API, actor systemId, persistence 서버 저장, React/Vue/Svelte 바인딩, @xstate/store, @xstate/graph 기반 경로 분석과 모델 기반 테스트.</p></article>
+ <article class="card"><h3>실행 조건</h3><p>ES Module과 CDN 접근이 가능한 최신 브라우저 필요. 내부망에서는 XState ESM 파일을 로컬에 저장한 뒤 import URL만 로컬 경로로 변경하면 된다.</p></article>
+ <article class="card wide"><h3>전체 스냅샷 확인 팁</h3><pre class="code">actor.subscribe((snapshot) => {
+  console.log({
+    value: snapshot.value,
+    context: snapshot.context,
+    status: snapshot.status,
+    output: snapshot.output,
+    tags: [...snapshot.tags],
+    children: snapshot.children
+  });
+});</pre></article>
+</div>`, root=>{});
+
+const tabs=$('#tabs'), pages=$('#pages');
+demos.forEach((d,i)=>{
+ const b=document.createElement('button');b.textContent=d.title;b.dataset.id=d.id;b.className=i===0?'active':'';
+ const p=document.createElement('section');p.className='page '+(i===0?'active':'');p.id='page-'+d.id;p.innerHTML=d.html;
+ tabs.append(b);pages.append(p);
+});
+const initialized=new Set();
+function activate(id){
+ document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+id));
+ if(!initialized.has(id)){const d=demos.find(x=>x.id===id);try{d.init($('#page-'+id));initialized.add(id)}catch(err){console.error(err);$('#page-'+id).insertAdjacentHTML('afterbegin',`<p class="bad">초기화 오류: ${err.message}</p>`)}}
+ history.replaceState(null,'','#'+id);
+}
+tabs.onclick=e=>{const b=e.target.closest('button');if(b)activate(b.dataset.id)};
+activate(location.hash.slice(1)&&demos.some(d=>d.id===location.hash.slice(1))?location.hash.slice(1):demos[0].id);
+</script>
+</body>
+</html>
