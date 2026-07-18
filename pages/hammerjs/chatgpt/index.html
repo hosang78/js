@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Hammer.js 종합 기능 샘플</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: rgba(255,255,255,.12);
+      --accent: #38bdf8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: radial-gradient(circle at top left, #1e3a8a 0, #0f172a 35%, #020617 100%); color: var(--text); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { padding: 18px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: clamp(24px, 4vw, 42px); margin-bottom: 8px; letter-spacing: -0.04em; }
+    h2 { font-size: 20px; margin-bottom: 12px; }
+    h3 { font-size: 15px; margin-bottom: 8px; color: #bfdbfe; }
+    p { color: var(--muted); line-height: 1.6; }
+    button, select, input { font: inherit; }
+    .wrap { max-width: 1280px; margin: 0 auto; }
+    .hero { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: 0 18px 50px rgba(0,0,0,.25); backdrop-filter: blur(10px); }
+    .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; }
+    .smallgrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: #dbeafe; background: rgba(59,130,246,.15); font-size: 13px; margin: 3px 4px 3px 0; }
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { border: 1px solid var(--line); background: #172554; color: #e0f2fe; border-radius: 12px; padding: 9px 12px; cursor: pointer; transition: transform .15s, border-color .15s, background .15s; }
+    button:hover { transform: translateY(-1px); border-color: rgba(125,211,252,.7); }
+    button:active { transform: translateY(1px) scale(.99); }
+    button.secondary { background: #111827; }
+    button.danger { background: #4c0519; }
+    button.ok { background: #064e3b; }
+    label { display: block; color: #cbd5e1; font-size: 13px; margin: 9px 0 5px; }
+    select, input[type="range"] { width: 100%; }
+    select { background: #0b1220; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+    input[type="checkbox"] { transform: translateY(1px); }
+    .stage {
+      position: relative;
+      min-height: 470px;
+      border-radius: 24px;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        radial-gradient(circle at center, rgba(56,189,248,.15), transparent 45%);
+      background-size: 32px 32px, 32px 32px, auto;
+      border: 1px solid var(--line);
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .gestureTarget {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 190px;
+      height: 190px;
+      margin-left: -95px;
+      margin-top: -95px;
+      border-radius: 34px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      background: conic-gradient(from 180deg, #38bdf8, #818cf8, #f472b6, #34d399, #38bdf8);
+      color: #020617;
+      box-shadow: 0 22px 60px rgba(56,189,248,.35);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      cursor: grab;
+      transform-origin: center;
+    }
+    .gestureTarget:active { cursor: grabbing; }
+    .gestureTarget .sub { display:block; font-size:13px; font-weight:700; opacity:.8; letter-spacing:0; margin-top:8px; }
+    .statusbar {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 8px;
+      pointer-events: none;
+    }
+    .metric { background: rgba(2,6,23,.68); border: 1px solid var(--line); border-radius: 14px; padding: 9px; min-width: 0; }
+    .metric b { display:block; color:#f8fafc; font-size: 18px; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+    .metric span { display:block; color:#93c5fd; font-size: 11px; }
+    .log {
+      height: 320px;
+      overflow: auto;
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .log div { border-bottom: 1px dashed rgba(255,255,255,.08); padding: 4px 0; }
+    .log .tap { color: #67e8f9; }
+    .log .pan { color: #93c5fd; }
+    .log .swipe { color: #fbbf24; }
+    .log .press { color: #fda4af; }
+    .log .pinch, .log .rotate { color: #86efac; }
+    .demoBox {
+      min-height: 130px;
+      border-radius: 16px;
+      background: #020617;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 14px;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    .flash { animation: flash .28s ease-out; }
+    @keyframes flash { from { box-shadow: inset 0 0 0 999px rgba(56,189,248,.25); } to { box-shadow: inset 0 0 0 0 rgba(56,189,248,0); } }
+    .pillRow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .pill { padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid var(--line); color: #cbd5e1; font-size: 12px; }
+    .pill.on { background: rgba(52,211,153,.16); color: #a7f3d0; border-color: rgba(52,211,153,.45); }
+    .code {
+      white-space: pre-wrap;
+      background: #020617;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      color: #d1d5db;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      overflow: auto;
+    }
+    .notice { border-left: 4px solid var(--warn); padding: 10px 12px; background: rgba(251,191,36,.09); border-radius: 12px; color: #fde68a; }
+    .oktext { color: var(--ok); }
+    .warntext { color: var(--warn); }
+    .badtext { color: var(--bad); }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 900px) {
+      body { padding: 10px; }
+      .hero, .grid, .two { grid-template-columns: 1fr; }
+      .statusbar { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .stage { min-height: 520px; }
+      .smallgrid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div class="card">
+      <h1>Hammer.js 종합 기능 샘플</h1>
+      <p>
+        터치·마우스·포인터 입력을 Hammer.js Recognizer로 해석하는 샘플이다.
+        가운데 블록을 탭, 더블탭, 길게 누르기, 드래그, 빠르게 스와이프, 두 손가락 확대/축소, 회전해 볼 수 있다.
+      </p>
+      <div>
+        <span class="badge">tap / doubletap</span>
+        <span class="badge">press / pressup</span>
+        <span class="badge">pan start/move/end</span>
+        <span class="badge">swipe 방향 감지</span>
+        <span class="badge">pinch 확대·축소</span>
+        <span class="badge">rotate 회전</span>
+        <span class="badge">recognizeWith / requireFailure</span>
+        <span class="badge">touchAction / Manager option</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>실행 상태</h2>
+      <p id="libStatus">Hammer.js 로드 확인 중...</p>
+      <div class="notice">
+        모바일 브라우저에서 가장 잘 보인다. PC에서는 마우스로 탭·드래그·스와이프 테스트가 가능하고,
+        핀치/회전은 실제 멀티터치 화면 또는 일부 트랙패드 환경이 필요하다.
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>1. 메인 제스처 실험장</h2>
+      <div id="stage" class="stage">
+        <div id="target" class="gestureTarget">
+          Hammer<br>Target
+          <span class="sub">여기를 직접 조작</span>
+        </div>
+        <div class="statusbar">
+          <div class="metric"><span>event</span><b id="mEvent">-</b></div>
+          <div class="metric"><span>delta</span><b id="mDelta">0, 0</b></div>
+          <div class="metric"><span>scale / rotation</span><b id="mScale">1.00 / 0°</b></div>
+          <div class="metric"><span>velocity / pointers</span><b id="mVelocity">0 / 0</b></div>
+        </div>
+      </div>
+      <div class="btns" style="margin-top:12px">
+        <button id="resetBtn" class="ok">위치/크기 초기화</button>
+        <button id="clearLogBtn" class="secondary">로그 지우기</button>
+        <button id="toggleFreezeBtn" class="secondary">변형 잠금: OFF</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Recognizer 설정</h2>
+      <div class="two">
+        <div>
+          <label>Pan 방향</label>
+          <select id="panDirection">
+            <option value="all">DIRECTION_ALL</option>
+            <option value="horizontal">DIRECTION_HORIZONTAL</option>
+            <option value="vertical">DIRECTION_VERTICAL</option>
+          </select>
+        </div>
+        <div>
+          <label>Swipe 방향</label>
+          <select id="swipeDirection">
+            <option value="all">DIRECTION_ALL</option>
+            <option value="horizontal">DIRECTION_HORIZONTAL</option>
+            <option value="vertical">DIRECTION_VERTICAL</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Pan threshold: <b id="panThText">3</b>px</label>
+      <input id="panThreshold" type="range" min="0" max="50" value="3">
+      <label>Swipe velocity: <b id="swipeVelText">0.30</b></label>
+      <input id="swipeVelocity" type="range" min="0.05" max="1.5" step="0.05" value="0.30">
+      <label>Press time: <b id="pressTimeText">500</b>ms</label>
+      <input id="pressTime" type="range" min="150" max="1500" step="50" value="500">
+
+      <div class="pillRow">
+        <label class="pill on"><input id="enableTap" type="checkbox" checked> Tap</label>
+        <label class="pill on"><input id="enableDoubleTap" type="checkbox" checked> DoubleTap</label>
+        <label class="pill on"><input id="enablePress" type="checkbox" checked> Press</label>
+        <label class="pill on"><input id="enablePan" type="checkbox" checked> Pan</label>
+        <label class="pill on"><input id="enableSwipe" type="checkbox" checked> Swipe</label>
+        <label class="pill on"><input id="enablePinch" type="checkbox" checked> Pinch</label>
+        <label class="pill on"><input id="enableRotate" type="checkbox" checked> Rotate</label>
+      </div>
+
+      <div class="btns" style="margin-top:14px">
+        <button id="applyBtn">설정 적용</button>
+        <button id="domEventsBtn" class="secondary">domEvents: OFF</button>
+      </div>
+
+      <h3 style="margin-top:16px">이벤트 로그</h3>
+      <div id="log" class="log" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="grid" style="margin-top:16px">
+    <div class="card">
+      <h2>3. 개별 기능 카드</h2>
+      <div class="smallgrid">
+        <div id="tapBox" class="demoBox">
+          <div>
+            <h3>Tap / DoubleTap</h3>
+            <p>짧게 누르면 tap, 빠르게 두 번 누르면 doubletap</p>
+            <b id="tapCount">0</b>
+          </div>
+        </div>
+        <div id="pressBox" class="demoBox">
+          <div>
+            <h3>Press</h3>
+            <p>길게 누르면 press, 손을 떼면 pressup</p>
+            <b id="pressState">대기</b>
+          </div>
+        </div>
+        <div id="swipeBox" class="demoBox">
+          <div>
+            <h3>Swipe</h3>
+            <p>상하좌우로 빠르게 밀기</p>
+            <b id="swipeState">대기</b>
+          </div>
+        </div>
+        <div id="panBox" class="demoBox">
+          <div>
+            <h3>Pan</h3>
+            <p>상자를 누른 채 이동</p>
+            <b id="panState">0, 0</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Touch Action 비교</h2>
+      <p>
+        Hammer는 Recognizer 설정에 맞춰 브라우저 기본 스크롤/줌 동작과 제스처 인식 충돌을 줄이기 위해
+        touch-action 값을 계산하거나 직접 지정할 수 있다.
+      </p>
+      <label>stage touch-action</label>
+      <select id="touchActionSelect">
+        <option value="compute">compute</option>
+        <option value="none">none</option>
+        <option value="pan-x">pan-x</option>
+        <option value="pan-y">pan-y</option>
+        <option value="manipulation">manipulation</option>
+        <option value="auto">auto</option>
+      </select>
+      <div class="pillRow">
+        <span class="pill">none: 스크롤/줌 방지 경향</span>
+        <span class="pill">pan-x: 세로 제스처 허용 조정</span>
+        <span class="pill">pan-y: 가로 제스처 허용 조정</span>
+        <span class="pill">auto: 브라우저 기본 동작 우선</span>
+      </div>
+      <h3 style="margin-top:16px">현재 Manager 구성 코드</h3>
+      <div id="codeView" class="code"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>5. 이벤트 객체에서 확인하는 값</h2>
+    <div class="smallgrid">
+      <div>
+        <h3>좌표·거리</h3>
+        <p><span class="oktext">center.x/y</span>, <span class="oktext">deltaX/Y</span>, <span class="oktext">distance</span>, <span class="oktext">angle</span></p>
+      </div>
+      <div>
+        <h3>속도·방향</h3>
+        <p><span class="warntext">velocity</span>, <span class="warntext">velocityX/Y</span>, <span class="warntext">direction</span>, <span class="warntext">offsetDirection</span></p>
+      </div>
+      <div>
+        <h3>멀티터치</h3>
+        <p><span class="oktext">scale</span>, <span class="oktext">rotation</span>, <span class="oktext">pointers.length</span></p>
+      </div>
+      <div>
+        <h3>상태</h3>
+        <p><span class="badtext">isFirst</span>, <span class="badtext">isFinal</span>, <span class="badtext">srcEvent.type</span>, <span class="badtext">pointerType</span></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+
+  const stage = $("stage");
+  const target = $("target");
+  const logEl = $("log");
+
+  const state = {
+    x: 0, y: 0, scale: 1, rotation: 0,
+    startX: 0, startY: 0, startScale: 1, startRotation: 0,
+    frozen: false,
+    domEvents: false,
+    manager: null,
+    tapCount: 0
+  };
+
+  const dirMap = {
+    all: Hammer.DIRECTION_ALL,
+    horizontal: Hammer.DIRECTION_HORIZONTAL,
+    vertical: Hammer.DIRECTION_VERTICAL
+  };
+
+  function directionName(dir) {
+    const map = {};
+    map[Hammer.DIRECTION_LEFT] = "LEFT";
+    map[Hammer.DIRECTION_RIGHT] = "RIGHT";
+    map[Hammer.DIRECTION_UP] = "UP";
+    map[Hammer.DIRECTION_DOWN] = "DOWN";
+    map[Hammer.DIRECTION_HORIZONTAL] = "HORIZONTAL";
+    map[Hammer.DIRECTION_VERTICAL] = "VERTICAL";
+    map[Hammer.DIRECTION_ALL] = "ALL";
+    return map[dir] || String(dir || "-");
+  }
+
+  function eventLine(ev) {
+    const parts = [
+      ev.type,
+      "dx=" + Math.round(ev.deltaX || 0),
+      "dy=" + Math.round(ev.deltaY || 0),
+      "v=" + Number(ev.velocity || 0).toFixed(2),
+      "dir=" + directionName(ev.direction),
+      "scale=" + Number(ev.scale || 1).toFixed(2),
+      "rot=" + Number(ev.rotation || 0).toFixed(1),
+      "p=" + (ev.pointers ? ev.pointers.length : 0),
+      "input=" + (ev.pointerType || (ev.srcEvent && ev.srcEvent.type) || "-")
+    ];
+    return parts.join(" | ");
+  }
+
+  function log(ev, extra) {
+    const div = document.createElement("div");
+    const cls = ev && ev.type ? ev.type.replace(/\d/g, "").replace(/start|move|end|cancel|up/g, "") : "";
+    div.className = cls;
+    div.textContent = new Date().toLocaleTimeString() + "  " + (ev ? eventLine(ev) : extra);
+    if (extra && ev) div.textContent += " | " + extra;
+    logEl.prepend(div);
+    while (logEl.children.length > 80) logEl.lastChild.remove();
+  }
+
+  function setMetrics(ev) {
+    $("mEvent").textContent = ev.type;
+    $("mDelta").textContent = Math.round(ev.deltaX || 0) + ", " + Math.round(ev.deltaY || 0);
+    $("mScale").textContent = Number(state.scale).toFixed(2) + " / " + Math.round(state.rotation) + "°";
+    $("mVelocity").textContent = Number(ev.velocity || 0).toFixed(2) + " / " + (ev.pointers ? ev.pointers.length : 0);
+  }
+
+  function render() {
+    target.style.transform = "translate(" + state.x + "px, " + state.y + "px) scale(" + state.scale + ") rotate(" + state.rotation + "deg)";
+  }
+
+  function flash(el) {
+    el.classList.remove("flash");
+    void el.offsetWidth;
+    el.classList.add("flash");
+  }
+
+  function updateCodeView() {
+    const code = `const mc = new Hammer.Manager(target, {
+  touchAction: "${$("touchActionSelect").value}",
+  domEvents: ${state.domEvents}
+});
+
+const tap = new Hammer.Tap({ event: "tap", taps: 1, enable: ${$("enableTap").checked} });
+const doubletap = new Hammer.Tap({ event: "doubletap", taps: 2, interval: 280, enable: ${$("enableDoubleTap").checked} });
+const press = new Hammer.Press({ time: ${$("pressTime").value}, enable: ${$("enablePress").checked} });
+const pan = new Hammer.Pan({
+  direction: Hammer.DIRECTION_${$("panDirection").value.toUpperCase()},
+  threshold: ${$("panThreshold").value},
+  enable: ${$("enablePan").checked}
+});
+const swipe = new Hammer.Swipe({
+  direction: Hammer.DIRECTION_${$("swipeDirection").value.toUpperCase()},
+  velocity: ${$("swipeVelocity").value},
+  enable: ${$("enableSwipe").checked}
+});
+const pinch = new Hammer.Pinch({ enable: ${$("enablePinch").checked} });
+const rotate = new Hammer.Rotate({ enable: ${$("enableRotate").checked} });
+
+pinch.recognizeWith(rotate);
+pan.recognizeWith([pinch, rotate]);
+tap.requireFailure(doubletap);
+
+mc.add([doubletap, tap, press, pan, swipe, pinch, rotate]);`;
+    $("codeView").textContent = code;
+  }
+
+  function buildManager() {
+    if (state.manager) {
+      state.manager.destroy();
+      state.manager = null;
+    }
+
+    const mc = new Hammer.Manager(target, {
+      touchAction: $("touchActionSelect").value,
+      domEvents: state.domEvents,
+      inputClass: Hammer.SUPPORT_POINTER_EVENTS ? Hammer.PointerEventInput : Hammer.TouchMouseInput
+    });
+
+    const tap = new Hammer.Tap({ event: "tap", taps: 1, enable: $("enableTap").checked });
+    const doubletap = new Hammer.Tap({ event: "doubletap", taps: 2, interval: 280, enable: $("enableDoubleTap").checked });
+    const press = new Hammer.Press({ event: "press", time: Number($("pressTime").value), enable: $("enablePress").checked });
+    const pan = new Hammer.Pan({ event: "pan", direction: dirMap[$("panDirection").value], threshold: Number($("panThreshold").value), enable: $("enablePan").checked });
+    const swipe = new Hammer.Swipe({ event: "swipe", direction: dirMap[$("swipeDirection").value], velocity: Number($("swipeVelocity").value), enable: $("enableSwipe").checked });
+    const pinch = new Hammer.Pinch({ event: "pinch", enable: $("enablePinch").checked });
+    const rotate = new Hammer.Rotate({ event: "rotate", enable: $("enableRotate").checked });
+
+    pinch.recognizeWith(rotate);
+    rotate.recognizeWith(pinch);
+    pan.recognizeWith([pinch, rotate]);
+    tap.requireFailure(doubletap);
+
+    mc.add([doubletap, tap, press, pan, swipe, pinch, rotate]);
+
+    mc.on("hammer.input", function (ev) {
+      if (ev.isFirst) {
+        state.startX = state.x;
+        state.startY = state.y;
+        state.startScale = state.scale;
+        state.startRotation = state.rotation;
+      }
+    });
+
+    mc.on("tap doubletap press pressup panstart panmove panend pancancel swipe swipeleft swiperight swipeup swipedown pinchstart pinchmove pinchend rotatestart rotatemove rotateend", function (ev) {
+      setMetrics(ev);
+
+      if (ev.type === "tap") {
+        flash(target);
+        log(ev, "single tap");
+      }
+
+      if (ev.type === "doubletap") {
+        flash(stage);
+        state.scale = Math.min(3.5, state.scale * 1.25);
+        render();
+        log(ev, "double tap zoom");
+      }
+
+      if (ev.type === "press") {
+        target.textContent = "PRESS";
+        log(ev, "long press recognized");
+      }
+
+      if (ev.type === "pressup") {
+        target.innerHTML = 'Hammer<br>Target<span class="sub">여기를 직접 조작</span>';
+        log(ev, "press released");
+      }
+
+      if (ev.type === "panstart") {
+        log(ev, "pan start");
+      }
+
+      if (ev.type === "panmove" && !state.frozen) {
+        state.x = state.startX + ev.deltaX;
+        state.y = state.startY + ev.deltaY;
+        render();
+      }
+
+      if (ev.type === "panend" || ev.type === "pancancel") {
+        log(ev, "pan final");
+      }
+
+      if (ev.type.startsWith("swipe")) {
+        const nudge = 55;
+        if (!state.frozen) {
+          if (ev.offsetDirection === Hammer.DIRECTION_LEFT) state.x -= nudge;
+          if (ev.offsetDirection === Hammer.DIRECTION_RIGHT) state.x += nudge;
+          if (ev.offsetDirection === Hammer.DIRECTION_UP) state.y -= nudge;
+          if (ev.offsetDirection === Hammer.DIRECTION_DOWN) state.y += nudge;
+          render();
+        }
+        log(ev, "swipe " + directionName(ev.offsetDirection));
+      }
+
+      if ((ev.type === "pinchmove" || ev.type === "rotatemove") && !state.frozen) {
+        state.scale = Math.max(.35, Math.min(4, state.startScale * (ev.scale || 1)));
+        state.rotation = state.startRotation + (ev.rotation || 0);
+        render();
+      }
+
+      if (ev.type === "pinchstart" || ev.type === "rotatestart") {
+        state.startScale = state.scale;
+        state.startRotation = state.rotation;
+        log(ev, "multi-touch start");
+      }
+
+      if (ev.type === "pinchend" || ev.type === "rotateend") {
+        log(ev, "multi-touch end");
+      }
+    });
+
+    state.manager = mc;
+    stage.style.touchAction = $("touchActionSelect").value === "compute" ? "none" : $("touchActionSelect").value;
+    updateCodeView();
+    log(null, "Manager rebuilt");
+  }
+
+  function makeMiniDemos() {
+    const tapMc = new Hammer($("tapBox"));
+    tapMc.get("doubletap").set({ enable: true });
+    tapMc.on("tap doubletap", function(ev) {
+      state.tapCount += ev.type === "doubletap" ? 2 : 1;
+      $("tapCount").textContent = state.tapCount + " (" + ev.type + ")";
+      flash($("tapBox"));
+      log(ev, "mini tap box");
+    });
+
+    const pressMc = new Hammer($("pressBox"));
+    pressMc.get("press").set({ time: 450 });
+    pressMc.on("press", function(ev) {
+      $("pressState").textContent = "press 감지";
+      flash($("pressBox"));
+      log(ev, "mini press");
+    });
+    pressMc.on("pressup", function(ev) {
+      $("pressState").textContent = "pressup";
+      log(ev, "mini pressup");
+    });
+
+    const swipeMc = new Hammer($("swipeBox"));
+    swipeMc.get("swipe").set({ direction: Hammer.DIRECTION_ALL, velocity: .2 });
+    swipeMc.on("swipeleft swiperight swipeup swipedown", function(ev) {
+      $("swipeState").textContent = ev.type + " / " + directionName(ev.offsetDirection);
+      flash($("swipeBox"));
+      log(ev, "mini swipe");
+    });
+
+    const panMc = new Hammer($("panBox"));
+    panMc.get("pan").set({ direction: Hammer.DIRECTION_ALL, threshold: 0 });
+    panMc.on("panstart panmove panend", function(ev) {
+      $("panState").textContent = Math.round(ev.deltaX) + ", " + Math.round(ev.deltaY);
+      if (ev.type === "panend") flash($("panBox"));
+      log(ev, "mini pan");
+    });
+  }
+
+  function bindUI() {
+    $("applyBtn").addEventListener("click", buildManager);
+    $("resetBtn").addEventListener("click", function () {
+      state.x = 0; state.y = 0; state.scale = 1; state.rotation = 0;
+      render();
+      log(null, "transform reset");
+    });
+    $("clearLogBtn").addEventListener("click", function () { logEl.innerHTML = ""; });
+    $("toggleFreezeBtn").addEventListener("click", function () {
+      state.frozen = !state.frozen;
+      $("toggleFreezeBtn").textContent = "변형 잠금: " + (state.frozen ? "ON" : "OFF");
+      $("toggleFreezeBtn").className = state.frozen ? "danger" : "secondary";
+    });
+    $("domEventsBtn").addEventListener("click", function () {
+      state.domEvents = !state.domEvents;
+      $("domEventsBtn").textContent = "domEvents: " + (state.domEvents ? "ON" : "OFF");
+      buildManager();
+    });
+    $("touchActionSelect").addEventListener("change", buildManager);
+
+    ["panThreshold", "swipeVelocity", "pressTime"].forEach(id => {
+      $(id).addEventListener("input", function () {
+        $("panThText").textContent = $("panThreshold").value;
+        $("swipeVelText").textContent = Number($("swipeVelocity").value).toFixed(2);
+        $("pressTimeText").textContent = $("pressTime").value;
+        updateCodeView();
+      });
+    });
+
+    ["panDirection", "swipeDirection", "enableTap", "enableDoubleTap", "enablePress", "enablePan", "enableSwipe", "enablePinch", "enableRotate"].forEach(id => {
+      $(id).addEventListener("change", function () {
+        const label = this.closest(".pill");
+        if (label) label.classList.toggle("on", this.checked);
+        updateCodeView();
+      });
+    });
+
+    document.addEventListener("tap", function (ev) {
+      if (state.domEvents) log({ type: "DOM tap", deltaX:0, deltaY:0, velocity:0, scale:1, rotation:0, pointers:[] }, "native DOM event fired");
+    });
+  }
+
+  function init() {
+    if (!window.Hammer) {
+      $("libStatus").innerHTML = '<span class="badtext">Hammer.js를 불러오지 못했다.</span> CDN 접근이 가능한지 확인해라.';
+      return;
+    }
+    $("libStatus").innerHTML = '<span class="oktext">Hammer.js 로드 완료</span> / version: ' + (Hammer.VERSION || "unknown");
+    bindUI();
+    makeMiniDemos();
+    buildManager();
+    render();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
