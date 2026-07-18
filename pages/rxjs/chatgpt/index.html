@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RxJS 7.8.2 종합 기능 실험실</title>
+  <meta name="description" content="RxJS의 Observable, Subject, operators, schedulers, Ajax, WebSocket, TestScheduler를 한 페이지에서 실행하는 종합 샘플" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: #0c1a2d;
+      --panel-2: #10243d;
+      --panel-3: #152c49;
+      --line: #264463;
+      --text: #e8f2ff;
+      --muted: #91a8c2;
+      --accent: #f04b9b;
+      --accent-2: #60d8ff;
+      --green: #62e6a7;
+      --yellow: #ffd166;
+      --red: #ff6b78;
+      --shadow: 0 18px 45px rgba(0,0,0,.28);
+      --radius: 18px;
+    }
+    :root.light {
+      color-scheme: light;
+      --bg: #f5f8fc;
+      --panel: #ffffff;
+      --panel-2: #f1f5fa;
+      --panel-3: #e7eef7;
+      --line: #cbd7e6;
+      --text: #132239;
+      --muted: #62758e;
+      --shadow: 0 16px 36px rgba(33,61,93,.12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 15% -10%, rgba(240,75,155,.18), transparent 31rem),
+        radial-gradient(circle at 95% 10%, rgba(96,216,255,.13), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; }
+    .app { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100vh; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; overflow: auto;
+      padding: 22px 18px;
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border-right: 1px solid var(--line);
+      backdrop-filter: blur(20px);
+      z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .logo {
+      width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--accent), #a541db);
+      box-shadow: 0 10px 25px rgba(240,75,155,.3);
+      font-weight: 900; font-size: 20px;
+    }
+    .brand h1 { font-size: 17px; margin: 0 0 2px; }
+    .brand small { color: var(--muted); }
+    .search {
+      width: 100%; border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+      border-radius: 12px; padding: 11px 12px; outline: none;
+    }
+    .search:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(96,216,255,.13); }
+    .side-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0 18px; }
+    .btn {
+      border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+      border-radius: 11px; padding: 9px 11px; transition: .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--accent-2); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), #b845d2); border-color: transparent; color: white; font-weight: 800; }
+    .btn.danger { color: var(--red); }
+    .btn.tiny { padding: 6px 9px; border-radius: 9px; font-size: 12px; }
+    .category-list { display: grid; gap: 5px; }
+    .category-btn {
+      width: 100%; text-align: left; border: 0; background: transparent; color: var(--muted);
+      padding: 10px 11px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .category-btn:hover, .category-btn.active { background: var(--panel-3); color: var(--text); }
+    .count { font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px; }
+    .sidebar-note { margin-top: 20px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .main { min-width: 0; padding: 30px clamp(18px, 4vw, 54px) 80px; }
+    .hero {
+      max-width: 1240px; margin: 0 auto 28px; padding: clamp(24px, 4vw, 46px);
+      background: linear-gradient(135deg, rgba(240,75,155,.14), rgba(96,216,255,.09)), var(--panel);
+      border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow); overflow: hidden; position: relative;
+    }
+    .hero::after {
+      content: ""; position: absolute; width: 300px; height: 300px; border-radius: 50%; right: -100px; top: -130px;
+      background: radial-gradient(circle, rgba(240,75,155,.25), transparent 65%); pointer-events: none;
+    }
+    .eyebrow { color: var(--accent-2); font-weight: 800; letter-spacing: .08em; font-size: 12px; text-transform: uppercase; }
+    .hero h2 { font-size: clamp(30px, 5vw, 58px); line-height: 1.06; margin: 10px 0 14px; max-width: 900px; }
+    .hero p { color: var(--muted); font-size: 16px; line-height: 1.7; max-width: 850px; }
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+    .stat { padding: 10px 14px; border: 1px solid var(--line); background: rgba(0,0,0,.12); border-radius: 12px; }
+    .stat b { color: var(--accent-2); }
+    .load-state { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+    .load-state.ok { color: var(--green); }
+    .load-state.error { color: var(--red); }
+    .toolbar {
+      max-width: 1240px; margin: 0 auto 18px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .toolbar .summary { color: var(--muted); }
+    .toolbar select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+    .grid { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
+    .card {
+      min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden; transition: transform .2s ease, border-color .2s ease;
+    }
+    .card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line)); }
+    .card.hidden { display: none; }
+    .card-head { padding: 18px 18px 13px; }
+    .card-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .card h3 { margin: 0; font-size: 18px; }
+    .number { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .desc { color: var(--muted); line-height: 1.6; font-size: 13px; margin: 10px 0 0; min-height: 42px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .badge { font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent-2); background: rgba(96,216,255,.08); border: 1px solid rgba(96,216,255,.2); border-radius: 999px; padding: 5px 8px; }
+    .category-badge { color: var(--yellow); border-color: rgba(255,209,102,.22); background: rgba(255,209,102,.07); }
+    .controls { padding: 13px 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel-2); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .controls input, .controls select {
+      min-width: 0; border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 9px; padding: 8px 10px;
+    }
+    .controls input[type="range"] { padding: 0; width: 120px; }
+    .controls label { display: flex; gap: 7px; align-items: center; color: var(--muted); font-size: 12px; }
+    .log {
+      min-height: 132px; max-height: 230px; overflow: auto; padding: 12px 14px; background: #050c16;
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    :root.light .log { background: #eff4fa; }
+    .log-empty { color: #60748d; padding: 8px 2px; }
+    .log-line { display: grid; grid-template-columns: 58px 24px minmax(0,1fr); gap: 7px; padding: 3px 0; border-bottom: 1px dashed rgba(137,160,188,.12); }
+    .log-time { color: #6f849d; }
+    .log-kind { font-weight: 900; }
+    .log-kind.next { color: var(--green); }
+    .log-kind.info { color: var(--accent-2); }
+    .log-kind.error { color: var(--red); }
+    .log-kind.complete { color: var(--yellow); }
+    .log-value { overflow-wrap: anywhere; white-space: pre-wrap; }
+    details { border-top: 1px solid var(--line); }
+    summary { cursor: pointer; list-style: none; padding: 11px 18px; color: var(--muted); font-size: 12px; font-weight: 800; }
+    summary::-webkit-details-marker { display: none; }
+    pre { margin: 0; padding: 16px 18px; overflow: auto; background: #07101d; color: #c6d8ec; font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    :root.light pre { background: #edf3f9; color: #243b57; }
+    .token-key { color: #ff83bd; }
+    .token-fn { color: #76dcff; }
+    .token-str { color: #ffe08a; }
+    .token-num { color: #87efb9; }
+    .notice { max-width: 1240px; margin: 22px auto 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); background: var(--panel); line-height: 1.65; font-size: 13px; }
+    .toast { position: fixed; right: 18px; bottom: 18px; z-index: 50; background: var(--panel-3); color: var(--text); border: 1px solid var(--line); padding: 11px 14px; border-radius: 11px; box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); pointer-events: none; transition: .2s; }
+    .toast.show { opacity: 1; transform: none; }
+    .mobile-menu { display:none; position: fixed; top: 12px; left: 12px; z-index: 40; }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; left: 0; transform: translateX(-105%); width: 290px; transition: .22s; box-shadow: var(--shadow); }
+      .sidebar.open { transform: none; }
+      .mobile-menu { display:block; }
+      .main { padding-top: 72px; }
+    }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .hero h2 { font-size: 35px; } }
+  </style>
+</head>
+<body>
+  <button class="btn mobile-menu" id="mobileMenu">☰ 메뉴</button>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="logo">Rx</div>
+        <div><h1>RxJS 기능 실험실</h1><small>stable 7.8.2 · single HTML</small></div>
+      </div>
+      <input class="search" id="search" type="search" placeholder="연산자·예제 검색" aria-label="예제 검색" />
+      <div class="side-actions">
+        <button class="btn danger" id="stopAll">전체 중지</button>
+        <button class="btn" id="themeToggle">테마 전환</button>
+      </div>
+      <nav class="category-list" id="categoryList"></nav>
+      <div class="sidebar-note">
+        실행 버튼을 누르면 해당 카드만 독립적으로 구독한다. 시간 기반 예제는 자동 완료되며, 언제든 전체 중지로 모든 Subscription과 이벤트 리스너를 해제할 수 있다.
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="hero">
+        <div class="eyebrow">Reactive Programming Playground</div>
+        <h2>RxJS의 핵심 기능을 직접 실행하며 비교하는 종합 샘플</h2>
+        <p>Observable 생명주기부터 생성 함수, 주요 pipeable operator, 고차 스트림, Subject 계열, 멀티캐스팅, Scheduler, Promise 변환, Ajax·WebSocket, TestScheduler까지 한 페이지에 구성했다.</p>
+        <div class="stats">
+          <div class="stat"><b id="demoCount">0</b> 실행형 데모</div>
+          <div class="stat"><b id="operatorCount">0</b> API·연산자</div>
+          <div class="stat"><b id="categoryCount">0</b> 분류</div>
+          <div class="stat"><b>독립 구독</b> 및 정리</div>
+        </div>
+        <div class="load-state" id="loadState">RxJS CDN을 불러오는 중...</div>
+      </section>
+
+      <div class="toolbar">
+        <div class="summary" id="visibleSummary">예제를 준비하는 중...</div>
+        <select id="sortSelect" aria-label="정렬">
+          <option value="default">기본 순서</option>
+          <option value="title">이름순</option>
+          <option value="category">분류순</option>
+        </select>
+      </div>
+
+      <section class="grid" id="grid"></section>
+
+      <div class="notice">
+        <strong>실행 환경 주의:</strong> 기본 예제는 브라우저 내부에서만 동작한다. Ajax·fromFetch·WebSocket 예제는 인터넷 연결, CORS 정책, 대상 서버 상태의 영향을 받는다. CDN이 차단된 내부망에서는 RxJS UMD 파일을 내려받아 이 HTML과 같은 폴더에 두고 로더 경로를 로컬 파일로 변경하면 된다.
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const CDN_URLS = [
+    'https://cdn.jsdelivr.net/npm/rxjs@7.8.2/dist/bundles/rxjs.umd.min.js',
+    'https://unpkg.com/rxjs@7.8.2/dist/bundles/rxjs.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/rxjs/7.8.2/rxjs.umd.min.js'
+  ];
+  const stateEl = document.getElementById('loadState');
+  let index = 0;
+  function tryLoad() {
+    const script = document.createElement('script');
+    script.src = CDN_URLS[index];
+    script.onload = () => {
+      stateEl.className = 'load-state ok';
+      stateEl.textContent = `RxJS ${window.rxjs?.version || '7.8.2'} 로드 완료 · ${new URL(script.src).host}`;
+      boot(window.rxjs);
+    };
+    script.onerror = () => {
+      script.remove();
+      index += 1;
+      if (index < CDN_URLS.length) tryLoad();
+      else {
+        stateEl.className = 'load-state error';
+        stateEl.textContent = 'RxJS 로드 실패: 인터넷 연결 또는 CDN 접근 정책을 확인하세요.';
+      }
+    };
+    document.head.appendChild(script);
+  }
+  tryLoad();
+})();
+
+function boot(R) {
+  'use strict';
+  const {
+    Observable, Subject, BehaviorSubject, ReplaySubject, AsyncSubject, Subscription,
+    of, from, range, interval, timer, defer, generate, iif, EMPTY, NEVER, throwError,
+    concat, merge, zip, combineLatest, forkJoin, race, partition, fromEvent,
+    animationFrames, firstValueFrom, lastValueFrom,
+    map, filter, tap, scan, reduce, take, takeUntil, takeWhile, skip, skipUntil,
+    distinct, distinctUntilChanged, debounceTime, throttleTime, auditTime, sampleTime,
+    bufferCount, bufferTime, windowCount, mergeMap, concatMap, switchMap, exhaustMap,
+    catchError, retry, retryWhen, delay, timeout, finalize, startWith, endWith,
+    pairwise, groupBy, toArray, withLatestFrom, share, shareReplay, materialize,
+    dematerialize, timestamp, timeInterval, observeOn, subscribeOn, expand,
+    asyncScheduler, asapScheduler, queueScheduler, animationFrameScheduler
+  } = R;
+
+  const demos = [];
+  const runtime = new Map();
+  const categories = [
+    '전체', '기초', '생성', '변환', '필터링', '결합', '고차 Observable',
+    '오류 처리', 'Subject', '멀티캐스팅', '스케줄러·유틸', '브라우저·통신', '테스트·실전'
+  ];
+
+  const pretty = value => {
+    if (value instanceof Error) return `${value.name}: ${value.message}`;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'function') return `[Function ${value.name || 'anonymous'}]`;
+    try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+  };
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const fakeRequest = (label, ms, result = label) => timer(ms).pipe(map(() => result));
+  const add = demo => demos.push({ controls: '', code: '', ...demo });
+
+  add({
+    id:'observable', category:'기초', title:'Observable · Observer · Teardown', apis:['Observable','subscribe','unsubscribe'],
+    desc:'구독할 때 실행되고 unsubscribe 시 teardown 함수가 호출되는 Observable 생명주기.',
+    code:`const source$ = new Observable(subscriber => {\n  let n = 0;\n  const id = setInterval(() => subscriber.next(++n), 300);\n  return () => clearInterval(id);\n});\nconst subscription = source$.subscribe(observer);`,
+    run(ctx){
+      const source$ = new Observable(sub => {
+        ctx.info('Observable 실행 시작'); let n = 0;
+        const id = setInterval(() => { sub.next(++n); if (n === 5) sub.complete(); }, 280);
+        return () => { clearInterval(id); ctx.info('teardown 실행'); };
+      });
+      ctx.track(source$.subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'subscription', category:'기초', title:'Subscription 합성', apis:['Subscription','add','unsubscribe'],
+    desc:'여러 구독과 정리 함수를 부모 Subscription 하나로 묶어 일괄 해제.',
+    code:`const parent = new Subscription();\nparent.add(interval(200).subscribe(...));\nparent.add(interval(350).subscribe(...));\nparent.add(() => console.log('custom cleanup'));\nparent.unsubscribe();`,
+    run(ctx){
+      const parent = new Subscription();
+      parent.add(interval(200).pipe(take(6)).subscribe(v => ctx.next(`A:${v}`)));
+      parent.add(interval(350).pipe(take(4)).subscribe(v => ctx.next(`B:${v}`)));
+      parent.add(() => ctx.info('부모 Subscription 정리 완료'));
+      ctx.track(parent);
+    }
+  });
+
+  add({
+    id:'creation-basic', category:'생성', title:'of · from · range', apis:['of','from','range'],
+    desc:'값, 배열·Promise, 숫자 범위를 Observable로 변환하는 기본 생성 함수.',
+    code:`concat(\n  of('of:A', 'of:B'),\n  from([10, 20, 30]),\n  from(Promise.resolve('Promise 완료')),\n  range(5, 3)\n).subscribe(...)`,
+    run(ctx){
+      ctx.track(concat(
+        of('of:A','of:B'),
+        from([10,20,30]).pipe(map(v => `array:${v}`)),
+        from(Promise.resolve('Promise 완료')),
+        range(5,3).pipe(map(v => `range:${v}`))
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'defer-iif', category:'생성', title:'defer · iif · EMPTY', apis:['defer','iif','EMPTY'],
+    desc:'구독 시점에 값을 만들고 조건에 따라 서로 다른 Observable을 선택.',
+    controls:`<label>조건 <input data-role="condition" type="checkbox" checked></label>`,
+    code:`const lazy$ = defer(() => of(Date.now()));\nconst selected$ = iif(\n  () => condition,\n  of('TRUE 경로'),\n  EMPTY\n);`,
+    run(ctx){
+      const checked = ctx.el.querySelector('[data-role="condition"]').checked;
+      ctx.track(concat(
+        defer(() => of(`구독 시각: ${new Date().toLocaleTimeString()}`)),
+        iif(() => checked, of('TRUE 경로 선택'), EMPTY).pipe(endWith('조건 스트림 종료'))
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'generate', category:'생성', title:'generate · timer · interval', apis:['generate','timer','interval'],
+    desc:'반복 규칙, 지연 단발 실행, 주기 실행을 순차 비교.',
+    code:`generate({ initialState: 1, condition: x => x <= 5, iterate: x => x + 1 })\ntimer(500)\ninterval(250).pipe(take(4))`,
+    run(ctx){
+      ctx.track(concat(
+        generate({ initialState:1, condition:x=>x<=5, iterate:x=>x+1 }).pipe(map(v=>`generate:${v}`)),
+        timer(350).pipe(map(()=> 'timer: 350ms')),
+        interval(220).pipe(take(4), map(v=>`interval:${v}`))
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'from-event', category:'생성', title:'fromEvent 상호작용', apis:['fromEvent','map','scan'],
+    desc:'버튼 DOM 이벤트를 Observable로 바꾸고 클릭 횟수를 누적.',
+    controls:`<button class="btn" data-role="eventBtn">이벤트 발생</button> <span data-role="hint">먼저 실행을 누르세요.</span>`,
+    code:`fromEvent(button, 'click').pipe(\n  map(event => event.timeStamp),\n  scan(count => count + 1, 0)\n).subscribe(...)`,
+    run(ctx){
+      const btn = ctx.el.querySelector('[data-role="eventBtn"]');
+      ctx.info('버튼 이벤트 구독 시작');
+      ctx.track(fromEvent(btn,'click').pipe(
+        scan(count => count + 1, 0)
+      ).subscribe(v => ctx.next(`클릭 누계 ${v}회`)));
+    }
+  });
+
+  add({
+    id:'map-filter-scan', category:'변환', title:'map · filter · scan', apis:['map','filter','scan'],
+    desc:'값 변환, 조건 통과, 누적 상태 계산을 하나의 파이프라인으로 합성.',
+    code:`range(1, 10).pipe(\n  filter(x => x % 2 === 0),\n  map(x => x * x),\n  scan((sum, x) => sum + x, 0)\n)`,
+    run(ctx){ ctx.track(range(1,10).pipe(filter(x=>x%2===0), map(x=>x*x), scan((sum,x)=>sum+x,0)).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'reduce-pairwise', category:'변환', title:'reduce · pairwise · distinctUntilChanged', apis:['reduce','pairwise','distinctUntilChanged'],
+    desc:'연속 중복 제거, 이전·현재 값 쌍 생성, 완료 시 최종 합계 계산.',
+    code:`from([1,1,2,3,3,5]).pipe(\n  distinctUntilChanged(),\n  pairwise(),\n  tap(pair => ...),\n  map(([a,b]) => b-a),\n  reduce((sum,n) => sum+n, 0)\n)`,
+    run(ctx){
+      ctx.track(from([1,1,2,3,3,5]).pipe(
+        distinctUntilChanged(), pairwise(), tap(pair=>ctx.info(`pair ${pretty(pair)}`)),
+        map(([a,b])=>b-a), reduce((sum,n)=>sum+n,0)
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'buffer-window', category:'변환', title:'bufferCount · bufferTime · windowCount', apis:['bufferCount','bufferTime','windowCount','mergeMap','toArray'],
+    desc:'스트림을 배열 버퍼 또는 하위 Observable 창으로 묶는 방식 비교.',
+    code:`source$.pipe(bufferCount(3))\nsource$.pipe(bufferTime(400))\nsource$.pipe(windowCount(3), mergeMap(w => w.pipe(toArray())))`,
+    run(ctx){
+      const a$ = interval(100).pipe(take(8), bufferCount(3), map(v=>({type:'bufferCount',v})));
+      const b$ = interval(100).pipe(take(8), bufferTime(320), filter(v=>v.length>0), map(v=>({type:'bufferTime',v})));
+      const c$ = range(1,8).pipe(windowCount(3), mergeMap(w=>w.pipe(toArray())), map(v=>({type:'windowCount',v})));
+      ctx.track(concat(a$,b$,c$).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'groupby', category:'변환', title:'groupBy · mergeMap · toArray', apis:['groupBy','mergeMap','toArray'],
+    desc:'객체 스트림을 키별 GroupedObservable로 분리한 뒤 다시 집계.',
+    code:`from(items).pipe(\n  groupBy(item => item.team),\n  mergeMap(group$ => group$.pipe(\n    toArray(),\n    map(items => ({ team: group$.key, items }))\n  ))\n)`,
+    run(ctx){
+      const items=[{team:'A',score:10},{team:'B',score:7},{team:'A',score:8},{team:'C',score:9},{team:'B',score:6}];
+      ctx.track(from(items).pipe(groupBy(x=>x.team),mergeMap(g=>g.pipe(toArray(),map(list=>({team:g.key,total:list.reduce((s,x)=>s+x.score,0),list}))))).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'expand', category:'변환', title:'expand 재귀 확장', apis:['expand','takeWhile'],
+    desc:'각 방출값에서 다음 Observable을 재귀적으로 생성해 페이지네이션·트리 탐색 형태 구현.',
+    code:`of(1).pipe(\n  expand(page => page < 5 ? of(page + 1).pipe(delay(180)) : EMPTY),\n  takeWhile(page => page <= 5)\n)`,
+    run(ctx){ ctx.track(of(1).pipe(expand(page=>page<5?of(page+1).pipe(delay(180)):EMPTY),takeWhile(page=>page<=5)).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'take-skip', category:'필터링', title:'take · skip · takeWhile', apis:['take','skip','takeWhile'],
+    desc:'앞부분 건너뛰기, 조건 동안 수신하기, 개수 제한하기.',
+    code:`range(1, 12).pipe(\n  skip(2),\n  takeWhile(x => x < 9),\n  take(5)\n)`,
+    run(ctx){ ctx.track(range(1,12).pipe(skip(2),takeWhile(x=>x<9),take(5)).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'take-until', category:'필터링', title:'takeUntil 취소 신호', apis:['takeUntil','timer','finalize'],
+    desc:'별도 notifier가 값을 방출하면 진행 중인 스트림을 자동 완료.',
+    code:`interval(180).pipe(\n  takeUntil(timer(1050)),\n  finalize(() => console.log('정리'))\n)`,
+    run(ctx){ ctx.track(interval(180).pipe(takeUntil(timer(1050)),finalize(()=>ctx.info('notifier로 종료'))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'time-filter', category:'필터링', title:'debounce · throttle · audit · sample', apis:['debounceTime','throttleTime','auditTime','sampleTime'],
+    desc:'같은 빠른 입력 스트림에 시간 기반 필터 4종을 적용해 결과 차이 비교.',
+    controls:`<button class="btn" data-role="burst">빠르게 8회 입력</button>`,
+    code:`input$.pipe(debounceTime(250))\ninput$.pipe(throttleTime(250))\ninput$.pipe(auditTime(250))\ninput$.pipe(sampleTime(250))`,
+    run(ctx){
+      const btn=ctx.el.querySelector('[data-role="burst"]');
+      const input$=fromEvent(btn,'click').pipe(mergeMap(()=>interval(55).pipe(take(8),map(i=>i+1))),share());
+      ctx.track(input$.pipe(debounceTime(180)).subscribe(v=>ctx.next(`debounce:${v}`)));
+      ctx.track(input$.pipe(throttleTime(180)).subscribe(v=>ctx.next(`throttle:${v}`)));
+      ctx.track(input$.pipe(auditTime(180)).subscribe(v=>ctx.next(`audit:${v}`)));
+      ctx.track(input$.pipe(sampleTime(180)).subscribe(v=>ctx.next(`sample:${v}`)));
+      ctx.info('버튼을 눌러 burst 입력을 발생시키세요.');
+    }
+  });
+
+  add({
+    id:'distinct', category:'필터링', title:'distinct · distinctUntilChanged', apis:['distinct','distinctUntilChanged'],
+    desc:'전체 이력 기준 중복 제거와 바로 이전 값 기준 중복 제거의 차이.',
+    code:`from([1,1,2,1,3,3,2]).pipe(distinct())\nfrom([1,1,2,1,3,3,2]).pipe(distinctUntilChanged())`,
+    run(ctx){
+      const values=[1,1,2,1,3,3,2];
+      ctx.track(concat(
+        from(values).pipe(distinct(),map(v=>`distinct:${v}`)),
+        from(values).pipe(distinctUntilChanged(),map(v=>`changed:${v}`))
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'combine-latest', category:'결합', title:'combineLatest', apis:['combineLatest','startWith'],
+    desc:'각 소스가 최소 한 번 방출한 뒤, 어느 하나가 갱신될 때 최신값 조합을 방출.',
+    code:`combineLatest([\n  interval(280).pipe(take(4), startWith(-1)),\n  interval(450).pipe(take(3), startWith(-1))\n])`,
+    run(ctx){
+      ctx.track(combineLatest([
+        interval(280).pipe(take(4),startWith(-1)),
+        interval(450).pipe(take(3),startWith(-1))
+      ]).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'zip-forkjoin', category:'결합', title:'zip · forkJoin', apis:['zip','forkJoin'],
+    desc:'인덱스별 짝맞춤과 모든 소스 완료 후 마지막 값 묶기의 차이.',
+    code:`zip(of('A','B','C'), of(1,2,3))\nforkJoin({ user: timer(300), orders: timer(500) })`,
+    run(ctx){
+      ctx.track(concat(
+        zip(of('A','B','C'),of(1,2,3)).pipe(map(v=>({zip:v}))),
+        forkJoin({user:timer(300).pipe(map(()=>({id:1,name:'Kim'}))),orders:timer(500).pipe(map(()=>[101,102]))}).pipe(map(v=>({forkJoin:v})))
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'merge-concat', category:'결합', title:'merge · concat', apis:['merge','concat'],
+    desc:'동시 구독으로 값이 섞이는 merge와 앞 스트림 완료 후 다음을 구독하는 concat 비교.',
+    code:`merge(sourceA$, sourceB$)\nconcat(sourceA$, sourceB$)`,
+    run(ctx){
+      const make=(name,period,count)=>interval(period).pipe(take(count),map(i=>`${name}${i}`));
+      ctx.track(concat(
+        merge(make('A',120,4),make('B',190,3)).pipe(map(v=>`merge:${v}`)),
+        concat(make('A',120,3),make('B',190,2)).pipe(map(v=>`concat:${v}`))
+      ).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'race', category:'결합', title:'race 최초 승자', apis:['race','timer'],
+    desc:'가장 먼저 값을 방출한 Observable만 유지하고 나머지 구독을 해제.',
+    code:`race(\n  timer(500).pipe(map(() => 'slow')),\n  timer(220).pipe(map(() => 'fast')),\n  timer(350).pipe(map(() => 'middle'))\n)`,
+    run(ctx){ ctx.track(race(timer(500).pipe(map(()=> 'slow')),timer(220).pipe(map(()=> 'fast')),timer(350).pipe(map(()=> 'middle'))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'partition', category:'결합', title:'partition 분기', apis:['partition','merge','map'],
+    desc:'하나의 소스를 조건에 맞는 스트림과 맞지 않는 스트림으로 분할.',
+    code:`const [even$, odd$] = partition(range(1, 8), x => x % 2 === 0);\nmerge(even$.pipe(map(...)), odd$.pipe(map(...)))`,
+    run(ctx){ const [even$,odd$]=partition(range(1,8),x=>x%2===0); ctx.track(merge(even$.pipe(map(v=>`짝수:${v}`)),odd$.pipe(map(v=>`홀수:${v}`))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'with-latest', category:'결합', title:'withLatestFrom', apis:['withLatestFrom','interval'],
+    desc:'주 소스가 방출할 때만 보조 소스의 최신값을 함께 가져오기.',
+    code:`primary$.pipe(withLatestFrom(state$))`,
+    run(ctx){
+      const primary$=interval(380).pipe(take(4),map(v=>`클릭${v}`));
+      const state$=interval(140).pipe(map(v=>`상태${v}`));
+      ctx.track(primary$.pipe(withLatestFrom(state$)).subscribe(ctx.observer()));
+    }
+  });
+
+  function flattenDemo(id,title,operatorName,operator,desc){
+    add({
+      id, category:'고차 Observable', title, apis:[operatorName,'timer','map'], desc,
+      controls:`<button class="btn" data-role="request">요청 발생</button> <span data-role="reqCount"></span>`,
+      code:`fromEvent(button, 'click').pipe(\n  ${operatorName}((_, i) => fakeRequest(i, 650))\n)`,
+      run(ctx){
+        const btn=ctx.el.querySelector('[data-role="request"]'); let seq=0;
+        ctx.track(fromEvent(btn,'click').pipe(
+          map(()=>++seq),
+          tap(id=>ctx.info(`외부 요청 #${id}`)),
+          operator(id=>fakeRequest(id,650,`응답 #${id}`))
+        ).subscribe(ctx.observer()));
+        ctx.info('버튼을 빠르게 여러 번 눌러 차이를 확인하세요.');
+      }
+    });
+  }
+  flattenDemo('merge-map','mergeMap 동시 처리','mergeMap',mergeMap,'모든 내부 Observable을 동시에 유지하므로 응답이 모두 도착.');
+  flattenDemo('concat-map','concatMap 순차 처리','concatMap',concatMap,'이전 내부 Observable 완료까지 다음 요청을 대기열에 보관.');
+  flattenDemo('switch-map','switchMap 최신 요청','switchMap',switchMap,'새 요청이 오면 이전 내부 구독을 취소하고 최신 요청만 유지.');
+  flattenDemo('exhaust-map','exhaustMap 중복 방지','exhaustMap',exhaustMap,'처리 중에는 새 요청을 무시해 중복 제출을 방지.');
+
+  add({
+    id:'catch-error', category:'오류 처리', title:'catchError 대체 스트림', apis:['throwError','catchError','of'],
+    desc:'오류를 포착해 fallback Observable로 전환하고 스트림을 정상 완료.',
+    code:`concat(of(1,2), throwError(() => new Error('실패'))).pipe(\n  catchError(error => of({ fallback: true, message: error.message }))\n)`,
+    run(ctx){ ctx.track(concat(of(1,2),throwError(()=>new Error('의도한 실패'))).pipe(catchError(e=>of({fallback:true,message:e.message}))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'retry', category:'오류 처리', title:'retry · retryWhen', apis:['retry','retryWhen','scan','delay'],
+    desc:'실패한 소스를 재구독하며 횟수·지연을 제어.',
+    controls:`<select data-role="retryMode"><option value="retry">retry 설정 객체</option><option value="retryWhen">retryWhen</option></select>`,
+    code:`source$.pipe(retry({ count: 3, delay: 300 }))\nsource$.pipe(retryWhen(errors => errors.pipe(scan(...), delay(300))))`,
+    run(ctx){
+      let attempt=0;
+      const source$=defer(()=>{ attempt++; ctx.info(`시도 ${attempt}`); return attempt<3?throwError(()=>new Error(`실패 ${attempt}`)):of(`성공 ${attempt}`); });
+      const mode=ctx.el.querySelector('[data-role="retryMode"]').value;
+      const result$=mode==='retry' ? source$.pipe(retry({count:3,delay:250})) : source$.pipe(retryWhen(errors=>errors.pipe(scan((count,e)=>{if(count>=2) throw e; return count+1;},0),delay(250))));
+      ctx.track(result$.subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'timeout', category:'오류 처리', title:'timeout 제한시간', apis:['timeout','catchError','timer'],
+    desc:'지정 시간 안에 값이 오지 않으면 TimeoutError를 발생시키고 복구.',
+    controls:`<label>응답 지연 <input data-role="delayMs" type="range" min="100" max="1000" value="700"><span data-role="delayText">700ms</span></label>`,
+    code:`timer(responseDelay).pipe(\n  timeout({ first: 450 }),\n  catchError(error => of(error.name))\n)`,
+    run(ctx){
+      const ms=Number(ctx.el.querySelector('[data-role="delayMs"]').value);
+      ctx.track(timer(ms).pipe(map(()=>`응답 ${ms}ms`),timeout({first:450}),catchError(e=>of(`${e.name}: 450ms 초과`))).subscribe(ctx.observer()));
+    },
+    bind(ctx){ const input=ctx.el.querySelector('[data-role="delayMs"]'), text=ctx.el.querySelector('[data-role="delayText"]'); input.addEventListener('input',()=>text.textContent=input.value+'ms'); }
+  });
+
+  add({
+    id:'finalize', category:'오류 처리', title:'finalize 공통 정리', apis:['finalize','take','interval'],
+    desc:'complete, error, unsubscribe 어느 경로든 종료 시 공통 정리 로직 실행.',
+    code:`interval(180).pipe(\n  take(4),\n  finalize(() => releaseResource())\n)`,
+    run(ctx){ ctx.track(interval(180).pipe(take(4),finalize(()=>ctx.info('리소스 정리: finalize'))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'subject', category:'Subject', title:'Subject 멀티캐스트', apis:['Subject'],
+    desc:'하나의 값을 여러 Observer에 동시에 전달하는 기본 Subject.',
+    controls:`<button class="btn" data-role="emit">next()</button>`,
+    code:`const subject = new Subject();\nsubject.subscribe(a);\nsubject.subscribe(b);\nsubject.next(value);`,
+    run(ctx){
+      const subject=new Subject(); let n=0; const btn=ctx.el.querySelector('[data-role="emit"]');
+      ctx.track(subject.subscribe(v=>ctx.next(`A 수신:${v}`)));
+      ctx.track(subject.subscribe(v=>ctx.next(`B 수신:${v}`)));
+      const h=()=>subject.next(++n); btn.addEventListener('click',h); ctx.cleanup(()=>btn.removeEventListener('click',h));
+      ctx.info('next() 버튼을 누르세요.');
+    }
+  });
+
+  add({
+    id:'behavior-subject', category:'Subject', title:'BehaviorSubject 현재값', apis:['BehaviorSubject','getValue'],
+    desc:'초기값과 가장 최근 값을 보유하며 늦은 구독자에게 즉시 전달.',
+    controls:`<button class="btn" data-role="behaviorNext">값 증가</button> <button class="btn" data-role="late">늦은 구독자 추가</button>`,
+    code:`const state$ = new BehaviorSubject(0);\nstate$.next(state$.getValue() + 1);\nstate$.subscribe(lateObserver);`,
+    run(ctx){
+      const s=new BehaviorSubject(0); const nextBtn=ctx.el.querySelector('[data-role="behaviorNext"]'), late=ctx.el.querySelector('[data-role="late"]');
+      ctx.track(s.subscribe(v=>ctx.next(`기존:${v}`)));
+      const n=()=>s.next(s.getValue()+1); const l=()=>ctx.track(s.subscribe(v=>ctx.next(`늦은:${v}`)));
+      nextBtn.addEventListener('click',n); late.addEventListener('click',l); ctx.cleanup(()=>{nextBtn.removeEventListener('click',n);late.removeEventListener('click',l);});
+    }
+  });
+
+  add({
+    id:'replay-subject', category:'Subject', title:'ReplaySubject 과거 재생', apis:['ReplaySubject'],
+    desc:'지정 개수 또는 시간 범위의 과거 값을 새 구독자에게 재생.',
+    controls:`<button class="btn" data-role="replayLate">늦은 구독자 추가</button>`,
+    code:`const replay$ = new ReplaySubject(3);\nreplay$.next(1); replay$.next(2); replay$.next(3); replay$.next(4);\nreplay$.subscribe(lateObserver);`,
+    run(ctx){
+      const s=new ReplaySubject(3); [1,2,3,4].forEach(v=>s.next(v));
+      ctx.track(s.subscribe(v=>ctx.next(`기존:${v}`)));
+      const btn=ctx.el.querySelector('[data-role="replayLate"]'); const h=()=>ctx.track(s.subscribe(v=>ctx.next(`늦은:${v}`)));
+      btn.addEventListener('click',h); ctx.cleanup(()=>btn.removeEventListener('click',h));
+    }
+  });
+
+  add({
+    id:'async-subject', category:'Subject', title:'AsyncSubject 최종값', apis:['AsyncSubject'],
+    desc:'여러 next 중 complete 직전 마지막 값 하나만 모든 구독자에게 전달.',
+    code:`const result$ = new AsyncSubject();\nresult$.next(10); result$.next(20); result$.next(30);\nresult$.complete(); // 30만 방출`,
+    run(ctx){ const s=new AsyncSubject(); ctx.track(s.subscribe(ctx.observer())); s.next(10);s.next(20);s.next(30);ctx.info('complete 호출');s.complete(); }
+  });
+
+  add({
+    id:'share-cold', category:'멀티캐스팅', title:'Cold Observable vs share', apis:['defer','share'],
+    desc:'일반 cold 소스는 구독마다 실행되지만 share는 동일 실행을 동시 구독자끼리 공유.',
+    code:`const cold$ = defer(() => { executions++; return interval(200); });\nconst shared$ = cold$.pipe(share());`,
+    run(ctx){
+      let executions=0;
+      const cold$=defer(()=>{ctx.info(`cold 실행 #${++executions}`);return interval(170).pipe(take(3));});
+      ctx.track(cold$.subscribe(v=>ctx.next(`cold-A:${v}`)));
+      ctx.track(cold$.subscribe(v=>ctx.next(`cold-B:${v}`)));
+      const shared$=cold$.pipe(share());
+      ctx.track(timer(650).pipe(switchMap(()=>shared$)).subscribe(v=>ctx.next(`share-A:${v}`)));
+      ctx.track(timer(650).pipe(switchMap(()=>shared$)).subscribe(v=>ctx.next(`share-B:${v}`)));
+    }
+  });
+
+  add({
+    id:'share-replay', category:'멀티캐스팅', title:'shareReplay 캐시', apis:['shareReplay','defer'],
+    desc:'한 번 계산한 최신 결과를 재사용해 늦은 구독자에게 즉시 전달.',
+    code:`const cached$ = defer(expensiveRequest).pipe(\n  shareReplay({ bufferSize: 1, refCount: true })\n);`,
+    run(ctx){
+      let calls=0;
+      const cached$=defer(()=>{ctx.info(`실제 요청 #${++calls}`);return timer(400).pipe(map(()=>({data:'완료',at:new Date().toLocaleTimeString()})));}).pipe(shareReplay({bufferSize:1,refCount:true}));
+      ctx.track(cached$.subscribe(v=>ctx.next({subscriber:'A',v})));
+      ctx.track(timer(750).pipe(switchMap(()=>cached$)).subscribe(v=>ctx.next({subscriber:'B(늦음)',v})));
+    }
+  });
+
+  add({
+    id:'schedulers', category:'스케줄러·유틸', title:'queue · asap · async Scheduler', apis:['queueScheduler','asapScheduler','asyncScheduler','observeOn'],
+    desc:'동기 큐, 마이크로태스크에 가까운 asap, 매크로태스크 async 실행 순서 비교.',
+    code:`of('queue').pipe(observeOn(queueScheduler))\nof('asap').pipe(observeOn(asapScheduler))\nof('async').pipe(observeOn(asyncScheduler))`,
+    run(ctx){
+      ctx.info('동기 시작');
+      ctx.track(of('queue').pipe(observeOn(queueScheduler)).subscribe(v=>ctx.next(v)));
+      ctx.track(of('asap').pipe(observeOn(asapScheduler)).subscribe(v=>ctx.next(v)));
+      ctx.track(of('async').pipe(observeOn(asyncScheduler)).subscribe(v=>ctx.next(v)));
+      ctx.info('동기 끝');
+    }
+  });
+
+  add({
+    id:'animation-frame', category:'스케줄러·유틸', title:'animationFrames · animationFrameScheduler', apis:['animationFrames','animationFrameScheduler','take'],
+    desc:'브라우저 렌더링 프레임에 맞춰 elapsed와 timestamp를 방출.',
+    code:`animationFrames().pipe(take(8)).subscribe(({ elapsed, timestamp }) => ...)`,
+    run(ctx){ ctx.track(animationFrames().pipe(take(8),map(({elapsed,timestamp})=>({elapsed:Math.round(elapsed),timestamp:Math.round(timestamp)}))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'notifications', category:'스케줄러·유틸', title:'materialize · dematerialize', apis:['materialize','dematerialize'],
+    desc:'next/error/complete 알림 자체를 Notification 값으로 변환하고 다시 복원.',
+    code:`source$.pipe(\n  materialize(),\n  tap(notification => inspect(notification)),\n  dematerialize()\n)`,
+    run(ctx){
+      ctx.track(concat(of('A','B'),throwError(()=>new Error('E'))).pipe(materialize(),tap(n=>ctx.info({kind:n.kind,value:n.value,error:n.error?.message})),dematerialize(),catchError(e=>of(`복원된 오류 처리:${e.message}`))).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'time-metadata', category:'스케줄러·유틸', title:'timestamp · timeInterval', apis:['timestamp','timeInterval'],
+    desc:'각 값에 절대 시각 또는 이전 방출과의 시간 간격 메타데이터 추가.',
+    code:`interval(220).pipe(\n  take(4),\n  timestamp(),\n  timeInterval()\n)`,
+    run(ctx){ ctx.track(interval(220).pipe(take(4),timestamp(),timeInterval(),map(x=>({interval:x.interval,value:x.value.value,timestamp:x.value.timestamp}))).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'promise-conversion', category:'스케줄러·유틸', title:'firstValueFrom · lastValueFrom', apis:['firstValueFrom','lastValueFrom'],
+    desc:'Observable의 첫 값 또는 완료 전 마지막 값을 Promise로 변환.',
+    code:`const first = await firstValueFrom(interval(100));\nconst last = await lastValueFrom(range(1, 5));`,
+    async run(ctx){
+      const [first,last]=await Promise.all([firstValueFrom(interval(100).pipe(take(3))),lastValueFrom(range(1,5))]);
+      ctx.next({firstValueFrom:first,lastValueFrom:last}); ctx.complete();
+    }
+  });
+
+  add({
+    id:'custom-operator', category:'스케줄러·유틸', title:'사용자 정의 Pipeable Operator', apis:['pipe','map','filter'],
+    desc:'자주 쓰는 연산자 조합을 재사용 가능한 operator 함수로 추출.',
+    code:`const doubleEven = () => source$ => source$.pipe(\n  filter(x => x % 2 === 0),\n  map(x => x * 2)\n);\nrange(1, 6).pipe(doubleEven())`,
+    run(ctx){ const doubleEven=()=>source$=>source$.pipe(filter(x=>x%2===0),map(x=>x*2)); ctx.track(range(1,6).pipe(doubleEven()).subscribe(ctx.observer())); }
+  });
+
+  add({
+    id:'from-fetch', category:'브라우저·통신', title:'fromFetch · Ajax', apis:['fromFetch','ajax','switchMap','catchError'],
+    desc:'Fetch API와 XMLHttpRequest 기반 Ajax Observable을 선택 실행. 네트워크·CORS 필요.',
+    controls:`<select data-role="httpType"><option value="fetch">fromFetch</option><option value="ajax">ajax.getJSON</option></select><input data-role="httpUrl" value="https://jsonplaceholder.typicode.com/todos/1" style="flex:1;min-width:220px">`,
+    code:`fromFetch(url).pipe(switchMap(response => response.json()))\najax.getJSON(url)`,
+    run(ctx){
+      const url=ctx.el.querySelector('[data-role="httpUrl"]').value.trim(); const type=ctx.el.querySelector('[data-role="httpType"]').value;
+      let req$;
+      if(type==='fetch'){
+        if(!R.fetch?.fromFetch) return ctx.error('현재 UMD 번들에 fromFetch namespace가 없습니다.');
+        req$=R.fetch.fromFetch(url).pipe(switchMap(res=>{if(!res.ok) throw new Error(`HTTP ${res.status}`);return res.json();}));
+      } else {
+        if(!R.ajax?.ajax) return ctx.error('현재 UMD 번들에 ajax namespace가 없습니다.');
+        req$=R.ajax.ajax.getJSON(url);
+      }
+      ctx.track(req$.pipe(timeout({first:8000}),catchError(e=>of({error:e.message,notice:'네트워크 또는 CORS 확인'}))).subscribe(ctx.observer()));
+    }
+  });
+
+  add({
+    id:'websocket', category:'브라우저·통신', title:'WebSocketSubject', apis:['webSocket','WebSocketSubject'],
+    desc:'WebSocket 연결을 양방향 Subject처럼 사용. 공개 echo 서버 상태에 따라 실패 가능.',
+    controls:`<input data-role="wsUrl" value="wss://echo.websocket.events" style="flex:1;min-width:210px"><button class="btn" data-role="wsSend">메시지 전송</button>`,
+    code:`const socket$ = webSocket(url);\nsocket$.subscribe(message => ...);\nsocket$.next({ type: 'ping', at: Date.now() });`,
+    run(ctx){
+      if(!R.webSocket?.webSocket) return ctx.error('현재 UMD 번들에 webSocket namespace가 없습니다.');
+      const url=ctx.el.querySelector('[data-role="wsUrl"]').value.trim(); const btn=ctx.el.querySelector('[data-role="wsSend"]');
+      const socket$=R.webSocket.webSocket({url,openObserver:{next:()=>ctx.info('WebSocket 연결됨')},closeObserver:{next:e=>ctx.info(`WebSocket 닫힘 code=${e.code}`)}});
+      ctx.track(socket$.pipe(catchError(e=>{ctx.error(e);return EMPTY;})).subscribe(ctx.observer()));
+      const h=()=>{ const msg={type:'ping',at:new Date().toISOString()}; ctx.info(`전송 ${pretty(msg)}`); socket$.next(msg); };
+      btn.addEventListener('click',h); ctx.cleanup(()=>{btn.removeEventListener('click',h);socket$.complete();});
+    }
+  });
+
+  add({
+    id:'test-scheduler', category:'테스트·실전', title:'TestScheduler 마블 테스트', apis:['TestScheduler','cold','expectObservable'],
+    desc:'가상 시간과 marble syntax로 시간 기반 Observable 결과를 동기적으로 검증.',
+    code:`const scheduler = new TestScheduler((actual, expected) => { ... });\nscheduler.run(({ cold, expectObservable }) => {\n  const source = cold('-a-b-c|', { a:1, b:2, c:3 });\n  expectObservable(source.pipe(map(x => x * 10))).toBe('-a-b-c|', ...);\n});`,
+    run(ctx){
+      if(!R.testing?.TestScheduler) return ctx.error('TestScheduler namespace를 찾지 못했습니다.');
+      const scheduler=new R.testing.TestScheduler((actual,expected)=>{
+        const pass=JSON.stringify(actual)===JSON.stringify(expected); ctx.next({assertion:pass?'PASS':'FAIL',actual,expected});
+      });
+      scheduler.run(({cold,expectObservable})=>{
+        const source=cold('-a-b-c|',{a:1,b:2,c:3});
+        expectObservable(source.pipe(map(x=>x*10))).toBe('-a-b-c|',{a:10,b:20,c:30});
+      });
+      ctx.complete();
+    }
+  });
+
+  add({
+    id:'autocomplete', category:'테스트·실전', title:'실전: 검색 자동완성', apis:['fromEvent','debounceTime','distinctUntilChanged','switchMap','catchError','shareReplay'],
+    desc:'입력 정제, 이전 요청 취소, 로딩·결과 표시를 결합한 대표적인 UI 파이프라인.',
+    controls:`<input data-role="query" placeholder="예: rx, reactive, observable" style="flex:1;min-width:220px"><button class="btn" data-role="typeDemo">자동 입력</button>`,
+    code:`fromEvent(input, 'input').pipe(\n  map(e => e.target.value.trim()),\n  debounceTime(250),\n  distinctUntilChanged(),\n  switchMap(query => search(query).pipe(catchError(() => of([])))),\n  shareReplay({ bufferSize: 1, refCount: true })\n)`,
+    run(ctx){
+      const input=ctx.el.querySelector('[data-role="query"]'), auto=ctx.el.querySelector('[data-role="typeDemo"]');
+      const dictionary=['rxjs','reactive programming','observable','observer','operator','subject','scheduler','subscription','switchMap','shareReplay'];
+      const search=q=>timer(280+Math.random()*350).pipe(map(()=>dictionary.filter(x=>x.toLowerCase().includes(q.toLowerCase()))));
+      const result$=fromEvent(input,'input').pipe(map(e=>e.target.value.trim()),debounceTime(220),distinctUntilChanged(),tap(q=>ctx.info(`검색: ${q || '(빈 값)'}`)),switchMap(q=>q?search(q):of([])),catchError(e=>of([`오류:${e.message}`])),shareReplay({bufferSize:1,refCount:true}));
+      ctx.track(result$.subscribe(v=>ctx.next(v)));
+      const h=async()=>{input.value='';for(const ch of 'reactive'){input.value+=ch;input.dispatchEvent(new Event('input'));await sleep(90);}};
+      auto.addEventListener('click',h);ctx.cleanup(()=>auto.removeEventListener('click',h));ctx.info('검색어를 입력하거나 자동 입력을 누르세요.');
+    }
+  });
+
+  add({
+    id:'state-store', category:'테스트·실전', title:'실전: 간단한 반응형 Store', apis:['BehaviorSubject','scan','distinctUntilChanged','shareReplay'],
+    desc:'Action 스트림과 reducer를 사용한 작은 상태 저장소 패턴.',
+    controls:`<button class="btn" data-role="inc">+1</button><button class="btn" data-role="dec">-1</button><button class="btn" data-role="reset">reset</button>`,
+    code:`const actions$ = new Subject();\nconst state$ = actions$.pipe(\n  scan(reducer, { count: 0 }),\n  startWith({ count: 0 }),\n  distinctUntilChanged((a,b) => a.count === b.count),\n  shareReplay(1)\n);`,
+    run(ctx){
+      const actions$=new Subject();
+      const state$=actions$.pipe(scan((state,action)=>action.type==='inc'?{count:state.count+1}:action.type==='dec'?{count:state.count-1}:{count:0},{count:0}),startWith({count:0}),distinctUntilChanged((a,b)=>a.count===b.count),shareReplay({bufferSize:1,refCount:true}));
+      ctx.track(state$.subscribe(v=>ctx.next(v)));
+      [['inc','inc'],['dec','dec'],['reset','reset']].forEach(([role,type])=>{const b=ctx.el.querySelector(`[data-role="${role}"]`);const h=()=>actions$.next({type});b.addEventListener('click',h);ctx.cleanup(()=>b.removeEventListener('click',h));});
+    }
+  });
+
+  add({
+    id:'progress-pipeline', category:'테스트·실전', title:'실전: 작업 큐와 진행률', apis:['from','concatMap','scan','startWith','finalize'],
+    desc:'작업을 순차 처리하면서 완료 개수와 전체 진행률을 누적 계산.',
+    code:`from(tasks).pipe(\n  concatMap(task => runTask(task)),\n  scan((state, result) => ({ ...state, done: state.done + 1 }), initial),\n  startWith(initial),\n  finalize(cleanup)\n)`,
+    run(ctx){
+      const tasks=['파일 검사','데이터 변환','보고서 생성','압축','완료 검증'];
+      ctx.track(from(tasks).pipe(concatMap((task,i)=>timer(180+120*i).pipe(map(()=>task))),scan((s,result)=>({done:s.done+1,total:tasks.length,percent:Math.round((s.done+1)/tasks.length*100),result}),{done:0,total:tasks.length,percent:0}),startWith({done:0,total:tasks.length,percent:0}),finalize(()=>ctx.info('작업 큐 정리'))).subscribe(ctx.observer()));
+    }
+  });
+
+  const grid=document.getElementById('grid');
+  const search=document.getElementById('search');
+  const categoryList=document.getElementById('categoryList');
+  const sortSelect=document.getElementById('sortSelect');
+  let activeCategory='전체';
+
+  function highlight(code){
+    return escapeHtml(code)
+      .replace(/\b(const|let|new|return|if|else|await|async|throw)\b/g,'<span class="token-key">$1</span>')
+      .replace(/\b(Observable|Subject|BehaviorSubject|ReplaySubject|AsyncSubject|of|from|range|interval|timer|defer|iif|EMPTY|throwError|concat|merge|zip|combineLatest|forkJoin|race|partition|fromEvent|map|filter|tap|scan|reduce|take|takeUntil|takeWhile|skip|distinct|distinctUntilChanged|debounceTime|throttleTime|auditTime|sampleTime|bufferCount|bufferTime|windowCount|mergeMap|concatMap|switchMap|exhaustMap|catchError|retry|retryWhen|delay|timeout|finalize|startWith|endWith|pairwise|groupBy|toArray|withLatestFrom|share|shareReplay|materialize|dematerialize|timestamp|timeInterval|observeOn|TestScheduler|firstValueFrom|lastValueFrom)\b/g,'<span class="token-fn">$1</span>')
+      .replace(/(&#39;.*?&#39;|&quot;.*?&quot;|`.*?`)/g,'<span class="token-str">$1</span>')
+      .replace(/(?<!#)\b(\d+)\b/g,'<span class="token-num">$1</span>');
+  }
+  function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+  function render(){
+    grid.innerHTML='';
+    demos.forEach((d,i)=>{
+      const article=document.createElement('article');
+      article.className='card'; article.dataset.id=d.id; article.dataset.category=d.category;
+      article.dataset.search=`${d.title} ${d.category} ${d.apis.join(' ')} ${d.desc}`.toLowerCase();
+      article.innerHTML=`
+        <div class="card-head">
+          <div class="card-top"><h3>${escapeHtml(d.title)}</h3><span class="number">#${String(i+1).padStart(2,'0')}</span></div>
+          <p class="desc">${escapeHtml(d.desc)}</p>
+          <div class="badges"><span class="badge category-badge">${escapeHtml(d.category)}</span>${d.apis.map(x=>`<span class="badge">${escapeHtml(x)}</span>`).join('')}</div>
+        </div>
+        <div class="controls">
+          <button class="btn primary tiny" data-action="run">실행</button>
+          <button class="btn tiny danger" data-action="stop">중지</button>
+          <button class="btn tiny" data-action="clear">로그 지우기</button>
+          ${d.controls}
+        </div>
+        <div class="log" data-role="log"><div class="log-empty">실행 결과가 여기에 표시됩니다.</div></div>
+        <details><summary>코드 보기</summary><pre><code>${highlight(d.code)}</code></pre></details>`;
+      grid.appendChild(article);
+      article.querySelector('[data-action="run"]').addEventListener('click',()=>runDemo(d,article));
+      article.querySelector('[data-action="stop"]').addEventListener('click',()=>stopDemo(d.id,true));
+      article.querySelector('[data-action="clear"]').addEventListener('click',()=>clearLog(article));
+      d.bind?.({el:article});
+    });
+    applyFilter();
+  }
+
+  function createCtx(d,el,slot){
+    const logEl=el.querySelector('[data-role="log"]');
+    const started=performance.now();
+    const write=(kind,value)=>{
+      logEl.querySelector('.log-empty')?.remove();
+      const line=document.createElement('div'); line.className='log-line';
+      const ms=Math.round(performance.now()-started);
+      const labels={next:'N',info:'i',error:'E',complete:'C'};
+      line.innerHTML=`<span class="log-time">+${ms}ms</span><span class="log-kind ${kind}">${labels[kind]}</span><span class="log-value"></span>`;
+      line.querySelector('.log-value').textContent=pretty(value);
+      logEl.appendChild(line); logEl.scrollTop=logEl.scrollHeight;
+    };
+    const ctx={
+      el,
+      next:v=>write('next',v), info:v=>write('info',v), error:e=>write('error',e), complete:()=>write('complete','complete'),
+      observer:()=>({next:v=>write('next',v),error:e=>write('error',e),complete:()=>write('complete','complete')}),
+      track:sub=>{if(sub?.unsubscribe){slot.subscription.add(sub);}return sub;},
+      cleanup:fn=>{slot.cleanups.push(fn);return fn;}
+    };
+    return ctx;
+  }
+
+  async function runDemo(d,el){
+    stopDemo(d.id,false); clearLog(el);
+    const slot={subscription:new Subscription(),cleanups:[]}; runtime.set(d.id,slot);
+    const ctx=createCtx(d,el,slot); ctx.info(`${d.title} 실행`);
+    try { await d.run(ctx); }
+    catch(e){ ctx.error(e); }
+  }
+  function stopDemo(id,announce){
+    const slot=runtime.get(id); if(!slot) return;
+    try{slot.subscription.unsubscribe();}catch{}
+    slot.cleanups.splice(0).forEach(fn=>{try{fn();}catch{}}); runtime.delete(id);
+    if(announce){ const el=grid.querySelector(`[data-id="${id}"]`); if(el) createStandaloneLog(el,'info','사용자 중지 및 정리 완료'); }
+  }
+  function stopAll(){ [...runtime.keys()].forEach(id=>stopDemo(id,false)); toast('모든 구독과 이벤트 리스너를 정리했습니다.'); }
+  function clearLog(el){ el.querySelector('[data-role="log"]').innerHTML='<div class="log-empty">실행 결과가 여기에 표시됩니다.</div>'; }
+  function createStandaloneLog(el,kind,value){
+    const log=el.querySelector('[data-role="log"]'); log.querySelector('.log-empty')?.remove();
+    const line=document.createElement('div');line.className='log-line';line.innerHTML=`<span class="log-time">now</span><span class="log-kind ${kind}">i</span><span class="log-value"></span>`;line.querySelector('.log-value').textContent=value;log.appendChild(line);
+  }
+
+  function renderCategories(){
+    categoryList.innerHTML='';
+    categories.forEach(cat=>{
+      const count=cat==='전체'?demos.length:demos.filter(d=>d.category===cat).length;
+      const b=document.createElement('button'); b.className='category-btn'+(cat===activeCategory?' active':''); b.innerHTML=`<span>${cat}</span><span class="count">${count}</span>`;
+      b.addEventListener('click',()=>{activeCategory=cat;document.querySelectorAll('.category-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');applyFilter();document.getElementById('sidebar').classList.remove('open');});
+      categoryList.appendChild(b);
+    });
+  }
+  function applyFilter(){
+    const q=search.value.trim().toLowerCase(); let visible=0;
+    grid.querySelectorAll('.card').forEach(card=>{
+      const show=(activeCategory==='전체'||card.dataset.category===activeCategory)&&(!q||card.dataset.search.includes(q));
+      card.classList.toggle('hidden',!show); if(show)visible++;
+    });
+    document.getElementById('visibleSummary').textContent=`${visible}개 예제 표시 · 분류: ${activeCategory}${q?` · 검색: “${search.value}”`:''}`;
+  }
+  function sortCards(mode){
+    const cards=[...grid.children];
+    cards.sort((a,b)=>{
+      const da=demos.find(d=>d.id===a.dataset.id), db=demos.find(d=>d.id===b.dataset.id);
+      if(mode==='title') return da.title.localeCompare(db.title,'ko');
+      if(mode==='category') return da.category.localeCompare(db.category,'ko')||da.title.localeCompare(db.title,'ko');
+      return demos.indexOf(da)-demos.indexOf(db);
+    }).forEach(c=>grid.appendChild(c));
+  }
+  function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);}
+
+  render(); renderCategories();
+  const uniqueApis=new Set(demos.flatMap(d=>d.apis));
+  document.getElementById('demoCount').textContent=demos.length;
+  document.getElementById('operatorCount').textContent=uniqueApis.size;
+  document.getElementById('categoryCount').textContent=categories.length-1;
+  search.addEventListener('input',applyFilter);
+  sortSelect.addEventListener('change',e=>sortCards(e.target.value));
+  document.getElementById('stopAll').addEventListener('click',stopAll);
+  document.getElementById('themeToggle').addEventListener('click',()=>{document.documentElement.classList.toggle('light');localStorage.setItem('rxjs-theme',document.documentElement.classList.contains('light')?'light':'dark');});
+  if(localStorage.getItem('rxjs-theme')==='light') document.documentElement.classList.add('light');
+  document.getElementById('mobileMenu').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+  window.addEventListener('beforeunload',stopAll);
+}
+</script>
+</body>
+</html>
