@@ -1,0 +1,1397 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Matter.js 종합 기능 실험실</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: rgba(15, 27, 46, 0.92);
+      --panel-2: rgba(22, 38, 63, 0.9);
+      --line: rgba(148, 163, 184, 0.22);
+      --text: #e6edf7;
+      --muted: #95a7c1;
+      --accent: #5eead4;
+      --accent-2: #60a5fa;
+      --warn: #fbbf24;
+      --danger: #fb7185;
+      --ok: #86efac;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.18), transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(20, 184, 166, 0.14), transparent 34%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { touch-action: manipulation; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 286px minmax(420px, 1fr) 294px;
+      grid-template-rows: 58px minmax(0, 1fr);
+      height: 100dvh;
+      min-height: 520px;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(8, 17, 31, 0.86);
+      backdrop-filter: blur(16px);
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      color: #04111d;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 30px rgba(94, 234, 212, 0.2);
+    }
+
+    .brand-copy { min-width: 0; }
+    .brand-title { font-weight: 800; font-size: 15px; white-space: nowrap; }
+    .brand-sub { color: var(--muted); font-size: 11px; margin-top: 1px; white-space: nowrap; }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      background: rgba(15, 27, 46, 0.7);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 12px var(--ok); }
+
+    .sidebar, .inspector {
+      min-height: 0;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+    }
+
+    .sidebar { border-right: 1px solid var(--line); padding: 14px; }
+    .inspector { border-left: 1px solid var(--line); padding: 14px; }
+
+    .section { margin-bottom: 16px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: #dbeafe;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .scene-grid { display: grid; gap: 7px; }
+    .scene-btn {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      background: rgba(30, 48, 75, 0.56);
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    .scene-btn:hover { transform: translateY(-1px); border-color: rgba(96, 165, 250, 0.45); }
+    .scene-btn.active { border-color: rgba(94, 234, 212, 0.72); background: rgba(13, 148, 136, 0.14); }
+    .scene-icon {
+      width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+      background: rgba(96, 165, 250, 0.12); font-size: 17px;
+    }
+    .scene-name { display: block; font-size: 12px; font-weight: 750; }
+    .scene-note { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; line-height: 1.35; }
+
+    .stage-shell {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: #07101d;
+      position: relative;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(8, 17, 31, 0.82);
+      z-index: 4;
+    }
+
+    .btn {
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      background: rgba(30, 48, 75, 0.7);
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .btn:hover { border-color: rgba(96, 165, 250, 0.62); background: rgba(37, 63, 99, 0.86); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { border-color: rgba(94, 234, 212, .5); background: rgba(13, 148, 136, .18); }
+    .btn.danger { border-color: rgba(251, 113, 133, .35); color: #fecdd3; }
+    .btn.active { border-color: var(--accent); color: var(--accent); background: rgba(20, 184, 166, .13); }
+    .btn.small { min-height: 30px; padding: 5px 8px; font-size: 11px; }
+
+    .sep { width: 1px; height: 26px; background: var(--line); margin: 0 2px; }
+
+    #stage {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+      background:
+        linear-gradient(rgba(96, 165, 250, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(96, 165, 250, .035) 1px, transparent 1px),
+        radial-gradient(circle at 50% 12%, rgba(30, 64, 175, .18), transparent 50%),
+        #07101d;
+      background-size: 32px 32px, 32px 32px, auto, auto;
+    }
+    #stage canvas { display: block; width: 100%; height: 100%; }
+
+    .overlay-top {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .scene-card {
+      max-width: 540px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(8, 17, 31, .8);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+    .scene-card h2 { margin: 0 0 3px; font-size: 14px; }
+    .scene-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .metrics {
+      margin-left: auto;
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 5px;
+    }
+    .metric {
+      min-width: 58px;
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      text-align: center;
+      background: rgba(8, 17, 31, .8);
+      backdrop-filter: blur(12px);
+    }
+    .metric b { display: block; font-size: 13px; color: #f8fafc; }
+    .metric span { color: var(--muted); font-size: 9px; }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      max-width: calc(100% - 24px);
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: rgba(8, 17, 31, .74);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .timeline {
+      min-height: 94px;
+      max-height: 134px;
+      overflow: auto;
+      padding: 8px 12px;
+      border-top: 1px solid var(--line);
+      background: rgba(8, 17, 31, .9);
+      font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #b9c9df;
+    }
+    .log-row { display: grid; grid-template-columns: 62px 74px 1fr; gap: 8px; padding: 2px 0; }
+    .log-time { color: #64748b; }
+    .log-type { color: var(--accent); }
+    .log-row.warn .log-type { color: var(--warn); }
+    .log-row.danger .log-type { color: var(--danger); }
+
+    .control-card {
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(30, 48, 75, .45);
+      margin-bottom: 9px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: minmax(84px, 1fr) 94px 42px;
+      align-items: center;
+      gap: 8px;
+      min-height: 31px;
+    }
+    .control-row + .control-row { margin-top: 6px; }
+    .control-label { font-size: 11px; color: #cbd5e1; }
+    .control-value { text-align: right; color: var(--accent); font-size: 10px; font-family: ui-monospace, monospace; }
+    input[type="range"] { width: 100%; accent-color: #5eead4; }
+
+    .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .check {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 8px; border: 1px solid var(--line); border-radius: 10px;
+      color: #cbd5e1; font-size: 10px; background: rgba(15, 27, 46, .52);
+    }
+    .check input { accent-color: #5eead4; }
+
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    .inspector-empty { color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .kv { display: grid; grid-template-columns: 86px 1fr; gap: 7px; padding: 5px 0; border-bottom: 1px solid rgba(148,163,184,.1); font-size: 10px; }
+    .kv span:first-child { color: var(--muted); }
+    .kv span:last-child { color: #dbeafe; text-align: right; overflow-wrap: anywhere; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .chip { padding: 5px 7px; border-radius: 999px; border: 1px solid rgba(96,165,250,.25); color: #bfdbfe; font: 9px ui-monospace, monospace; background: rgba(37,99,235,.09); }
+
+    .mobile-only, .settings-toggle { display: none; }
+
+    .fatal {
+      position: fixed; inset: 0; z-index: 999; display: none; place-items: center; padding: 24px;
+      background: #07101d;
+    }
+    .fatal-card { max-width: 620px; padding: 22px; border: 1px solid rgba(251,113,133,.5); border-radius: 18px; background: #111d31; box-shadow: var(--shadow); }
+    .fatal h1 { margin: 0 0 10px; font-size: 20px; }
+    .fatal p { color: #cbd5e1; line-height: 1.7; }
+    code { color: #a7f3d0; }
+
+    @media (max-width: 1120px) {
+      .app { grid-template-columns: 236px minmax(360px, 1fr) 260px; }
+      .sidebar, .inspector { padding: 11px; }
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 236px minmax(360px, 1fr); }
+      .settings-toggle { display: inline-flex; }
+      .inspector {
+        display: none;
+        position: fixed;
+        z-index: 35;
+        top: 58px;
+        right: 0;
+        bottom: 0;
+        width: min(88vw, 330px);
+        border-left: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+      .inspector.open { display: block; }
+    }
+
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      .app { display: block; height: auto; min-height: 100dvh; }
+      header { position: sticky; top: 0; height: 56px; padding: 0 10px; }
+      .mobile-only { display: inline-flex; }
+      .inspector { top: 56px; }
+      .brand-sub, .status-pill { display: none; }
+      .sidebar {
+        position: fixed; z-index: 30; top: 56px; bottom: 0; left: 0; width: min(86vw, 320px);
+        transform: translateX(-105%); transition: transform .2s ease; box-shadow: var(--shadow);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .stage-shell { height: calc(100dvh - 56px); grid-template-rows: auto minmax(0, 1fr) 86px; }
+      .toolbar { padding: 8px; gap: 5px; overflow-x: auto; flex-wrap: nowrap; }
+      .toolbar .btn { flex: 0 0 auto; }
+      .toolbar .sep { flex: 0 0 auto; }
+      .metrics { grid-template-columns: repeat(3, 50px); }
+      .metric { min-width: 50px; padding: 6px 4px; }
+      .scene-card { max-width: calc(100% - 158px); }
+      .scene-card p { display: none; }
+      .hint { display: none; }
+      .timeline { min-height: 86px; max-height: 86px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="btn small mobile-only" id="menuBtn" aria-label="장면 메뉴 열기">☰</button>
+    <div class="brand">
+      <div class="logo">M</div>
+      <div class="brand-copy">
+        <div class="brand-title">Matter.js 종합 기능 실험실</div>
+        <div class="brand-sub">Rigid bodies · constraints · collisions · queries · events</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="status-pill"><span class="status-dot"></span><span id="libVersion">Matter.js 로드 중</span></div>
+      <button class="btn small settings-toggle" id="settingsBtn">⚙ 설정</button>
+      <button class="btn small" id="helpBtn">도움말</button>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <section class="section">
+      <div class="section-title"><span>장면 선택</span><span id="sceneCount">15</span></div>
+      <div class="scene-grid" id="sceneGrid"></div>
+    </section>
+  </aside>
+
+  <main class="stage-shell">
+    <div class="toolbar">
+      <button class="btn primary" id="pauseBtn">⏸ 일시정지</button>
+      <button class="btn" id="resetBtn">↻ 재시작</button>
+      <span class="sep"></span>
+      <button class="btn" data-add="circle">● 원</button>
+      <button class="btn" data-add="box">■ 상자</button>
+      <button class="btn" data-add="polygon">⬟ 다각형</button>
+      <button class="btn" data-add="burst">✦ 폭발 투입</button>
+      <span class="sep"></span>
+      <button class="btn" id="rayBtn">⌁ 레이캐스트</button>
+      <button class="btn" id="clearBtn">동적 바디 제거</button>
+    </div>
+
+    <div id="stage">
+      <div class="overlay-top">
+        <div class="scene-card">
+          <h2 id="sceneTitle">플레이그라운드</h2>
+          <p id="sceneDescription">드래그, 충돌, 제약조건, 센서를 한꺼번에 체험한다.</p>
+        </div>
+        <div class="metrics">
+          <div class="metric"><b id="fpsValue">0</b><span>FPS</span></div>
+          <div class="metric"><b id="bodyValue">0</b><span>BODIES</span></div>
+          <div class="metric"><b id="pairValue">0</b><span>PAIRS</span></div>
+        </div>
+      </div>
+      <div class="hint">마우스/터치 드래그 · 클릭 선택 · 우클릭 삭제 · Space 일시정지 · R 재시작 · Delete 선택 삭제</div>
+    </div>
+
+    <div class="timeline" id="eventLog" aria-live="polite"></div>
+  </main>
+
+  <aside class="inspector">
+    <section class="section">
+      <div class="section-title"><span>물리 환경</span></div>
+      <div class="control-card">
+        <div class="control-row"><span class="control-label">중력 X</span><input id="gravityX" type="range" min="-1" max="1" step="0.05" value="0"><span class="control-value" id="gravityXVal">0.00</span></div>
+        <div class="control-row"><span class="control-label">중력 Y</span><input id="gravityY" type="range" min="-1" max="1" step="0.05" value="1"><span class="control-value" id="gravityYVal">1.00</span></div>
+        <div class="control-row"><span class="control-label">시간 배율</span><input id="timeScale" type="range" min="0.1" max="2" step="0.1" value="1"><span class="control-value" id="timeScaleVal">1.0×</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><span>새 바디 기본값</span></div>
+      <div class="control-card">
+        <div class="control-row"><span class="control-label">반발계수</span><input id="restitution" type="range" min="0" max="1.2" step="0.05" value="0.65"><span class="control-value" id="restitutionVal">0.65</span></div>
+        <div class="control-row"><span class="control-label">마찰</span><input id="friction" type="range" min="0" max="1" step="0.05" value="0.15"><span class="control-value" id="frictionVal">0.15</span></div>
+        <div class="control-row"><span class="control-label">공기저항</span><input id="frictionAir" type="range" min="0" max="0.12" step="0.005" value="0.01"><span class="control-value" id="frictionAirVal">0.010</span></div>
+        <div class="control-row"><span class="control-label">밀도</span><input id="density" type="range" min="0.0005" max="0.01" step="0.0005" value="0.002"><span class="control-value" id="densityVal">0.0020</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><span>렌더 디버그</span></div>
+      <div class="check-grid" id="debugGrid">
+        <label class="check"><input type="checkbox" data-render="wireframes"> 와이어프레임</label>
+        <label class="check"><input type="checkbox" data-render="showBounds"> 경계 상자</label>
+        <label class="check"><input type="checkbox" data-render="showAxes"> 축</label>
+        <label class="check"><input type="checkbox" data-render="showVelocity"> 속도</label>
+        <label class="check"><input type="checkbox" data-render="showPositions"> 위치</label>
+        <label class="check"><input type="checkbox" data-render="showCollisions"> 충돌점</label>
+        <label class="check"><input type="checkbox" data-render="showSeparations"> 분리 벡터</label>
+        <label class="check"><input type="checkbox" data-render="showAngleIndicator"> 회전각</label>
+        <label class="check"><input type="checkbox" data-render="showSleeping"> 수면 상태</label>
+        <label class="check"><input type="checkbox" data-render="showIds"> 객체 ID</label>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><span>선택 바디</span></div>
+      <div class="control-card" id="bodyInspector"><div class="inspector-empty">캔버스의 바디를 클릭하면 속성과 조작 버튼이 표시된다.</div></div>
+      <div class="button-grid">
+        <button class="btn small" data-body-action="forceLeft">← 힘</button>
+        <button class="btn small" data-body-action="forceRight">힘 →</button>
+        <button class="btn small" data-body-action="jump">↑ 점프</button>
+        <button class="btn small" data-body-action="torque">↻ 회전</button>
+        <button class="btn small" data-body-action="static">정적 전환</button>
+        <button class="btn small" data-body-action="sleep">수면/깨우기</button>
+        <button class="btn small" data-body-action="scaleUp">확대</button>
+        <button class="btn small" data-body-action="scaleDown">축소</button>
+        <button class="btn small danger" data-body-action="delete">선택 삭제</button>
+        <button class="btn small" id="saveStateBtn">상태 저장</button>
+        <button class="btn small" id="loadStateBtn">상태 복원</button>
+        <button class="btn small" id="copyStateBtn">JSON 복사</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><span>현재 장면 API</span></div>
+      <div class="chips" id="apiChips"></div>
+    </section>
+  </aside>
+</div>
+
+<div class="fatal" id="fatal">
+  <div class="fatal-card">
+    <h1>Matter.js를 불러오지 못했어</h1>
+    <p>이 단일 HTML은 Matter.js 0.20.0을 CDN에서 읽는다. 인터넷이 차단된 환경에서는 <code>matter.min.js</code>를 HTML과 같은 폴더에 놓고, 파일 하단의 CDN 주소를 <code>./matter.min.js</code>로 바꾸면 된다.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js" onerror="document.getElementById('fatal').style.display='grid'"></script>
+<script>
+(() => {
+  'use strict';
+  if (!window.Matter) {
+    document.getElementById('fatal').style.display = 'grid';
+    return;
+  }
+
+  const {
+    Engine, Render, Runner, Bodies, Body, Composite, Composites, Constraint,
+    Mouse, MouseConstraint, Events, Query, Sleeping, Vector, Common
+  } = Matter;
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const choice = arr => arr[Math.floor(Math.random() * arr.length)];
+  const fmt = (v, digits = 2) => Number.isFinite(v) ? v.toFixed(digits) : '-';
+
+  const palette = ['#60a5fa', '#5eead4', '#fbbf24', '#fb7185', '#c084fc', '#86efac', '#f97316'];
+  const state = {
+    sceneId: 'playground',
+    paused: false,
+    selectedBody: null,
+    currentBodies: [],
+    customUpdates: [],
+    customOverlays: [],
+    collisionPairs: 0,
+    collisionsTotal: 0,
+    lastRay: null,
+    savedState: null,
+    resizeTimer: null,
+    sensorInside: new Map(),
+    sceneData: {},
+    fps: 0,
+    lastFrame: performance.now(),
+    frameCounter: 0,
+    lastFpsUpdate: performance.now()
+  };
+
+  const stage = $('#stage');
+  const engine = Engine.create({ enableSleeping: true });
+  engine.gravity.x = 0;
+  engine.gravity.y = 1;
+  engine.gravity.scale = 0.001;
+
+  const render = Render.create({
+    element: stage,
+    engine,
+    options: {
+      width: Math.max(320, stage.clientWidth),
+      height: Math.max(320, stage.clientHeight),
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      background: 'transparent',
+      wireframes: false,
+      showSleeping: true,
+      showAngleIndicator: false,
+      showVelocity: false,
+      showCollisions: false,
+      showSeparations: false,
+      showBounds: false,
+      showAxes: false,
+      showPositions: false,
+      showIds: false
+    }
+  });
+
+  render.canvas.setAttribute('aria-label', 'Matter.js 물리 시뮬레이션 캔버스');
+  const runner = Runner.create({ delta: 1000 / 60 });
+  Render.run(render);
+  Runner.run(runner, engine);
+
+  const mouse = Mouse.create(render.canvas);
+  const mouseConstraint = MouseConstraint.create(engine, {
+    mouse,
+    constraint: {
+      stiffness: 0.18,
+      damping: 0.1,
+      render: { visible: true, strokeStyle: '#5eead4', lineWidth: 2 }
+    }
+  });
+  render.mouse = mouse;
+
+  function width() { return render.options.width; }
+  function height() { return render.options.height; }
+
+  function dynamicStyle(fill = choice(palette)) {
+    return {
+      fillStyle: fill,
+      strokeStyle: 'rgba(255,255,255,.55)',
+      lineWidth: 1
+    };
+  }
+
+  function mark(body, role = 'dynamic') {
+    body.plugin = body.plugin || {};
+    body.plugin.role = role;
+    state.currentBodies.push(body);
+    return body;
+  }
+
+  function addWalls(options = {}) {
+    const w = width(), h = height();
+    const thickness = 54;
+    const wallStyle = { fillStyle: '#14233a', strokeStyle: '#365171', lineWidth: 1 };
+    const walls = [
+      Bodies.rectangle(w / 2, h + thickness / 2 - 6, w + thickness * 2, thickness, { isStatic: true, label: '바닥', render: wallStyle }),
+      Bodies.rectangle(-thickness / 2 + 6, h / 2, thickness, h + thickness * 2, { isStatic: true, label: '왼쪽 벽', render: wallStyle }),
+      Bodies.rectangle(w + thickness / 2 - 6, h / 2, thickness, h + thickness * 2, { isStatic: true, label: '오른쪽 벽', render: wallStyle })
+    ];
+    if (options.ceiling) walls.push(Bodies.rectangle(w / 2, -thickness / 2 + 6, w + thickness * 2, thickness, { isStatic: true, label: '천장', render: wallStyle }));
+    walls.forEach(b => mark(b, 'boundary'));
+    Composite.add(engine.world, walls);
+    return walls;
+  }
+
+  function addRamp(x, y, w, h, angle) {
+    const ramp = Bodies.rectangle(x, y, w, h, {
+      isStatic: true,
+      angle,
+      label: '경사면',
+      friction: 0.9,
+      render: { fillStyle: '#253957', strokeStyle: '#4b6b91', lineWidth: 1 }
+    });
+    mark(ramp, 'static');
+    Composite.add(engine.world, ramp);
+    return ramp;
+  }
+
+  function bodyDefaults(extra = {}) {
+    return {
+      restitution: parseFloat($('#restitution').value),
+      friction: parseFloat($('#friction').value),
+      frictionAir: parseFloat($('#frictionAir').value),
+      density: parseFloat($('#density').value),
+      render: dynamicStyle(),
+      ...extra
+    };
+  }
+
+  function addRandomBody(x = rand(70, width() - 70), y = 25, type = choice(['circle', 'box', 'polygon']), extra = {}) {
+    const size = rand(18, 32);
+    let body;
+    const opts = bodyDefaults({ label: `사용자 ${type}`, ...extra });
+    if (type === 'circle') body = Bodies.circle(x, y, size, opts);
+    else if (type === 'box') body = Bodies.rectangle(x, y, size * 1.8, size * 1.25, { ...opts, chamfer: { radius: Math.min(8, size * .25) } });
+    else body = Bodies.polygon(x, y, Math.floor(rand(3, 8)), size, opts);
+    mark(body);
+    Composite.add(engine.world, body);
+    return body;
+  }
+
+  function addBurst() {
+    const cx = width() * .5, cy = 70;
+    for (let i = 0; i < 18; i++) {
+      const b = addRandomBody(cx + rand(-50, 50), cy + rand(-20, 20));
+      const angle = rand(0, Math.PI * 2);
+      Body.setVelocity(b, { x: Math.cos(angle) * rand(2, 8), y: Math.sin(angle) * rand(2, 5) - 4 });
+      Body.setAngularVelocity(b, rand(-0.18, 0.18));
+    }
+    addLog('ACTION', '18개 바디 폭발 투입');
+  }
+
+  function clearScene() {
+    state.selectedBody = null;
+    state.currentBodies = [];
+    state.customUpdates = [];
+    state.customOverlays = [];
+    state.sensorInside.clear();
+    state.sceneData = {};
+    state.lastRay = null;
+    Composite.clear(engine.world, false, true);
+    Engine.clear(engine);
+    Composite.add(engine.world, mouseConstraint);
+    mouseConstraint.body = null;
+    mouseConstraint.constraint.bodyB = null;
+    $('#eventLog').innerHTML = '';
+    updateInspector();
+  }
+
+  function createSensor(x, y, w, h, label = '센서') {
+    const sensor = Bodies.rectangle(x, y, w, h, {
+      isStatic: true,
+      isSensor: true,
+      label,
+      render: { fillStyle: 'rgba(94,234,212,.12)', strokeStyle: '#5eead4', lineWidth: 2 }
+    });
+    mark(sensor, 'sensor');
+    Composite.add(engine.world, sensor);
+    return sensor;
+  }
+
+  const scenes = [
+    {
+      id: 'playground', icon: '◉', name: '플레이그라운드', note: '종합 입문 장면',
+      description: '스택, 경사면, 진자, 시소, 센서와 마우스 제약조건을 동시에 체험한다.',
+      apis: ['Engine', 'Render', 'Runner', 'Bodies', 'Composite', 'Constraint', 'MouseConstraint', 'Events'],
+      build() {
+        addWalls();
+        addRamp(width() * .18, height() * .72, 230, 18, -0.25);
+        const stack = Composites.stack(width() * .57, 55, 5, 3, 5, 5, (x, y, col, row) => {
+          const b = row % 2 ? Bodies.circle(x, y, 19, bodyDefaults({ label: '스택 원' })) : Bodies.rectangle(x, y, 38, 38, bodyDefaults({ label: '스택 상자', chamfer: { radius: 6 } }));
+          mark(b); return b;
+        });
+        Composite.add(engine.world, stack);
+
+        const pendulum = mark(Bodies.circle(width() * .28, height() * .2, 27, bodyDefaults({ label: '진자', density: .006, restitution: .8 })));
+        const rope = Constraint.create({ pointA: { x: width() * .28, y: 26 }, bodyB: pendulum, length: Math.min(180, height() * .28), stiffness: .92, render: { strokeStyle: '#a7f3d0', lineWidth: 2 } });
+        Composite.add(engine.world, [pendulum, rope]);
+
+        const plank = mark(Bodies.rectangle(width() * .52, height() * .72, 220, 16, { label: '시소', density: .004, chamfer: { radius: 7 }, render: dynamicStyle('#fbbf24') }));
+        const fulcrum = Constraint.create({ pointA: { x: width() * .52, y: height() * .72 }, bodyB: plank, stiffness: 1, length: 0, render: { visible: true, strokeStyle: '#fef3c7' } });
+        Composite.add(engine.world, [plank, fulcrum]);
+        createSensor(width() * .82, height() - 85, 100, 24, '점수 센서');
+      }
+    },
+    {
+      id: 'materials', icon: '◌', name: '재질 비교', note: '마찰·반발·공기저항',
+      description: '서로 다른 restitution, friction, frictionAir 값을 가진 바디의 운동을 비교한다.',
+      apis: ['Bodies.circle', 'Body.setVelocity', 'restitution', 'friction', 'frictionAir', 'density'],
+      build() {
+        addWalls();
+        addRamp(width() * .5, height() * .22, width() * .72, 14, .07);
+        const configs = [
+          { x: .22, r: 0.05, f: .8, air: .002, color: '#94a3b8', label: '점토형' },
+          { x: .42, r: .4, f: .25, air: .008, color: '#60a5fa', label: '보통형' },
+          { x: .62, r: .85, f: .08, air: .002, color: '#5eead4', label: '고무형' },
+          { x: .82, r: 1.15, f: .02, air: .045, color: '#fb7185', label: '풍선형' }
+        ];
+        configs.forEach((c, idx) => {
+          for (let i = 0; i < 5; i++) {
+            const b = mark(Bodies.circle(width() * c.x + rand(-8, 8), 55 - i * 42, 20, {
+              label: c.label,
+              restitution: c.r, friction: c.f, frictionAir: c.air,
+              density: idx === 3 ? .0008 : .003,
+              render: dynamicStyle(c.color)
+            }));
+            Composite.add(engine.world, b);
+          }
+        });
+      }
+    },
+    {
+      id: 'newton', icon: '◍', name: '뉴턴 크래들', note: '운동량 전달',
+      description: 'Composites.newtonsCradle과 고강성 Constraint로 충돌 에너지 전달을 관찰한다.',
+      apis: ['Composites.newtonsCradle', 'Constraint', 'Body.translate', 'Body.setVelocity'],
+      build() {
+        addWalls();
+        const size = clamp(width() / 45, 18, 28);
+        const cradle = Composites.newtonsCradle(width() * .25, 45, 7, size, Math.min(180, height() * .32));
+        cradle.bodies.forEach((b, i) => { mark(b); b.label = `크래들 구슬 ${i + 1}`; b.render = dynamicStyle(i % 2 ? '#60a5fa' : '#5eead4'); });
+        Composite.add(engine.world, cradle);
+        const first = cradle.bodies[0];
+        Body.translate(first, { x: -110, y: -60 });
+        const second = Composites.newtonsCradle(width() * .42, height() * .52, 5, size * .78, Math.min(120, height() * .2));
+        second.bodies.forEach((b, i) => { mark(b); b.label = `소형 크래들 ${i + 1}`; b.render = dynamicStyle('#c084fc'); });
+        Composite.add(engine.world, second);
+        Body.translate(second.bodies[second.bodies.length - 1], { x: 85, y: -45 });
+      }
+    },
+    {
+      id: 'bridge', icon: '⌁', name: '현수교', note: '체인 제약조건',
+      description: '여러 직사각형을 Composites.chain으로 연결하고 양 끝을 고정한 유연한 다리다.',
+      apis: ['Composites.stack', 'Composites.chain', 'Constraint', 'Composite.add'],
+      build() {
+        addWalls();
+        const count = clamp(Math.floor(width() / 58), 9, 18);
+        const bridge = Composites.stack(width() * .12, height() * .38, count, 1, 2, 0, (x, y) => {
+          const b = Bodies.rectangle(x, y, 48, 16, { density: .005, friction: .8, chamfer: { radius: 5 }, label: '교량 데크', render: dynamicStyle('#60a5fa') });
+          mark(b); return b;
+        });
+        Composites.chain(bridge, .5, 0, -.5, 0, { stiffness: .82, length: 2, render: { strokeStyle: '#bfdbfe', lineWidth: 2 } });
+        const first = bridge.bodies[0], last = bridge.bodies[bridge.bodies.length - 1];
+        Composite.add(engine.world, [bridge,
+          Constraint.create({ pointA: { x: first.position.x - 25, y: first.position.y }, bodyB: first, pointB: { x: -25, y: 0 }, stiffness: .95, render: { strokeStyle: '#5eead4' } }),
+          Constraint.create({ pointA: { x: last.position.x + 25, y: last.position.y }, bodyB: last, pointB: { x: 25, y: 0 }, stiffness: .95, render: { strokeStyle: '#5eead4' } })
+        ]);
+        for (let i = 0; i < 12; i++) addRandomBody(width() * .3 + i * 28, 60 - i * 12, i % 3 === 0 ? 'circle' : 'box', { restitution: .25, density: .003 });
+      }
+    },
+    {
+      id: 'chain', icon: '⛓', name: '체인·진자', note: '다중 관절',
+      description: '링크 체인, 추, 이중 진자와 감쇠를 조합한 제약조건 장면이다.',
+      apis: ['Composites.chain', 'Constraint.create', 'stiffness', 'damping', 'angularStiffness'],
+      build() {
+        addWalls();
+        const chainGroup = Body.nextGroup(true);
+        const chain = Composites.stack(width() * .28, 55, 12, 1, 2, 0, (x, y) => {
+          const link = Bodies.rectangle(x, y, 34, 12, { density: .004, collisionFilter: { group: chainGroup }, chamfer: { radius: 6 }, label: '체인 링크', render: dynamicStyle('#5eead4') });
+          mark(link); return link;
+        });
+        Composites.chain(chain, .48, 0, -.48, 0, { stiffness: .86, damping: .04, length: 2, render: { strokeStyle: '#99f6e4', lineWidth: 2 } });
+        const anchor = Constraint.create({ pointA: { x: chain.bodies[0].position.x - 18, y: chain.bodies[0].position.y }, bodyB: chain.bodies[0], pointB: { x: -18, y: 0 }, stiffness: 1, render: { strokeStyle: '#f8fafc' } });
+        const weight = mark(Bodies.circle(chain.bodies.at(-1).position.x + 30, chain.bodies.at(-1).position.y, 35, { density: .012, label: '체인 추', render: dynamicStyle('#fbbf24') }));
+        const end = Constraint.create({ bodyA: chain.bodies.at(-1), pointA: { x: 17, y: 0 }, bodyB: weight, length: 28, stiffness: .9, render: { strokeStyle: '#fde68a' } });
+        Composite.add(engine.world, [chain, anchor, weight, end]);
+
+        const p1 = mark(Bodies.circle(width() * .72, height() * .26, 22, { density: .008, label: '이중 진자 1', render: dynamicStyle('#c084fc') }));
+        const p2 = mark(Bodies.circle(width() * .72, height() * .51, 27, { density: .01, label: '이중 진자 2', render: dynamicStyle('#fb7185') }));
+        Composite.add(engine.world, [p1, p2,
+          Constraint.create({ pointA: { x: width() * .72, y: 28 }, bodyB: p1, length: height() * .22, stiffness: 1, damping: .015 }),
+          Constraint.create({ bodyA: p1, bodyB: p2, length: height() * .23, stiffness: 1, damping: .015 })
+        ]);
+        Body.setVelocity(p2, { x: 8, y: 0 });
+      }
+    },
+    {
+      id: 'car', icon: '▣', name: '자동차', note: '복합체·바퀴',
+      description: 'Composites.car가 차체와 회전 바퀴를 축 제약조건으로 결합한다.',
+      apis: ['Composites.car', 'Composite', 'Constraint', 'Body.applyForce', 'friction'],
+      build() {
+        addWalls();
+        addRamp(width() * .38, height() * .67, width() * .48, 18, .12);
+        addRamp(width() * .79, height() * .58, width() * .28, 18, -.16);
+        for (let i = 0; i < 6; i++) {
+          const step = Bodies.rectangle(width() * .84 + i * 22, height() - 30 - i * 16, 44, 16, { isStatic: true, label: '계단', render: { fillStyle: '#253957' } });
+          mark(step, 'static'); Composite.add(engine.world, step);
+        }
+        const car = Composites.car(105, height() * .34, 120, 28, 22);
+        car.bodies.forEach((b, i) => { mark(b); b.label = i === 0 ? '자동차 차체' : `자동차 바퀴 ${i}`; b.render = dynamicStyle(i === 0 ? '#fb7185' : '#111827'); });
+        state.sceneData.car = car;
+        Composite.add(engine.world, car);
+        state.customUpdates.push(() => {
+          if (state.sceneData.car && !state.paused && state.sceneData.drive) {
+            state.sceneData.car.bodies.slice(1).forEach(wheel => Body.setAngularVelocity(wheel, .22 * state.sceneData.drive));
+          }
+        });
+        state.sceneData.drive = 1;
+      }
+    },
+    {
+      id: 'catapult', icon: '↗', name: '투석기', note: '회전축·충격량',
+      description: '피벗 Constraint, 무거운 추, 발사체를 이용해 레버 운동을 만든다.',
+      apis: ['Constraint', 'Body.setMass', 'Body.applyForce', 'Body.setAngularVelocity'],
+      build() {
+        addWalls();
+        const baseX = width() * .42, baseY = height() * .68;
+        const arm = mark(Bodies.rectangle(baseX, baseY, 290, 18, { density: .005, label: '투석기 팔', chamfer: { radius: 8 }, render: dynamicStyle('#fbbf24') }));
+        const pivot = Constraint.create({ pointA: { x: baseX - 30, y: baseY }, bodyB: arm, pointB: { x: -30, y: 0 }, length: 0, stiffness: 1, render: { strokeStyle: '#fef3c7', lineWidth: 3 } });
+        const counter = mark(Bodies.rectangle(baseX - 132, baseY - 30, 62, 62, { density: .025, label: '무거운 추', render: dynamicStyle('#64748b') }));
+        const counterLink = Constraint.create({ bodyA: arm, pointA: { x: -125, y: 0 }, bodyB: counter, length: 15, stiffness: .9 });
+        const projectile = mark(Bodies.circle(baseX + 116, baseY - 30, 23, { restitution: .72, density: .004, label: '투석기 발사체', render: dynamicStyle('#fb7185') }));
+        const stop = Bodies.rectangle(baseX - 44, baseY + 72, 24, 90, { isStatic: true, angle: -.12, label: '투석기 받침', render: { fillStyle: '#253957' } });
+        mark(stop, 'static');
+        Composite.add(engine.world, [arm, pivot, counter, counterLink, projectile, stop]);
+        state.sceneData.projectile = projectile;
+        setTimeout(() => {
+          if (state.sceneId === 'catapult' && Composite.get(engine.world, counter.id, 'body')) Body.applyForce(counter, counter.position, { x: 0, y: .08 });
+        }, 450);
+      }
+    },
+    {
+      id: 'slingshot', icon: '⌇', name: '슬링샷', note: '탄성 제약조건',
+      description: '낮은 stiffness의 고무줄 Constraint가 발사체를 원점으로 당긴다. 직접 끌어 놓아 발사한다.',
+      apis: ['Constraint.create', 'stiffness', 'MouseConstraint', 'Events.afterUpdate', 'Body.setPosition'],
+      build() {
+        addWalls();
+        addRamp(width() * .62, height() * .68, width() * .42, 18, -.12);
+        const anchor = { x: width() * .25, y: height() * .46 };
+        let projectile = mark(Bodies.polygon(anchor.x, anchor.y, 8, 26, { density: .005, restitution: .8, label: '슬링샷 탄환', render: dynamicStyle('#fb7185') }));
+        const elastic = Constraint.create({ pointA: anchor, bodyB: projectile, stiffness: .045, damping: .008, length: 0, render: { strokeStyle: '#fda4af', lineWidth: 4 } });
+        Composite.add(engine.world, [projectile, elastic]);
+        state.sceneData.elastic = elastic;
+        state.customUpdates.push(() => {
+          const p = elastic.bodyB;
+          if (!p) return;
+          if (p.position.x > width() * .72 || p.position.y > height() - 45) {
+            const speed = Vector.magnitude(p.velocity);
+            if (speed < 2.2) {
+              const next = mark(Bodies.polygon(anchor.x, anchor.y, 8, 26, { density: .005, restitution: .8, label: '슬링샷 탄환', render: dynamicStyle(choice(palette)) }));
+              Composite.add(engine.world, next);
+              elastic.bodyB = next;
+            }
+          }
+        });
+        for (let i = 0; i < 10; i++) {
+          const b = mark(Bodies.rectangle(width() * .72 + (i % 3) * 33, height() * .56 - Math.floor(i / 3) * 34, 30, 30, { density: .002, restitution: .25, label: '슬링샷 표적', chamfer: { radius: 4 }, render: dynamicStyle('#60a5fa') }));
+          Composite.add(engine.world, b);
+        }
+      }
+    },
+    {
+      id: 'domino', icon: '▥', name: '도미노', note: '연쇄 충돌',
+      description: '마찰과 관성모멘트가 연속적인 넘어짐을 전달하는 연쇄 반응 장면이다.',
+      apis: ['Bodies.rectangle', 'inertia', 'friction', 'collisionStart', 'Body.setVelocity'],
+      build() {
+        addWalls();
+        const y = height() - 54;
+        const count = clamp(Math.floor(width() / 34), 16, 34);
+        for (let i = 0; i < count; i++) {
+          const x = 55 + i * ((width() - 110) / (count - 1));
+          const rise = Math.sin(i * .43) * 25;
+          const d = mark(Bodies.rectangle(x, y + rise, 12, 72, { density: .004, friction: .45, frictionStatic: .7, restitution: .05, label: `도미노 ${i + 1}`, chamfer: { radius: 3 }, render: dynamicStyle(i % 2 ? '#60a5fa' : '#5eead4') }));
+          Composite.add(engine.world, d);
+        }
+        const ball = mark(Bodies.circle(24, y - 40, 22, { density: .012, restitution: .2, label: '도미노 시작 공', render: dynamicStyle('#fb7185') }));
+        Composite.add(engine.world, ball);
+        Body.setVelocity(ball, { x: 7.5, y: 0 });
+      }
+    },
+    {
+      id: 'softbody', icon: '▦', name: '소프트바디', note: '탄성 격자',
+      description: '입자들을 가로·세로·대각선 Constraint로 묶어 천이나 젤리처럼 변형시킨다.',
+      apis: ['Composites.softBody', 'Composites.mesh', 'Constraint', 'crossBrace', 'damping'],
+      build() {
+        addWalls();
+        const columns = clamp(Math.floor(width() / 90), 6, 10);
+        const rows = clamp(Math.floor(height() / 90), 4, 7);
+        const soft = Composites.softBody(width() * .18, 70, columns, rows, 4, 4, true, 12, {
+          friction: .08, frictionAir: .018, restitution: .25, density: .0015,
+          label: '소프트 입자', render: dynamicStyle('#5eead4')
+        }, {
+          stiffness: .25, damping: .06, render: { strokeStyle: 'rgba(94,234,212,.58)', lineWidth: 1 }
+        });
+        soft.bodies.forEach(b => mark(b));
+        Composite.add(engine.world, soft);
+        addRamp(width() * .68, height() * .58, width() * .44, 20, -.16);
+        for (let i = 0; i < 8; i++) addRandomBody(width() * .68 + rand(-70, 70), 40 - i * 18, i % 2 ? 'circle' : 'polygon', { restitution: .5 });
+      }
+    },
+    {
+      id: 'filters', icon: '⊘', name: '충돌 필터', note: 'category·mask·group',
+      description: 'category와 mask가 맞는 바디만 충돌한다. 같은 색상의 레인에서 통과 여부를 비교한다.',
+      apis: ['Body.nextCategory', 'Body.nextGroup', 'collisionFilter.category', 'collisionFilter.mask', 'collisionFilter.group'],
+      build() {
+        addWalls();
+        const defaultCategory = 0x0001, catA = 0x0002, catB = 0x0004, catC = 0x0008;
+        const lanes = [
+          { x: .25, cat: catA, mask: defaultCategory | catA, color: '#60a5fa', label: 'A 전용' },
+          { x: .5, cat: catB, mask: defaultCategory | catA | catB, color: '#5eead4', label: 'A+B' },
+          { x: .75, cat: catC, mask: defaultCategory, gateMask: 0, color: '#fb7185', label: '게이트 통과' }
+        ];
+        lanes.forEach((lane, idx) => {
+          const gate = Bodies.rectangle(width() * lane.x, height() * .52, width() * .19, 18, { isStatic: true, label: `${lane.label} 게이트`, collisionFilter: { category: lane.cat, mask: lane.gateMask ?? lane.mask }, render: { fillStyle: lane.color, strokeStyle: '#fff', lineWidth: 1 } });
+          mark(gate, 'static'); Composite.add(engine.world, gate);
+          for (let i = 0; i < 8; i++) {
+            const b = mark(Bodies.circle(width() * lane.x + rand(-35, 35), 35 - i * 38, 17, {
+              label: lane.label, restitution: .55,
+              collisionFilter: { category: lane.cat, mask: lane.mask }, render: dynamicStyle(lane.color)
+            }));
+            Composite.add(engine.world, b);
+          }
+        });
+      }
+    },
+    {
+      id: 'sensors', icon: '◎', name: '센서·이벤트', note: '비물리 충돌 감지',
+      description: 'isSensor 바디는 밀어내지 않고 겹침만 감지한다. 진입·이탈 이벤트가 로그에 기록된다.',
+      apis: ['isSensor', 'Events.collisionStart', 'Events.collisionActive', 'Events.collisionEnd', 'pair.isSensor'],
+      build() {
+        addWalls();
+        const colors = ['#5eead4', '#fbbf24', '#fb7185'];
+        [0.25, 0.5, 0.75].forEach((x, i) => {
+          const sensor = createSensor(width() * x, height() * (.42 + i * .1), width() * .18, 44, `센서 ${i + 1}`);
+          sensor.render.fillStyle = `${colors[i]}22`;
+          sensor.render.strokeStyle = colors[i];
+        });
+        addRamp(width() * .5, height() * .25, width() * .8, 16, .08);
+        for (let i = 0; i < 28; i++) addRandomBody(rand(60, width() - 60), -i * 28, i % 3 === 0 ? 'polygon' : 'circle', { restitution: .55, frictionAir: .006 });
+      }
+    },
+    {
+      id: 'compound', icon: '◈', name: '복합 바디', note: 'parts·fromVertices',
+      description: '여러 기본 바디를 Body.create(parts)로 하나의 강체처럼 결합한다.',
+      apis: ['Body.create', 'parts', 'Bodies.fromVertices', 'Body.scale', 'Body.rotate'],
+      build() {
+        addWalls();
+        addRamp(width() * .5, height() * .72, width() * .76, 18, -.08);
+        for (let i = 0; i < 5; i++) {
+          const x = width() * (.2 + i * .15), y = 70 - i * 55;
+          const left = Bodies.circle(x - 28, y, 24, { render: dynamicStyle('#60a5fa') });
+          const bar = Bodies.rectangle(x, y, 70, 18, { render: dynamicStyle('#5eead4') });
+          const right = Bodies.circle(x + 28, y, 24, { render: dynamicStyle('#fb7185') });
+          const compound = mark(Body.create({ parts: [left, bar, right], density: .004, restitution: .5, friction: .25, label: '덤벨 복합 바디' }));
+          Composite.add(engine.world, compound);
+        }
+        const verts = [{ x: -35, y: -8 }, { x: -18, y: -32 }, { x: 12, y: -38 }, { x: 36, y: -14 }, { x: 31, y: 20 }, { x: 6, y: 38 }, { x: -26, y: 29 }];
+        for (let i = 0; i < 5; i++) {
+          const star = Bodies.fromVertices(width() * .28 + i * 90, 45 - i * 32, [verts], { restitution: .7, density: .002, label: '사용자 정의 볼록 다각형', render: dynamicStyle('#fbbf24') }, true);
+          const body = Array.isArray(star) ? star[0] : star;
+          mark(body); Composite.add(engine.world, body);
+        }
+      }
+    },
+    {
+      id: 'gravity', icon: '✧', name: '무중력 인력장', note: '사용자 정의 힘',
+      description: '기본 중력을 끄고 매 프레임 중심 방향으로 Body.applyForce를 적용한다.',
+      apis: ['engine.gravity', 'Events.beforeUpdate', 'Body.applyForce', 'Vector.sub', 'Vector.normalise'],
+      build() {
+        addWalls({ ceiling: true });
+        engine.gravity.x = 0; engine.gravity.y = 0;
+        syncGravityUI();
+        const center = { x: width() / 2, y: height() / 2 };
+        const core = Bodies.circle(center.x, center.y, 34, { isStatic: true, isSensor: true, label: '중력 코어', render: { fillStyle: '#fbbf24', strokeStyle: '#fff7cc', lineWidth: 3 } });
+        mark(core, 'sensor'); Composite.add(engine.world, core);
+        for (let i = 0; i < 42; i++) {
+          const angle = (i / 42) * Math.PI * 2;
+          const radius = rand(100, Math.min(width(), height()) * .43);
+          const b = addRandomBody(center.x + Math.cos(angle) * radius, center.y + Math.sin(angle) * radius, i % 3 === 0 ? 'box' : 'circle', { frictionAir: .001, restitution: .9, density: .0015 });
+          Body.setVelocity(b, { x: -Math.sin(angle) * rand(1.5, 4.2), y: Math.cos(angle) * rand(1.5, 4.2) });
+        }
+        state.customUpdates.push(() => {
+          for (const b of Composite.allBodies(engine.world)) {
+            if (b.isStatic || b === core) continue;
+            const delta = Vector.sub(center, b.position);
+            const distSq = Math.max(2500, Vector.magnitudeSquared(delta));
+            const dir = Vector.normalise(delta);
+            const force = Math.min(.0012, (b.mass * 18) / distSq);
+            Body.applyForce(b, b.position, Vector.mult(dir, force));
+          }
+        });
+      }
+    },
+    {
+      id: 'stress', icon: '▧', name: '스트레스 테스트', note: '다수 바디·수면',
+      description: '수백 개의 혼합 바디로 충돌 해석, broadphase, sleeping 성능을 확인한다.',
+      apis: ['Engine.enableSleeping', 'Composite.allBodies', 'Runner', 'Render', 'Sleeping'],
+      build() {
+        addWalls();
+        const cols = clamp(Math.floor(width() / 31), 16, 34);
+        const rows = clamp(Math.floor(height() / 38), 10, 20);
+        const pile = Composites.stack(25, -rows * 24, cols, rows, 1, 1, (x, y, col, row) => {
+          let b;
+          const opts = { restitution: .2, friction: .12, frictionAir: .002, density: .0015, label: '스트레스 바디', render: dynamicStyle(palette[(col + row) % palette.length]) };
+          if ((col + row) % 4 === 0) b = Bodies.circle(x, y, 10, opts);
+          else if ((col + row) % 4 === 1) b = Bodies.polygon(x, y, 5, 11, opts);
+          else b = Bodies.rectangle(x, y, 20, 20, { ...opts, chamfer: { radius: 3 } });
+          mark(b); return b;
+        });
+        Composite.add(engine.world, pile);
+      }
+    }
+  ];
+
+  function setScene(id, preserveGravity = false) {
+    const scene = scenes.find(s => s.id === id) || scenes[0];
+    state.sceneId = scene.id;
+    clearScene();
+    if (!preserveGravity && scene.id !== 'gravity') {
+      engine.gravity.x = parseFloat($('#gravityX').value);
+      engine.gravity.y = parseFloat($('#gravityY').value);
+    }
+    scene.build();
+    $$('.scene-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.scene === scene.id));
+    $('#sceneTitle').textContent = scene.name;
+    $('#sceneDescription').textContent = scene.description;
+    $('#apiChips').innerHTML = scene.apis.map(api => `<span class="chip">${api}</span>`).join('');
+    addLog('SCENE', `${scene.name} 장면 생성`);
+    updateMetrics();
+    if (window.innerWidth <= 760) $('#sidebar').classList.remove('open');
+  }
+
+  function renderSceneButtons() {
+    $('#sceneGrid').innerHTML = scenes.map(scene => `
+      <button class="scene-btn ${scene.id === state.sceneId ? 'active' : ''}" data-scene="${scene.id}">
+        <span class="scene-icon">${scene.icon}</span>
+        <span><span class="scene-name">${scene.name}</span><span class="scene-note">${scene.note}</span></span>
+      </button>`).join('');
+    $('#sceneCount').textContent = scenes.length;
+  }
+
+  function addLog(type, message, level = '') {
+    const now = new Date();
+    const row = document.createElement('div');
+    row.className = `log-row ${level}`;
+    row.innerHTML = `<span class="log-time">${now.toLocaleTimeString('ko-KR', { hour12: false })}</span><span class="log-type">${type}</span><span>${escapeHtml(message)}</span>`;
+    const log = $('#eventLog');
+    log.appendChild(row);
+    while (log.children.length > 60) log.removeChild(log.firstChild);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+  }
+
+  function selectAt(point) {
+    const hits = Query.point(Composite.allBodies(engine.world), point).filter(b => b.plugin?.role !== 'boundary');
+    state.selectedBody = hits[0] || null;
+    updateInspector();
+    if (state.selectedBody) addLog('SELECT', `${state.selectedBody.label} #${state.selectedBody.id}`);
+  }
+
+  function updateInspector() {
+    const box = $('#bodyInspector');
+    const b = state.selectedBody;
+    if (!b || !Composite.get(engine.world, b.id, 'body')) {
+      state.selectedBody = null;
+      box.innerHTML = '<div class="inspector-empty">캔버스의 바디를 클릭하면 속성과 조작 버튼이 표시된다.</div>';
+      return;
+    }
+    box.innerHTML = [
+      ['라벨', b.label], ['ID', b.id], ['위치', `${fmt(b.position.x, 1)}, ${fmt(b.position.y, 1)}`],
+      ['속도', `${fmt(b.velocity.x, 2)}, ${fmt(b.velocity.y, 2)}`], ['속력', fmt(b.speed, 3)],
+      ['각도', `${fmt(b.angle * 180 / Math.PI, 1)}°`], ['각속도', fmt(b.angularVelocity, 4)],
+      ['질량', b.isStatic ? '∞ (정적)' : fmt(b.mass, 4)], ['밀도', fmt(b.density, 5)],
+      ['면적', fmt(b.area, 1)], ['반발', fmt(b.restitution, 2)], ['마찰', fmt(b.friction, 2)],
+      ['센서', b.isSensor ? '예' : '아니오'], ['수면', b.isSleeping ? '예' : '아니오'], ['parts', b.parts.length]
+    ].map(([k, v]) => `<div class="kv"><span>${k}</span><span>${escapeHtml(v)}</span></div>`).join('');
+  }
+
+  function actOnBody(action) {
+    const b = state.selectedBody;
+    if (!b || !Composite.get(engine.world, b.id, 'body')) return addLog('WARN', '선택된 바디가 없음', 'warn');
+    const force = Math.max(.0008, Math.min(.02, (b.mass || 1) * .0014));
+    if (action === 'forceLeft') Body.applyForce(b, b.position, { x: -force, y: 0 });
+    if (action === 'forceRight') Body.applyForce(b, b.position, { x: force, y: 0 });
+    if (action === 'jump') Body.applyForce(b, b.position, { x: 0, y: -force * 1.5 });
+    if (action === 'torque') Body.setAngularVelocity(b, b.angularVelocity + .18);
+    if (action === 'static') Body.setStatic(b, !b.isStatic);
+    if (action === 'sleep') Sleeping.set(b, !b.isSleeping);
+    if (action === 'scaleUp') Body.scale(b, 1.15, 1.15);
+    if (action === 'scaleDown') Body.scale(b, .87, .87);
+    if (action === 'delete') { Composite.remove(engine.world, b); state.selectedBody = null; }
+    updateInspector();
+    addLog('BODY', `${action} → ${b.label}`);
+  }
+
+  function removeDynamicBodies() {
+    const bodies = Composite.allBodies(engine.world).filter(b => !b.isStatic && b.plugin?.role !== 'sensor');
+    Composite.remove(engine.world, bodies);
+    state.selectedBody = null;
+    updateInspector();
+    addLog('CLEAR', `${bodies.length}개 동적 바디 제거`);
+  }
+
+  function saveWorldState() {
+    const bodies = Composite.allBodies(engine.world).filter(b => b.plugin?.role !== 'boundary').map(b => ({
+      id: b.id, label: b.label, x: b.position.x, y: b.position.y, angle: b.angle,
+      vx: b.velocity.x, vy: b.velocity.y, av: b.angularVelocity,
+      isStatic: b.isStatic, isSleeping: b.isSleeping
+    }));
+    state.savedState = { sceneId: state.sceneId, bodies, gravity: { x: engine.gravity.x, y: engine.gravity.y }, timeScale: engine.timing.timeScale };
+    try { localStorage.setItem('matterLabState', JSON.stringify(state.savedState)); }
+    catch (_) { addLog('WARN', '브라우저 저장소 접근 불가: 메모리에만 저장', 'warn'); }
+    addLog('SAVE', `${bodies.length}개 바디 상태 저장`);
+  }
+
+  function loadWorldState() {
+    try {
+      const saved = state.savedState || JSON.parse(localStorage.getItem('matterLabState') || 'null');
+      if (!saved) throw new Error('저장 상태 없음');
+      setScene(saved.sceneId);
+      engine.gravity.x = saved.gravity.x; engine.gravity.y = saved.gravity.y; engine.timing.timeScale = saved.timeScale;
+      const live = Composite.allBodies(engine.world).filter(b => b.plugin?.role !== 'boundary');
+      saved.bodies.forEach((s, i) => {
+        const b = live.find(x => x.label === s.label && !x.__restored) || live[i];
+        if (!b) return;
+        b.__restored = true;
+        Body.setStatic(b, s.isStatic);
+        Body.setPosition(b, { x: s.x, y: s.y });
+        Body.setAngle(b, s.angle);
+        Body.setVelocity(b, { x: s.vx, y: s.vy });
+        Body.setAngularVelocity(b, s.av);
+        Sleeping.set(b, s.isSleeping);
+      });
+      live.forEach(b => delete b.__restored);
+      syncGravityUI();
+      $('#timeScale').value = engine.timing.timeScale;
+      $('#timeScaleVal').textContent = `${engine.timing.timeScale.toFixed(1)}×`;
+      addLog('LOAD', '저장 상태 복원 완료');
+    } catch (err) { addLog('ERROR', err.message, 'danger'); }
+  }
+
+  async function copyState() {
+    const data = {
+      scene: state.sceneId,
+      gravity: engine.gravity,
+      bodies: Composite.allBodies(engine.world).map(b => ({ label: b.label, position: b.position, velocity: b.velocity, angle: b.angle, isStatic: b.isStatic }))
+    };
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      addLog('COPY', '현재 월드 JSON을 클립보드에 복사');
+    } catch (_) {
+      addLog('WARN', '클립보드 접근 불가', 'warn');
+    }
+  }
+
+  function castRay() {
+    const start = { x: 20, y: rand(70, height() - 70) };
+    const end = { x: width() - 20, y: rand(70, height() - 70) };
+    const hits = Query.ray(Composite.allBodies(engine.world), start, end, 5);
+    state.lastRay = { start, end, hits, expires: performance.now() + 1800 };
+    hits.forEach(hit => {
+      const b = hit.body || hit.bodyA;
+      if (b && !b.isStatic) Body.applyForce(b, hit.supports?.[0] || b.position, { x: .0008 * b.mass, y: -.0003 * b.mass });
+    });
+    addLog('RAY', `${hits.length}개 충돌 후보 감지`);
+  }
+
+  function resizeRender() {
+    const w = Math.max(320, stage.clientWidth);
+    const h = Math.max(300, stage.clientHeight);
+    render.options.width = w;
+    render.options.height = h;
+    render.canvas.style.width = `${w}px`;
+    render.canvas.style.height = `${h}px`;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    Render.setPixelRatio(render, ratio);
+    Mouse.setScale(mouse, { x: 1, y: 1 });
+    Mouse.setOffset(mouse, { x: 0, y: 0 });
+    clearTimeout(state.resizeTimer);
+    state.resizeTimer = setTimeout(() => setScene(state.sceneId), 180);
+  }
+
+  function syncGravityUI() {
+    $('#gravityX').value = clamp(engine.gravity.x, -1, 1);
+    $('#gravityY').value = clamp(engine.gravity.y, -1, 1);
+    $('#gravityXVal').textContent = engine.gravity.x.toFixed(2);
+    $('#gravityYVal').textContent = engine.gravity.y.toFixed(2);
+  }
+
+  function updateMetrics() {
+    $('#bodyValue').textContent = Composite.allBodies(engine.world).length;
+    $('#pairValue').textContent = state.collisionPairs;
+    $('#fpsValue').textContent = Math.round(state.fps);
+  }
+
+  function drawOverlay() {
+    const ctx = render.context;
+    const ratio = render.options.pixelRatio || 1;
+    ctx.save();
+    ctx.scale(ratio, ratio);
+
+    const b = state.selectedBody;
+    if (b && Composite.get(engine.world, b.id, 'body')) {
+      ctx.beginPath();
+      const vertices = b.vertices;
+      ctx.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+      ctx.closePath();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.setLineDash([7, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(8,17,31,.82)';
+      ctx.fillRect(b.position.x + 12, b.position.y - 27, Math.max(70, b.label.length * 9), 22);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '11px system-ui';
+      ctx.fillText(`${b.label} #${b.id}`, b.position.x + 18, b.position.y - 12);
+    }
+
+    if (state.lastRay && state.lastRay.expires > performance.now()) {
+      const ray = state.lastRay;
+      ctx.beginPath(); ctx.moveTo(ray.start.x, ray.start.y); ctx.lineTo(ray.end.x, ray.end.y);
+      ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3; ctx.setLineDash([10, 6]); ctx.stroke(); ctx.setLineDash([]);
+      ray.hits.forEach(hit => {
+        const p = hit.supports?.[0] || (hit.body || hit.bodyA)?.position;
+        if (!p) return;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fillStyle = '#fb7185'; ctx.fill();
+      });
+    }
+
+    for (const overlay of state.customOverlays) overlay(ctx);
+    ctx.restore();
+  }
+
+  Events.on(engine, 'beforeUpdate', () => {
+    for (const fn of state.customUpdates) fn();
+  });
+
+  Events.on(engine, 'collisionStart', event => {
+    state.collisionsTotal += event.pairs.length;
+    state.collisionPairs = engine.pairs.list.length;
+    for (const pair of event.pairs) {
+      const a = pair.bodyA, b = pair.bodyB;
+      const sensor = a.isSensor ? a : b.isSensor ? b : null;
+      const other = sensor === a ? b : a;
+      if (sensor) {
+        const key = `${sensor.id}:${other.id}`;
+        state.sensorInside.set(key, true);
+        addLog('SENSOR+', `${other.label} → ${sensor.label}`);
+      }
+    }
+  });
+
+  Events.on(engine, 'collisionActive', () => {
+    state.collisionPairs = engine.pairs.list.filter(p => p.isActive).length;
+  });
+
+  Events.on(engine, 'collisionEnd', event => {
+    for (const pair of event.pairs) {
+      const a = pair.bodyA, b = pair.bodyB;
+      const sensor = a.isSensor ? a : b.isSensor ? b : null;
+      const other = sensor === a ? b : a;
+      if (sensor) {
+        const key = `${sensor.id}:${other.id}`;
+        state.sensorInside.delete(key);
+        addLog('SENSOR−', `${other.label} ← ${sensor.label}`);
+      }
+    }
+  });
+
+  Events.on(render, 'afterRender', drawOverlay);
+
+  Events.on(mouseConstraint, 'mousedown', event => selectAt(event.mouse.position));
+  Events.on(mouseConstraint, 'startdrag', event => {
+    state.selectedBody = event.body;
+    updateInspector();
+    addLog('DRAG', `${event.body.label} 드래그 시작`);
+  });
+  Events.on(mouseConstraint, 'enddrag', event => addLog('DROP', `${event.body.label} 드래그 종료`));
+
+  render.canvas.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    const rect = render.canvas.getBoundingClientRect();
+    const point = { x: (event.clientX - rect.left) * width() / rect.width, y: (event.clientY - rect.top) * height() / rect.height };
+    const body = Query.point(Composite.allBodies(engine.world), point).find(b => !b.isStatic);
+    if (body) { Composite.remove(engine.world, body); addLog('DELETE', `${body.label} 우클릭 삭제`); }
+  });
+
+  renderSceneButtons();
+  $('#libVersion').textContent = `Matter.js ${Matter.version}`;
+  $('#sceneGrid').addEventListener('click', event => {
+    const btn = event.target.closest('[data-scene]');
+    if (btn) setScene(btn.dataset.scene);
+  });
+
+  $('#pauseBtn').addEventListener('click', () => {
+    state.paused = !state.paused;
+    runner.enabled = !state.paused;
+    $('#pauseBtn').textContent = state.paused ? '▶ 재생' : '⏸ 일시정지';
+    $('#pauseBtn').classList.toggle('active', state.paused);
+    addLog(state.paused ? 'PAUSE' : 'PLAY', state.paused ? '시뮬레이션 일시정지' : '시뮬레이션 재생');
+  });
+  $('#resetBtn').addEventListener('click', () => setScene(state.sceneId));
+  $('#clearBtn').addEventListener('click', removeDynamicBodies);
+  $('#rayBtn').addEventListener('click', castRay);
+  $$('[data-add]').forEach(btn => btn.addEventListener('click', () => btn.dataset.add === 'burst' ? addBurst() : addRandomBody(undefined, 35, btn.dataset.add)));
+  $$('[data-body-action]').forEach(btn => btn.addEventListener('click', () => actOnBody(btn.dataset.bodyAction)));
+  $('#saveStateBtn').addEventListener('click', saveWorldState);
+  $('#loadStateBtn').addEventListener('click', loadWorldState);
+  $('#copyStateBtn').addEventListener('click', copyState);
+  $('#menuBtn').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+  $('#settingsBtn').addEventListener('click', () => $('.inspector').classList.toggle('open'));
+  $('#helpBtn').addEventListener('click', () => alert('조작법\n\n• 바디 드래그: 마우스/터치\n• 바디 선택: 클릭\n• 바디 삭제: 우클릭 또는 Delete\n• 일시정지: Space\n• 장면 재시작: R\n• 원/상자/다각형 추가: C/B/P\n• 레이캐스트: Q\n\n오른쪽 패널에서 중력, 시간 배율, 재질과 디버그 표시를 조절할 수 있어.'));
+
+  const sliders = [
+    ['gravityX', 'gravityXVal', v => { engine.gravity.x = v; return v.toFixed(2); }],
+    ['gravityY', 'gravityYVal', v => { engine.gravity.y = v; return v.toFixed(2); }],
+    ['timeScale', 'timeScaleVal', v => { engine.timing.timeScale = v; return `${v.toFixed(1)}×`; }],
+    ['restitution', 'restitutionVal', v => v.toFixed(2)],
+    ['friction', 'frictionVal', v => v.toFixed(2)],
+    ['frictionAir', 'frictionAirVal', v => v.toFixed(3)],
+    ['density', 'densityVal', v => v.toFixed(4)]
+  ];
+  sliders.forEach(([id, out, apply]) => {
+    $(`#${id}`).addEventListener('input', event => { const v = parseFloat(event.target.value); $(`#${out}`).textContent = apply(v); });
+  });
+
+  $('#debugGrid').addEventListener('change', event => {
+    const key = event.target.dataset.render;
+    if (key) render.options[key] = event.target.checked;
+  });
+
+  window.addEventListener('keydown', event => {
+    if (event.target.matches('input, select, textarea')) return;
+    const key = event.key.toLowerCase();
+    if (event.code === 'Space') { event.preventDefault(); $('#pauseBtn').click(); }
+    else if (key === 'r') setScene(state.sceneId);
+    else if (key === 'c') addRandomBody(undefined, 35, 'circle');
+    else if (key === 'b') addRandomBody(undefined, 35, 'box');
+    else if (key === 'p') addRandomBody(undefined, 35, 'polygon');
+    else if (key === 'q') castRay();
+    else if (event.key === 'Delete' && state.selectedBody) actOnBody('delete');
+  });
+
+  window.addEventListener('resize', resizeRender, { passive: true });
+
+  function frame(now) {
+    state.frameCounter++;
+    if (now - state.lastFpsUpdate >= 500) {
+      state.fps = state.frameCounter * 1000 / (now - state.lastFpsUpdate);
+      state.frameCounter = 0;
+      state.lastFpsUpdate = now;
+      updateMetrics();
+      updateInspector();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  syncGravityUI();
+  setScene(state.sceneId);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
