@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>pako</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    height: 90px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .result-box.bad { background: #fff0f0; border-color: #f5c2c2; color: #b42318; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  th, td {
+    border: 1px solid #e5e5e5;
+    padding: 6px 10px;
+    text-align: right;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  th { background: #f5f6f8; }
+  .bar {
+    background: #dbe4ff;
+    height: 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+  .bar-fill { background: #4f7dff; height: 100%; border-radius: 4px; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>pako 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>pako</strong>는 zlib을 자바스크립트로 이식한 압축 라이브러리입니다. 브라우저에는
+    마땅한 내장 압축 API가 없어서, JSON 데이터를 localStorage나 URL 쿼리스트링에 압축해서
+    담을 때 널리 쓰입니다.
+    <ul>
+      <li><code>pako.gzip(문자열)</code> / <code>pako.ungzip(바이트, {toText:true})</code>로 압축·해제</li>
+      <li><code>{ level: 1~9 }</code>로 압축 강도(속도 vs 압축률 트레이드오프) 조절</li>
+      <li><code>new pako.Deflate()</code> + <code>push()</code>로 데이터를 청크 단위 스트리밍 압축</li>
+      <li>압축 결과는 바이너리(Uint8Array)라 텍스트 저장소에 넣으려면 Base64 인코딩이 필요</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 다른 외부 API는 사용하지 않습니다. 검증 중 실제로 확인한 점: 예전
+      버전에서 쓰이던 <code>{to:'string'}</code> 옵션은 pako 3.x에서 <code>{toText:true}</code>로
+      이름이 바뀌었고, 옛 옵션명을 쓰면 에러 없이 조용히 Uint8Array를 반환해버려 실수를
+      알아채기 어려웠습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 텍스트 압축/해제 (gzip)</h2>
+    <div class="desc">아래 텍스트를 gzip으로 압축한 뒤 다시 압축을 풀어 원본과 정확히 일치하는지 실제로 비교합니다.</div>
+    <textarea id="input1">가상 위판장 공지: 오늘 위판 시세는 고등어 kg당 4,200원, 갈치 kg당 15,800원입니다. </textarea>
+    <div class="controls">
+      <button class="action" id="compressBtn1">gzip 압축 + 복원 테스트</button>
+      <button class="ghost" id="repeatBtn1">텍스트 10배로 늘리기</button>
+    </div>
+    <div class="result-box" id="output1">아직 압축 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const compressed = pako.gzip(text);          // Uint8Array
+const restored = pako.ungzip(compressed, { toText: true }); // 문자열로 복원
+console.log(restored === text); // true</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 압축 레벨 비교</h2>
+    <div class="desc">같은 텍스트를 압축 레벨 1(빠름·낮은 압축률)부터 9(느림·높은 압축률)까지 비교합니다.</div>
+    <div class="controls"><button class="action" id="levelBtn2">레벨별 압축 실행</button></div>
+    <div id="levelTableWrap2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">pako.deflate(text, { level: 1 }); // 빠르지만 덜 압축됨
+pako.deflate(text, { level: 9 }); // 느리지만 더 압축됨</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 스트리밍 압축 (Deflate 청크 단위 push)</h2>
+    <div class="desc">긴 텍스트를 500자씩 잘라 <code>Deflate</code> 인스턴스에 순서대로 밀어넣습니다. 한 번에 압축한 결과와 바이트 단위까지 동일한지 확인합니다.</div>
+    <div class="controls"><button class="action" id="streamBtn3">청크 단위로 스트리밍 압축</button></div>
+    <div class="result-box" id="output3">아직 실행 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const deflator = new pako.Deflate({ level: 6 });
+chunks.forEach((chunk, i) => {
+  deflator.push(chunk, i === chunks.length - 1); // 마지막 청크만 true(Z_FINISH)
+});
+console.log(deflator.result); // 전체 압축 결과</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. gzip + Base64로 localStorage에 저장</h2>
+    <div class="desc">가상 위판 기록 50건을 JSON으로 만들어 압축 후 Base64로 인코딩해 실제 <code>localStorage</code>에 저장하고, 다시 읽어와 압축을 풀어 원본과 비교합니다.</div>
+    <div class="controls">
+      <button class="action" id="saveBtn4">압축해서 localStorage에 저장</button>
+      <button class="ghost" id="loadBtn4">localStorage에서 읽어 복원</button>
+    </div>
+    <div class="result-box" id="output4">아직 저장 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const gz = pako.gzip(JSON.stringify(data));
+const b64 = btoa(String.fromCharCode(...gz));   // 바이너리 → Base64 문자열
+localStorage.setItem('key', b64);
+
+const restored = atob(localStorage.getItem('key'));
+const bytes = Uint8Array.from(restored, c => c.charCodeAt(0));
+const data2 = JSON.parse(pako.ungzip(bytes, { toText: true }));</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/pako@3.0.1/dist/browser/pako.umd.min.js"></script>
+  <script>
+    // ---------- 1. gzip 압축/해제 ----------
+    document.getElementById('repeatBtn1').addEventListener('click', () => {
+      const ta = document.getElementById('input1');
+      ta.value = ta.value.repeat(2);
+    });
+    document.getElementById('compressBtn1').addEventListener('click', () => {
+      const text = document.getElementById('input1').value;
+      const originalSize = new TextEncoder().encode(text).length;
+      const compressed = pako.gzip(text);
+      const restored = pako.ungzip(compressed, { toText: true });
+      const matches = restored === text;
+      const output1 = document.getElementById('output1');
+      const ratio = ((compressed.length / originalSize) * 100).toFixed(1);
+      output1.textContent =
+        `원본 ${originalSize.toLocaleString('ko-KR')}바이트 → 압축 ${compressed.length.toLocaleString('ko-KR')}바이트 ` +
+        `(압축률 ${ratio}%)\n복원 후 원본과 완전히 일치: ${matches ? '예' : '아니오'}`;
+      output1.classList.toggle('ok', matches);
+      output1.classList.toggle('bad', !matches);
+    });
+
+    // ---------- 2. 압축 레벨 비교 ----------
+    document.getElementById('levelBtn2').addEventListener('click', () => {
+      const text = document.getElementById('input1').value.repeat(20);
+      const originalSize = new TextEncoder().encode(text).length;
+      const levels = [1, 3, 6, 9];
+      const rows = levels.map((lvl) => {
+        const t0 = performance.now();
+        const result = pako.deflate(text, { level: lvl });
+        const ms = (performance.now() - t0).toFixed(2);
+        return { level: lvl, size: result.length, ms };
+      });
+      const maxSize = Math.max(...rows.map((r) => r.size));
+      let html = `<table><tr><th>레벨</th><th>결과 크기(byte)</th><th>소요시간(ms)</th><th>크기 비교</th></tr>`;
+      rows.forEach((r) => {
+        const pct = ((r.size / maxSize) * 100).toFixed(0);
+        html += `<tr><td>level ${r.level}</td><td>${r.size.toLocaleString('ko-KR')}</td><td>${r.ms}</td>` +
+          `<td><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div></td></tr>`;
+      });
+      html += `</table><div class="result-box ok">원본 ${originalSize.toLocaleString('ko-KR')}바이트 기준. 레벨이 높을수록 결과 크기가 작거나 같습니다.</div>`;
+      document.getElementById('levelTableWrap2').innerHTML = html;
+    });
+
+    // ---------- 3. 스트리밍 압축 ----------
+    document.getElementById('streamBtn3').addEventListener('click', () => {
+      const text = document.getElementById('input1').value.repeat(30);
+      const chunkSize = 500;
+      const chunks = [];
+      for (let i = 0; i < text.length; i += chunkSize) chunks.push(text.slice(i, i + chunkSize));
+
+      const deflator = new pako.Deflate({ level: 6 });
+      chunks.forEach((chunk, i) => deflator.push(chunk, i === chunks.length - 1));
+
+      const nonStreaming = pako.deflate(text, { level: 6 });
+      const sameSize = deflator.result.length === nonStreaming.length;
+      const restored = pako.inflate(deflator.result, { toText: true });
+      const roundTripOk = restored === text;
+
+      const output3 = document.getElementById('output3');
+      output3.textContent =
+        `${chunks.length}개 청크(청크당 최대 ${chunkSize}자)로 나눠 압축 완료\n` +
+        `스트리밍 결과 크기: ${deflator.result.length.toLocaleString('ko-KR')}바이트, ` +
+        `한 번에 압축한 결과와 바이트까지 동일: ${sameSize ? '예' : '아니오'}\n` +
+        `압축 해제 후 원본과 완전히 일치: ${roundTripOk ? '예' : '아니오'}`;
+      output3.classList.toggle('ok', sameSize && roundTripOk);
+      output3.classList.toggle('bad', !(sameSize && roundTripOk));
+    });
+
+    // ---------- 4. gzip + Base64 + localStorage ----------
+    const STORAGE_KEY = 'pako_demo_records';
+    function uint8ToBase64(bytes) {
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+    function base64ToUint8(b64) {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+    function genRecords() {
+      return Array.from({ length: 50 }, (_, i) => ({
+        species: ['고등어', '갈치', '오징어'][i % 3],
+        weightKg: 100 + i,
+        priceKrw: 4000 + i * 15,
+      }));
+    }
+    let lastSavedJson = null;
+    document.getElementById('saveBtn4').addEventListener('click', () => {
+      const data = { port: '가상 위판장 A', records: genRecords() };
+      lastSavedJson = JSON.stringify(data);
+      const gz = pako.gzip(lastSavedJson);
+      const b64 = uint8ToBase64(gz);
+      localStorage.setItem(STORAGE_KEY, b64);
+      const output4 = document.getElementById('output4');
+      output4.textContent =
+        `원본 JSON ${new TextEncoder().encode(lastSavedJson).length.toLocaleString('ko-KR')}바이트 → ` +
+        `gzip ${gz.length.toLocaleString('ko-KR')}바이트 → Base64 ${b64.length.toLocaleString('ko-KR')}자를 ` +
+        `localStorage['${STORAGE_KEY}']에 저장했습니다.`;
+      output4.classList.add('ok');
+      output4.classList.remove('bad');
+    });
+    document.getElementById('loadBtn4').addEventListener('click', () => {
+      const output4 = document.getElementById('output4');
+      const b64 = localStorage.getItem(STORAGE_KEY);
+      if (!b64) {
+        output4.textContent = '먼저 저장 버튼을 눌러주세요.';
+        output4.classList.remove('ok');
+        return;
+      }
+      const bytes = base64ToUint8(b64);
+      const restoredJson = pako.ungzip(bytes, { toText: true });
+      const matches = lastSavedJson !== null && restoredJson === lastSavedJson;
+      const restored = JSON.parse(restoredJson);
+      output4.textContent =
+        `localStorage에서 읽어 압축 해제 완료 — 위판장: ${restored.port}, 기록 ${restored.records.length}건\n` +
+        `이번 세션에 저장한 원본과 완전히 일치: ${matches ? '예' : '(다른 세션에 저장된 값이거나 아직 비교 불가)'}`;
+      output4.classList.add('ok');
+      output4.classList.remove('bad');
+    });
+  </script>
+</body>
+</html>
