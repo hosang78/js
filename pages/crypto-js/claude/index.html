@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>crypto-js</title>
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px; font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px; color: #a15c00; background: #fff6e5;
+    border: 1px solid #ffe0a3; border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  input[type="text"], input[type="password"] {
+    font-size: 13px; padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fafbfc; flex: 1; min-width: 180px;
+  }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px; white-space: nowrap;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff; border: 1px solid #dbe4ff; border-radius: 8px;
+    padding: 10px 12px; font-size: 12.5px; color: #333; margin-top: 8px;
+    white-space: pre-wrap; word-break: break-all; font-family: monospace;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .result-box.fail { background: #ffeceb; border-color: #ffc9c5; color: #c0392b; }
+  .hash-row { display: flex; gap: 10px; align-items: center; margin: 6px 0; font-size: 12.5px; }
+  .hash-row .algo { min-width: 70px; font-weight: 600; color: #4f7dff; }
+  .hash-row .val { flex: 1; font-family: monospace; word-break: break-all; color: #444; }
+  .avalanche-char { display: inline-block; }
+  .avalanche-char.diff { background: #ffd9d6; color: #c0392b; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 8px; }
+  table.data-table th, table.data-table td { border: 1px solid #e5e5e5; padding: 6px 10px; text-align: left; }
+  table.data-table th { background: #f5f6f8; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; margin-top: 8px; white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>crypto-js</h1>
+  <p>
+    crypto-js는 브라우저에서 바로 실행되는 해시·암호화 라이브러리입니다. 비밀번호를
+    서버로 보내지 않고 클라이언트에서 미리 해시하거나, 저장할 데이터를 암호화하는 등의
+    작업에 쓰입니다. 이 대시보드도 비밀번호 보호 앱이라 주제가 잘 맞아 함께 다뤄봅니다.
+  </p>
+  <ul>
+    <li>SHA-256/MD5/SHA-1 같은 해시 함수 — 같은 입력은 항상 같은 출력, 되돌릴 수 없음</li>
+    <li>HMAC — 비밀키를 섞은 해시로 메시지 위변조·잘못된 키를 감지</li>
+    <li>AES 대칭키 암호화 — 같은 비밀번호로만 원래 내용을 복호화 가능</li>
+    <li>PBKDF2 — 비밀번호에 salt를 섞어 무차별 대입(레인보우 테이블) 공격을 어렵게 만드는 키 유도</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 이 페이지는 crypto-js 기능을 보여주기 위한 학습용 예제입니다. 실제 로그인 비밀번호
+    해싱 등 보안이 중요한 용도에는 더 검증된 서버 사이드 라이브러리(bcrypt 등)를 쓰는 것이
+    안전합니다. 예시 문구는 <b>가상의 데이터</b>이며 실제 수협중앙회 정보와 무관합니다.
+    다른 외부 API는 사용하지 않았습니다 (crypto-js 4.2.0을 CDN에서 로드).
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 해시 함수 — SHA-256 / MD5 / SHA-1 + 눈사태 효과</h2>
+  <p class="desc">
+    해시 함수는 어떤 길이의 입력이든 고정된 길이의 결과로 바꾸고, <b>같은 입력이면 항상 같은
+    결과</b>가 나오며, 결과에서 원래 입력을 역산할 수 없습니다. 입력을 한 글자만 바꿔도 결과가
+    완전히 달라지는 "눈사태 효과(avalanche effect)"도 확인해보세요.
+  </p>
+  <div class="controls">
+    <input type="text" id="s1-input" value="고등어 120kg 위판" />
+    <button class="action" id="s1-run">해시 계산</button>
+  </div>
+  <div id="s1-result"></div>
+
+  <div class="desc" style="margin-top:16px;">눈사태 효과: 아래 텍스트에서 숫자 하나만 바꿔서 SHA-256을 비교합니다 (다른 글자는 빨간색)</div>
+  <div class="controls">
+    <input type="text" id="s1-a" value="고등어 120kg 위판" />
+    <input type="text" id="s1-b" value="고등어 121kg 위판" />
+    <button class="action" id="s1-avalanche">비교</button>
+  </div>
+  <div id="s1-avalanche-result"></div>
+
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">CryptoJS.SHA256('고등어 120kg 위판').toString();  // 64자리 16진수
+CryptoJS.MD5('고등어 120kg 위판').toString();     // 32자리 16진수
+CryptoJS.SHA1('고등어 120kg 위판').toString();    // 40자리 16진수</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. HMAC — 메시지 인증 (위변조 감지)</h2>
+  <p class="desc">
+    HMAC은 비밀키와 메시지를 함께 해시합니다. 메시지가 한 글자라도 바뀌거나, 검증하는 쪽이
+    다른 키를 쓰면 HMAC 값이 완전히 달라져서 위변조나 키 불일치를 감지할 수 있습니다.
+  </p>
+  <div class="controls">
+    <input type="text" id="s2-msg" value="위판 낙찰 확정: 고등어 120kg / 960,000원" />
+  </div>
+  <div class="controls">
+    <input type="text" id="s2-key" value="my-secret-key" placeholder="비밀키" />
+    <button class="action" id="s2-run">HMAC 생성</button>
+  </div>
+  <div class="result-box" id="s2-hmac"></div>
+  <div class="controls">
+    <button class="ghost" id="s2-tamper">메시지 변조 후 재계산</button>
+    <button class="ghost" id="s2-wrongkey">다른 키로 재계산</button>
+  </div>
+  <div id="s2-verify-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const hmac = CryptoJS.HmacSHA256('메시지', '비밀키').toString();
+// 메시지나 키가 조금이라도 다르면 완전히 다른 HMAC이 나옴 -&gt; 검증 실패로 감지</pre>
+  </details>
+</section>
+
+<!-- Section 3 -->
+<section class="block">
+  <h2>3. AES 대칭키 암호화 / 복호화</h2>
+  <p class="desc">
+    같은 비밀번호로 암호화하고 복호화합니다. 비밀번호가 틀리면 원래 내용을 복원할 수
+    없습니다 — "올바른 비밀번호로 복호화"와 "틀린 비밀번호로 복호화"를 각각 눌러 비교해보세요.
+  </p>
+  <div class="controls">
+    <input type="text" id="s3-plaintext" value="위판 낙찰가: 8,500,000원" />
+  </div>
+  <div class="controls">
+    <input type="password" id="s3-password" value="correct-password-123" placeholder="암호화 비밀번호" />
+    <button class="action" id="s3-encrypt">🔒 암호화</button>
+  </div>
+  <div class="result-box" id="s3-ciphertext"></div>
+  <div class="controls">
+    <button class="action" id="s3-decrypt-correct">🔓 올바른 비밀번호로 복호화</button>
+    <button class="ghost" id="s3-decrypt-wrong">🔓 틀린 비밀번호로 복호화 시도</button>
+  </div>
+  <div id="s3-decrypt-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const ciphertext = CryptoJS.AES.encrypt('평문', '비밀번호').toString();
+const bytes = CryptoJS.AES.decrypt(ciphertext, '비밀번호');
+const plaintext = bytes.toString(CryptoJS.enc.Utf8); // 원래 평문
+// 비밀번호가 틀리면 깨진 바이트가 나와서 toString(Utf8)이 빈 문자열이 되기 쉬움</pre>
+  </details>
+</section>
+
+<!-- Section 4 -->
+<section class="block">
+  <h2>4. PBKDF2 — Salt 기반 키 유도</h2>
+  <p class="desc">
+    같은 비밀번호라도 매번 다른 무작위 salt를 섞어서 키를 유도하면, 같은 비밀번호를 쓰는
+    두 사용자의 저장된 값이 서로 달라져서 미리 계산해둔 레인보우 테이블 공격이 무력화됩니다.
+  </p>
+  <div class="controls">
+    <input type="text" id="s4-password" value="user-password" placeholder="비밀번호" />
+    <button class="action" id="s4-run">Salt 새로 생성 + 키 유도</button>
+  </div>
+  <table class="data-table" id="s4-table">
+    <thead><tr><th>시도</th><th>Salt (매번 무작위)</th><th>유도된 키 (PBKDF2, 1000회 반복)</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="result-box" id="s4-note" style="display:none;"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const salt = CryptoJS.lib.WordArray.random(128 / 8); // 128비트 무작위 salt
+const key = CryptoJS.PBKDF2('비밀번호', salt, {
+  keySize: 256 / 32,   // 256비트 키
+  iterations: 1000,    // 반복 횟수가 많을수록 무차별 대입이 느려짐
+}).toString();</pre>
+  </details>
+</section>
+
+<!-- Section 5 -->
+<section class="block">
+  <h2>5. 인코딩 변환 — Base64 / Hex / Utf8</h2>
+  <p class="desc">
+    crypto-js 내부에서는 데이터를 <code>WordArray</code>라는 형태로 다루고,
+    <code>CryptoJS.enc.*</code>로 여러 텍스트 인코딩과 서로 변환합니다. 암호화하지 않아도
+    단순 인코딩 변환에도 자주 쓰입니다.
+  </p>
+  <div class="controls">
+    <input type="text" id="s5-input" value="수협 위판 2026" />
+    <button class="action" id="s5-run">변환</button>
+  </div>
+  <div id="s5-result"></div>
+  <details>
+    <summary>소스 코드 보기</summary>
+    <pre class="code-sample">const wordArray = CryptoJS.enc.Utf8.parse('수협 위판 2026');
+const base64 = CryptoJS.enc.Base64.stringify(wordArray);
+const hex = CryptoJS.enc.Hex.stringify(wordArray);
+
+CryptoJS.enc.Base64.parse(base64).toString(CryptoJS.enc.Utf8); // 원문으로 복원
+CryptoJS.enc.Hex.parse(hex).toString(CryptoJS.enc.Utf8);       // 원문으로 복원</pre>
+  </details>
+</section>
+
+<script>
+(function () {
+  // ---------- Section 1 ----------
+  document.getElementById('s1-run').addEventListener('click', () => {
+    const text = document.getElementById('s1-input').value;
+    const sha256 = CryptoJS.SHA256(text).toString();
+    const md5 = CryptoJS.MD5(text).toString();
+    const sha1 = CryptoJS.SHA1(text).toString();
+    document.getElementById('s1-result').innerHTML = `
+      <div class="hash-row"><span class="algo">SHA-256</span><span class="val">${sha256}</span></div>
+      <div class="hash-row"><span class="algo">MD5</span><span class="val">${md5}</span></div>
+      <div class="hash-row"><span class="algo">SHA-1</span><span class="val">${sha1}</span></div>
+    `;
+  });
+  document.getElementById('s1-run').click();
+
+  document.getElementById('s1-avalanche').addEventListener('click', () => {
+    const a = document.getElementById('s1-a').value;
+    const b = document.getElementById('s1-b').value;
+    const hashA = CryptoJS.SHA256(a).toString();
+    const hashB = CryptoJS.SHA256(b).toString();
+    let diffCount = 0;
+    let highlighted = '';
+    for (let i = 0; i < hashA.length; i++) {
+      const same = hashA[i] === hashB[i];
+      if (!same) diffCount++;
+      highlighted += `<span class="avalanche-char ${same ? '' : 'diff'}">${hashB[i]}</span>`;
+    }
+    const pct = Math.round((diffCount / hashA.length) * 1000) / 10;
+    document.getElementById('s1-avalanche-result').innerHTML = `
+      <div class="result-box">
+        입력 A의 SHA-256: ${hashA}<br/>
+        입력 B의 SHA-256: ${highlighted}<br/>
+        <b>${diffCount} / ${hashA.length}자 (${pct}%)</b>가 다름 — 입력은 한 글자만 바뀌었는데 해시는 거의 통째로 달라짐
+      </div>
+    `;
+  });
+  document.getElementById('s1-avalanche').click();
+
+  // ---------- Section 2 ----------
+  let lastHmac = '';
+  function runHmac() {
+    const msg = document.getElementById('s2-msg').value;
+    const key = document.getElementById('s2-key').value;
+    lastHmac = CryptoJS.HmacSHA256(msg, key).toString();
+    document.getElementById('s2-hmac').textContent = 'HMAC-SHA256: ' + lastHmac;
+    document.getElementById('s2-verify-result').innerHTML = '';
+  }
+  document.getElementById('s2-run').addEventListener('click', runHmac);
+  runHmac();
+
+  document.getElementById('s2-tamper').addEventListener('click', () => {
+    const originalMsg = document.getElementById('s2-msg').value;
+    const key = document.getElementById('s2-key').value;
+    const tamperedMsg = originalMsg + ' (변조됨)';
+    const tamperedHmac = CryptoJS.HmacSHA256(tamperedMsg, key).toString();
+    const match = tamperedHmac === lastHmac;
+    document.getElementById('s2-verify-result').innerHTML = `
+      <div class="result-box ${match ? 'ok' : 'fail'}">
+        변조된 메시지: "${tamperedMsg}"<br/>
+        재계산한 HMAC: ${tamperedHmac}<br/>
+        원본 HMAC과 일치: <b>${match ? '일치 (이상함)' : '불일치 — 위변조 감지됨 ✅'}</b>
+      </div>
+    `;
+  });
+
+  document.getElementById('s2-wrongkey').addEventListener('click', () => {
+    const msg = document.getElementById('s2-msg').value;
+    const wrongKey = document.getElementById('s2-key').value + '-tampered';
+    const wrongHmac = CryptoJS.HmacSHA256(msg, wrongKey).toString();
+    const match = wrongHmac === lastHmac;
+    document.getElementById('s2-verify-result').innerHTML = `
+      <div class="result-box ${match ? 'ok' : 'fail'}">
+        다른 키("${wrongKey}")로 재계산한 HMAC: ${wrongHmac}<br/>
+        원본 HMAC과 일치: <b>${match ? '일치 (이상함)' : '불일치 — 키가 다름을 감지됨 ✅'}</b>
+      </div>
+    `;
+  });
+
+  // ---------- Section 3 ----------
+  let lastCiphertext = '';
+  document.getElementById('s3-encrypt').addEventListener('click', () => {
+    const plaintext = document.getElementById('s3-plaintext').value;
+    const password = document.getElementById('s3-password').value;
+    lastCiphertext = CryptoJS.AES.encrypt(plaintext, password).toString();
+    document.getElementById('s3-ciphertext').textContent = lastCiphertext;
+    document.getElementById('s3-decrypt-result').innerHTML = '';
+  });
+  document.getElementById('s3-encrypt').click();
+
+  document.getElementById('s3-decrypt-correct').addEventListener('click', () => {
+    const password = document.getElementById('s3-password').value;
+    const bytes = CryptoJS.AES.decrypt(lastCiphertext, password);
+    let text;
+    try { text = bytes.toString(CryptoJS.enc.Utf8); } catch (e) { text = '(복호화 실패: ' + e.message + ')'; }
+    const ok = text === document.getElementById('s3-plaintext').value;
+    document.getElementById('s3-decrypt-result').innerHTML = `
+      <div class="result-box ${ok ? 'ok' : 'fail'}">올바른 비밀번호로 복호화 결과: "${text}" ${ok ? '✅ 원문과 일치' : ''}</div>
+    `;
+  });
+
+  document.getElementById('s3-decrypt-wrong').addEventListener('click', () => {
+    const wrongPassword = document.getElementById('s3-password').value + '-wrong';
+    let text;
+    try {
+      const bytes = CryptoJS.AES.decrypt(lastCiphertext, wrongPassword);
+      text = bytes.toString(CryptoJS.enc.Utf8);
+      if (text === '') text = '(빈 문자열 — 복호화된 바이트가 올바른 UTF-8이 아니어서 내용이 나오지 않음)';
+    } catch (e) {
+      text = '(오류 발생: ' + e.message + ')';
+    }
+    document.getElementById('s3-decrypt-result').innerHTML = `
+      <div class="result-box fail">틀린 비밀번호("${wrongPassword}")로 복호화 시도 결과: ${text}</div>
+    `;
+  });
+
+  // ---------- Section 4 ----------
+  let attemptCount = 0;
+  function runPbkdf2() {
+    const password = document.getElementById('s4-password').value;
+    const salt = CryptoJS.lib.WordArray.random(128 / 8);
+    const key = CryptoJS.PBKDF2(password, salt, { keySize: 256 / 32, iterations: 1000 }).toString();
+    attemptCount++;
+    const tbody = document.querySelector('#s4-table tbody');
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${attemptCount}</td><td style="font-family:monospace;">${salt.toString()}</td><td style="font-family:monospace;word-break:break-all;">${key}</td>`;
+    tbody.prepend(row);
+    if (attemptCount > 1) {
+      document.getElementById('s4-note').style.display = 'block';
+      document.getElementById('s4-note').textContent = '같은 비밀번호("' + password + '")인데도 매번 다른 salt 때문에 완전히 다른 키가 나옵니다.';
+    }
+  }
+  document.getElementById('s4-run').addEventListener('click', runPbkdf2);
+  runPbkdf2();
+
+  // ---------- Section 5 ----------
+  function runEncoding() {
+    const text = document.getElementById('s5-input').value;
+    const wordArray = CryptoJS.enc.Utf8.parse(text);
+    const base64 = CryptoJS.enc.Base64.stringify(wordArray);
+    const hex = CryptoJS.enc.Hex.stringify(wordArray);
+    const backFromBase64 = CryptoJS.enc.Base64.parse(base64).toString(CryptoJS.enc.Utf8);
+    const backFromHex = CryptoJS.enc.Hex.parse(hex).toString(CryptoJS.enc.Utf8);
+    document.getElementById('s5-result').innerHTML = `
+      <div class="hash-row"><span class="algo">Base64</span><span class="val">${base64}</span></div>
+      <div class="hash-row"><span class="algo">Hex</span><span class="val">${hex}</span></div>
+      <div class="result-box ${backFromBase64 === text && backFromHex === text ? 'ok' : 'fail'}">
+        Base64 → 원문 복원: "${backFromBase64}" ${backFromBase64 === text ? '✅' : '❌'}<br/>
+        Hex → 원문 복원: "${backFromHex}" ${backFromHex === text ? '✅' : '❌'}
+      </div>
+    `;
+  }
+  document.getElementById('s5-run').addEventListener('click', runEncoding);
+  runEncoding();
+})();
+</script>
+</body>
+</html>
