@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>PixiJS</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px;
+    color: #a15c00;
+    background: #fff6e5;
+    border: 1px solid #ffe0a3;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+  section.block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .desc {
+    font-size: 13.5px;
+    color: #555;
+    margin-bottom: 12px;
+  }
+  .canvas-wrap {
+    width: 100%;
+    height: 320px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #14162a;
+    margin-bottom: 12px;
+  }
+  .canvas-wrap canvas { display: block; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 13px;
+  }
+  button.action {
+    padding: 7px 13px;
+    border: none;
+    border-radius: 8px;
+    background: #4f7dff;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action.off { background: #bbb; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; }
+  button.ghost:hover { background: #f2f2f2; }
+  .result-box {
+    background: #f0f4ff;
+    border: 1px solid #dbe4ff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+  .result-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  details { margin-top: 10px; font-size: 12.5px; }
+  summary { cursor: pointer; color: #4f7dff; }
+  pre.code-sample {
+    background: #1a1d24;
+    color: #d8e0ff;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <h1>PixiJS 핵심 기능 둘러보기</h1>
+
+  <div class="intro">
+    <strong>PixiJS</strong>는 WebGL을 활용하는 빠른 2D 렌더링 라이브러리입니다. Canvas 2D API보다
+    훨씬 많은 오브젝트를 부드럽게 다룰 수 있어 게임·인터랙티브 그래픽에 널리 쓰입니다.
+    <ul>
+      <li><code>await app.init({...})</code>로 초기화(v8부터 비동기) 후 <code>app.stage</code>에 오브젝트 추가</li>
+      <li><code>new Graphics().rect(...).fill(색상)</code> 같은 체이닝 방식으로 도형을 그림</li>
+      <li><code>app.ticker.add(fn)</code>으로 매 프레임 호출되는 애니메이션 등록</li>
+      <li><code>obj.eventMode = 'static'</code>로 지정하면 클릭·호버 같은 포인터 이벤트 사용 가능</li>
+      <li><code>obj.filters = [new BlurFilter(), ...]</code>로 내장 필터 효과 적용</li>
+    </ul>
+    <div class="disclaimer">
+      ※ 이 페이지의 위판 구역 데이터는 모두 <strong>가상의 예시</strong>이며 실제 수협중앙회의
+      자료가 아닙니다. 다른 외부 API는 사용하지 않습니다.
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>1. 기본 도형(Graphics) + Ticker 애니메이션</h2>
+    <div class="desc">사각형·원·다각형을 그려 각자 다른 속도로 회전시킵니다.</div>
+    <div class="canvas-wrap" id="canvas1"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const box = new PIXI.Graphics().rect(-40, -40, 80, 80).fill(0x4f7dff);
+app.stage.addChild(box);
+app.ticker.add(() => { box.rotation += 0.01; });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>2. 텍스트 렌더링</h2>
+    <div class="desc">굵기·색상·그림자 등 스타일이 다른 텍스트 세 종류를 렌더링합니다.</div>
+    <div class="canvas-wrap" id="canvas2"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const title = new PIXI.Text({
+  text: '가상 위판장 현황판',
+  style: { fill: 0xffffff, fontSize: 28, fontWeight: 'bold' },
+});</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>3. 인터랙션 (클릭 · 호버)</h2>
+    <div class="desc">아래 위판 구역 카드를 클릭해보세요. 클릭할 때마다 색이 바뀌고 카운트가 올라갑니다.</div>
+    <div class="canvas-wrap" id="canvas3"></div>
+    <div class="result-box" id="output3">아직 클릭 안 함</div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">zone.eventMode = 'static';
+zone.cursor = 'pointer';
+zone.on('pointerdown', () => { zone.tint = 0xe0524a; clickCount++; });
+zone.on('pointerover', () => { zone.scale.set(1.05); });
+zone.on('pointerout', () => { zone.scale.set(1); });</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>4. 내장 필터 효과 비교</h2>
+    <div class="desc">버튼으로 Blur(흐림)와 ColorMatrix(흑백) 필터를 켜고 끄며 같은 도형에 어떻게 적용되는지 비교합니다.</div>
+    <div class="canvas-wrap" id="canvas4"></div>
+    <div class="controls">
+      <button class="action" id="blurBtn4">Blur 필터</button>
+      <button class="action" id="grayscaleBtn4">흑백(ColorMatrix) 필터</button>
+    </div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const blur = new PIXI.BlurFilter({ strength: 8 });
+const gray = new PIXI.ColorMatrixFilter();
+gray.grayscale(1);
+shape.filters = [blur, gray]; // 배열이라 여러 필터를 동시에 적용 가능</pre>
+    </details>
+  </section>
+
+  <section class="block">
+    <h2>5. Container로 그룹 묶기</h2>
+    <div class="desc">여러 도형을 하나의 Container에 넣으면, 각 도형이 자전하는 동시에 컨테이너 전체가 공전합니다.</div>
+    <div class="canvas-wrap" id="canvas5"></div>
+    <details>
+      <summary>코드 보기</summary>
+      <pre class="code-sample">const group = new PIXI.Container();
+group.addChild(shape1, shape2, shape3); // 자식들은 그룹 기준 상대 좌표
+app.stage.addChild(group);
+app.ticker.add(() => {
+  group.rotation += 0.005;      // 그룹 전체 공전
+  shape1.rotation += 0.03;      // 개별 자전
+});</pre>
+    </details>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.19.0/dist/pixi.min.js"></script>
+  <script>
+    async function makeApp(container) {
+      const app = new PIXI.Application();
+      await app.init({
+        width: container.clientWidth,
+        height: container.clientHeight,
+        background: 0x14162a,
+        antialias: true,
+        resolution: Math.min(window.devicePixelRatio, 2),
+        autoDensity: true,
+      });
+      container.appendChild(app.canvas);
+      return app;
+    }
+
+    // ---------- 1. 기본 도형 + Ticker ----------
+    (async () => {
+      const app = await makeApp(document.getElementById('canvas1'));
+      const box = new PIXI.Graphics().rect(-40, -40, 80, 80).fill(0x4f7dff);
+      box.x = 100; box.y = 160;
+      const circle = new PIXI.Graphics().circle(0, 0, 45).fill(0x22c07a);
+      circle.x = 230; circle.y = 160;
+      const tri = new PIXI.Graphics().poly([0, -50, 45, 35, -45, 35]).fill(0xe08a2e);
+      tri.x = 360; tri.y = 160;
+      app.stage.addChild(box, circle, tri);
+      app.ticker.add(() => {
+        box.rotation += 0.015;
+        circle.scale.set(1 + Math.sin(app.ticker.lastTime / 400) * 0.15);
+        tri.rotation -= 0.01;
+      });
+    })();
+
+    // ---------- 2. 텍스트 ----------
+    (async () => {
+      const app = await makeApp(document.getElementById('canvas2'));
+      const title = new PIXI.Text({
+        text: '가상 위판장 현황판',
+        style: { fill: 0xffffff, fontSize: 28, fontWeight: 'bold' },
+      });
+      title.x = 30; title.y = 40;
+      const sub = new PIXI.Text({
+        text: '오늘 위판량: 2,830kg (가상 예시)',
+        style: { fill: 0x9fb0ff, fontSize: 16 },
+      });
+      sub.x = 30; sub.y = 90;
+      const highlight = new PIXI.Text({
+        text: '주의: 3구역 시세 급등',
+        style: {
+          fill: 0xffffff,
+          fontSize: 18,
+          fontWeight: 'bold',
+          dropShadow: { color: 0xe0524a, blur: 4, distance: 0, alpha: 0.9 },
+        },
+      });
+      highlight.x = 30; highlight.y = 150;
+      app.stage.addChild(title, sub, highlight);
+    })();
+
+    // ---------- 3. 인터랙션 ----------
+    (async () => {
+      const app = await makeApp(document.getElementById('canvas3'));
+      const output3 = document.getElementById('output3');
+      let clickCount = 0;
+      const zoneNames = ['1구역 - 활어', '2구역 - 냉동', '3구역 - 가공'];
+      const zones = zoneNames.map((name, i) => {
+        const g = new PIXI.Graphics().roundRect(-70, -50, 140, 100, 12).fill(0x4f7dff);
+        g.x = 100 + i * 160; g.y = 160;
+        g.eventMode = 'static';
+        g.cursor = 'pointer';
+        g.on('pointerover', () => { g.scale.set(1.06); });
+        g.on('pointerout', () => { g.scale.set(1); });
+        g.on('pointerdown', () => {
+          clickCount++;
+          g.tint = g.tint === 0xffffff ? 0xe0524a : 0xffffff;
+          output3.textContent = `${name} 클릭됨 (총 클릭 ${clickCount}회)`;
+          output3.classList.add('ok');
+        });
+        const label = new PIXI.Text({ text: name, style: { fill: 0xffffff, fontSize: 14 } });
+        label.anchor.set(0.5);
+        g.addChild(label);
+        app.stage.addChild(g);
+        return g;
+      });
+    })();
+
+    // ---------- 4. 필터 ----------
+    (async () => {
+      const app = await makeApp(document.getElementById('canvas4'));
+      const shape = new PIXI.Graphics().roundRect(-70, -70, 140, 140, 16).fill(0xe08a2e);
+      shape.x = 160; shape.y = 160;
+      const shape2 = new PIXI.Graphics().circle(0, 0, 70).fill(0x22c07a);
+      shape2.x = 340; shape2.y = 160;
+      app.stage.addChild(shape, shape2);
+      app.ticker.add(() => { shape.rotation += 0.008; shape2.rotation -= 0.008; });
+
+      const blur = new PIXI.BlurFilter({ strength: 8 });
+      const gray = new PIXI.ColorMatrixFilter();
+      gray.grayscale(1, false);
+      let blurOn = false, grayOn = false;
+
+      function applyFilters() {
+        const active = [];
+        if (blurOn) active.push(blur);
+        if (grayOn) active.push(gray);
+        shape.filters = active;
+        shape2.filters = active;
+      }
+      const blurBtn = document.getElementById('blurBtn4');
+      const grayscaleBtn = document.getElementById('grayscaleBtn4');
+      blurBtn.addEventListener('click', () => {
+        blurOn = !blurOn;
+        blurBtn.classList.toggle('off', !blurOn);
+        applyFilters();
+      });
+      grayscaleBtn.addEventListener('click', () => {
+        grayOn = !grayOn;
+        grayscaleBtn.classList.toggle('off', !grayOn);
+        applyFilters();
+      });
+    })();
+
+    // ---------- 5. Container 그룹 ----------
+    (async () => {
+      const app = await makeApp(document.getElementById('canvas5'));
+      const group = new PIXI.Container();
+      group.x = 230; group.y = 160;
+
+      const colors = [0x4f7dff, 0x22c07a, 0xe08a2e];
+      const kids = colors.map((color, i) => {
+        const g = new PIXI.Graphics().rect(-18, -18, 36, 36).fill(color);
+        const angle = (i / colors.length) * Math.PI * 2;
+        g.x = Math.cos(angle) * 90;
+        g.y = Math.sin(angle) * 90;
+        group.addChild(g);
+        return g;
+      });
+      const center = new PIXI.Graphics().circle(0, 0, 24).fill(0xffffff);
+      group.addChild(center);
+      app.stage.addChild(group);
+
+      app.ticker.add(() => {
+        group.rotation += 0.006;
+        kids.forEach((k, i) => { k.rotation += 0.03 * (i % 2 === 0 ? 1 : -1); });
+      });
+    })();
+  </script>
+</body>
+</html>
