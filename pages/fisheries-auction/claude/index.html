@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>전국 위판장 현황</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f6f8;
+    color: #222;
+    line-height: 1.6;
+  }
+  h1 { margin-top: 0; font-size: 22px; }
+  h2 { font-size: 17px; margin-bottom: 4px; }
+  .intro {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px; font-size: 14px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin-bottom: 4px; }
+  .disclaimer {
+    font-size: 12.5px; color: #a15c00; background: #fff6e5;
+    border: 1px solid #ffe0a3; border-radius: 8px; padding: 10px 12px; margin-top: 12px;
+  }
+  section.block {
+    background: #fff; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 20px;
+  }
+  .desc { font-size: 13.5px; color: #555; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; align-items: center; font-size: 13px; }
+  label.field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #777; }
+  input[type="text"], input[type="date"], input[type="number"] {
+    font-size: 13px; padding: 7px 10px; border: 1px solid #ddd; border-radius: 8px;
+    background: #fafbfc; min-width: 140px;
+  }
+  button.action {
+    padding: 7px 13px; border: none; border-radius: 8px;
+    background: #4f7dff; color: #fff; cursor: pointer; font-size: 13px; white-space: nowrap;
+    align-self: flex-end;
+  }
+  button.action:hover { background: #3d67e0; }
+  button.action:disabled { background: #c7cede; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #333; border: 1px solid #ccc; align-self: flex-end; }
+  button.ghost:hover { background: #f2f2f2; }
+  .status-box {
+    font-size: 12.5px; padding: 8px 12px; border-radius: 8px; margin-top: 8px;
+    background: #f0f4ff; border: 1px solid #dbe4ff; color: #333;
+  }
+  .status-box.ok { background: #eafff3; border-color: #b8f0d3; color: #0a7a4c; }
+  .status-box.error { background: #ffeceb; border-color: #ffc9c5; color: #c0392b; white-space: pre-wrap; }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 12.5px; margin-top: 10px; }
+  table.data-table th, table.data-table td { border: 1px solid #e5e5e5; padding: 6px 8px; text-align: left; }
+  table.data-table th { background: #f5f6f8; white-space: nowrap; }
+  table.data-table tbody tr { cursor: pointer; }
+  table.data-table tbody tr:hover { background: #f0f4ff; }
+  table.data-table td.num { text-align: right; font-family: monospace; }
+  .hint { font-size: 12px; color: #888; margin-top: 6px; }
+  details.raw { margin-top: 10px; font-size: 12.5px; }
+  details.raw summary { cursor: pointer; color: #4f7dff; }
+  pre.raw-box {
+    background: #1a1d24; color: #d8e0ff; padding: 12px; border-radius: 8px;
+    overflow-x: auto; font-size: 11.5px; margin-top: 8px; white-space: pre-wrap; max-height: 300px; overflow-y: auto;
+  }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: #eef0f3; color: #555; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>전국 위판장 현황</h1>
+  <p>
+    해양수산부가 공공데이터포털(<a href="https://www.data.go.kr" target="_blank" rel="noopener">data.go.kr</a>)에
+    공개한 <b>실제 API</b> 2종을 연동한 페이지입니다. 이 저장소의 다른 라이브러리 데모들과 달리,
+    여기 나오는 위판장·위판 실적 데이터는 가상의 예시가 아니라 <b>실제 정부 공공데이터</b>입니다.
+  </p>
+  <ul>
+    <li><b>위판장 정보</b> (select0020List) — 산지조합명, 위판장명, 주소, 전화번호</li>
+    <li><b>위판장별 위탁 판매 현황</b> (select0040List) — 위판일자별 수산물 품목·수량·중량·단가·금액</li>
+    <li>위판장 목록에서 항목을 클릭하면 그 위판장명으로 바로 위판 현황을 연계 조회합니다</li>
+  </ul>
+  <div class="disclaimer">
+    ⚠️ 개인 테스트 목적으로 발급받은 일반 인증키를 서버(<code>server.js</code>)에 두고, 브라우저는
+    이 앱의 서버(<code>/api/fisheries/*</code>)로만 요청합니다 (CORS 회피 + 인증키 비노출).
+    data.go.kr 응답은 위·경도 좌표를 제공하지 않아 지도 대신 표로 표시합니다.
+    <b>data.go.kr 서비스 자체가 현재 계정 설정 문제로 "Unexpected errors"를 반환하는 상태일 수
+    있습니다</b> — 아래 "원본 응답 보기"에서 실제로 어떤 응답이 오는지 항상 확인할 수 있습니다.
+  </div>
+</div>
+
+<!-- Section 1 -->
+<section class="block">
+  <h2>1. 위판장 정보 조회 <span class="badge">select0020List</span></h2>
+  <p class="desc">위판장명 또는 위판장코드로 검색합니다. 비워두면 전체 목록을 페이지 단위로 가져옵니다.</p>
+  <div class="controls">
+    <label class="field">위판장명<input type="text" id="s1-csmtmktNm" placeholder="예: 본점" /></label>
+    <label class="field">위판장코드<input type="text" id="s1-csmtmktCode" placeholder="예: 344001" /></label>
+    <label class="field">페이지<input type="number" id="s1-pageNo" value="1" min="1" style="width:70px;" /></label>
+    <label class="field">개수<input type="number" id="s1-numOfRows" value="10" min="1" max="100" style="width:70px;" /></label>
+    <button class="action" id="s1-search">조회</button>
+  </div>
+  <div id="s1-status"></div>
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="s1-table" style="display:none;">
+      <thead><tr><th>산지조합</th><th>위판장명</th><th>주소</th><th>전화번호</th><th>홈페이지</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="hint">💡 행을 클릭하면 아래 2번 섹션에서 해당 위판장의 위판 현황을 바로 조회합니다.</div>
+  <details class="raw">
+    <summary>원본 응답 보기 (디버그)</summary>
+    <pre class="raw-box" id="s1-raw">아직 조회하지 않았습니다.</pre>
+  </details>
+</section>
+
+<!-- Section 2 -->
+<section class="block">
+  <h2>2. 위판장별 위탁 판매 현황 <span class="badge">select0040List</span></h2>
+  <p class="desc">
+    <code>baseDt</code>(기준일자)는 필수입니다. 최신 날짜는 아직 집계 전일 수 있어, 결과가 없으면
+    더 과거 날짜로 시도해보세요.
+  </p>
+  <div class="controls">
+    <label class="field">기준일자 *<input type="date" id="s2-baseDt" /></label>
+    <label class="field">조합명<input type="text" id="s2-mxtrNm" placeholder="예: 옹진수산업협동조합" /></label>
+    <label class="field">위판장명<input type="text" id="s2-csmtmktNm" placeholder="예: 연안위판장(옹진)" /></label>
+    <label class="field">수산물표준코드<input type="text" id="s2-mprcStdCode" placeholder="예: 620401" /></label>
+    <label class="field">페이지<input type="number" id="s2-pageNo" value="1" min="1" style="width:70px;" /></label>
+    <label class="field">개수<input type="number" id="s2-numOfRows" value="10" min="1" max="100" style="width:70px;" /></label>
+    <button class="action" id="s2-search">조회</button>
+  </div>
+  <div id="s2-status"></div>
+  <div style="overflow-x:auto;">
+    <table class="data-table" id="s2-table" style="display:none;">
+      <thead><tr>
+        <th>위판일자</th><th>위판장명</th><th>수산물</th><th>어종상태</th><th>규격</th><th>단위</th>
+        <th>수량</th><th>중량(kg)</th><th>단가</th><th>금액</th><th>원산지</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <details class="raw">
+    <summary>원본 응답 보기 (디버그)</summary>
+    <pre class="raw-box" id="s2-raw">아직 조회하지 않았습니다.</pre>
+  </details>
+</section>
+
+<script>
+(function () {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  document.getElementById('s2-baseDt').value = todayStr;
+
+  // data.go.kr 이 문서에 명시한 표준 에러 코드 (참고용 안내에 사용)
+  const KNOWN_ERROR_CODES = {
+    '1': '어플리케이션 에러', '10': '잘못된 요청 파라미터 에러', '12': '해당 오픈API서비스가 없거나 폐기됨',
+    '20': '서비스 접근거부', '22': '서비스 요청제한횟수 초과', '30': '등록되지 않은 서비스키',
+    '31': '활용기간 만료', '32': '등록되지 않은 IP', '99': '기타 에러',
+  };
+
+  // select0020List / select0040List 공통 응답 형식:
+  // <responseXml><header>...</header><body><item>...</item><item>...</item></body></responseXml>
+  // (표준 data.go.kr 포맷과 달리 <items> 래퍼가 없고 루트가 <responseXml>)
+  function parseFisheriesXml(xmlText) {
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const parserError = doc.querySelector('parsererror');
+    if (parserError) {
+      return { ok: false, message: 'XML로 파싱할 수 없는 응답입니다 (아래 원본 응답 참고)', items: [] };
+    }
+    const header = doc.querySelector('header');
+    const resultCode = header ? header.querySelector('resultCode')?.textContent : null;
+    const resultMsg = header ? header.querySelector('resultMsg')?.textContent : null;
+    const totalCount = header ? header.querySelector('totalCount')?.textContent : null;
+
+    if (resultCode && resultCode !== '00') {
+      const known = KNOWN_ERROR_CODES[resultCode];
+      return {
+        ok: false,
+        message: `API 에러 (코드 ${resultCode}): ${resultMsg || known || '알 수 없는 오류'}`,
+        items: [],
+      };
+    }
+
+    const itemEls = Array.from(doc.querySelectorAll('body > item'));
+    const items = itemEls.map((itemEl) => {
+      const obj = {};
+      Array.from(itemEl.children).forEach((child) => {
+        obj[child.tagName] = child.textContent;
+      });
+      return obj;
+    });
+
+    if (!header && items.length === 0) {
+      return { ok: false, message: '알 수 없는 응답 형식입니다 (아래 원본 응답 참고)', items: [] };
+    }
+
+    return { ok: true, resultMsg, totalCount, items };
+  }
+
+  async function callProxy(path, statusEl, rawEl) {
+    statusEl.innerHTML = '<div class="status-box">조회 중...</div>';
+    rawEl.textContent = '요청 중...';
+    try {
+      const res = await fetch(path);
+      const text = await res.text();
+      rawEl.textContent = `HTTP ${res.status}\n\n${text}`;
+      if (!res.ok) {
+        let msg = text;
+        try { msg = JSON.parse(text).error || text; } catch (e) { /* not json */ }
+        statusEl.innerHTML = `<div class="status-box error">요청 실패 (HTTP ${res.status}): ${msg}</div>`;
+        return null;
+      }
+      const parsed = parseFisheriesXml(text);
+      if (!parsed.ok) {
+        statusEl.innerHTML = `<div class="status-box error">${parsed.message}</div>`;
+        return null;
+      }
+      statusEl.innerHTML = `<div class="status-box ok">정상 응답 — 총 ${parsed.totalCount ?? parsed.items.length}건 중 ${parsed.items.length}건 표시</div>`;
+      return parsed.items;
+    } catch (err) {
+      statusEl.innerHTML = `<div class="status-box error">네트워크 오류: ${err.message}</div>`;
+      rawEl.textContent = '(요청 자체가 실패했습니다: ' + err.message + ')';
+      return null;
+    }
+  }
+
+  // ---------- Section 1 ----------
+  const s1Status = document.getElementById('s1-status');
+  const s1Raw = document.getElementById('s1-raw');
+  const s1Table = document.getElementById('s1-table');
+  const s1Tbody = s1Table.querySelector('tbody');
+
+  async function searchMarketInfo() {
+    const params = new URLSearchParams({
+      pageNo: document.getElementById('s1-pageNo').value || '1',
+      numOfRows: document.getElementById('s1-numOfRows').value || '10',
+      type: 'xml',
+    });
+    const csmtmktNm = document.getElementById('s1-csmtmktNm').value.trim();
+    const csmtmktCode = document.getElementById('s1-csmtmktCode').value.trim();
+    if (csmtmktNm) params.set('csmtmktNm', csmtmktNm);
+    if (csmtmktCode) params.set('csmtmktCode', csmtmktCode);
+
+    const items = await callProxy(`/api/fisheries/market-info?${params}`, s1Status, s1Raw);
+    if (!items) { s1Table.style.display = 'none'; return; }
+
+    s1Tbody.innerHTML = '';
+    items.forEach((item) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.mxtrNm || ''}</td>
+        <td>${item.csmtmktNm || ''}</td>
+        <td>${item.addr || ''}</td>
+        <td>${item.telNo || ''}</td>
+        <td>${item.hmpgAdres || ''}</td>
+      `;
+      tr.addEventListener('click', () => {
+        document.getElementById('s2-csmtmktNm').value = item.csmtmktNm || '';
+        document.getElementById('s2-mxtrNm').value = item.mxtrNm || '';
+        searchTradeStatus();
+        document.getElementById('s2-table').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      s1Tbody.appendChild(tr);
+    });
+    s1Table.style.display = items.length ? 'table' : 'none';
+  }
+  document.getElementById('s1-search').addEventListener('click', searchMarketInfo);
+
+  // ---------- Section 2 ----------
+  const s2Status = document.getElementById('s2-status');
+  const s2Raw = document.getElementById('s2-raw');
+  const s2Table = document.getElementById('s2-table');
+  const s2Tbody = s2Table.querySelector('tbody');
+
+  async function searchTradeStatus() {
+    const baseDtRaw = document.getElementById('s2-baseDt').value; // YYYY-MM-DD
+    if (!baseDtRaw) {
+      s2Status.innerHTML = '<div class="status-box error">기준일자를 선택해주세요.</div>';
+      return;
+    }
+    const baseDt = baseDtRaw.replace(/-/g, ''); // YYYYMMDD
+    const params = new URLSearchParams({
+      pageNo: document.getElementById('s2-pageNo').value || '1',
+      numOfRows: document.getElementById('s2-numOfRows').value || '10',
+      type: 'xml',
+      baseDt,
+    });
+    const mxtrNm = document.getElementById('s2-mxtrNm').value.trim();
+    const csmtmktNm = document.getElementById('s2-csmtmktNm').value.trim();
+    const mprcStdCode = document.getElementById('s2-mprcStdCode').value.trim();
+    if (mxtrNm) params.set('mxtrNm', mxtrNm);
+    if (csmtmktNm) params.set('csmtmktNm', csmtmktNm);
+    if (mprcStdCode) params.set('mprcStdCode', mprcStdCode);
+
+    const items = await callProxy(`/api/fisheries/trade-status?${params}`, s2Status, s2Raw);
+    if (!items) { s2Table.style.display = 'none'; return; }
+
+    s2Tbody.innerHTML = '';
+    items.forEach((item) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.csmtDe || ''}</td>
+        <td>${item.csmtmktNm || ''}</td>
+        <td>${item.mprcStdCodeNm || ''}</td>
+        <td>${item.kdfshSttusNm || ''}</td>
+        <td>${item.goodsStndrdNm || ''}</td>
+        <td>${item.goodsUnitNm || ''}</td>
+        <td class="num">${item.csmtQy || ''}</td>
+        <td class="num">${item.csmtWt || ''}</td>
+        <td class="num">${item.csmtUntpc ? Number(item.csmtUntpc).toLocaleString() : ''}</td>
+        <td class="num">${item.csmtAmount ? Number(item.csmtAmount).toLocaleString() : ''}</td>
+        <td>${item.orgplceSeNm || ''}</td>
+      `;
+      s2Tbody.appendChild(tr);
+    });
+    s2Table.style.display = items.length ? 'table' : 'none';
+  }
+  document.getElementById('s2-search').addEventListener('click', searchTradeStatus);
+})();
+</script>
+</body>
+</html>
